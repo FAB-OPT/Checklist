@@ -1,0 +1,1588 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#1E3A5F">
+<title>ระบบตรวจสาขา QA Audit</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0&display=swap" rel="stylesheet">
+<style>
+:root {
+  --primary: #D63622;
+  --primary-dark: #A82518;
+  --primary-light: #FF8534;
+  --accent: #E85A35;
+  --secondary: #FF8534;
+  --success: #2D5F3F;
+  --warning: #D9963C;
+  --danger: #B82E1A;
+  --bg: #F8F6F4;
+  --surface: #FFFFFF;
+  --text: #2A1F1A;
+  --text-secondary: #786860;
+  --border: #ECE0D8;
+  --shadow: 0 2px 8px rgba(168,37,24,0.06);
+  --shadow-lg: 0 4px 16px rgba(168,37,24,0.10);
+  --app-gradient: linear-gradient(90deg, #4A7BD8 0%, #8B5A9F 28%, #E84A1F 58%, #FF8C00 82%, #FFD700 100%);
+  --login-gradient: linear-gradient(135deg, #FF8534 0%, #D63622 100%);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+body {
+  font-family: 'Sarabun', sans-serif;
+  background: #F4F6F9;
+  color: var(--text);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+  padding-bottom: 80px;
+}
+.material-symbols-rounded {
+  font-family: 'Material Symbols Rounded';
+  font-weight: normal; font-style: normal; font-size: 24px; line-height: 1;
+  letter-spacing: normal; text-transform: none; display: inline-block;
+  white-space: nowrap; word-wrap: normal; direction: ltr; vertical-align: middle;
+}
+
+.app-header {
+  background: var(--app-gradient);
+  color: white;
+  padding: 14px 20px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: var(--shadow);
+  text-shadow: 0 1px 2px rgba(0,0,0,0.18);
+}
+.app-header-inner { display:flex; justify-content:space-between; align-items:center; gap:12px; }
+.app-header h1 { font-size: 18px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+.app-header .subtitle { font-size: 12px; opacity: 0.92; margin-top: 2px; }
+.user-chip {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 12px; background: rgba(255,255,255,0.18);
+  border-radius: 20px; font-size: 13px; font-weight: 600;
+  backdrop-filter: blur(6px);
+  cursor: pointer;
+}
+.role-badge {
+  display: inline-block;
+  padding: 1px 8px;
+  background: rgba(255,255,255,0.25);
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.container { max-width: 1100px; margin: 0 auto; padding: 16px; }
+
+.card {
+  background: var(--surface);
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 16px;
+  box-shadow: var(--shadow);
+}
+.card-header {
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 16px; padding-bottom: 12px;
+  border-bottom: 2px solid var(--border);
+}
+.card-header h2 { font-size: 17px; font-weight: 700; color: var(--primary); }
+
+.form-group { margin-bottom: 16px; }
+.form-group label {
+  display: block; font-weight: 600; font-size: 13px;
+  margin-bottom: 6px; color: var(--text-secondary);
+}
+.form-group label .req { color: var(--danger); }
+.form-control {
+  width: 100%; padding: 12px 14px;
+  border: 1.5px solid var(--border); border-radius: 8px;
+  font-size: 15px; font-family: inherit; background: var(--surface);
+  transition: border-color 0.2s;
+}
+.form-control:focus { outline: none; border-color: var(--primary); }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 600px) { .form-row { grid-template-columns: 1fr; } }
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  gap: 8px; padding: 12px 20px; border: none; border-radius: 8px;
+  font-size: 15px; font-weight: 600; font-family: inherit;
+  cursor: pointer; transition: all 0.2s; text-decoration: none;
+}
+.btn-primary { background: var(--primary); color: white; }
+.btn-primary:hover { background: var(--primary-dark); }
+.btn-secondary { background: var(--surface); color: var(--text); border: 1.5px solid var(--border); }
+.btn-success { background: var(--success); color: white; }
+.btn-danger { background: var(--danger); color: white; }
+.btn-block { width: 100%; }
+.btn-lg { padding: 16px 24px; font-size: 16px; }
+.btn-sm { padding: 8px 14px; font-size: 13px; }
+
+.section-tabs {
+  display: flex; overflow-x: auto; gap: 6px;
+  padding: 12px 16px; background: var(--surface);
+  margin: 0 -16px 16px; border-bottom: 1px solid var(--border);
+  scrollbar-width: none;
+}
+.section-tabs::-webkit-scrollbar { display: none; }
+.section-tab {
+  flex-shrink: 0; padding: 8px 14px; border-radius: 20px;
+  background: var(--bg); border: 1.5px solid var(--border);
+  font-size: 13px; font-weight: 600; cursor: pointer;
+  white-space: nowrap; transition: all 0.2s; color: var(--text-secondary);
+  font-family: inherit;
+}
+.section-tab.active { background: var(--primary); color: white; border-color: var(--primary); }
+.section-tab .badge {
+  display: inline-block; margin-left: 4px;
+  padding: 1px 6px; border-radius: 10px;
+  background: rgba(255,255,255,0.25); font-size: 11px;
+}
+.section-tab:not(.active) .badge { background: var(--primary); color: white; }
+
+.subsection { margin-bottom: 20px; }
+.subsection-title {
+  font-size: 14px; font-weight: 700; padding: 10px 14px;
+  background: #FCE9DD;
+  border-left: 4px solid var(--primary); border-radius: 6px;
+  margin-bottom: 10px; color: var(--primary-dark);
+}
+.subsection-title.red {
+  background: #F8D6CE;
+  border-left-color: var(--danger); color: #7A1F10;
+}
+.subsection-title .req-photo-badge {
+  display: inline-block; margin-left: 8px;
+  padding: 2px 8px; background: var(--danger); color: white;
+  border-radius: 10px; font-size: 11px; font-weight: 600;
+}
+
+.item {
+  display: flex; flex-direction: column; gap: 10px;
+  padding: 12px 14px; background: var(--surface);
+  border: 1.5px solid var(--border); border-radius: 10px;
+  margin-bottom: 8px; transition: all 0.2s;
+}
+.item.answered-pass { border-color: var(--success); background: #E5F0E8; }
+.item.answered-fail { border-color: var(--danger); background: #F8D6CE; }
+.item.answered-na { border-color: var(--text-secondary); background: #FAFAFA; }
+.item-text { display: flex; align-items: flex-start; gap: 10px; font-size: 14px; line-height: 1.5; }
+.item-num {
+  flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center;
+  width: 26px; height: 26px; border-radius: 50%;
+  background: var(--bg); color: var(--text-secondary);
+  font-weight: 700; font-size: 12px;
+}
+.item-text-content { flex: 1; }
+.item-note { font-size: 12px; color: var(--text-secondary); margin-top: 4px; font-style: italic; }
+.item-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.choice-btn {
+  flex: 1; min-width: 70px; padding: 8px 12px;
+  border-radius: 6px; border: 1.5px solid var(--border);
+  background: var(--surface); font-size: 13px; font-weight: 600;
+  cursor: pointer; transition: all 0.15s;
+  display: flex; align-items: center; justify-content: center; gap: 4px;
+  font-family: inherit;
+}
+.choice-btn:hover { background: var(--bg); }
+.choice-btn.active.pass { background: var(--success); color: white; border-color: var(--success); }
+.choice-btn.active.fail { background: var(--danger); color: white; border-color: var(--danger); }
+.choice-btn.active.na { background: var(--text-secondary); color: white; border-color: var(--text-secondary); }
+
+.photo-section { border-top: 1px dashed var(--border); padding-top: 10px; margin-top: 4px; }
+.photo-required-label {
+  font-size: 12px; font-weight: 600; color: var(--danger);
+  margin-bottom: 6px; display: flex; align-items: center; gap: 4px;
+}
+.photo-upload-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 12px; background: #FCE9DD;
+  border: 1.5px dashed var(--primary); border-radius: 6px;
+  font-size: 13px; font-weight: 600; cursor: pointer;
+  color: var(--primary); font-family: inherit;
+}
+.photo-upload-btn:hover { background: #F8D6CE; }
+.photo-preview { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+.photo-thumb {
+  position: relative; width: 70px; height: 70px;
+  border-radius: 6px; overflow: hidden; border: 1.5px solid var(--border);
+}
+.photo-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.photo-thumb .remove-btn {
+  position: absolute; top: 2px; right: 2px;
+  width: 20px; height: 20px; border-radius: 50%;
+  background: rgba(0,0,0,0.6); color: white; border: none;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+}
+.note-input {
+  width: 100%; padding: 8px 10px;
+  border: 1.5px solid var(--border); border-radius: 6px;
+  font-size: 13px; font-family: inherit; resize: vertical; margin-top: 6px;
+}
+
+.progress-bar-container {
+  position: sticky; top: 60px;
+  background: var(--surface); padding: 12px 16px;
+  margin: 0 -16px 16px; z-index: 99;
+  box-shadow: var(--shadow);
+}
+.progress-info {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 6px; font-size: 13px;
+}
+.progress-info b { color: var(--primary); font-weight: 700; }
+.progress-bar { height: 8px; background: var(--bg); border-radius: 4px; overflow: hidden; }
+.progress-fill {
+  height: 100%; background: var(--app-gradient);
+  transition: width 0.3s;
+}
+
+.score-display {
+  text-align: center; padding: 20px; border-radius: 12px; margin-bottom: 16px;
+}
+.score-display.excellent { background: linear-gradient(135deg, #2D8F4A, #1E6B36); color: white; }
+.score-display.standard { background: linear-gradient(135deg, #FF8534, #D63622); color: white; }
+.score-display.improve { background: linear-gradient(135deg, #D9963C, #A86A1F); color: white; }
+.score-display.breakdown { background: linear-gradient(135deg, #B82E1A, #7A1F10); color: white; }
+.score-display .score-value { font-size: 52px; font-weight: 800; line-height: 1; }
+.score-display .score-label { font-size: 17px; font-weight: 600; margin-top: 8px; }
+.score-display .score-tier { font-size: 13px; opacity: 0.95; margin-top: 4px; }
+
+.section-summary-grid { display: grid; gap: 8px; }
+.section-summary-row {
+  display: grid; grid-template-columns: 28px 1fr auto auto;
+  gap: 10px; align-items: center;
+  padding: 10px 12px; background: var(--bg);
+  border-radius: 8px; font-size: 13px;
+}
+.section-letter-badge {
+  width: 28px; height: 28px; border-radius: 50%;
+  background: var(--app-gradient); color: white;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 13px;
+}
+.section-name { font-weight: 600; font-size: 13px; }
+.section-pct { font-weight: 700; color: var(--primary); }
+.section-pct.good { color: var(--success); }
+.section-pct.bad { color: var(--danger); }
+
+.screen { display: none; }
+.screen.active { display: block; }
+
+.login-logo { text-align: center; margin-bottom: 24px; }
+.login-logo .icon {
+  width: 72px; height: 72px; border-radius: 16px;
+  background: var(--app-gradient); color: white;
+  display: inline-flex; align-items: center; justify-content: center;
+  margin-bottom: 12px;
+  box-shadow: 0 4px 12px rgba(30,58,95,0.25);
+}
+.login-logo .icon .material-symbols-rounded { font-size: 40px; }
+.login-logo h1 { font-size: 22px; font-weight: 800; background: var(--login-gradient); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent; }
+.login-logo p { font-size: 13px; color: var(--text-secondary); margin-top: 4px; }
+
+.bottom-nav {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  background: var(--surface); border-top: 1px solid var(--border);
+  display: flex; justify-content: space-around;
+  padding: 8px 0 calc(8px + env(safe-area-inset-bottom)); z-index: 100;
+}
+.bottom-nav-item {
+  flex: 1; display: flex; flex-direction: column; align-items: center;
+  gap: 2px; padding: 6px; font-size: 11px;
+  color: var(--text-secondary); cursor: pointer;
+  background: none; border: none; font-family: inherit;
+}
+.bottom-nav-item.active { color: var(--primary); }
+.bottom-nav-item .material-symbols-rounded { font-size: 22px; }
+
+.alert {
+  padding: 12px 16px; border-radius: 8px; margin-bottom: 16px;
+  font-size: 13px; display: flex; align-items: center; gap: 8px;
+}
+.alert-warning { background: #FCE9DD; color: #7A5818; border-left: 4px solid var(--warning); }
+.alert-danger { background: #F8D6CE; color: #7A1F10; border-left: 4px solid var(--danger); }
+.alert-info { background: #FCE9DD; color: var(--primary-dark); border-left: 4px solid var(--secondary); }
+.alert-success { background: #E5F0E8; color: #1F4A2D; border-left: 4px solid var(--success); }
+
+.modal-overlay {
+  display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.6); z-index: 200;
+  align-items: center; justify-content: center; padding: 20px;
+}
+.modal-overlay.show { display: flex; }
+.modal {
+  background: var(--surface); border-radius: 12px;
+  padding: 24px; max-width: 400px; width: 100%;
+}
+.modal h3 { font-size: 18px; margin-bottom: 12px; }
+.modal-actions { display: flex; gap: 8px; margin-top: 16px; }
+
+@media print {
+  .bottom-nav, .section-tabs, .progress-bar-container, .no-print { display: none !important; }
+  body { padding-bottom: 0; }
+  .card { box-shadow: none; border: 1px solid #ccc; page-break-inside: avoid; }
+}
+
+.fail-list-item {
+  padding: 10px 12px; background: #F8D6CE;
+  border-left: 4px solid var(--danger); border-radius: 6px;
+  margin-bottom: 6px; font-size: 13px;
+}
+.fail-list-item .fail-section { font-weight: 700; color: #7A1F10; font-size: 12px; margin-bottom: 2px; }
+.fail-list-item .fail-photos { display: flex; gap: 4px; margin-top: 6px; flex-wrap: wrap; }
+.fail-list-item .fail-photos img { width: 60px; height: 60px; object-fit: cover; border-radius: 4px; }
+
+/* Dashboard */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.kpi-card {
+  background: var(--surface); border-radius: 10px;
+  padding: 14px; box-shadow: var(--shadow);
+  border-left: 4px solid var(--primary);
+}
+.kpi-card .label { font-size: 12px; color: var(--text-secondary); font-weight: 600; }
+.kpi-card .value { font-size: 26px; font-weight: 800; margin-top: 4px; color: var(--text); }
+.kpi-card .sub { font-size: 11px; color: var(--text-secondary); margin-top: 2px; }
+.kpi-card.success { border-color: var(--success); }
+.kpi-card.warning { border-color: var(--warning); }
+.kpi-card.danger { border-color: var(--danger); }
+.kpi-card.info { border-color: var(--secondary); }
+
+.audit-list {
+  display: flex; flex-direction: column; gap: 8px;
+}
+.audit-row {
+  background: var(--surface); border-radius: 10px;
+  padding: 12px 14px; box-shadow: var(--shadow);
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 10px; align-items: center;
+  cursor: pointer;
+  transition: transform 0.15s;
+  border-left: 4px solid var(--border);
+}
+.audit-row:hover { transform: translateX(2px); }
+.audit-row.excellent { border-left-color: var(--primary); }
+.audit-row.standard { border-left-color: var(--secondary); }
+.audit-row.improve { border-left-color: var(--warning); }
+.audit-row.breakdown { border-left-color: var(--danger); }
+.audit-row .audit-branch { font-weight: 700; font-size: 14px; }
+.audit-row .audit-meta { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+.audit-row .audit-score {
+  font-size: 22px; font-weight: 800; color: var(--primary); min-width: 60px; text-align: right;
+}
+.audit-row .audit-tier {
+  font-size: 10px; padding: 3px 8px; border-radius: 10px;
+  font-weight: 700; white-space: nowrap;
+}
+.audit-row .audit-tier.excellent { background: #E5F0E8; color: #1E6B36; }
+.audit-row .audit-tier.standard { background: #FCE9DD; color: var(--primary-dark); }
+.audit-row .audit-tier.improve { background: #FCE9DD; color: #7A5818; }
+.audit-row .audit-tier.breakdown { background: #F8D6CE; color: #7A1F10; }
+
+.filter-bar {
+  display: flex; gap: 8px; flex-wrap: wrap;
+  background: var(--surface); padding: 12px; border-radius: 10px;
+  margin-bottom: 12px; box-shadow: var(--shadow);
+}
+.filter-bar select, .filter-bar input {
+  padding: 8px 12px; border: 1.5px solid var(--border);
+  border-radius: 6px; font-size: 13px; font-family: inherit;
+  flex: 1; min-width: 120px;
+}
+
+.zone-card {
+  background: var(--surface); border-radius: 10px;
+  padding: 14px; box-shadow: var(--shadow); margin-bottom: 10px;
+}
+.zone-card .zone-name { font-weight: 700; font-size: 15px; color: var(--primary); }
+.zone-card .zone-stats { display: flex; gap: 16px; margin-top: 8px; font-size: 13px; }
+.zone-card .zone-stats > div { display: flex; flex-direction: column; }
+.zone-card .zone-stats .num { font-size: 18px; font-weight: 700; color: var(--text); }
+.zone-card .zone-stats .lbl { font-size: 11px; color: var(--text-secondary); }
+
+#login-hint {
+  background: #F0EBE0; border-radius: 8px; padding: 10px;
+  font-size: 12px; color: var(--text-secondary); margin-top: 12px;
+  border-left: 3px solid var(--warning);
+}
+#login-hint b { color: var(--text); }
+#login-hint code {
+  background: var(--surface); padding: 1px 6px; border-radius: 4px;
+  font-family: monospace; font-size: 12px;
+}
+
+/* ============ LOGIN STYLES (fresh) ============ */
+.login-container {
+  min-height: 100vh;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 24px 20px;
+  background: linear-gradient(180deg, #E8F1FB 0%, #FCEEF0 100%);
+  position: relative; overflow: hidden;
+}
+.login-bg-blob {
+  position: absolute; border-radius: 50%;
+  filter: blur(80px); opacity: 0.85; z-index: 0;
+  pointer-events: none;
+}
+.login-bg-blob.blob-1 {
+  width: 360px; height: 360px; top: -100px; right: -100px;
+  background: #7FB3F0;
+}
+.login-bg-blob.blob-2 {
+  width: 320px; height: 320px; bottom: -90px; left: -90px;
+  background: #F4A8B0;
+}
+.login-bg-blob.blob-3 {
+  width: 240px; height: 240px; top: 35%; right: -60px;
+  background: #FFCCD2; opacity: 0.7;
+}
+.login-bg-blob.blob-4 {
+  width: 280px; height: 280px; top: -60px; left: -80px;
+  background: #B5E0C2; opacity: 0.75;
+}
+.login-footer {
+  position: relative; z-index: 1; margin-top: 20px;
+  font-size: 11px; color: var(--text-secondary); opacity: 0.65;
+}
+.login-box {
+  position: relative; z-index: 1;
+  background: rgba(255,255,255,0.95);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: 28px;
+  padding: 36px 28px 28px;
+  width: 100%; max-width: 400px;
+  box-shadow: 0 20px 60px rgba(30,58,95,0.10), 0 1px 3px rgba(0,0,0,0.04);
+  border: 1px solid rgba(255,255,255,0.6);
+}
+.brand-logo {
+  width: 76px; height: 76px; border-radius: 22px;
+  background: linear-gradient(135deg, #FF8534 0%, #D63622 100%);
+  color: white;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 12px 32px rgba(214,54,34,0.35), inset 0 1px 0 rgba(255,255,255,0.2);
+  margin: 0 auto 18px;
+}
+.brand-logo .material-symbols-rounded { font-size: 42px; color: white; }
+.brand-title {
+  font-size: 22px; font-weight: 800; text-align: center;
+  color: var(--text); letter-spacing: -0.3px;
+}
+.brand-subtitle {
+  font-size: 13px; color: var(--text-secondary);
+  text-align: center; margin-top: 6px; margin-bottom: 28px;
+}
+.role-toggle {
+  position: relative;
+  display: grid; grid-template-columns: 1fr 1fr;
+  background: #EEF2F7; border-radius: 14px;
+  padding: 5px; margin-bottom: 28px; height: 48px;
+}
+.role-toggle-slider {
+  position: absolute; top: 5px; left: 5px;
+  width: calc(50% - 5px); height: calc(100% - 10px);
+  background: #FFFFFF; border-radius: 10px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  transition: transform 0.28s cubic-bezier(.4,0,.2,1);
+}
+.role-toggle.staff .role-toggle-slider { transform: translateX(100%); }
+.role-toggle-btn {
+  position: relative; z-index: 1;
+  background: none; border: none; cursor: pointer;
+  font-size: 14px; font-weight: 600; font-family: inherit;
+  color: var(--text-secondary); transition: color 0.28s;
+}
+.role-toggle-btn.active { color: #B82E1A; }
+.pin-section { margin-bottom: 24px; position: relative; cursor: text; }
+.pin-label {
+  display: block; font-size: 13px; font-weight: 600;
+  color: var(--text-secondary); margin-bottom: 12px; text-align: center;
+}
+.pin-row { display: flex; gap: 10px; justify-content: center; }
+.pin-cell {
+  width: 48px; height: 56px; border-radius: 12px;
+  background: #F4F6FA; border: 2px solid #E4E9F0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px; font-weight: 700; color: var(--text);
+  transition: all 0.18s;
+}
+.pin-cell.filled { background: #FFFFFF; border-color: #D63622; }
+.pin-cell.active { border-color: #D63622; box-shadow: 0 0 0 4px rgba(214,54,34,0.18); background: #FFFFFF; }
+.btn-login {
+  background: linear-gradient(135deg, #FF8534 0%, #D63622 100%);
+  color: white;
+  font-size: 16px; font-weight: 700;
+  padding: 16px 24px; border-radius: 14px;
+  box-shadow: 0 10px 24px rgba(214,54,34,0.30);
+  transition: all 0.2s; letter-spacing: 0.3px;
+}
+.btn-login:hover { transform: translateY(-1px); box-shadow: 0 14px 30px rgba(214,54,34,0.35); }
+.btn-login:active { transform: translateY(0); }
+@media (max-width: 480px) {
+  .pin-row { gap: 8px; }
+  .pin-cell { width: 44px; height: 52px; font-size: 20px; border-radius: 10px; }
+}
+@media (max-width: 380px) {
+  .pin-row { gap: 6px; }
+  .pin-cell { width: 40px; height: 48px; font-size: 18px; }
+}
+
+html:has(#login-screen.active),
+body:has(#login-screen.active) {
+  background: linear-gradient(180deg, #E8F1FB 0%, #FCEEF0 100%);
+  padding-bottom: 0;
+  margin: 0;
+  min-height: 100vh;
+}
+body:has(#login-screen.active) {
+  background-attachment: fixed;
+}
+.login-container {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+/* ============ END LOGIN STYLES ============ */
+
+</style>
+</head>
+<body>
+
+<!-- LOGIN SCREEN -->
+<div id="login-screen" class="screen active">
+  <div class="login-container">
+    <div class="login-bg-blob blob-1"></div>
+    <div class="login-bg-blob blob-2"></div>
+    <div class="login-bg-blob blob-3"></div>
+    <div class="login-bg-blob blob-4"></div>
+    <div class="login-box">
+      <div class="brand-logo">
+        <span class="material-symbols-rounded">fact_check</span>
+      </div>
+      <h1 class="brand-title">QA Audit System</h1>
+      <p class="brand-subtitle">ระบบตรวจสอบมาตรฐานสาขา</p>
+
+      <div class="role-toggle" id="role-toggle">
+        <div class="role-toggle-slider"></div>
+        <button class="role-toggle-btn active" data-role="branch" onclick="selectRole('branch')">สาขา</button>
+        <button class="role-toggle-btn" data-role="staff" onclick="selectRole('staff')">Admin</button>
+      </div>
+
+      <div class="pin-section" onclick="focusPin()">
+        <label class="pin-label" id="pin-label">กรอกรหัสสาขา 4 หลัก</label>
+        <div class="pin-row" id="pin-row"></div>
+        <input type="tel" inputmode="numeric" id="login-id" autocomplete="off" maxlength="4" oninput="onPinInput()" onkeydown="onPinKeyDown(event)" style="position:absolute;opacity:0;pointer-events:none;width:1px;height:1px;">
+      </div>
+
+      <button class="btn btn-login btn-block" onclick="doLogin()">เข้าสู่ระบบ</button>
+    </div>
+    <div class="login-footer">© 2026 Operation FAB · v1.0</div>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="app-screen" class="screen">
+  <div class="app-header">
+    <div class="app-header-inner">
+      <div>
+        <h1><span class="material-symbols-rounded">restaurant</span> QA Audit</h1>
+        <div class="subtitle" id="header-subtitle">ระบบตรวจสอบมาตรฐานสาขา</div>
+      </div>
+      <div class="user-chip" onclick="showUserMenu()">
+        <span class="material-symbols-rounded" style="font-size:18px;">account_circle</span>
+        <div>
+          <div id="user-name">-</div>
+          <div class="role-badge" id="user-role">-</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="container">
+    <!-- DASHBOARD (admin/bzm) -->
+    <div id="dashboard-screen" style="display:none;">
+      <div class="card">
+        <div class="card-header">
+          <span class="material-symbols-rounded" style="color:var(--primary);">dashboard</span>
+          <h2 id="dashboard-title">Dashboard</h2>
+        </div>
+
+        <div class="kpi-grid" id="kpi-grid"></div>
+
+        <div id="zone-list" style="display:none;">
+          <h3 style="font-size:15px;margin:16px 0 10px;">สรุปรายโซน</h3>
+          <div id="zone-list-content"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <span class="material-symbols-rounded" style="color:var(--primary);">list_alt</span>
+          <h2>ผลการตรวจล่าสุด</h2>
+        </div>
+
+        <div class="filter-bar">
+          <input type="text" id="filter-search" placeholder="ค้นหาสาขา..." oninput="renderAuditList()">
+          <select id="filter-bzm" onchange="renderAuditList()">
+            <option value="">ทุก BZM</option>
+          </select>
+          <select id="filter-tier" onchange="renderAuditList()">
+            <option value="">ทุกเกรด</option>
+            <option value="excellent">⭐ ดีมาก</option>
+            <option value="standard">✅ มาตรฐาน</option>
+            <option value="improve">⚠️ ปรับปรุง</option>
+            <option value="breakdown">🚨 เร่งด่วน</option>
+          </select>
+        </div>
+
+        <div class="audit-list" id="audit-list"></div>
+      </div>
+    </div>
+
+    <!-- BRANCH INFO SCREEN -->
+    <div id="info-screen" style="display:none;">
+      <div class="card">
+        <div class="card-header">
+          <span class="material-symbols-rounded" style="color:var(--primary);">store</span>
+          <h2>เริ่มตรวจสาขา</h2>
+        </div>
+
+        <div class="form-group">
+          <label>สาขา / Branch <span class="req">*</span></label>
+          <select class="form-control" id="branch-select">
+            <option value="">— เลือกสาขา —</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>BZM ประจำสาขา</label>
+          <input type="text" class="form-control" id="bzm-name" readonly>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>วันที่ตรวจ <span class="req">*</span></label>
+            <input type="date" class="form-control" id="audit-date">
+          </div>
+          <div class="form-group">
+            <label>เวลาเข้าตรวจ <span class="req">*</span></label>
+            <input type="time" class="form-control" id="audit-time">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>ผู้ตรวจ <span class="req">*</span></label>
+          <input type="text" class="form-control" id="inspector-name" readonly>
+        </div>
+
+        <div class="form-group">
+          <label>ผู้จัดการสาขา (ผู้รับการตรวจ)</label>
+          <input type="text" class="form-control" id="branch-manager" placeholder="ชื่อผู้จัดการสาขา">
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>จำนวนทีมผู้จัดการ (คน)</label>
+            <input type="number" min="0" class="form-control" id="num-managers" placeholder="0">
+          </div>
+          <div class="form-group">
+            <label>จำนวนพนักงานบริการ (คน)</label>
+            <input type="number" min="0" class="form-control" id="num-service" placeholder="0">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>จำนวนพนักงานครัว (คน)</label>
+            <input type="number" min="0" class="form-control" id="num-kitchen" placeholder="0">
+          </div>
+          <div class="form-group">
+            <label>หมายเหตุ</label>
+            <input type="text" class="form-control" id="extra-note" placeholder="(ถ้ามี)">
+          </div>
+        </div>
+
+        <button class="btn btn-primary btn-block btn-lg" onclick="startAudit()">
+          <span class="material-symbols-rounded">arrow_forward</span>
+          เริ่มตรวจ
+        </button>
+      </div>
+    </div>
+
+    <!-- CHECKLIST SCREEN -->
+    <div id="checklist-screen" style="display:none;">
+      <div class="progress-bar-container">
+        <div class="progress-info">
+          <span>ความคืบหน้า: <b id="progress-text">0 / 0</b></span>
+          <span id="progress-pct"><b>0%</b></span>
+        </div>
+        <div class="progress-bar"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+      </div>
+
+      <div class="section-tabs" id="section-tabs"></div>
+      <div id="checklist-content"></div>
+
+      <div style="display:flex; gap:8px; margin-top:16px;">
+        <button class="btn btn-secondary" style="flex:1" onclick="prevSection()">
+          <span class="material-symbols-rounded">arrow_back</span> ก่อนหน้า
+        </button>
+        <button class="btn btn-primary" style="flex:1" onclick="nextSection()">
+          ถัดไป <span class="material-symbols-rounded">arrow_forward</span>
+        </button>
+      </div>
+
+      <button class="btn btn-success btn-block btn-lg" style="margin-top:12px;" onclick="finishAudit()">
+        <span class="material-symbols-rounded">save</span>
+        บันทึก & ดูสรุปผล
+      </button>
+    </div>
+
+    <!-- SUMMARY SCREEN -->
+    <div id="summary-screen" style="display:none;">
+      <div class="card">
+        <div class="card-header">
+          <span class="material-symbols-rounded" style="color:var(--primary);">leaderboard</span>
+          <h2>สรุปผลการตรวจ</h2>
+        </div>
+
+        <div id="branch-info-summary" style="background:var(--bg);padding:12px;border-radius:8px;margin-bottom:16px;font-size:13px;"></div>
+
+        <div id="score-display" class="score-display">
+          <div class="score-value" id="total-score">0.0</div>
+          <div class="score-label">% คะแนนรวม</div>
+          <div class="score-tier" id="score-tier">—</div>
+        </div>
+
+        <h3 style="font-size:15px;margin-bottom:12px;">คะแนนแยกตามหมวด</h3>
+        <div class="section-summary-grid" id="section-summary-grid"></div>
+      </div>
+
+      <div class="card" id="ncr-card">
+        <div class="card-header">
+          <span class="material-symbols-rounded" style="color:var(--danger);">warning</span>
+          <h2>รายการที่ไม่ผ่าน (NCR)</h2>
+        </div>
+        <div id="ncr-list"></div>
+      </div>
+
+      <div class="card no-print">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn btn-secondary" style="flex:1;min-width:130px;" onclick="goToChecklist()">
+            <span class="material-symbols-rounded">edit</span> แก้ไข
+          </button>
+          <button class="btn btn-primary" style="flex:1;min-width:130px;" onclick="window.print()">
+            <span class="material-symbols-rounded">print</span> พิมพ์
+          </button>
+          <button class="btn btn-success" style="flex:1;min-width:130px;" onclick="exportJSON()">
+            <span class="material-symbols-rounded">download</span> Export
+          </button>
+          <button class="btn btn-secondary" style="flex:1;min-width:130px;" onclick="backToDashboard()">
+            <span class="material-symbols-rounded">home</span> หน้าหลัก
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom Nav (rendered dynamically per role) -->
+  <nav class="bottom-nav no-print" id="bottom-nav"></nav>
+</div>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <h3 id="modal-title">แจ้งเตือน</h3>
+    <p id="modal-body">message</p>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" id="modal-cancel" style="display:none;" onclick="closeModal()">ยกเลิก</button>
+      <button class="btn btn-primary btn-block" id="modal-ok" onclick="closeModal()">ตกลง</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const SECTIONS = [{"letter": "A", "title": "Facilities  :  สิ่งอำนวยความสะดวก", "possibility": 23, "subsections": [{"title": "FOH  :  ภายนอกและพื้นที่ให้บริการลูกค้า", "items": [{"num": 1, "possibility": 1, "text": "ป้ายชื่อร้าน/ ประตูหน้าร้าน/ ขอบกระจกและ ผนังร้าน สะอาดและอยู่ในสภาพดี", "note": null}, {"num": 2, "possibility": 1, "text": "ที่ตั้งเมนูหน้าร้าน/ สื่อการขายถูกต้องตรงรายการปัจจุบันไม่เขียนด้วยลายมือ สะอาดและอยู่ในสภาพดี", "note": null}, {"num": 3, "possibility": 1, "text": "โต๊ะเก้าอี้ลูกค้า/ โซฟา/ เบาะพิง สะอาดและอยู่ในสภาพดี", "note": null}, {"num": 4, "possibility": 1, "text": "ระบบไฟฟ้าและเครื่องปรับอากาศส่วนบริการทำงานปกติ และอยู่ในสภาพดี (รวมหลอดไฟและหน้ากากแอร์)", "note": null}, {"num": 5, "possibility": 1, "text": "Trash bin/Trash Cart ถังขยะส่วนบริการ สะอาดพร้อมใช้งานอยู่ในสภาพดี", "note": null}, {"num": 6, "possibility": 1, "text": "พื้นที่บริเวณส่วนบริการอยู่ในสภาพดี มีการทำความสะอาดอย่างสม่ำเสมอในช่วงปฎิบัติงาน", "note": null}, {"num": 7, "possibility": 1, "text": "ห้องผู้จัดการร้าน/ ห้องพนักงาน สะอาดจัดเป็นระเบียบเรียบร้อย", "note": null}]}, {"title": "Drink Station : บริเวณบาร์น้ำ", "items": [{"num": 8, "possibility": 1, "text": "พื้นบริเวณบาร์น้ำสะอาด", "note": null}, {"num": 9, "possibility": 1, "text": "ชั้นวางของ/ ตู้ Station และสต็อกเครื่องดื่มจัดเป็นระเบียบ", "note": null}, {"num": 10, "possibility": 1, "text": "ตู้แช่เครื่องดื่มมีสินค้าครบ พร้อมบริการ และจัดเก็บเป็นระเบียบ", "note": null}, {"num": 11, "possibility": 1, "text": "บริเวณซิงค์ล้างแก้ว/ ถาดคว่ำแก้ว ได้รับการดูแลรักษาความสะอาดอย่างสม่ำเสมอ", "note": null}]}, {"title": "Serving Station : บริเวณเตรียมเสิร์ฟ", "items": [{"num": 12, "possibility": 1, "text": "มีการเตรียมภาชนะและอุปกรณ์เสิร์ฟอาหารสำหรับทานในร้านที่สะอาด อยู่ในสภาพดี และมีปริมาณเหมาะสม", "note": null}, {"num": 13, "possibility": 1, "text": "ถาดเสิร์ฟสะอาดและมีปริมาณเพียงพอ", "note": null}, {"num": 14, "possibility": 1, "text": "อุปกรณ์อื่นๆ ที่เตรียมใช้งานบริเวณหน้าช่องส่ง กระบอกพริกไทย ธงบอกระดับความสุกสเต๊กเนื้อ กระดิ่ง เป็นต้น", "note": null}, {"num": 15, "possibility": 1, "text": "มีภาชนะสำหรับใส่อาหารนำกลับจัดเก็บในภาชนะปิดมิดชิด", "note": null}]}, {"title": "BOH : ภายในพื้นที่ครัว  และ ห้องสต็อกจัดเก็บสินค้า", "items": [{"num": 16, "possibility": 1, "text": "พื้น/ ผนัง/ กระเบื้อง/ ฝ้า ในครัวสะอาดและมีการดูแลสม่ำเสมอในช่วงปฎิบัติงาน", "note": null}, {"num": 17, "possibility": 1, "text": "ระบบไฟฟ้าและเครื่องปรับอากาศส่วนครัวทำงานปกติ และอยู่ในสภาพดี (รวมหลอดไฟและหน้ากากแอร์)", "note": null}, {"num": 18, "possibility": 1, "text": "บริเวณพื้นที่เก็บ/ ชั้นวางอุปกรณ์ต่างๆ สะอาดได้รับการดูแลเป็นอย่างดี", "note": null}, {"num": 19, "possibility": 1, "text": "Preperation table/ Work table โต๊ะเตรียมวัตถุดิบ สะอาดพร้อมใช้งานและอยู่ในสภาพดี", "note": null}, {"num": 20, "possibility": 1, "text": "รถเข็นขยะ/ ถังขยะสะอาดมีถุงรองถัง และมีฝาปิดก่อนและหลังชั่วโมงเร่งด่วน และอยู่ในสภาพดี", "note": null}, {"num": 21, "possibility": 1, "text": "ห้องสต็อกได้รับการจัดอย่างเป็นระเบียบเรียบร้อย ง่ายต่อการหยิบใช้ ", "note": null}, {"num": 22, "possibility": 1, "text": "ซิงค์ได้รับการทำความสะอาดอย่างสม่ำเสมออยู่ในสภาพดี", "note": null}, {"num": 23, "possibility": 1, "text": "บริเวณพื้นที่เก็บอุปกรณ์ทำความสะอาด/ อุปกรณ์ สะอาดได้รับการดูแลเป็นอย่างดี", "note": null}]}]}, {"letter": "B", "title": "Service Standard : การบริการส่วนหน้า", "possibility": 15, "subsections": [{"title": "FOH : การบริการส่วนหน้า", "items": [{"num": 1, "possibility": 1, "text": "มี เกลือ/ ซอสแม็กกี้ เครื่องปรุงและซอสสำหรับลูกค้า ครบถ้วนพร้อมเสิร์ฟ", "note": null}, {"num": 2, "possibility": 1, "text": "มีการเตรียมอุปกรณ์ในการทำความสะอาดโต๊ะ พร้อมใช้งาน", "note": null}, {"num": 3, "possibility": 1, "text": "เมนูได้รับการดูแลทำความสะอาดอย่างสม่ำเสมอมีจำนวนเพียงพออยู่ในสภาพดี", "note": null}, {"num": 4, "possibility": 1, "text": "พนักงานกล่าวต้อนรับลูกค้าตามมาตรฐานภายในระยะเวลาที่กำหนด", "note": null}, {"num": 5, "possibility": 1, "text": "ขั้นตอนการรับรายการอาหารถูกต้องตามมาตรฐานกำหนด", "note": null}, {"num": 6, "possibility": 1, "text": "ลูกค้าได้รับการเสิร์ฟเครื่องดื่มภาย ในเวลา 3 นาที หลังจากสั่งอาหาร", "note": null}, {"num": 7, "possibility": 1, "text": "ลูกค้าได้รับ Spaghetti และ Other Menu ภายในเวลา 12 นาที หลังจากสั่งอาหาร หรือตามเวลามาตรฐานหลังจากสั่งอาหาร ", "note": null}, {"num": 8, "possibility": 1, "text": "ลูกค้าได้รับสเต๊กภายในเวลา 16 นาที, สเต๊ก Mixed Grill Party ภายใน 20 นาที และสเต๊กเตรียมวัตถุดิบต่อที่ ภายใน 25 นาที หรือตามเวลามาตรฐานหลังจากสั่งอาหาร ", "note": null}, {"num": 9, "possibility": 1, "text": "ขั้นตอนการเสิร์ฟอาหารถูกต้องตามมาตรฐานกำหนด", "note": null}, {"num": 10, "possibility": 1, "text": "รายการอาหารที่ลูกค้าสั่งได้รับครบและถูกต้อง หรือไม่มีสินค้า ลูกค้าต้องได้รับแจ้งภายใน 3 นาที", "note": null}, {"num": 11, "possibility": 1, "text": "มีการจัดลำดับการเสิร์ฟอาหารที่ถูกต้องตามมาตรฐาน ", "note": null}, {"num": 12, "possibility": 1, "text": "พนักงานมีการสอบถามความพึงพอใจของลูกค้า ระหว่างทานอาหาร", "note": null}, {"num": 13, "possibility": 1, "text": "ขั้นตอนการชำระเงินถูกต้องตามมาตรฐานกำหนด", "note": null}, {"num": 14, "possibility": 1, "text": "การบริหารจัดการคิวถูกต้องตามมาตรฐานกำหนด", "note": null}, {"num": 15, "possibility": 1, "text": "เก็บโต๊ะภายใน 3 นาที หลังจากลูกค้าลุกออกจากโต๊ะ", "note": null}]}]}, {"letter": "C", "title": "Raw, Prepared & Ready  : วัตถุดิบ (ก่อนเตรียม/ แปรรูป/ เตรียมใช้และเปิดใช้)", "possibility": 36, "subsections": [{"title": "Meat Products : วัตถุดิบประเภทเนื้อสัตว์ ", "items": [{"num": 1, "possibility": 1, "text": "วัตถุดิบมีลักษณะสี เนื้อสัมผัส กลิ่นถูกต้องและได้รับอนุญาตตรงตามมาตรฐาน", "note": null}, {"num": 2, "possibility": 1, "text": "วิธีการเตรียมและวิธีการเก็บรักษาวัตถุดิบถูกต้องตามมาตรฐาน", "note": null}, {"num": 3, "possibility": 1, "text": "อายุการเก็บรักษาวัตถุดิบถูกต้องตามมาตรฐานและ หยิบวัตถุดิบใช้  FEFO, FI-FO", "note": null}, {"num": 4, "possibility": 1, "text": "วัตถุดิบไม่หมดอายุ พร้อมใช้ และมีจำหน่าย", "note": null}]}, {"title": "Fish & Seafood  Products : วัตถุดิบประเภทปลาและอาหารทะเล ", "items": [{"num": 5, "possibility": 1, "text": "วัตถุดิบมีลักษณะสี เนื้อสัมผัส กลิ่นถูกต้องและได้รับอนุญาตตรงตามมาตรฐาน", "note": null}, {"num": 6, "possibility": 1, "text": "วิธีการเตรียมและวิธีการเก็บรักษาวัตถุดิบถูกต้องตามมาตรฐาน", "note": null}, {"num": 7, "possibility": 1, "text": "อายุการเก็บรักษาวัตถุดิบถูกต้องตามมาตรฐานและ หยิบวัตถุดิบใช้  FEFO, FI-FO", "note": null}, {"num": 8, "possibility": 1, "text": "วัตถุดิบไม่หมดอายุ พร้อมใช้ และมีจำหน่าย", "note": null}]}, {"title": "Semi Processed Products : วัตถุดิบกึ่งสำเร็จรูป  ", "items": [{"num": 9, "possibility": 1, "text": "วัตถุดิบมีลักษณะสี เนื้อสัมผัส กลิ่นถูกต้องและได้รับอนุญาตตรงตามมาตรฐาน", "note": null}, {"num": 10, "possibility": 1, "text": "วิธีการเตรียมและวิธีการเก็บรักษาวัตถุดิบถูกต้องตามมาตรฐาน", "note": null}, {"num": 11, "possibility": 1, "text": "อายุการเก็บรักษาวัตถุดิบถูกต้องตามมาตรฐานและ หยิบวัตถุดิบใช้  FEFO, FI-FO", "note": null}, {"num": 12, "possibility": 1, "text": "วัตถุดิบไม่หมดอายุ พร้อมใช้ และมีจำหน่าย", "note": null}]}, {"title": "Frozen  Products : วัตถุดิบแช่แข็ง", "items": [{"num": 13, "possibility": 1, "text": "วัตถุดิบมีลักษณะสี เนื้อสัมผัส กลิ่นถูกต้องและได้รับอนุญาตตรงตามมาตรฐาน", "note": null}, {"num": 14, "possibility": 1, "text": "วิธีการเตรียมและวิธีการเก็บรักษาวัตถุดิบถูกต้องตามมาตรฐาน", "note": null}, {"num": 15, "possibility": 1, "text": "อายุการเก็บรักษาวัตถุดิบถูกต้องตามมาตรฐานและ หยิบวัตถุดิบใช้  FEFO, FI-FO", "note": null}, {"num": 16, "possibility": 1, "text": "วัตถุดิบไม่หมดอายุ พร้อมใช้ และมีจำหน่าย", "note": null}]}, {"title": "Rambo sauce/ Other sause/ Salad dressing/ Seasonings : แรมโบ้ ซอส/ Sauce ต่างๆ/ น้ำ Salad ต่างๆ/ เครื่องปรุงรส", "items": [{"num": 17, "possibility": 1, "text": "วัตถุดิบมีลักษณะสี เนื้อสัมผัส กลิ่นถูกต้องและได้รับอนุญาตตรงตามมาตรฐาน", "note": null}, {"num": 18, "possibility": 1, "text": "วิธีการเตรียมและวิธีการเก็บรักษาวัตถุดิบถูกต้องตามมาตรฐาน", "note": null}, {"num": 19, "possibility": 1, "text": "อายุการเก็บรักษาวัตถุดิบถูกต้องตามมาตรฐานและ หยิบวัตถุดิบใช้  FEFO, FI-FO", "note": null}, {"num": 20, "possibility": 1, "text": "วัตถุดิบไม่หมดอายุ พร้อมใช้ และมีจำหน่าย", "note": null}]}, {"title": "Vegetable/ Fruit : ผักและผลไม้ ", "items": [{"num": 21, "possibility": 1, "text": "วัตถุดิบมีลักษณะสี เนื้อสัมผัส กลิ่นถูกต้องและได้รับอนุญาตตรงตามมาตรฐาน", "note": null}, {"num": 22, "possibility": 1, "text": "วิธีการเตรียมและวิธีการเก็บรักษาวัตถุดิบถูกต้องตามมาตรฐาน", "note": null}, {"num": 23, "possibility": 1, "text": "อายุการเก็บรักษาวัตถุดิบถูกต้องตามมาตรฐานและ หยิบวัตถุดิบใช้  FEFO, FI-FO", "note": null}, {"num": 24, "possibility": 1, "text": "วัตถุดิบไม่หมดอายุ พร้อมใช้ และมีจำหน่าย", "note": null}]}, {"title": "Rice/ Pasta/ Bread/ Soup/ Mash Potato mix  และวัตถุดิบอื่นๆ", "items": [{"num": 25, "possibility": 1, "text": "วัตถุดิบมีลักษณะสี เนื้อสัมผัส กลิ่นถูกต้องและได้รับอนุญาตตรงตามมาตรฐาน", "note": null}, {"num": 26, "possibility": 1, "text": "วิธีการเตรียมและวิธีการเก็บรักษาวัตถุดิบถูกต้องตามมาตรฐาน", "note": null}, {"num": 27, "possibility": 1, "text": "อายุการเก็บรักษาวัตถุดิบถูกต้องตามมาตรฐานและ หยิบวัตถุดิบใช้  FEFO, FI-FO", "note": null}, {"num": 28, "possibility": 1, "text": "วัตถุดิบไม่หมดอายุ พร้อมใช้ และมีจำหน่าย", "note": null}]}, {"title": "Butter/ Oil/ Cheese : เนย/ น้ำมัน/ ชีส", "items": [{"num": 29, "possibility": 1, "text": "วัตถุดิบมีลักษณะสี เนื้อสัมผัส กลิ่นถูกต้องและได้รับอนุญาตตรงตามมาตรฐาน", "note": null}, {"num": 30, "possibility": 1, "text": "วิธีการเตรียมและวิธีการเก็บรักษาวัตถุดิบถูกต้องตามมาตรฐาน", "note": null}, {"num": 31, "possibility": 1, "text": "อายุการเก็บรักษาวัตถุดิบถูกต้องตามมาตรฐานและ หยิบวัตถุดิบใช้  FEFO, FI-FO", "note": null}, {"num": 32, "possibility": 1, "text": "วัตถุดิบไม่หมดอายุ พร้อมใช้ และมีจำหน่าย", "note": null}]}, {"title": "Drinks/ Juice/Dessert/ Milk/ Ice : เครื่องดื่ม/ ขนมหวาน/ นม/ น้ำแข็ง", "items": [{"num": 33, "possibility": 1, "text": "วัตถุดิบมีลักษณะสี เนื้อสัมผัส กลิ่นถูกต้องและได้รับอนุญาตตรงตามมาตรฐาน", "note": null}, {"num": 34, "possibility": 1, "text": "วิธีการเตรียมและวิธีการเก็บรักษาวัตถุดิบถูกต้องตามมาตรฐาน", "note": null}, {"num": 35, "possibility": 1, "text": "อายุการเก็บรักษาวัตถุดิบถูกต้องตามมาตรฐานและ หยิบวัตถุดิบใช้  FEFO, FI-FO", "note": null}, {"num": 36, "possibility": 1, "text": "วัตถุดิบไม่หมดอายุ พร้อมใช้ และมีจำหน่าย", "note": null}]}, {"title": "Other Ingredients : วัตถุดิบอื่นๆ   ", "items": [{"num": 37, "possibility": "N/A", "text": "วัตถุดิบมีลักษณะสี เนื้อสัมผัส กลิ่นถูกต้องและได้รับอนุญาตตรงตามมาตรฐาน", "note": null}, {"num": 38, "possibility": "N/A", "text": "วิธีการเตรียมและวิธีการเก็บรักษาวัตถุดิบถูกต้องตามมาตรฐาน", "note": null}, {"num": 39, "possibility": "N/A", "text": "อายุการเก็บรักษาวัตถุดิบถูกต้องตามมาตรฐานและ หยิบวัตถุดิบใช้  FEFO, FI-FO", "note": null}, {"num": 40, "possibility": "N/A", "text": "วัตถุดิบไม่หมดอายุ พร้อมใช้ และมีจำหน่าย", "note": null}]}]}, {"letter": "D", "title": "Steak and Side dishes : สเต๊กและเครื่องเคียง", "possibility": 19, "subsections": [{"title": "Beef/ Pork/ Chicken and Fish Steak : สเต๊กเนื้อ/ สเต๊กหมู/ สเต๊กไก่ และ สเต๊กปลา", "items": [{"num": 1, "possibility": 1, "text": "วิธีการเตรียมและขั้นตอนการปฏิบัติงานถูกต้อง", "note": null}, {"num": 2, "possibility": 1, "text": "ผลิตภัณฑ์มีลักษณะปรากฎ สี เนื้อสัมผัส และความสุกตรงตามมาตรฐาน", "note": null}, {"num": 3, "possibility": 1, "text": "วิธีการจัดจานและการบรรจุผลิตภัณฑ์ถูกต้องตามมาตรฐาน", "note": null}, {"num": 4, "possibility": 1, "text": "เสิร์ฟผลิตภัณฑ์ทันทีตามมาตรฐานกำหนด", "note": null}, {"num": 5, "possibility": 1, "text": "มาตรฐานการเตรียมและอายุการเก็บรักษา สเต๊กขึ้นลายถูกต้องตามมาตรฐาน", "note": null}]}, {"title": "Mixed Grill Party / Combo Steak : มิกซ์กริลปาร์ตี้/ คอมโบสเต๊ก", "items": [{"num": 6, "possibility": 1, "text": "วิธีการเตรียมและขั้นตอนการปฏิบัติงานถูกต้อง", "note": null}, {"num": 7, "possibility": 1, "text": "ผลิตภัณฑ์มีลักษณะปรากฎ สี เนื้อสัมผัส และความสุกตรงตามมาตรฐาน", "note": null}, {"num": 8, "possibility": 1, "text": "วิธีการจัดจานและการบรรจุผลิตภัณฑ์ถูกต้องตามมาตรฐาน", "note": null}, {"num": 9, "possibility": 1, "text": "เสิร์ฟผลิตภัณฑ์ทันทีตามมาตรฐานกำหนด", "note": null}, {"num": 10, "possibility": 1, "text": "มาตรฐานการเตรียมและอายุการเก็บรักษา สเต๊กขึ้นลายถูกต้องตามมาตรฐาน", "note": null}]}, {"title": "Rice : เมนูข้าว ", "items": [{"num": 11, "possibility": 1, "text": "วิธีการเตรียมและขั้นตอนการปฏิบัติงานถูกต้อง", "note": null}, {"num": 12, "possibility": 1, "text": "ผลิตภัณฑ์มีลักษณะปรากฎ สี เนื้อสัมผัส และความสุกตรงตามมาตรฐาน", "note": null}, {"num": 13, "possibility": 1, "text": "วิธีการจัดจานและการบรรจุผลิตภัณฑ์ถูกต้องตามมาตรฐาน", "note": null}, {"num": 14, "possibility": 1, "text": "เสิร์ฟผลิตภัณฑ์ทันทีตามมาตรฐานกำหนด", "note": null}, {"num": 15, "possibility": 1, "text": "มาตรฐานการเตรียมและอายุการเก็บรักษา สเต๊กขึ้นลายถูกต้องตามมาตรฐาน", "note": null}]}, {"title": "Hot Side Dishes/ Cold Side Dishes and Topping for steak : เครื่องเคียงสเต๊กเสิร์ฟร้อน เสิร์ฟเย็น และการซื้อเชดด้าชีสและไข่ดาวเพิ่ม      (หักคะแนนตามการเสิร์ฟ 3 ประเภท)", "items": [{"num": 16, "possibility": 1, "text": "วิธีการเตรียมและขั้นตอนการปฏิบัติงานถูกต้อง", "note": null}, {"num": 17, "possibility": 1, "text": "ผลิตภัณฑ์มีลักษณะปรากฎ สี เนื้อสัมผัส และรสชาติตรงตามมาตรฐาน", "note": null}, {"num": 18, "possibility": 1, "text": "วิธีการจัดจานและการบรรจุผลิตภัณฑ์ถูกต้องตามมาตรฐาน", "note": null}, {"num": 19, "possibility": 1, "text": "เสิร์ฟผลิตภัณฑ์ทันทีตามมาตรฐานกำหนด", "note": null}]}]}, {"letter": "E", "title": "Spaghetti : สปาเกตตี", "possibility": 4, "subsections": [{"title": "Spaghetti : สปาเก็ตตี", "items": [{"num": 1, "possibility": 1, "text": "วิธีการเตรียมและขั้นตอนการปฏิบัติงานถูกต้อง", "note": null}, {"num": 2, "possibility": 1, "text": "ผลิตภัณฑ์มีลักษณะปรากฎ สี เนื้อสัมผัส และรสชาติตรงตามมาตรฐาน", "note": null}, {"num": 3, "possibility": 1, "text": "วิธีการจัดจานและการบรรจุผลิตภัณฑ์ถูกต้องตามมาตรฐาน", "note": null}, {"num": 4, "possibility": 1, "text": "เสิร์ฟผลิตภัณฑ์ทันทีตามมาตรฐานกำหนด", "note": null}]}]}, {"letter": "F", "title": "Other Menu : เมนูอื่นๆ", "possibility": 20, "subsections": [{"title": "Kids Menu : เมนูเด็ก", "items": [{"num": 1, "possibility": 1, "text": "วิธีการเตรียมและขั้นตอนการปฏิบัติงานถูกต้อง", "note": null}, {"num": 2, "possibility": 1, "text": "ผลิตภัณฑ์มีลักษณะปรากฎ สี เนื้อสัมผัส และรสชาติตรงตามมาตรฐาน", "note": null}, {"num": 3, "possibility": 1, "text": "วิธีการจัดจานและการบรรจุผลิตภัณฑ์ถูกต้องตามมาตรฐาน", "note": null}, {"num": 4, "possibility": 1, "text": "เสิร์ฟผลิตภัณฑ์ทันทีตามมาตรฐานกำหนด", "note": null}]}, {"title": "Salad : สลัด", "items": [{"num": 5, "possibility": 1, "text": "วิธีการเตรียมและขั้นตอนการปฏิบัติงานถูกต้อง", "note": null}, {"num": 6, "possibility": 1, "text": "ผลิตภัณฑ์มีลักษณะปรากฎ สี เนื้อสัมผัส และรสชาติตรงตามมาตรฐาน", "note": null}, {"num": 7, "possibility": 1, "text": "วิธีการจัดจานและการบรรจุผลิตภัณฑ์ถูกต้องตามมาตรฐาน", "note": null}, {"num": 8, "possibility": 1, "text": "เสิร์ฟผลิตภัณฑ์ทันทีตามมาตรฐานกำหนด", "note": null}]}, {"title": "Soup : ซุป", "items": [{"num": 9, "possibility": 1, "text": "วิธีการเตรียมและขั้นตอนการปฏิบัติงานถูกต้อง", "note": null}, {"num": 10, "possibility": 1, "text": "ผลิตภัณฑ์มีลักษณะปรากฎ สี เนื้อสัมผัส และรสชาติตรงตามมาตรฐาน", "note": null}, {"num": 11, "possibility": 1, "text": "วิธีการจัดจานและการบรรจุผลิตภัณฑ์ถูกต้องตามมาตรฐาน", "note": null}, {"num": 12, "possibility": 1, "text": "เสิร์ฟผลิตภัณฑ์ทันทีตามมาตรฐานกำหนด", "note": null}]}, {"title": "Appetizer : เมนูเรียกน้ำย่อย  ", "items": [{"num": 13, "possibility": 1, "text": "วิธีการเตรียมและขั้นตอนการปฏิบัติงานถูกต้อง", "note": null}, {"num": 14, "possibility": 1, "text": "ผลิตภัณฑ์มีลักษณะปรากฎ สี เนื้อสัมผัส และรสชาติตรงตามมาตรฐาน", "note": null}, {"num": 15, "possibility": 1, "text": "วิธีการจัดจานและการบรรจุผลิตภัณฑ์ถูกต้องตามมาตรฐาน", "note": null}, {"num": 16, "possibility": 1, "text": "เสิร์ฟผลิตภัณฑ์ทันทีตามมาตรฐานกำหนด", "note": null}]}, {"title": "Topping for Spaghetti and Other Menu : การซื้อเชดด้าชีสและไข่ดาวเพิ่มในหมวด สปาเก็ตตีและเมนูอื่นๆ", "items": [{"num": 17, "possibility": 1, "text": "วิธีการเตรียมและขั้นตอนการปฏิบัติงานถูกต้อง", "note": null}, {"num": 18, "possibility": 1, "text": "ผลิตภัณฑ์มีลักษณะปรากฎ สี เนื้อสัมผัส และรสชาติตรงตามมาตรฐาน", "note": null}, {"num": 19, "possibility": 1, "text": "วิธีการจัดจานและการบรรจุผลิตภัณฑ์ถูกต้องตามมาตรฐาน", "note": null}, {"num": 20, "possibility": 1, "text": "เสิร์ฟผลิตภัณฑ์ทันทีตามมาตรฐานกำหนด", "note": null}]}, {"title": "Additional Menu : ผลิตภัณฑ์อื่นๆ", "items": [{"num": 21, "possibility": "N/A", "text": "ผลิตภัณฑ์มีลักษณะปรากฎ สี เนื้อสัมผัส และรสชาติตรงตามมาตรฐาน", "note": null}, {"num": 22, "possibility": "N/A", "text": "วิธีการเตรียมและขั้นตอนการปฏิบัติงานถูกต้อง", "note": null}, {"num": 23, "possibility": "N/A", "text": "วิธีการจัดจานและการบรรจุผลิตภัณฑ์ถูกต้องตามมาตรฐาน", "note": null}, {"num": 24, "possibility": "N/A", "text": "เสิร์ฟผลิตภัณฑ์ทันทีตามมาตรฐานกำหนด", "note": null}]}]}, {"letter": "G", "title": "Dessert : ของหวาน", "possibility": 4, "subsections": [{"title": "Dessert : ของหวาน", "items": [{"num": 1, "possibility": 1, "text": "วิธีการเตรียมและขั้นตอนการปฏิบัติงานถูกต้อง", "note": null}, {"num": 2, "possibility": 1, "text": "ผลิตภัณฑ์มีลักษณะปรากฎ สี เนื้อสัมผัส และรสชาติตรงตามมาตรฐาน", "note": null}, {"num": 3, "possibility": 1, "text": "วิธีการจัดจานและการบรรจุผลิตภัณฑ์ถูกต้องตามมาตรฐาน", "note": null}, {"num": 4, "possibility": 1, "text": "เสิร์ฟผลิตภัณฑ์ทันทีตามมาตรฐานกำหนด", "note": null}]}]}, {"letter": "H", "title": "Drinks : เครื่องดื่ม", "possibility": 8, "subsections": [{"title": "Drinking water/ Soda/ Beer : น้ำดื่ม/ น้ำอัดลม/ เบียร์ ", "items": [{"num": 1, "possibility": 1, "text": "วิธีการเตรียมและขั้นตอนการปฏิบัติงานถูกต้อง", "note": null}, {"num": 2, "possibility": 1, "text": "ผลิตภัณฑ์มีลักษณะปรากฎ สี เนื้อสัมผัส และรสชาติตรงตามมาตรฐาน", "note": null}, {"num": 3, "possibility": 1, "text": "วิธีการบรรจุผลิตภัณฑ์ถูกต้องตรงตามมาตรฐาน", "note": null}, {"num": 4, "possibility": 1, "text": "เสิร์ฟผลิตภัณฑ์ทันทีตามมาตรฐานกำหนด", "note": null}]}, {"title": "Beverage  :  เครื่องดื่มผสม (ชามะนาว,กีวี่)", "items": [{"num": 5, "possibility": 1, "text": "วิธีการเตรียมและขั้นตอนการปฏิบัติงานถูกต้อง", "note": null}, {"num": 6, "possibility": 1, "text": "ผลิตภัณฑ์มีลักษณะปรากฎ สี เนื้อสัมผัส และรสชาติตรงตามมาตรฐาน", "note": null}, {"num": 7, "possibility": 1, "text": "วิธีการบรรจุผลิตภัณฑ์ถูกต้องตรงตามมาตรฐาน", "note": null}, {"num": 8, "possibility": 1, "text": "เสิร์ฟผลิตภัณฑ์ทันทีตามมาตรฐานกำหนด", "note": null}]}, {"title": "Additional Menu : ผลิตภัณฑ์อื่นๆ", "items": [{"num": 9, "possibility": "N/A", "text": "วิธีการเตรียมและขั้นตอนการปฏิบัติงานถูกต้อง", "note": null}, {"num": 10, "possibility": "N/A", "text": "ผลิตภัณฑ์มีลักษณะปรากฎ สี เนื้อสัมผัส และรสชาติตรงตามมาตรฐาน", "note": null}, {"num": 11, "possibility": "N/A", "text": "วิธีการบรรจุผลิตภัณฑ์ถูกต้องตรงตามมาตรฐาน", "note": null}, {"num": 12, "possibility": "N/A", "text": "เสิร์ฟผลิตภัณฑ์ทันทีตามมาตรฐานกำหนด", "note": null}]}]}, {"letter": "I", "title": "Equipment : อุปกรณ์ ", "possibility": 24, "subsections": [{"title": "Equipment : อุปกรณ์ และเครื่องมือต่อไปนี้สะอาดสภาพดี", "items": [{"num": 1, "possibility": 1, "text": "กระบะ/ กล่องพลาสติก/ ภาชนะใส่วัตถุดิบและอุปกรณ์อื่นๆ สะอาดอยู่ในสภาพดี", "note": null}, {"num": 2, "possibility": 1, "text": "ถุงใส่วัตถุดิบต่างๆ/ Plastic Wrap และเครื่องซีลจัดเก็บเหมาะสม สะอาดอยู่ในสภาพดี", "note": null}, {"num": 3, "possibility": 1, "text": "อุปกรณ์ มีด/ เขียง/ กรรไกร และสปาตูล่า สะอาดอยู่ในสภาพดี", "note": null}, {"num": 4, "possibility": 1, "text": "Postmix/ EZ Care/ Blender สะอาดอยู่ในสภาพดี", "note": null}, {"num": 5, "possibility": 1, "text": "Dishwasher/ บริเวณเครื่องล้างจานเป็นระเบียบ สะอาดและอยู่ในสภาพดี", "note": null}, {"num": 6, "possibility": 1, "text": "เตาทอดไฟฟ้า/ เตาอบ สะอาดและอยู่ในสภาพดี ", "note": null}, {"num": 7, "possibility": 1, "text": "บ่อดักไขมัน สะอาดและอยู่ในสภาพดี", "note": null}, {"num": 8, "possibility": 1, "text": "Hood/ Filter สะอาดและอยู่ในสภาพดี", "note": null}, {"num": 9, "possibility": 1, "text": "Ice Machine เครื่องทำน้ำแข็ง/ Ice bin ถังน้ำแข็งสะอาดและอยู่ในสภาพดี", "note": null}, {"num": 10, "possibility": 1, "text": "ตู้เย็นสเต๊ก/ พาสต้า/ UnderCounter สะอาดจัดเป็นระเบียบเรียบร้อย อยู่ในสภาพดี", "note": null}, {"num": 11, "possibility": 1, "text": "ตู้แช่เย็น (ตู้ยืน) สะอาดจัดของเป็นระเบียบและอยู่ในสภาพดี ", "note": null}, {"num": 12, "possibility": 1, "text": "ตู้แช่แข็ง/ ตู้เฟรนช์ฟราย สะอาดจัดของเป็นระเบียบและอยู่ในสภาพดี ", "note": null}, {"num": 13, "possibility": 1, "text": "วอร์มเมอร์ซอส/ วอร์มเมอร์ซุป/ Fried Warmer อุปกรณ์สำหรับอุ่นอาหาร สะอาด อยู่ในสภาพดีพร้อมใช้งาน", "note": null}, {"num": 14, "possibility": 1, "text": "หัวเตา/ บริเวณเตาแก็สพาสต้าและสเต๊กสะอาด อยู่ในสภาพดี", "note": null}, {"num": 15, "possibility": 1, "text": "ไมโครเวฟ สะอาดพร้อมใช้งานและอยู่ในสภาพดี ไม่วางสิ่งของด้านบน", "note": null}, {"num": 16, "possibility": 1, "text": "ถังดับเพลิง สะอาดอยู่ในสภาพดีพร้อมใช้งานอยู่ในจุดที่เหมาะสม", "note": null}, {"num": 17, "possibility": 1, "text": "เครื่องดักแมลง/ ตู้ Control/ ปลั๊กไฟ/ สายไฟ", "note": null}, {"num": 18, "possibility": 1, "text": "อุปกรณ์ชั่งน้ำหนักเที่ยงตรงและเครื่องมือการตวงผลิตภัณฑ์มีครบ สะอาดพร้อมใช้งาน อยู่ในสภาพดี", "note": null}, {"num": 19, "possibility": 1, "text": "หม้อลวกอาหาร/ กาต้มน้ำร้อนไฟฟ้า/ เทอร์โมมิเตอร์ สะอาดพร้อมใช้งานและอยู่ในสภาพดี", "note": null}, {"num": 20, "possibility": 1, "text": "เครื่องกรองน้ำ สะอาด สภาพพร้อมใช้งานและอยู่ในสภาพดี", "note": null}, {"num": 21, "possibility": 1, "text": "เตาย่าง/ เตาแบน/ เตา Contact grill สะอาดและอยู่ในสภาพดี ", "note": null}, {"num": 22, "possibility": 1, "text": "เครื่องพิมพ์ใบออเดอร์ เปิดใช้งานครบทุก Station มีกระดาษพร้อมใช้งาน และอยู่ในสภาพดี", "note": null}, {"num": 23, "possibility": 1, "text": "เครื่องคิดเงิน/ เครื่องคอมพิวเตอร์/ เครื่องปริ้นเตอร์ สะอาดพร้อมใช้งาน และอยู่ในสภาพดี", "note": null}, {"num": 24, "possibility": 1, "text": "เครื่องหมักสเต๊กและเครื่องสไลด์ผัก เครื่องจักรอื่นๆ ", "note": null}]}]}, {"letter": "J", "title": "Hygiene and Chemical Cleaning  :  สุขอนามัยและน้ำยาเคมี", "possibility": 8, "subsections": [{"title": "Hygiene : สุขอนามัย", "items": [{"num": 1, "possibility": 1, "text": "พนักงานปฎิบัติตามสุขอนามัยส่วนบุคคล ", "note": null}, {"num": 2, "possibility": 1, "text": "พนักงานครัวหรือพนักงานทุกคนที่เข้าไปเตรียม ปรุง ประกอบอาหารในครัวไม่สวมเครื่องประดับ และต้องสวมหมวกคลุมผม", "note": null}, {"num": 3, "possibility": 1, "text": "การแต่งกายของพนักงานเครื่องแบบถูกต้องและสะอาด ", "note": null}, {"num": 4, "possibility": 1, "text": "พนักงานชาย/ หญิงส่วนบริการต้องจัดทรงผมให้เรียบร้อยตามมาตรฐาน สีผมไม่ฉูดฉาด และแต่งหน้า หากใส่ต่างหูขนาดเส้นผ่าศูนย์กลางต้องไม่เกิน 0.5 ซม", "note": null}, {"num": 5, "possibility": 1, "text": "พนักงานทุกคนไม่รับโทรศัพท์ และปิดเสียงโทรศัพท์มือถือขณะปฎิบัติงาน", "note": null}, {"num": 6, "possibility": 1, "text": "ยารักษาโรค (ไม่หมดอายุ) จัดเก็บในพื้นที่เหมาะสม แยกจากบริเวณเตรียม ปรุงอาหาร", "note": null}]}, {"title": "Chemical Cleaning : น้ำยาเคมี", "items": [{"num": 7, "possibility": 1, "text": "มีสารเคมีและอุปกรณ์ที่เกี่ยวข้องที่อนุญาตให้ใช้ครบ สะอาดอยู่ในสภาพดีพร้อมใช้งาน", "note": null}, {"num": 8, "possibility": 1, "text": "พนักงานมีความรู้เกี่ยวกับสารเคมีที่ใช้ภายในร้าน และใช้สารเคมีได้อย่างถูกต้อง", "note": null}]}]}, {"letter": "K", "title": "Operations Management : การบริหารจัดการ", "possibility": 6, "subsections": [{"title": "Operation and documentation : การดำเนินงานและเอกสารที่เกี่ยวข้อง ", "items": [{"num": 1, "possibility": 1, "text": "เปิดขายอาหารครบถ้วนตามเมนูในทุกช่องทางจำหน่าย/ ผลิตภัณฑ์และวัตถุดิบ จะต้องซื้อจากผู้จัดจำหน่ายที่บริษัทฯกำหนดเท่านั้น", "note": null}, {"num": 2, "possibility": 1, "text": "มีการแยกวัตถุดิบที่ถูกระงับใช้ รอการทำลาย หมดอายุ หรือรอคืน ออกจากวัตถุดิบมาตรฐานอย่างชัดเจน", "note": null}, {"num": 3, "possibility": 1, "text": "มีคู่มือปฎิบัติงานถูกต้องและได้รับการ Update ทั้งหมด", "note": null}, {"num": 4, "possibility": 1, "text": "มีรายงาน เอกสาร Prep list/ Deployment และ อื่นๆ", "note": null}]}, {"title": "Product Control and Food Safety : การควบคุมผลิตภัณฑ์และความปลอดภัยด้านอาหาร  (หักคะแนนรายประเภทวัตถุดิบ)    ", "items": [{"num": 5, "possibility": 1, "text": "ผลิตภัณฑ์ ไม่มีจำหน่ายให้ลูกค้า ช่วงเวลาหนึ่งหรือตลอดทั้งวัน หรือนำวัตถุดิบไม่พร้อมใช้งานมาออกออเดอร์ในหมวด D/ E/ F/ G/ H ", "note": null}, {"num": 6, "possibility": 1, "text": "นำวัตถุดิบที่หมดอายุมาประกอบอาหารออกออเดอร์ให้ลูกค้าในหมวด D/ E/ F/ G/ H  ", "note": null}]}]}, {"letter": "L", "title": "Other Program  :  Pest Conrol  สัตว์พาหะ  (ใส่จำนวน___ตัวที่พบ ส่วนร่องรอย ซาก มูล เป็นความสะอาด)", "possibility": 0, "subsections": [{"title": "", "items": [{"num": 1, "possibility": null, "text": "หนู", "note": null}, {"num": 2, "possibility": null, "text": "แมลงสาบ", "note": null}, {"num": 3, "possibility": null, "text": "แมลงวัน", "note": null}, {"num": 4, "possibility": null, "text": "มด", "note": null}, {"num": 5, "possibility": null, "text": "ปลวก", "note": null}]}]}, {"letter": "M", "title": "Critical Issue  :  เหตุการณ์ที่วิกฤต จากการสังเกตุการณ์ -1 ต่อข้อ      ", "possibility": 0, "subsections": [{"title": "", "items": [{"num": 1, "possibility": null, "text": "พบเห็นร่องรอยสัตว์ รบกวนต่างๆ ", "note": null}, {"num": 2, "possibility": null, "text": "มีการจัดเก็บและวางสินค้า สารเคมีหรืออุปกรณ์ต่างๆ ที่มีโอกาสเสี่ยงหรือทำให้เกิดการปนเปื้อน", "note": null}, {"num": 3, "possibility": null, "text": "พบเห็นการปฎิบัติงานในลักษณะที่เสี่ยงต่อการปนเปื้อน", "note": null}, {"num": 4, "possibility": null, "text": "พบเห็นการปฎิบัติงานที่ไม่ปลอดภัยหรืออันตราย ต่อพนักงานหรือลูกค้า", "note": null}, {"num": 5, "possibility": null, "text": "พบพนักงานเป็นโรคติดต่อกำลังปฎิบัติงานอยู่ภายในร้าน", "note": null}, {"num": 6, "possibility": null, "text": "พบวัตถุดิบที่ไม่ได้มาตรฐานมาแปรรูปใหม่ อาจเป็นอันตรายต่อสุขภาพของลูกค้า", "note": null}, {"num": 7, "possibility": null, "text": "พบอุปกรณ์ที่แตกร้าวชำรุดและอาจก่อให้เกิดการปนเปื้อนในอาหารหรือภาชนะบรรจุ ", "note": null}]}]}];
+const BRANCHES = [{"code": "5001", "name": "แฟชั่น ไอส์แลนด์", "manager": "นพชัย จันทร์รุ่ง", "managerNick": "พี่นพ"}, {"code": "5002", "name": "ซีคอนสแควร์ ศรีนครินทร์", "manager": "นพชัย จันทร์รุ่ง", "managerNick": "พี่นพ"}, {"code": "5003", "name": "เดอะมอลล์ ท่าพระ", "manager": "พัทธดนย์ วัฒนายุทธ", "managerNick": "พี่ปิ๊ก"}, {"code": "5004", "name": "เซ็นทรัล รัตนาธิเบศร์", "manager": "สีวิกา สังข์ด้วง", "managerNick": "พี่เจี๊ยบ"}, {"code": "5005", "name": "เดอะมอลล์ บางกะปิ", "manager": "นิรุต เจริญศิลป์", "managerNick": "พี่รุต"}, {"code": "5007", "name": "เซ็นทรัลพลาซา พระราม 2", "manager": "พัทธดนย์ วัฒนายุทธ", "managerNick": "พี่ปิ๊ก"}, {"code": "5010", "name": "แพชชั่น ระยอง", "manager": "นิรุต เจริญศิลป์", "managerNick": "พี่รุต"}, {"code": "5011", "name": "เดอะมอลล์ งามวงศ์วาน", "manager": "สีวิกา สังข์ด้วง", "managerNick": "พี่เจี๊ยบ"}, {"code": "5012", "name": "โลตัส บางพลี", "manager": "อนุรักษ์ สอนภักดี", "managerNick": "พี่เอ็ม"}, {"code": "5013", "name": "แหลมทอง บางแสน", "manager": "ศุกร์แสง วัฒนาฟุ้งเจริญ", "managerNick": "พี่หยี"}, {"code": "5014", "name": "บิ๊กซี พัทยากลาง", "manager": "ศุกร์แสง วัฒนาฟุ้งเจริญ", "managerNick": "พี่หยี"}, {"code": "5015", "name": "แปซิฟิกพาร์ค ศรีราชา", "manager": "ศุกร์แสง วัฒนาฟุ้งเจริญ", "managerNick": "พี่หยี"}, {"code": "5016", "name": "อิมพีเรียลเวิลด์ สำโรง", "manager": "นพชัย จันทร์รุ่ง", "managerNick": "พี่นพ"}, {"code": "5017", "name": "ซีคอน บางแค", "manager": "พัทธดนย์ วัฒนายุทธ", "managerNick": "พี่ปิ๊ก"}, {"code": "5018", "name": "เซ็นทรัล รามอินทรา", "manager": "อนุรักษ์ สอนภักดี", "managerNick": "พี่เอ็ม"}, {"code": "5019", "name": "เทอร์มินัล 21 อโศก", "manager": "นิรุต เจริญศิลป์", "managerNick": "พี่รุต"}, {"code": "5021", "name": "เซ็นทรัล ปิ่นเกล้า", "manager": "พัทธดนย์ วัฒนายุทธ", "managerNick": "พี่ปิ๊ก"}, {"code": "5023", "name": "บิ๊กซี พัทยาใต้", "manager": "ศุกร์แสง วัฒนาฟุ้งเจริญ", "managerNick": "พี่หยี"}, {"code": "5024", "name": "เดอะมอลล์ บางแค", "manager": "พัทธดนย์ วัฒนายุทธ", "managerNick": "พี่ปิ๊ก"}, {"code": "5026", "name": "IT หลักสี่", "manager": "อนุรักษ์ สอนภักดี", "managerNick": "พี่เอ็ม"}, {"code": "5027", "name": "เซ็นทรัล แจ้งวัฒนะ", "manager": "อนุรักษ์ สอนภักดี", "managerNick": "พี่เอ็ม"}, {"code": "5028", "name": "โลตัส ปทุมธานี", "manager": "สีวิกา สังข์ด้วง", "managerNick": "พี่เจี๊ยบ"}, {"code": "5030", "name": "เพลินนารี่ มอลล์", "manager": "อนุรักษ์ สอนภักดี", "managerNick": "พี่เอ็ม"}, {"code": "5031", "name": "เซ็นทรัล ศาลายา", "manager": "พัทธดนย์ วัฒนายุทธ", "managerNick": "พี่ปิ๊ก"}, {"code": "5033", "name": "โลตัส แจ้งวัฒนะ", "manager": "อนุรักษ์ สอนภักดี", "managerNick": "พี่เอ็ม"}, {"code": "5034", "name": "โลตัส ศาลายา", "manager": "พัทธดนย์ วัฒนายุทธ", "managerNick": "พี่ปิ๊ก"}, {"code": "5035", "name": "เซ็นทรัลพัทยา บีช", "manager": "ศุกร์แสง วัฒนาฟุ้งเจริญ", "managerNick": "พี่หยี"}, {"code": "5036", "name": "โลตัส บางปะกอก", "manager": "พัทธดนย์ วัฒนายุทธ", "managerNick": "พี่ปิ๊ก"}, {"code": "5038", "name": "เซ็นทรัล ระยอง", "manager": "นิรุต เจริญศิลป์", "managerNick": "พี่รุต"}, {"code": "5039", "name": "เซ็นทรัล ชลบุรี", "manager": "ศุกร์แสง วัฒนาฟุ้งเจริญ", "managerNick": "พี่หยี"}, {"code": "5040", "name": "เซ็นทรัล Westgate", "manager": "พัทธดนย์ วัฒนายุทธ", "managerNick": "พี่ปิ๊ก"}, {"code": "5041", "name": "เซ็นทรัล พระราม3", "manager": "นพชัย จันทร์รุ่ง", "managerNick": "พี่นพ"}, {"code": "5042", "name": "ฟิวเจอร์ปาร์ค รังสิต", "manager": "สีวิกา สังข์ด้วง", "managerNick": "พี่เจี๊ยบ"}, {"code": "5044", "name": "โลตัส ระยอง", "manager": "นิรุต เจริญศิลป์", "managerNick": "พี่รุต"}, {"code": "5045", "name": "Promenade", "manager": "นพชัย จันทร์รุ่ง", "managerNick": "พี่นพ"}, {"code": "5046", "name": "โลตัส บางกะปิ", "manager": "นิรุต เจริญศิลป์", "managerNick": "พี่รุต"}, {"code": "5047", "name": "เซ็นทรัล East ville", "manager": "อนุรักษ์ สอนภักดี", "managerNick": "พี่เอ็ม"}, {"code": "5049", "name": "โลตัส ชลบุรี", "manager": "ศุกร์แสง วัฒนาฟุ้งเจริญ", "managerNick": "พี่หยี"}, {"code": "5050", "name": "บิ๊กซี บางพลี", "manager": "อนุรักษ์ สอนภักดี", "managerNick": "พี่เอ็ม"}, {"code": "5052", "name": "โลตัส นวนคร", "manager": "สีวิกา สังข์ด้วง", "managerNick": "พี่เจี๊ยบ"}, {"code": "5054", "name": "บิ๊กซี บางใหญ่", "manager": "พัทธดนย์ วัฒนายุทธ", "managerNick": "พี่ปิ๊ก"}, {"code": "5055", "name": "โลตัส สุขาภิบาล 3", "manager": "นิรุต เจริญศิลป์", "managerNick": "พี่รุต"}, {"code": "5057", "name": "โลตัส รังสิต", "manager": "สีวิกา สังข์ด้วง", "managerNick": "พี่เจี๊ยบ"}, {"code": "5061", "name": "บิ๊กซี สัตหีบ", "manager": "ศุกร์แสง วัฒนาฟุ้งเจริญ", "managerNick": "พี่หยี"}, {"code": "5062", "name": "โรบินสัน ชลบุรี", "manager": "ศุกร์แสง วัฒนาฟุ้งเจริญ", "managerNick": "พี่หยี"}, {"code": "5063", "name": "โลตัส พนัสนิคม", "manager": "ศุกร์แสง วัฒนาฟุ้งเจริญ", "managerNick": "พี่หยี"}, {"code": "5064", "name": "เทอร์มินอล พัทยา", "manager": "ศุกร์แสง วัฒนาฟุ้งเจริญ", "managerNick": "พี่หยี"}, {"code": "5065", "name": "เกตเวย์ เอกมัย", "manager": "นิรุต เจริญศิลป์", "managerNick": "พี่รุต"}, {"code": "5066", "name": "เกตเวย์ บางซื่อ", "manager": "สีวิกา สังข์ด้วง", "managerNick": "พี่เจี๊ยบ"}, {"code": "5068", "name": "คอสโม บาร์ซา", "manager": "อนุรักษ์ สอนภักดี", "managerNick": "พี่เอ็ม"}, {"code": "5069", "name": "โลตัส พัฒนาการ", "manager": "นพชัย จันทร์รุ่ง", "managerNick": "พี่นพ"}, {"code": "5070", "name": "พันทิพย์ งามวงศ์วาน", "manager": "สีวิกา สังข์ด้วง", "managerNick": "พี่เจี๊ยบ"}, {"code": "5071", "name": "โลตัส จรัญสนิทวงศ์", "manager": "พัทธดนย์ วัฒนายุทธ", "managerNick": "พี่ปิ๊ก"}, {"code": "5072", "name": "โลตัส สุขาภิบาล 1", "manager": "นพชัย จันทร์รุ่ง", "managerNick": "พี่นพ"}, {"code": "5073", "name": "โลตัส ลาดพร้าว", "manager": "อนุรักษ์ สอนภักดี", "managerNick": "พี่เอ็ม"}, {"code": "5074", "name": "บิ๊กซี พระราม 4", "manager": "นิรุต เจริญศิลป์", "managerNick": "พี่รุต"}, {"code": "5076", "name": "บิ๊กซี ติวานนท์", "manager": "สีวิกา สังข์ด้วง", "managerNick": "พี่เจี๊ยบ"}, {"code": "5077", "name": "เทอมินัล โคราช", "manager": "ณธวรรท ศิริเมธานณ", "managerNick": "พี่บิ๊ก"}, {"code": "5078", "name": "เดอะมอลล์ โคราช", "manager": "ณธวรรท ศิริเมธานณ", "managerNick": "พี่บิ๊ก"}, {"code": "5079", "name": "เซ็นทรัล โคราช", "manager": "ณธวรรท ศิริเมธานณ", "managerNick": "พี่บิ๊ก"}, {"code": "5080", "name": "โลตัส แกลง ระยอง", "manager": "นิรุต เจริญศิลป์", "managerNick": "พี่รุต"}, {"code": "5081", "name": "โลตัส ติวานนท์", "manager": "อนุรักษ์ สอนภักดี", "managerNick": "พี่เอ็ม"}, {"code": "5082", "name": "มาเก็ตเพลส วงศ์สว่างเซ็นเตอร์", "manager": "สีวิกา สังข์ด้วง", "managerNick": "พี่เจี๊ยบ"}, {"code": "5084", "name": "เทอมินัล 21 พระราม 3", "manager": "นพชัย จันทร์รุ่ง", "managerNick": "พี่นพ"}, {"code": "5085", "name": "ICS ไอคอนสยาม", "manager": "นพชัย จันทร์รุ่ง", "managerNick": "พี่นพ"}, {"code": "5087", "name": "ศูนย์การประชุมแห่งชาติสิริกิติ์", "manager": "นพชัย จันทร์รุ่ง", "managerNick": "พี่นพ"}, {"code": "5088", "name": "สยาม สแควร์", "manager": "นิรุต เจริญศิลป์", "managerNick": "พี่รุต"}, {"code": "5089", "name": "FAB Avenue", "manager": "อนุรักษ์ สอนภักดี", "managerNick": "พี่เอ็ม"}, {"code": "5090", "name": "S Oasis", "manager": "อนุรักษ์ สอนภักดี", "managerNick": "พี่เอ็ม"}, {"code": "5091", "name": "ปตท.เกษรนวมินทร์", "manager": "นพชัย จันทร์รุ่ง", "managerNick": "พี่นพ"}, {"code": "5504", "name": "โลตัสวังหิน", "manager": "อนุรักษ์ สอนภักดี", "managerNick": "พี่เอ็ม"}, {"code": "5505", "name": "โลตัสเลียบคลองสอง", "manager": "นพชัย จันทร์รุ่ง", "managerNick": "พี่นพ"}, {"code": "5508", "name": "รพ.วชิระพยาบาล", "manager": "พัทธดนย์ วัฒนายุทธ", "managerNick": "พี่ปิ๊ก"}, {"code": "5509", "name": "โลตัส นครอินทร์", "manager": "สีวิกา สังข์ด้วง", "managerNick": "พี่เจี๊ยบ"}];
+const USERS = {"490033": {"name": "นิรุต เจริญศิลป์", "nick": "พี่รุต", "role": "bzm"}, "500759": {"name": "พัทธดนย์ วัฒนายุทธ", "nick": "พี่ปิ๊ก", "role": "bzm"}, "510620": {"name": "สีวิกา สังข์ด้วง", "nick": "พี่เจี๊ยบ", "role": "bzm"}, "520532": {"name": "ศุกร์แสง วัฒนาฟุ้งเจริญ", "nick": "พี่หยี", "role": "bzm"}, "570998": {"name": "นพชัย จันทร์รุ่ง", "nick": "พี่นพ", "role": "bzm"}, "601338": {"name": "อนุรักษ์ สอนภักดี", "nick": "พี่เอ็ม", "role": "bzm"}, "BIG001": {"name": "ณธวรรท ศิริเมธานณ", "nick": "พี่บิ๊ก", "role": "bzm"}, "601183": {"name": "Admin", "nick": "Admin", "role": "admin"}, "480808": {"name": "Vice President", "nick": "VP", "role": "vp"}, "681201": {"name": "COO", "nick": "COO", "role": "coo"}};
+// ============ DATA INIT ============
+const SECTION_WEIGHTS = {
+  'A': 9.0, 'B': 11.3, 'C': 30.0, 'D': 15.8, 'E': 2.2,
+  'F': 11.0, 'G': 1.5, 'H': 3.0, 'I': 9.0, 'J': 4.0, 'K': 3.2
+};
+const TOTAL_ITEMS = SECTIONS.reduce((s, sec) => s + sec.subsections.reduce((s2, sub) => s2 + sub.items.length, 0), 0);
+
+function subsectionRequiresPhoto(section, subsection) {
+  if (section.letter === 'M' || section.letter === 'L') return true;
+  if (subsection.title && /หักคะแนน|รายวัตถุดิบ|รายหมวด|รายประเภท/.test(subsection.title)) return true;
+  if (section.letter === 'C' || section.letter === 'D') return true;
+  return false;
+}
+
+// ============ STATE ============
+let currentUser = null; // {code, name, nick, role}
+let currentRole = 'branch'; // login form mode
+let currentAudit = null; // {id, branchInfo, answers, currentSectionIdx, status}
+let allAudits = []; // loaded from storage
+
+// ============ STORAGE (localStorage-based shared store) ============
+// In production, replace these with API calls to a backend
+const STORAGE_KEY = 'qa_audits_v1';
+
+function loadAudits() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      allAudits = JSON.parse(raw);
+    } else {
+      allAudits = [];
+    }
+  } catch (e) {
+    console.error('Load failed', e);
+    allAudits = [];
+  }
+}
+
+function saveAudits() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(allAudits));
+  } catch (e) {
+    console.error('Save failed', e);
+    showModal('บันทึกไม่สำเร็จ', 'ข้อมูลอาจเกินขนาด — ลองลบรูปบางส่วนหรือ Export เก็บไว้');
+  }
+}
+
+function saveCurrentAudit() {
+  if (!currentAudit) return;
+  const idx = allAudits.findIndex(a => a.id === currentAudit.id);
+  // Capture latest state
+  const snapshot = JSON.parse(JSON.stringify(currentAudit));
+  snapshot.updatedAt = new Date().toISOString();
+  if (idx >= 0) {
+    allAudits[idx] = snapshot;
+  } else {
+    allAudits.push(snapshot);
+  }
+  saveAudits();
+}
+
+// ============ AUTH ============
+function selectRole(role) {
+  currentRole = role;
+  document.querySelectorAll('.role-toggle-btn').forEach(b => b.classList.toggle('active', b.dataset.role === role));
+  const toggle = document.querySelector('.role-toggle');
+  toggle.classList.toggle('staff', role === 'staff');
+  const input = document.getElementById('login-id');
+  const label = document.getElementById('pin-label');
+  if (role === 'branch') {
+    input.maxLength = 4;
+    label.textContent = 'กรอกรหัสสาขา 4 หลัก';
+  } else {
+    input.maxLength = 6;
+    label.textContent = 'กรอกรหัส Admin 6 หลัก';
+  }
+  input.value = '';
+  renderPinCells();
+}
+
+function renderPinCells() {
+  const len = currentRole === 'branch' ? 4 : 6;
+  const val = document.getElementById('login-id').value;
+  const row = document.getElementById('pin-row');
+  let html = '';
+  for (let i = 0; i < len; i++) {
+    const filled = i < val.length;
+    const active = i === val.length;
+    html += `<div class="pin-cell ${filled ? 'filled' : ''} ${active ? 'active' : ''}">${filled ? val[i] : ''}</div>`;
+  }
+  row.innerHTML = html;
+}
+
+function onPinInput() {
+  // strip non-digits
+  const input = document.getElementById('login-id');
+  input.value = input.value.replace(/\D/g, '');
+  renderPinCells();
+}
+
+function focusPin() {
+  document.getElementById('login-id').focus();
+}
+
+function onPinKeyDown(e) {
+  if (e.key === 'Enter') doLogin();
+}
+
+function doLogin() {
+  const id = document.getElementById('login-id').value.trim().toUpperCase();
+  if (!id) { showModal('กรุณากรอกรหัส', 'โปรดกรอกรหัสเพื่อเข้าสู่ระบบ'); return; }
+
+  if (currentRole === 'branch') {
+    // Branch login - find matching branch by code
+    const branch = BRANCHES.find(b => b.code === id);
+    if (!branch) {
+      showModal('ไม่พบรหัสสาขา', 'กรุณาตรวจสอบรหัสสาขาอีกครั้ง');
+      return;
+    }
+    currentUser = {
+      code: branch.code,
+      name: branch.name,
+      nick: branch.code,
+      role: 'branch',
+      branchCode: branch.code,
+      branchName: branch.name,
+      bzm: branch.manager
+    };
+  } else {
+    // Staff login
+    const user = USERS[id];
+    if (!user) {
+      showModal('ไม่พบรหัสพนักงาน', 'กรุณาตรวจสอบรหัสพนักงานอีกครั้ง');
+      return;
+    }
+    currentUser = { code: id, ...user };
+  }
+
+  loadAudits();
+  document.getElementById('login-screen').classList.remove('active');
+  document.getElementById('app-screen').classList.add('active');
+
+  // Update header
+  document.getElementById('user-name').textContent = currentUser.nick || currentUser.name;
+  const roleLabel = {
+    'branch': 'สาขา ' + currentUser.code,
+    'bzm': 'BZM',
+    'admin': 'Admin',
+    'coo': 'COO',
+    'vp': 'VP'
+  }[currentUser.role] || currentUser.role;
+  document.getElementById('user-role').textContent = roleLabel;
+
+  renderBottomNav();
+  routeByRole();
+}
+
+function showUserMenu() {
+  if (confirm('ออกจากระบบ?')) logout();
+}
+
+function logout() {
+  currentUser = null;
+  currentAudit = null;
+  document.getElementById('app-screen').classList.remove('active');
+  document.getElementById('login-screen').classList.add('active');
+  document.getElementById('login-id').value = '';
+}
+
+// ============ NAV ============
+function routeByRole() {
+  if (currentUser.role === 'branch') {
+    showDashboard();
+  } else if (currentUser.role === 'bzm') {
+    showDashboard();
+  } else {
+    showDashboard();
+  }
+}
+
+function renderBottomNav() {
+  const nav = document.getElementById('bottom-nav');
+  let html = '';
+  html += '<button class="bottom-nav-item active" id="nav-dash" onclick="showDashboard()"><span class="material-symbols-rounded">dashboard</span><span>หน้าหลัก</span></button>';
+  if (currentUser.role !== 'branch') {
+    html += '<button class="bottom-nav-item" id="nav-new" onclick="newAudit()"><span class="material-symbols-rounded">add_circle</span><span>ตรวจสาขา</span></button>';
+  }
+  html += '<button class="bottom-nav-item" id="nav-logout" onclick="logout()"><span class="material-symbols-rounded">logout</span><span>ออกระบบ</span></button>';
+  nav.innerHTML = html;
+}
+
+function setActiveNav(id) {
+  document.querySelectorAll('.bottom-nav-item').forEach(b => b.classList.remove('active'));
+  const el = document.getElementById(id);
+  if (el) el.classList.add('active');
+}
+
+function hideAllScreens() {
+  ['dashboard-screen','info-screen','checklist-screen','summary-screen'].forEach(id => {
+    document.getElementById(id).style.display = 'none';
+  });
+}
+
+// ============ DASHBOARD ============
+function getVisibleAudits() {
+  // Filter based on role
+  if (currentUser.role === 'branch') {
+    return allAudits.filter(a => a.branchInfo.branchCode === currentUser.branchCode && a.status === 'completed');
+  } else if (currentUser.role === 'bzm') {
+    // BZM sees: audits they performed + audits of branches in their zone
+    return allAudits.filter(a =>
+      a.inspectorCode === currentUser.code ||
+      a.branchInfo.bzm === currentUser.name
+    );
+  } else {
+    return allAudits;
+  }
+}
+
+function showDashboard() {
+  hideAllScreens();
+  document.getElementById('dashboard-screen').style.display = 'block';
+  setActiveNav('nav-dash');
+
+  const audits = getVisibleAudits();
+  const completed = audits.filter(a => a.status === 'completed');
+
+  // Title
+  const title = {
+    'branch': 'ผลการตรวจสาขา ' + currentUser.branchCode,
+    'bzm': 'Dashboard BZM · ' + currentUser.nick,
+    'admin': 'Dashboard ผู้ดูแลระบบ',
+    'coo': 'Dashboard COO',
+    'vp': 'Dashboard VP'
+  }[currentUser.role];
+  document.getElementById('dashboard-title').textContent = title;
+
+  // KPIs
+  const kpiGrid = document.getElementById('kpi-grid');
+  const avgScore = completed.length ? completed.reduce((s,a) => s + (a.scoreData?.grandTotal||0), 0) / completed.length : 0;
+  const totalBranches = currentUser.role === 'bzm'
+    ? BRANCHES.filter(b => b.manager === currentUser.name).length
+    : (currentUser.role === 'branch' ? 1 : BRANCHES.length);
+  const auditedBranches = new Set(completed.map(a => a.branchInfo.branchCode)).size;
+  const excellentCount = completed.filter(a => (a.scoreData?.grandTotal||0) >= 90).length;
+  const breakdownCount = completed.filter(a => (a.scoreData?.grandTotal||0) < 70).length;
+
+  let kpiHTML = '';
+  kpiHTML += `<div class="kpi-card info"><div class="label">จำนวนการตรวจ</div><div class="value">${completed.length}</div><div class="sub">ครั้ง</div></div>`;
+  kpiHTML += `<div class="kpi-card"><div class="label">คะแนนเฉลี่ย</div><div class="value">${avgScore.toFixed(1)}<span style="font-size:14px;">%</span></div><div class="sub">จากทั้งหมด</div></div>`;
+  kpiHTML += `<div class="kpi-card success"><div class="label">ดีมาก ≥90%</div><div class="value">${excellentCount}</div><div class="sub">สาขา</div></div>`;
+  kpiHTML += `<div class="kpi-card danger"><div class="label">เร่งด่วน <70%</div><div class="value">${breakdownCount}</div><div class="sub">สาขา</div></div>`;
+  if (currentUser.role !== 'branch') {
+    kpiHTML += `<div class="kpi-card warning"><div class="label">ครอบคลุม</div><div class="value">${auditedBranches}/${totalBranches}</div><div class="sub">สาขา</div></div>`;
+  }
+  kpiGrid.innerHTML = kpiHTML;
+
+  // Zone breakdown (admin/coo/vp only)
+  if (['admin','coo','vp'].includes(currentUser.role)) {
+    document.getElementById('zone-list').style.display = 'block';
+    renderZoneList(completed);
+  } else {
+    document.getElementById('zone-list').style.display = 'none';
+  }
+
+  // Populate BZM filter
+  const bzmSelect = document.getElementById('filter-bzm');
+  if (currentUser.role === 'admin' || currentUser.role === 'coo' || currentUser.role === 'vp') {
+    const bzms = [...new Set(BRANCHES.map(b => b.manager))];
+    bzmSelect.innerHTML = '<option value="">ทุก BZM</option>' + bzms.map(b => `<option value="${escapeAttr(b)}">${escapeHtml(b)}</option>`).join('');
+    bzmSelect.style.display = '';
+  } else {
+    bzmSelect.style.display = 'none';
+  }
+
+  renderAuditList();
+}
+
+function renderZoneList(completed) {
+  const bzms = [...new Set(BRANCHES.map(b => b.manager))];
+  let html = '';
+  for (const bzm of bzms) {
+    const zoneBranches = BRANCHES.filter(b => b.manager === bzm);
+    const zoneAudits = completed.filter(a => a.branchInfo.bzm === bzm);
+    const audited = new Set(zoneAudits.map(a => a.branchInfo.branchCode)).size;
+    const avg = zoneAudits.length ? zoneAudits.reduce((s,a) => s + (a.scoreData?.grandTotal||0), 0) / zoneAudits.length : 0;
+    const nick = zoneBranches[0] ? '' : '';
+    const branch1 = zoneBranches[0];
+    const nickname = bzm.split(' ').slice(-1)[0]; // last word as fallback
+    html += `<div class="zone-card">
+      <div class="zone-name">${escapeHtml(bzm)}</div>
+      <div class="zone-stats">
+        <div><div class="num">${audited}/${zoneBranches.length}</div><div class="lbl">สาขาตรวจแล้ว</div></div>
+        <div><div class="num">${zoneAudits.length}</div><div class="lbl">ครั้งที่ตรวจ</div></div>
+        <div><div class="num" style="color:${avg>=85?'var(--success)':(avg<70?'var(--danger)':'var(--warning)')};">${avg.toFixed(1)}%</div><div class="lbl">คะแนนเฉลี่ย</div></div>
+      </div>
+    </div>`;
+  }
+  document.getElementById('zone-list-content').innerHTML = html;
+}
+
+function renderAuditList() {
+  const search = document.getElementById('filter-search').value.toLowerCase();
+  const bzmFilter = document.getElementById('filter-bzm').value;
+  const tierFilter = document.getElementById('filter-tier').value;
+
+  let audits = getVisibleAudits().filter(a => a.status === 'completed').slice();
+  audits.sort((a,b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+
+  audits = audits.filter(a => {
+    if (search && !((a.branchInfo.branch||'').toLowerCase().includes(search) || (a.branchInfo.branchCode||'').includes(search))) return false;
+    if (bzmFilter && a.branchInfo.bzm !== bzmFilter) return false;
+    if (tierFilter) {
+      const t = tierFor(a.scoreData?.grandTotal || 0).class;
+      if (t !== tierFilter) return false;
+    }
+    return true;
+  });
+
+  const list = document.getElementById('audit-list');
+  if (audits.length === 0) {
+    list.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text-secondary);"><span class="material-symbols-rounded" style="font-size:42px;">inbox</span><div style="margin-top:8px;">ยังไม่มีผลการตรวจ</div></div>';
+    return;
+  }
+  let html = '';
+  for (const a of audits) {
+    const score = a.scoreData?.grandTotal || 0;
+    const tier = tierFor(score);
+    const inspectorLabel = a.inspectorName || a.inspectorCode || '-';
+    html += `<div class="audit-row ${tier.class}" onclick="viewAudit('${a.id}')">
+      <div>
+        <div class="audit-branch">${escapeHtml(a.branchInfo.branch||'-')}</div>
+        <div class="audit-meta">
+          <span class="material-symbols-rounded" style="font-size:13px;vertical-align:-2px;">person</span> ${escapeHtml(inspectorLabel)}
+          · ${escapeHtml(a.branchInfo.date||'-')} ${escapeHtml(a.branchInfo.time||'')}
+          ${a.branchInfo.bzm ? '· BZM: ' + escapeHtml(a.branchInfo.bzm.split(' ')[0]) : ''}
+        </div>
+      </div>
+      <div class="audit-tier ${tier.class}">${tier.label}</div>
+      <div class="audit-score">${score.toFixed(1)}<span style="font-size:13px;">%</span></div>
+    </div>`;
+  }
+  list.innerHTML = html;
+}
+
+function viewAudit(id) {
+  const audit = allAudits.find(a => a.id === id);
+  if (!audit) return;
+  currentAudit = JSON.parse(JSON.stringify(audit));
+  // Branch users: read-only summary
+  showSummary(true);
+}
+
+// ============ NEW AUDIT (BZM only) ============
+function newAudit() {
+  if (currentUser.role === 'branch') {
+    showModal('ไม่อนุญาต', 'สาขาดูได้เฉพาะผลการตรวจของตนเอง');
+    return;
+  }
+  currentAudit = {
+    id: 'audit_' + Date.now() + '_' + Math.random().toString(36).slice(2,8),
+    inspectorCode: currentUser.code,
+    inspectorName: currentUser.nick || currentUser.name,
+    branchInfo: {},
+    answers: {},
+    currentSectionIdx: 0,
+    status: 'draft',
+    createdAt: new Date().toISOString()
+  };
+  showInfoScreen();
+}
+
+function showInfoScreen() {
+  hideAllScreens();
+  document.getElementById('info-screen').style.display = 'block';
+  setActiveNav('nav-new');
+
+  // Populate branch select
+  const sel = document.getElementById('branch-select');
+  sel.innerHTML = '<option value="">— เลือกสาขา —</option>';
+  // Group by manager
+  const byManager = {};
+  for (const b of BRANCHES) {
+    if (!byManager[b.manager]) byManager[b.manager] = [];
+    byManager[b.manager].push(b);
+  }
+  for (const mgr of Object.keys(byManager).sort()) {
+    const group = document.createElement('optgroup');
+    group.label = 'BZM: ' + mgr;
+    for (const b of byManager[mgr]) {
+      const opt = document.createElement('option');
+      opt.value = b.code;
+      opt.dataset.manager = b.manager;
+      opt.textContent = b.code + ' ' + b.name;
+      group.appendChild(opt);
+    }
+    sel.appendChild(group);
+  }
+  sel.onchange = e => {
+    const opt = e.target.options[e.target.selectedIndex];
+    document.getElementById('bzm-name').value = opt.dataset.manager || '';
+  };
+
+  // Defaults
+  const now = new Date();
+  document.getElementById('audit-date').value = now.toISOString().slice(0,10);
+  document.getElementById('audit-time').value = now.toTimeString().slice(0,5);
+  document.getElementById('inspector-name').value = currentUser.name;
+}
+
+function startAudit() {
+  const code = document.getElementById('branch-select').value;
+  if (!code) { showModal('ข้อมูลไม่ครบ', 'กรุณาเลือกสาขา'); return; }
+  const branch = BRANCHES.find(b => b.code === code);
+  const date = document.getElementById('audit-date').value;
+  const time = document.getElementById('audit-time').value;
+  if (!date || !time) { showModal('ข้อมูลไม่ครบ', 'กรุณาเลือกวันที่และเวลาเข้าตรวจ'); return; }
+
+  currentAudit.branchInfo = {
+    branchCode: branch.code,
+    branch: branch.code + ' ' + branch.name,
+    bzm: branch.manager,
+    date: date,
+    time: time,
+    inspector: currentUser.name,
+    inspectorCode: currentUser.code,
+    manager: document.getElementById('branch-manager').value,
+    numManagers: document.getElementById('num-managers').value || 0,
+    numService: document.getElementById('num-service').value || 0,
+    numKitchen: document.getElementById('num-kitchen').value || 0,
+    note: document.getElementById('extra-note').value
+  };
+  currentAudit.status = 'in_progress';
+  saveCurrentAudit();
+
+  document.getElementById('header-subtitle').textContent = currentAudit.branchInfo.branch + ' · ' + date + ' ' + time;
+  goToChecklist();
+}
+
+// ============ CHECKLIST ============
+function goToChecklist() {
+  if (!currentAudit) { showDashboard(); return; }
+  hideAllScreens();
+  document.getElementById('checklist-screen').style.display = 'block';
+  setActiveNav('nav-new');
+  renderSectionTabs();
+  renderChecklist();
+}
+
+function renderSectionTabs() {
+  const tabs = document.getElementById('section-tabs');
+  tabs.innerHTML = '';
+  SECTIONS.forEach((sec, idx) => {
+    const total = sec.subsections.reduce((s, sub) => s + sub.items.length, 0);
+    const tab = document.createElement('button');
+    tab.className = 'section-tab' + (idx === currentAudit.currentSectionIdx ? ' active' : '');
+    tab.innerHTML = sec.letter + ' <span class="badge">' + total + '</span>';
+    tab.title = sec.title;
+    tab.onclick = () => { currentAudit.currentSectionIdx = idx; renderSectionTabs(); renderChecklist(); window.scrollTo(0,0); };
+    tabs.appendChild(tab);
+  });
+}
+
+function renderChecklist() {
+  const sec = SECTIONS[currentAudit.currentSectionIdx];
+  const container = document.getElementById('checklist-content');
+  let html = '<div class="card">';
+  html += '<div class="card-header"><div style="width:36px;height:36px;border-radius:8px;background:var(--app-gradient);color:white;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:18px;box-shadow:0 2px 6px rgba(30,58,95,0.20);">'+sec.letter+'</div>';
+  html += '<h2 style="font-size:16px;">'+escapeHtml(sec.title)+'</h2></div>';
+
+  sec.subsections.forEach((sub, subIdx) => {
+    const needPhoto = subsectionRequiresPhoto(sec, sub);
+    if (sub.title) {
+      html += '<div class="subsection-title' + (needPhoto ? ' red' : '') + '">';
+      html += escapeHtml(sub.title);
+      if (needPhoto) html += '<span class="req-photo-badge">📷 ต้องแนบรูป</span>';
+      html += '</div>';
+    }
+    sub.items.forEach(item => {
+      const key = sec.letter + '|' + subIdx + '|' + item.num;
+      const ans = currentAudit.answers[key] || { value: null, note: '', photos: [] };
+      const itemClass = ans.value ? ('answered-' + ans.value) : '';
+      const isNAOnly = item.possibility === 'N/A';
+      html += '<div class="item ' + itemClass + '">';
+      html += '<div class="item-text">';
+      html += '<span class="item-num">'+item.num+'</span>';
+      html += '<div class="item-text-content">'+escapeHtml(item.text);
+      if (item.note) html += '<div class="item-note">📝 '+escapeHtml(item.note)+'</div>';
+      html += '</div></div>';
+      html += '<div class="item-actions">';
+      if (!isNAOnly) {
+        html += '<button class="choice-btn ' + (ans.value==='pass'?'active pass':'') + '" onclick="setAnswer(\'' + escapeAttr(key) + '\',\'pass\')"><span class="material-symbols-rounded" style="font-size:18px;">check_circle</span> ผ่าน</button>';
+        html += '<button class="choice-btn ' + (ans.value==='fail'?'active fail':'') + '" onclick="setAnswer(\'' + escapeAttr(key) + '\',\'fail\')"><span class="material-symbols-rounded" style="font-size:18px;">cancel</span> ไม่ผ่าน</button>';
+      }
+      html += '<button class="choice-btn ' + (ans.value==='na'?'active na':'') + '" onclick="setAnswer(\'' + escapeAttr(key) + '\',\'na\')">N/A</button>';
+      html += '</div>';
+
+      if (ans.value === 'fail') {
+        html += '<div class="photo-section">';
+        if (needPhoto) html += '<div class="photo-required-label"><span class="material-symbols-rounded" style="font-size:16px;">photo_camera</span> ต้องแนบรูปหลักฐาน</div>';
+        html += '<label class="photo-upload-btn"><span class="material-symbols-rounded" style="font-size:18px;">add_a_photo</span> แนบรูป<input type="file" accept="image/*" capture="environment" multiple style="display:none;" onchange="addPhotos(\'' + escapeAttr(key) + '\', this.files)"></label>';
+        html += '<div class="photo-preview">';
+        ans.photos.forEach((p, pi) => {
+          html += '<div class="photo-thumb"><img src="'+p+'"><button class="remove-btn" onclick="removePhoto(\'' + escapeAttr(key) + '\','+pi+')"><span class="material-symbols-rounded" style="font-size:14px;">close</span></button></div>';
+        });
+        html += '</div>';
+        html += '<textarea class="note-input" placeholder="รายละเอียดที่พบ / ข้อเสนอแนะ" oninput="setNote(\'' + escapeAttr(key) + '\', this.value)">'+escapeHtml(ans.note||'')+'</textarea>';
+        html += '</div>';
+      }
+      html += '</div>';
+    });
+  });
+
+  html += '</div>';
+  container.innerHTML = html;
+  updateProgress();
+}
+
+function setAnswer(key, value) {
+  if (!currentAudit.answers[key]) currentAudit.answers[key] = { value: null, note: '', photos: [] };
+  if (currentAudit.answers[key].value === value) currentAudit.answers[key].value = null;
+  else currentAudit.answers[key].value = value;
+  saveCurrentAudit();
+  renderChecklist();
+}
+
+function setNote(key, value) {
+  if (!currentAudit.answers[key]) currentAudit.answers[key] = { value: null, note: '', photos: [] };
+  currentAudit.answers[key].note = value;
+  // Debounce-ish: save on blur would be ideal but on every input is OK for small data
+  saveCurrentAudit();
+}
+
+function addPhotos(key, files) {
+  if (!currentAudit.answers[key]) currentAudit.answers[key] = { value: null, note: '', photos: [] };
+  for (const f of files) {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const maxDim = 800;
+        let w = img.width, h = img.height;
+        if (w > h && w > maxDim) { h = h * maxDim / w; w = maxDim; }
+        else if (h > maxDim) { w = w * maxDim / h; h = maxDim; }
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        currentAudit.answers[key].photos.push(canvas.toDataURL('image/jpeg', 0.7));
+        saveCurrentAudit();
+        renderChecklist();
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(f);
+  }
+}
+
+function removePhoto(key, idx) {
+  if (currentAudit.answers[key]) {
+    currentAudit.answers[key].photos.splice(idx, 1);
+    saveCurrentAudit();
+    renderChecklist();
+  }
+}
+
+function prevSection() {
+  if (currentAudit.currentSectionIdx > 0) {
+    currentAudit.currentSectionIdx--;
+    renderSectionTabs();
+    renderChecklist();
+    window.scrollTo(0,0);
+  }
+}
+
+function nextSection() {
+  if (currentAudit.currentSectionIdx < SECTIONS.length - 1) {
+    currentAudit.currentSectionIdx++;
+    renderSectionTabs();
+    renderChecklist();
+    window.scrollTo(0,0);
+  } else {
+    finishAudit();
+  }
+}
+
+function updateProgress() {
+  const answered = Object.values(currentAudit.answers).filter(a => a.value !== null).length;
+  const pct = TOTAL_ITEMS ? (answered/TOTAL_ITEMS*100) : 0;
+  document.getElementById('progress-text').textContent = answered + ' / ' + TOTAL_ITEMS;
+  document.getElementById('progress-pct').innerHTML = '<b>' + pct.toFixed(1) + '%</b>';
+  document.getElementById('progress-fill').style.width = pct + '%';
+}
+
+function finishAudit() {
+  const scoreData = computeScores();
+  currentAudit.scoreData = scoreData;
+  currentAudit.status = 'completed';
+  currentAudit.completedAt = new Date().toISOString();
+  saveCurrentAudit();
+  showSummary(false);
+}
+
+// ============ SCORING ============
+function computeScores() {
+  const sectionScores = [];
+  let totalEarned = 0;
+
+  for (const sec of SECTIONS) {
+    if (!['A','B','C','D','E','F','G','H','I','J','K'].includes(sec.letter)) continue;
+    let total = 0, passed = 0, failed = 0, na = 0;
+    sec.subsections.forEach((sub, subIdx) => {
+      sub.items.forEach(item => {
+        const key = sec.letter + '|' + subIdx + '|' + item.num;
+        const ans = currentAudit.answers[key];
+        const isNAOnly = item.possibility === 'N/A';
+        if (isNAOnly) { na++; return; }
+        if (!ans || ans.value === null) { total++; return; }
+        if (ans.value === 'na') { na++; return; }
+        total++;
+        if (ans.value === 'pass') passed++;
+        else if (ans.value === 'fail') failed++;
+      });
+    });
+    const weight = SECTION_WEIGHTS[sec.letter] || 0;
+    const pct = total > 0 ? (passed / total) : 1;
+    const earned = pct * weight;
+    sectionScores.push({ letter: sec.letter, title: sec.title, total, passed, failed, na, weight, pct: pct * 100, earned });
+    totalEarned += earned;
+  }
+
+  let lDeduct = 0;
+  const secL = SECTIONS.find(s => s.letter === 'L');
+  if (secL) secL.subsections.forEach((sub, subIdx) => sub.items.forEach(item => {
+    const ans = currentAudit.answers['L|' + subIdx + '|' + item.num];
+    if (ans && ans.value === 'fail') lDeduct += 0.5;
+  }));
+
+  let mDeduct = 0;
+  const secM = SECTIONS.find(s => s.letter === 'M');
+  if (secM) secM.subsections.forEach((sub, subIdx) => sub.items.forEach(item => {
+    const ans = currentAudit.answers['M|' + subIdx + '|' + item.num];
+    if (ans && ans.value === 'fail') mDeduct += 1;
+  }));
+
+  const grandTotal = Math.max(0, totalEarned - lDeduct - mDeduct);
+  return { sectionScores, totalEarned, lDeduct, mDeduct, grandTotal };
+}
+
+function tierFor(pct) {
+  if (pct >= 90) return { class:'excellent', label:'⭐ ดีมาก', desc:'≥ 90%' };
+  if (pct >= 85) return { class:'standard', label:'✅ มาตรฐาน', desc:'≥ 85%' };
+  if (pct >= 70) return { class:'improve', label:'⚠️ ปรับปรุง', desc:'≥ 70%' };
+  return { class:'breakdown', label:'🚨 เร่งด่วน', desc:'< 70%' };
+}
+
+function showSummary(readonly) {
+  hideAllScreens();
+  document.getElementById('summary-screen').style.display = 'block';
+
+  const info = currentAudit.branchInfo;
+  document.getElementById('branch-info-summary').innerHTML = `
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;">
+      <div><b>สาขา:</b> ${escapeHtml(info.branch||'-')}</div>
+      <div><b>BZM:</b> ${escapeHtml(info.bzm||'-')}</div>
+      <div><b>วันที่:</b> ${escapeHtml(info.date||'-')}</div>
+      <div><b>เวลา:</b> ${escapeHtml(info.time||'-')}</div>
+      <div><b>ผู้ตรวจ:</b> ${escapeHtml(info.inspector||'-')}</div>
+      <div><b>ผจก.สาขา:</b> ${escapeHtml(info.manager||'-')}</div>
+      <div><b>ทีมผจก.:</b> ${info.numManagers||0} คน</div>
+      <div><b>พนง.บริการ:</b> ${info.numService||0} คน</div>
+      <div><b>พนง.ครัว:</b> ${info.numKitchen||0} คน</div>
+    </div>
+  `;
+
+  const scores = currentAudit.scoreData || computeScores();
+  const tier = tierFor(scores.grandTotal);
+  const scoreEl = document.getElementById('score-display');
+  scoreEl.className = 'score-display ' + tier.class;
+  document.getElementById('total-score').textContent = scores.grandTotal.toFixed(2);
+  document.getElementById('score-tier').textContent = tier.label + ' (' + tier.desc + ')';
+
+  const grid = document.getElementById('section-summary-grid');
+  let html = '';
+  for (const s of scores.sectionScores) {
+    const cls = s.pct >= 90 ? 'good' : (s.pct < 70 ? 'bad' : '');
+    html += '<div class="section-summary-row">';
+    html += '<div class="section-letter-badge">'+s.letter+'</div>';
+    html += '<div class="section-name">'+escapeHtml(s.title.split(':')[0])+'<div style="font-size:11px;color:var(--text-secondary);font-weight:400;">ผ่าน '+s.passed+'/'+s.total+'</div></div>';
+    html += '<div style="font-size:11px;color:var(--text-secondary);">น้ำหนัก '+s.weight+'</div>';
+    html += '<div class="section-pct '+cls+'">'+s.earned.toFixed(2)+'</div>';
+    html += '</div>';
+  }
+  if (scores.lDeduct > 0) {
+    html += '<div class="section-summary-row" style="background:#F0EBE0;"><div class="section-letter-badge" style="background:var(--warning);">L</div><div class="section-name">Pest Control · พบสัตว์พาหะ</div><div></div><div class="section-pct bad">-'+scores.lDeduct.toFixed(2)+'</div></div>';
+  }
+  if (scores.mDeduct > 0) {
+    html += '<div class="section-summary-row" style="background:#F0E0DA;"><div class="section-letter-badge" style="background:var(--danger);">M</div><div class="section-name">Critical Issue · เหตุการณ์วิกฤต</div><div></div><div class="section-pct bad">-'+scores.mDeduct.toFixed(2)+'</div></div>';
+  }
+  grid.innerHTML = html;
+
+  renderNCR();
+}
+
+function renderNCR() {
+  const list = document.getElementById('ncr-list');
+  let html = '';
+  let count = 0;
+  for (const sec of SECTIONS) {
+    sec.subsections.forEach((sub, subIdx) => {
+      sub.items.forEach(item => {
+        const key = sec.letter + '|' + subIdx + '|' + item.num;
+        const ans = currentAudit.answers[key];
+        if (ans && ans.value === 'fail') {
+          count++;
+          html += '<div class="fail-list-item">';
+          html += '<div class="fail-section">หมวด '+sec.letter+' · '+escapeHtml(sub.title||sec.title)+'</div>';
+          html += '<div><b>#'+item.num+':</b> '+escapeHtml(item.text)+'</div>';
+          if (ans.note) html += '<div style="margin-top:4px;font-size:12px;color:var(--text-secondary);">📝 '+escapeHtml(ans.note)+'</div>';
+          if (ans.photos && ans.photos.length) {
+            html += '<div class="fail-photos">';
+            ans.photos.forEach(p => { html += '<img src="'+p+'">'; });
+            html += '</div>';
+          }
+          html += '</div>';
+        }
+      });
+    });
+  }
+  if (count === 0) {
+    html = '<div style="text-align:center;padding:20px;color:var(--success);"><span class="material-symbols-rounded" style="font-size:48px;">verified</span><div style="font-weight:600;margin-top:8px;">ไม่พบรายการที่ไม่ผ่าน เยี่ยมมาก!</div></div>';
+  }
+  list.innerHTML = '<div style="margin-bottom:10px;font-size:13px;color:var(--text-secondary);">รวม '+count+' รายการ</div>' + html;
+}
+
+function backToDashboard() {
+  currentAudit = null;
+  showDashboard();
+}
+
+function exportJSON() {
+  const data = JSON.parse(JSON.stringify(currentAudit));
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'audit-' + (currentAudit.branchInfo.branchCode || 'export') + '-' + (currentAudit.branchInfo.date||'') + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ============ UTILS ============
+function escapeHtml(s) {
+  if (s == null) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
+}
+function escapeAttr(s) { return String(s).replace(/'/g, "\\'").replace(/"/g,'&quot;'); }
+function showModal(title, body) {
+  document.getElementById('modal-title').textContent = title;
+  document.getElementById('modal-body').textContent = body;
+  document.getElementById('modal').classList.add('show');
+}
+function closeModal() { document.getElementById('modal').classList.remove('show'); }
+
+// Init
+selectRole('branch');
+renderPinCells();
+
+</script>
+</body>
+</html>
