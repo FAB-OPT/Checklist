@@ -66,6 +66,11 @@ body {
   border-radius: 20px; font-size: 13px; font-weight: 600;
   backdrop-filter: blur(6px);
   cursor: pointer;
+  max-width: 60%;
+}
+.user-chip #user-name {
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  max-width: 220px;
 }
 .role-badge {
   display: inline-block;
@@ -1290,7 +1295,11 @@ async function doLogin() {
   document.getElementById('app-screen').classList.add('active');
 
   // Update header
-  document.getElementById('user-name').textContent = currentUser.nick || currentUser.name;
+  if (currentUser.role === 'branch') {
+    document.getElementById('user-name').textContent = branchLabel(currentUser.branchCode, currentUser.branchName);
+  } else {
+    document.getElementById('user-name').textContent = currentUser.nick || currentUser.name;
+  }
   const roleLabel = {
     'branch': 'สาขา ' + currentUser.code,
     'bzm': 'BZM',
@@ -1571,7 +1580,8 @@ function startAudit() {
 
   currentAudit.branchInfo = {
     branchCode: branch.code,
-    branch: branch.code + ' ' + branch.name,
+    branch: branchLabel(branch.code, branch.name),
+    branchName: branch.name,
     bzm: branch.manager,
     date: date,
     time: time,
@@ -1902,6 +1912,12 @@ function exportJSON() {
 }
 
 // ============ UTILS ============
+function branchLabel(code, name) {
+  if (!code && !name) return '';
+  if (!name) return String(code);
+  return `${code} Santa Fe ${name}`;
+}
+
 function escapeHtml(s) {
   if (s == null) return '';
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
@@ -1967,7 +1983,7 @@ function renderDailyList() {
   const dateFilter = document.getElementById('daily-filter-date').value;
 
   let list = getVisibleDailyChecklists();
-  if (search) list = list.filter(d => (d.branchCode + ' ' + (d.branchName||'')).toLowerCase().includes(search));
+  if (search) list = list.filter(d => branchLabel(d.branchCode, d.branchName).toLowerCase().includes(search));
   if (shiftFilter) list = list.filter(d => d.shift === shiftFilter);
   if (dateFilter) list = list.filter(d => d.date === dateFilter);
 
@@ -1990,7 +2006,7 @@ function renderDailyList() {
     else badge = `<span style="background:#E0F5E5;color:var(--success);padding:2px 8px;border-radius:8px;font-size:11px;font-weight:600;">✓ ครบ</span>`;
     return `<div class="audit-item" onclick="showDailyDetail('${escapeAttr(d.id)}')" style="border-left:4px solid ${d.shift==='open' ? 'var(--secondary)' : 'var(--text)'};">
       <div style="flex:1;">
-        <div style="font-weight:600;font-size:14px;">${escapeHtml(d.branchCode)} ${escapeHtml(d.branchName||'')}</div>
+        <div style="font-weight:600;font-size:14px;">${escapeHtml(branchLabel(d.branchCode, d.branchName))}</div>
         <div style="font-size:12px;color:var(--text-secondary);margin-top:2px;">
           ${shiftLabel} · ${escapeHtml(d.date)} · ผู้บันทึก: ${escapeHtml(d.manager || '-')}
         </div>
@@ -2044,7 +2060,7 @@ function startDailyShift(shift) {
   document.getElementById('daily-form-screen').style.display = 'block';
   document.getElementById('daily-form-title').textContent = shift === 'open' ? 'เช็ค Open' : 'เช็ค Close';
   document.getElementById('daily-form-icon').textContent = shift === 'open' ? 'wb_sunny' : 'bedtime';
-  document.getElementById('daily-form-branch').textContent = `${currentUser.branchCode} ${currentUser.branchName}`;
+  document.getElementById('daily-form-branch').textContent = branchLabel(currentUser.branchCode, currentUser.branchName);
   document.getElementById('daily-form-meta').textContent = `วันที่ ${today} · BZM: ${currentUser.bzm || '-'}`;
   document.getElementById('daily-manager').value = currentDaily.manager;
   renderDailyForm();
@@ -2124,7 +2140,7 @@ function showDailyDetail(id) {
   document.getElementById('daily-detail-title').textContent = (d.shift === 'open' ? 'Open' : 'Close') + ' · ' + d.date;
   document.getElementById('daily-detail-icon').textContent = d.shift === 'open' ? 'wb_sunny' : 'bedtime';
   document.getElementById('daily-detail-meta').innerHTML = `
-    <div><b>${escapeHtml(d.branchCode)} ${escapeHtml(d.branchName || '')}</b></div>
+    <div><b>${escapeHtml(branchLabel(d.branchCode, d.branchName))}</b></div>
     <div style="color:var(--text-secondary);margin-top:4px;">
       ${d.shift === 'open' ? '☀️ Open shift' : '🌙 Close shift'} · ${escapeHtml(d.date)}<br>
       Manager on duty: <b>${escapeHtml(d.manager || '-')}</b><br>
