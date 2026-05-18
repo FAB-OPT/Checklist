@@ -86,16 +86,13 @@ body {
 .app-header-inner { display:flex; justify-content:space-between; align-items:center; gap:12px; }
 .app-header-inner > div:first-child { flex: 1; min-width: 0; }
 .app-header h1 {
-  font-size: clamp(13px, 3.8vw, 18px);
+  font-size: 16px;
   font-weight: 800;
-  display: flex; align-items: center; gap: 8px;
-  letter-spacing: -0.2px; line-height: 1.2;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  display: flex; align-items: center; gap: 10px;
+  letter-spacing: -0.2px; line-height: 1.3;
 }
-.app-header h1 .material-symbols-rounded { flex-shrink: 0; font-size: 22px; }
-.app-header h1 .app-title-text {
-  overflow: hidden; text-overflow: ellipsis; min-width: 0;
-}
+.app-header h1 .material-symbols-rounded { flex-shrink: 0; font-size: 24px; }
+.app-header h1 .app-title-text { min-width: 0; }
 .app-header .subtitle { font-size: 12px; opacity: 0.92; margin-top: 4px; }
 .user-chip {
   display: flex; align-items: center; gap: 10px;
@@ -620,11 +617,13 @@ body {
 }
 .brand-logo .material-symbols-rounded { font-size: 42px; color: white; }
 .brand-title {
-  font-size: clamp(14px, 4.5vw, 20px);
+  font-size: 18px;
   font-weight: 800; text-align: center;
-  color: var(--text); letter-spacing: -0.3px;
-  line-height: 1.2;
-  white-space: nowrap;
+  color: var(--text); letter-spacing: -0.2px;
+  line-height: 1.3;
+  text-wrap: balance;
+  max-width: 320px;
+  margin: 0 auto;
 }
 .brand-subtitle {
   font-size: 13px; color: var(--text-secondary);
