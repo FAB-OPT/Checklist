@@ -12,45 +12,52 @@
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0&display=swap" rel="stylesheet">
 <style>
 :root {
-  /* Brand */
-  --primary: #D63622;
+  /* Brand — Warm Sunset spectrum */
+  --primary: #D63622;          /* Santa Fe red */
   --primary-dark: #A82518;
-  --primary-light: #FF8534;
-  --primary-50: #FFF4F0;
-  --primary-100: #FCE9DD;
+  --primary-light: #FF8534;    /* orange */
+  --primary-50: #FFF6EE;       /* warm cream */
+  --primary-100: #FFE6D4;      /* peach */
   --accent: #E85A35;
+  --accent-yellow: #FFB833;    /* sunset yellow */
+  --accent-yellow-bg: #FFF3D6;
+  --accent-cool: #8B5A9F;      /* sunset purple */
+  --accent-cool-bg: #EFE5F2;
   --secondary: #FF8534;
   --success: #2D7A4A;
-  --success-bg: #E6F4EA;
-  --warning: #D9963C;
-  --warning-bg: #FFF4DD;
+  --success-bg: #E2F2E7;
+  --warning: #E5A348;
+  --warning-bg: #FFF1D6;
   --danger: #C73223;
-  --danger-bg: #FFEDE9;
-  /* Neutrals */
-  --bg: #F5F2EF;
-  --bg-strong: #EFEAE5;
+  --danger-bg: #FFE3DC;
+  /* Neutrals — cream-tinted */
+  --bg: #FBF5EE;               /* cream background */
+  --bg-strong: #F4ECE2;
   --surface: #FFFFFF;
-  --surface-2: #FAF8F6;
-  --text: #1A1410;
-  --text-secondary: #6B5D55;
-  --text-tertiary: #9C8E85;
-  --border: #ECE2DA;
-  --border-strong: #DBCDC2;
-  /* Shadows — softer, layered */
-  --shadow-sm: 0 1px 2px rgba(20,15,10,0.05);
-  --shadow: 0 2px 6px rgba(20,15,10,0.05), 0 1px 2px rgba(20,15,10,0.04);
-  --shadow-lg: 0 10px 24px rgba(20,15,10,0.08), 0 2px 6px rgba(20,15,10,0.04);
-  --shadow-primary: 0 6px 16px rgba(214,54,34,0.22);
+  --surface-2: #FCF7F1;
+  --text: #1F1612;
+  --text-secondary: #756258;
+  --text-tertiary: #A89588;
+  --border: #F0E5DC;           /* warm taupe */
+  --border-strong: #E0CFC0;
+  /* Shadows — warm tint */
+  --shadow-sm: 0 1px 2px rgba(80,40,20,0.06);
+  --shadow: 0 2px 6px rgba(80,40,20,0.07), 0 1px 2px rgba(80,40,20,0.04);
+  --shadow-lg: 0 12px 28px rgba(80,40,20,0.09), 0 2px 6px rgba(80,40,20,0.04);
+  --shadow-primary: 0 6px 16px rgba(214,54,34,0.25);
+  --shadow-accent: 0 6px 16px rgba(255,184,51,0.30);
   /* Radii */
   --r-sm: 8px;
   --r-md: 12px;
   --r-lg: 16px;
   --r-xl: 20px;
   --r-pill: 999px;
-  /* Gradients */
-  --app-gradient: linear-gradient(90deg, #4A7BD8 0%, #8B5A9F 28%, #E84A1F 58%, #FF8C00 82%, #FFD700 100%);
-  --login-gradient: linear-gradient(135deg, #FF8534 0%, #D63622 100%);
+  /* Gradients — Warm Sunset */
+  --app-gradient: linear-gradient(90deg, #6E7AC8 0%, #8B5A9F 24%, #E84A1F 54%, #FF8C00 80%, #FFCC33 100%);
+  --login-gradient: linear-gradient(135deg, #FFB833 0%, #FF8534 45%, #D63622 100%);
   --primary-gradient: linear-gradient(135deg, #FF8534 0%, #D63622 100%);
+  --warm-gradient: linear-gradient(135deg, #FFCC33 0%, #FF8534 50%, #D63622 100%);
+  --cool-gradient: linear-gradient(135deg, #8B5A9F 0%, #6E7AC8 100%);
 }
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 body {
