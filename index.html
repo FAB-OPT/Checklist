@@ -1301,13 +1301,15 @@ async function doLogin() {
     document.getElementById('user-name').textContent = currentUser.nick || currentUser.name;
   }
   const roleLabel = {
-    'branch': 'สาขา ' + currentUser.code,
+    'branch': '',
     'bzm': 'BZM',
     'admin': 'Admin',
     'coo': 'COO',
     'vp': 'VP'
   }[currentUser.role] || currentUser.role;
-  document.getElementById('user-role').textContent = roleLabel;
+  const roleEl = document.getElementById('user-role');
+  roleEl.textContent = roleLabel;
+  roleEl.style.display = roleLabel ? '' : 'none';
 
   renderBottomNav();
   routeByRole();
