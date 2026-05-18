@@ -810,12 +810,12 @@ body:has(#login-screen.active) {
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
           <button class="btn btn-primary btn-lg" onclick="startDailyShift('open')" style="padding:18px 12px;flex-direction:column;">
             <span class="material-symbols-rounded" style="font-size:32px;">wb_sunny</span>
-            <span>เช็ค Open</span>
+            <span id="daily-open-label">เช็ค Open</span>
             <span id="daily-open-status" style="font-size:11px;opacity:.9;"></span>
           </button>
           <button class="btn btn-secondary btn-lg" onclick="startDailyShift('close')" style="padding:18px 12px;flex-direction:column;background:var(--text);color:#fff;">
             <span class="material-symbols-rounded" style="font-size:32px;">bedtime</span>
-            <span>เช็ค Close</span>
+            <span id="daily-close-label">เช็ค Close</span>
             <span id="daily-close-status" style="font-size:11px;opacity:.9;"></span>
           </button>
         </div>
@@ -1960,6 +1960,8 @@ function showDailyHub() {
     const closeDone = allDailyChecklists.find(d => d.branchCode === currentUser.branchCode && d.date === today && d.shift === 'close');
     document.getElementById('daily-open-status').textContent = openDone ? '✓ บันทึกแล้ว' : 'ยังไม่ได้บันทึก';
     document.getElementById('daily-close-status').textContent = closeDone ? '✓ บันทึกแล้ว' : 'ยังไม่ได้บันทึก';
+    document.getElementById('daily-open-label').textContent = openDone ? 'แก้ไข Open' : 'เช็ค Open';
+    document.getElementById('daily-close-label').textContent = closeDone ? 'แก้ไข Close' : 'เช็ค Close';
   } else {
     branchActions.style.display = 'none';
   }
@@ -2058,7 +2060,9 @@ function startDailyShift(shift) {
 
   hideAllScreens();
   document.getElementById('daily-form-screen').style.display = 'block';
-  document.getElementById('daily-form-title').textContent = shift === 'open' ? 'เช็ค Open' : 'เช็ค Close';
+  const isEdit = !!existing;
+  const shiftLabel = shift === 'open' ? 'Open' : 'Close';
+  document.getElementById('daily-form-title').textContent = (isEdit ? 'แก้ไข ' : 'เช็ค ') + shiftLabel;
   document.getElementById('daily-form-icon').textContent = shift === 'open' ? 'wb_sunny' : 'bedtime';
   document.getElementById('daily-form-branch').textContent = branchLabel(currentUser.branchCode, currentUser.branchName);
   document.getElementById('daily-form-meta').textContent = `วันที่ ${today} · BZM: ${currentUser.bzm || '-'}`;
@@ -2167,8 +2171,9 @@ async function submitDailyShift() {
   else allDailyChecklists.push(currentDaily);
   saveDailyLocal();
 
+  const wasEdit = !!(idx >= 0);
   await saveDailyToBackend(currentDaily);
-  showModal('บันทึกสำเร็จ', `บันทึก ${currentDaily.shift === 'open' ? 'Open' : 'Close'} shift วันที่ ${currentDaily.date} เรียบร้อยแล้ว`);
+  showModal(wasEdit ? 'แก้ไขสำเร็จ' : 'บันทึกสำเร็จ', `${wasEdit ? 'แก้ไข' : 'บันทึก'} ${currentDaily.shift === 'open' ? 'Open' : 'Close'} shift วันที่ ${currentDaily.date} เรียบร้อยแล้ว`);
   currentDaily = null;
   showDailyHub();
 }
