@@ -553,31 +553,38 @@ body {
 .audit-card.improve .audit-card-progress-fill { background: linear-gradient(90deg, #FFCC33, var(--warning)); }
 .audit-card.breakdown .audit-card-progress-fill { background: linear-gradient(90deg, #E04938, var(--danger)); }
 
-/* Page eyebrow (above hero) */
+/* Page eyebrow (single line: title + small inline accent) */
 .page-eyebrow {
-  display: flex; align-items: flex-end; justify-content: space-between; gap: 12px;
   padding: 4px 4px 14px;
 }
-.page-eyebrow-label {
+.page-eyebrow-title {
+  font-size: 24px; font-weight: 900; color: var(--text);
+  letter-spacing: -0.4px; line-height: 1.15;
+  display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;
+}
+.page-eyebrow-inline {
   font-size: 11px; font-weight: 800; letter-spacing: 1.5px;
   text-transform: uppercase; color: var(--primary);
-  margin-bottom: 4px;
-}
-.page-eyebrow-title {
-  font-size: 26px; font-weight: 900; color: var(--text);
-  letter-spacing: -0.5px; line-height: 1.1;
-}
-.page-eyebrow-scope {
-  font-size: 12px; font-weight: 700; color: var(--text-secondary);
-  text-align: right;
 }
 
-/* Score card (Apple-Health style — big number, tier pill, meta) */
+/* Score card — Apple-Health, now combined with donut */
 .score-card {
-  text-align: center;
-  padding: 36px 24px 28px;
+  padding: 32px 24px 24px;
   position: relative;
   border-radius: 24px;
+}
+.score-card-top { text-align: center; }
+.score-card-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 24px -24px 20px;
+}
+.score-card-chart-label {
+  font-size: 13px; font-weight: 800;
+  color: var(--text-secondary);
+  letter-spacing: 0.5px; text-transform: uppercase;
+  text-align: center;
+  margin-bottom: 16px;
 }
 .score-card-pct {
   font-size: 88px; font-weight: 900;
@@ -765,6 +772,32 @@ body {
   .dashboard-hero-title { font-size: 19px; }
   .hero-stat-value { font-size: 20px; }
 }
+
+/* Daily form section tabs */
+.daily-section-tabs {
+  position: sticky;
+  top: 0;
+  background: var(--bg);
+  z-index: 50;
+  padding: 8px 16px;
+  margin-bottom: 14px;
+  box-shadow: 0 4px 8px rgba(20,15,10,0.04);
+}
+.daily-section-chip {
+  position: relative;
+  padding-right: 14px;
+}
+.daily-section-chip .chip-badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  margin-left: 6px;
+  min-width: 22px; height: 22px;
+  padding: 0 6px;
+  border-radius: var(--r-pill);
+  font-size: 11px; font-weight: 800;
+  line-height: 1;
+}
+.chip-badge-fail { background: var(--danger); color: white; }
+.chip-badge-done { background: var(--success); color: white; }
 
 /* Daily form: section cards + big questions + clear pass/fail/N/A buttons */
 .daily-section-card {
@@ -1464,27 +1497,21 @@ body:has(#login-screen.active) {
     <div id="dashboard-screen" style="display:none;">
       <!-- Eyebrow row -->
       <div class="page-eyebrow">
-        <div>
-          <div class="page-eyebrow-label">QUALITY ASSURANCE</div>
-          <h2 class="page-eyebrow-title" id="dashboard-title">สรุปผลตรวจ</h2>
-        </div>
-        <div class="page-eyebrow-scope" id="dashboard-hero-subtitle">—</div>
+        <h2 class="page-eyebrow-title" id="dashboard-title">
+          สรุปผลตรวจ <span class="page-eyebrow-inline">Quality Assurance</span>
+        </h2>
       </div>
 
-      <!-- Big Score card -->
+      <!-- Combined Score + Donut card -->
       <div class="card score-card">
-        <div class="score-card-pct" id="score-card-pct">—</div>
-        <div class="score-card-pct-unit">% คะแนนเฉลี่ย</div>
-        <div class="score-card-badge" id="dashboard-hero-badge">—</div>
-        <div class="score-card-meta" id="score-card-meta"></div>
-      </div>
-
-      <!-- Donut + legend -->
-      <div class="card">
-        <div class="card-header">
-          <span class="material-symbols-rounded" style="color:var(--primary);">donut_large</span>
-          <h2>การกระจายเกรด</h2>
+        <div class="score-card-top">
+          <div class="score-card-pct" id="score-card-pct">—</div>
+          <div class="score-card-pct-unit">% คะแนนเฉลี่ย</div>
+          <div class="score-card-badge" id="dashboard-hero-badge">—</div>
+          <div class="score-card-meta" id="score-card-meta"></div>
         </div>
+        <div class="score-card-divider"></div>
+        <div class="score-card-chart-label">การกระจายเกรด</div>
         <div class="donut-wrap" id="tier-chart"></div>
       </div>
 
@@ -1736,6 +1763,8 @@ body:has(#login-screen.active) {
           <input type="text" class="form-control" id="daily-manager" placeholder="ชื่อผู้รับผิดชอบ shift">
         </div>
       </div>
+
+      <div class="chip-row daily-section-tabs" id="daily-section-tabs"></div>
 
       <div id="daily-sections-container"></div>
 
@@ -2293,16 +2322,6 @@ function showDashboard() {
   const auditedBranches = new Set(completed.map(a => a.branchInfo.branchCode)).size;
   const excellentCount = completed.filter(a => (a.scoreData?.grandTotal||0) >= 90).length;
   const breakdownCount = completed.filter(a => (a.scoreData?.grandTotal||0) < 70).length;
-
-  // Scope eyebrow
-  const scopeMap = {
-    'branch': 'สาขา ' + currentUser.branchCode,
-    'bzm': 'ดูแลโดย ' + currentUser.nick,
-    'admin': 'ทุกสาขา · Admin',
-    'coo': 'ทุกสาขา · COO',
-    'vp': 'ทุกสาขา · VP'
-  };
-  document.getElementById('dashboard-hero-subtitle').textContent = scopeMap[currentUser.role] || '';
 
   // Big Score card
   const scoreCard = document.querySelector('.score-card');
@@ -3044,7 +3063,37 @@ function startDailyShift(shift) {
   renderDailyForm();
 }
 
+function renderDailySectionTabs() {
+  const tabs = document.getElementById('daily-section-tabs');
+  if (!tabs) return;
+  const template = currentDaily.shift === 'open' ? DAILY_OPEN : DAILY_CLOSE;
+  let globalIdx = 0;
+  const html = template.map((sec, sIdx) => {
+    const start = globalIdx;
+    const sectionItems = currentDaily.items.slice(start, start + sec.items.length);
+    globalIdx += sec.items.length;
+    const failCount = sectionItems.filter(i => i.status === 'fail').length;
+    const doneCount = sectionItems.filter(i => i.status).length;
+    const allDone = doneCount === sec.items.length;
+    let badgeHtml = '';
+    if (failCount) badgeHtml = `<span class="chip-badge chip-badge-fail">${failCount}</span>`;
+    else if (allDone) badgeHtml = `<span class="chip-badge chip-badge-done">✓</span>`;
+    return `<button type="button" class="chip daily-section-chip" onclick="scrollToDailySection(${sIdx})">
+      ${escapeHtml(sec.name)}${badgeHtml}
+    </button>`;
+  }).join('');
+  tabs.innerHTML = html;
+}
+
+function scrollToDailySection(idx) {
+  const target = document.getElementById('daily-section-' + idx);
+  if (!target) return;
+  const top = target.getBoundingClientRect().top + window.scrollY - 12;
+  window.scrollTo({ top, behavior: 'smooth' });
+}
+
 function renderDailyForm() {
+  renderDailySectionTabs();
   const container = document.getElementById('daily-sections-container');
   const template = currentDaily.shift === 'open' ? DAILY_OPEN : DAILY_CLOSE;
   let html = '';
@@ -3056,7 +3105,7 @@ function renderDailyForm() {
     const failCount = sectionItems.filter(i => i.status === 'fail').length;
     const naCount = sectionItems.filter(i => i.status === 'na').length;
     const doneCount = passCount + failCount + naCount;
-    html += `<div class="daily-section-card">
+    html += `<div class="daily-section-card" id="daily-section-${sIdx}" data-section-idx="${sIdx}">
       <div class="daily-section-header">
         <div class="daily-section-name">${escapeHtml(sec.name)}</div>
         <div class="daily-section-progress">${doneCount}/${sec.items.length}${failCount ? ` · <span style="color:var(--danger)">✗${failCount}</span>` : ''}</div>
