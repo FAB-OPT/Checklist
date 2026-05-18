@@ -688,6 +688,13 @@ body:has(#login-screen.active) {
 
 /* ============ END LOGIN STYLES ============ */
 
+/* ============ SIDEBAR BRAND & LOGOUT ============ */
+.nav-brand { display: none; }
+.nav-items { display: contents; }
+.nav-logout-btn { color: var(--danger); }
+.nav-logout-btn .material-symbols-rounded { color: var(--danger); }
+.nav-logout-btn.active::after { background: var(--danger); }
+
 /* ============ DESKTOP LAYOUT (≥1024px) ============ */
 @media (min-width: 1024px) {
   body {
@@ -702,7 +709,7 @@ body:has(#login-screen.active) {
     flex-direction: column;
     justify-content: flex-start;
     align-items: stretch;
-    padding: 88px 14px 24px;
+    padding: 20px 14px 24px;
     gap: 4px;
     border-top: none;
     border-right: 1px solid var(--border);
@@ -710,6 +717,51 @@ body:has(#login-screen.active) {
     backdrop-filter: none;
     background: var(--surface);
   }
+
+  /* Brand block at top of sidebar */
+  .nav-brand {
+    display: flex; align-items: center; gap: 12px;
+    padding: 6px 10px 18px;
+    margin-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+  }
+  .nav-brand-icon {
+    width: 44px; height: 44px;
+    border-radius: var(--r-md);
+    background: var(--primary-gradient);
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: var(--shadow-primary);
+    flex-shrink: 0;
+  }
+  .nav-brand-icon .material-symbols-rounded {
+    color: white; font-size: 24px;
+  }
+  .nav-brand-name {
+    font-weight: 800; font-size: 16px;
+    color: var(--text); letter-spacing: -0.2px;
+    line-height: 1.1;
+  }
+  .nav-brand-sub {
+    font-size: 11px; font-weight: 700;
+    color: var(--text-secondary);
+    margin-top: 2px; letter-spacing: 0.3px;
+    text-transform: uppercase;
+  }
+
+  /* Logout pinned to bottom */
+  .nav-logout-btn {
+    margin-top: auto;
+    background: var(--danger-bg);
+    color: var(--danger);
+    font-weight: 700;
+  }
+  .nav-logout-btn .material-symbols-rounded { color: var(--danger); }
+  .nav-logout-btn:hover {
+    background: var(--danger);
+    color: white;
+  }
+  .nav-logout-btn:hover .material-symbols-rounded { color: white; }
+  .nav-logout-btn.active::after { display: none; }
   .bottom-nav-item {
     flex: 0 0 auto;
     flex-direction: row;
@@ -1617,12 +1669,15 @@ function routeByRole() {
 function renderBottomNav() {
   const nav = document.getElementById('bottom-nav');
   let html = '';
+  html += '<div class="nav-brand"><div class="nav-brand-icon"><span class="material-symbols-rounded">restaurant</span></div><div class="nav-brand-text"><div class="nav-brand-name">Santa Fe</div><div class="nav-brand-sub">QA Audit</div></div></div>';
+  html += '<div class="nav-items">';
   html += '<button class="bottom-nav-item active" id="nav-dash" onclick="showDashboard()"><span class="material-symbols-rounded">dashboard</span><span>หน้าหลัก</span></button>';
   if (currentUser.role !== 'branch') {
     html += '<button class="bottom-nav-item" id="nav-new" onclick="newAudit()"><span class="material-symbols-rounded">add_circle</span><span>ตรวจสาขา</span></button>';
   }
   html += '<button class="bottom-nav-item" id="nav-daily" onclick="showDailyHub()"><span class="material-symbols-rounded">checklist</span><span>Open-Close</span></button>';
-  html += '<button class="bottom-nav-item" id="nav-logout" onclick="logout()"><span class="material-symbols-rounded">logout</span><span>ออกระบบ</span></button>';
+  html += '</div>';
+  html += '<button class="bottom-nav-item nav-logout-btn" id="nav-logout" onclick="logout()"><span class="material-symbols-rounded">logout</span><span>ออกระบบ</span></button>';
   nav.innerHTML = html;
 }
 
