@@ -617,18 +617,28 @@ body {
   color: var(--text-secondary);
   margin-top: 8px; letter-spacing: 0.1px;
 }
+.stat-tile-badge {
+  display: inline-flex; margin-top: 12px;
+  padding: 4px 12px;
+  border-radius: var(--r-pill);
+  font-size: 11px; font-weight: 800;
+  background: var(--bg-strong); color: var(--text-secondary);
+  letter-spacing: 0.2px;
+}
 /* Average tile recolors to tier color when set */
 .score-card.tier-excellent .stat-tile-score { border-color: var(--success); }
 .score-card.tier-excellent .stat-tile-score .stat-tile-value { color: var(--success); }
+.score-card.tier-excellent .stat-tile-score .stat-tile-badge { background: var(--success-bg); color: #1E6B36; }
 .score-card.tier-standard  .stat-tile-score { border-color: var(--primary); }
 .score-card.tier-standard  .stat-tile-score .stat-tile-value { color: var(--primary); }
+.score-card.tier-standard  .stat-tile-score .stat-tile-badge { background: var(--primary-50); color: var(--primary-dark); }
 .score-card.tier-improve   .stat-tile-score { border-color: var(--warning); }
 .score-card.tier-improve   .stat-tile-score .stat-tile-value { color: var(--warning); }
+.score-card.tier-improve   .stat-tile-score .stat-tile-badge { background: var(--warning-bg); color: #7A5818; }
 .score-card.tier-breakdown .stat-tile-score { border-color: var(--danger); }
 .score-card.tier-breakdown .stat-tile-score .stat-tile-value { color: var(--danger); }
+.score-card.tier-breakdown .stat-tile-score .stat-tile-badge { background: var(--danger-bg); color: #7A1F10; }
 
-.score-card-badge-row { text-align: center; margin-bottom: 12px; }
-.score-card-meta { margin-top: 6px; }
 @media (min-width: 1024px) {
   .stat-tile { padding: 22px 20px; }
   .stat-tile-value { font-size: 44px; }
@@ -670,54 +680,62 @@ body {
 }
 .score-card-meta .dot { opacity: 0.4; }
 
-/* Tier distribution — stacked horizontal bar + legend */
-.donut-wrap {
-  display: flex; flex-direction: column;
-  gap: 16px;
-}
-.seg-bar {
-  display: flex;
-  width: 100%;
-  height: 16px;
-  border-radius: var(--r-pill);
-  overflow: hidden;
-  background: var(--bg-strong);
-  box-shadow: inset 0 0 0 1px rgba(80,40,20,0.04);
-}
-.seg-bar-piece {
-  height: 100%;
-  transition: flex 0.5s cubic-bezier(.4,0,.2,1);
-}
-.seg-legend {
+/* Tier distribution — 4 stat cards in a row */
+.tier-stat-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: 8px 16px;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
 }
-.seg-legend-row {
-  display: flex; align-items: center; gap: 10px;
-  padding: 6px 0;
-  font-size: 13px;
+@media (min-width: 600px) {
+  .tier-stat-grid { grid-template-columns: repeat(4, 1fr); }
 }
-.seg-legend-row.is-empty { opacity: 0.4; }
-.seg-legend-dot {
-  width: 12px; height: 12px;
-  border-radius: 50%;
-  box-shadow: 0 0 0 3px rgba(80,40,20,0.04);
-  flex-shrink: 0;
+.tier-stat {
+  background: var(--surface-2);
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-md);
+  padding: 14px 12px 12px;
+  position: relative; overflow: hidden;
+  transition: transform 0.18s, box-shadow 0.18s;
+  opacity: 0.55;
 }
-.seg-legend-label { font-weight: 700; color: var(--text); flex: 1; }
-.seg-legend-count {
-  font-variant-numeric: tabular-nums;
-  display: inline-flex; align-items: baseline; gap: 5px;
+.tier-stat.has-data { opacity: 1; }
+.tier-stat::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0;
+  height: 4px;
 }
-.seg-legend-count b {
-  font-size: 16px; font-weight: 800;
-  color: var(--text); letter-spacing: -0.2px;
+.tier-stat.tier-excellent::before { background: linear-gradient(90deg, #38A063, #4FB87A); }
+.tier-stat.tier-standard::before  { background: linear-gradient(90deg, var(--primary), var(--primary-light)); }
+.tier-stat.tier-improve::before   { background: linear-gradient(90deg, var(--warning), #FFCC33); }
+.tier-stat.tier-breakdown::before { background: linear-gradient(90deg, var(--danger), #E04938); }
+.tier-stat.has-data.tier-excellent { border-color: rgba(56,160,99,0.4); }
+.tier-stat.has-data.tier-standard  { border-color: rgba(214,54,34,0.4); }
+.tier-stat.has-data.tier-improve   { border-color: rgba(229,163,72,0.4); }
+.tier-stat.has-data.tier-breakdown { border-color: rgba(199,50,35,0.4); }
+.tier-stat-top {
+  display: flex; align-items: center; gap: 6px;
+  margin-bottom: 4px;
 }
-.seg-legend-count em {
+.tier-stat-emoji { font-size: 14px; }
+.tier-stat-name {
+  font-size: 12px; font-weight: 800;
+  color: var(--text-secondary); letter-spacing: 0.2px;
+}
+.tier-stat-count {
+  font-size: 32px; font-weight: 900;
+  line-height: 1; letter-spacing: -1px;
+  color: var(--text); font-variant-numeric: tabular-nums;
+  margin: 6px 0 6px;
+}
+.tier-stat.has-data.tier-excellent .tier-stat-count { color: var(--success); }
+.tier-stat.has-data.tier-standard  .tier-stat-count { color: var(--primary); }
+.tier-stat.has-data.tier-improve   .tier-stat-count { color: var(--warning); }
+.tier-stat.has-data.tier-breakdown .tier-stat-count { color: var(--danger); }
+.tier-stat-bottom {
+  display: flex; justify-content: space-between; align-items: baseline;
   font-size: 11px; font-weight: 700;
-  color: var(--text-secondary); font-style: normal;
 }
+.tier-stat-sub { color: var(--text-tertiary); }
+.tier-stat-pct { color: var(--text); font-variant-numeric: tabular-nums; }
 
 /* Dashboard hero — gradient card with title, scope, big stats (legacy, kept for fallback) */
 .dashboard-hero {
@@ -1534,7 +1552,7 @@ body:has(#login-screen.active) {
         </h2>
       </div>
 
-      <!-- Combined Score + Distribution card -->
+      <!-- Score + Tier Stats card -->
       <div class="card score-card">
         <div class="stat-tile-grid">
           <div class="stat-tile">
@@ -1544,15 +1562,11 @@ body:has(#login-screen.active) {
           <div class="stat-tile stat-tile-score" id="stat-avg-tile">
             <div class="stat-tile-value" id="stat-avg">—<span class="pct">%</span></div>
             <div class="stat-tile-label">คะแนนเฉลี่ย</div>
+            <div class="stat-tile-badge" id="dashboard-hero-badge">—</div>
           </div>
         </div>
-        <div class="score-card-badge-row">
-          <div class="score-card-badge" id="dashboard-hero-badge">—</div>
-        </div>
-        <div class="score-card-meta" id="score-card-meta"></div>
-        <div class="score-card-divider"></div>
-        <div class="score-card-chart-label">การกระจายเกรด</div>
-        <div class="donut-wrap" id="tier-chart"></div>
+
+        <div class="tier-stat-grid" id="tier-chart"></div>
       </div>
 
       <div id="zone-list" style="display:none;" class="card">
@@ -2376,14 +2390,7 @@ function showDashboard() {
     document.getElementById('dashboard-hero-badge').textContent = 'ยังไม่มีข้อมูล';
     scoreCard.className = 'card score-card tier-empty';
   }
-  const metaParts = [
-    `ดีมาก ${excellentCount}`,
-    `เร่งด่วน ${breakdownCount}`,
-  ];
-  if (currentUser.role !== 'branch') {
-    metaParts.push(`ครอบคลุม ${auditedBranches}/${totalBranches}`);
-  }
-  document.getElementById('score-card-meta').innerHTML = metaParts.map(t => `<span>${escapeHtml(t)}</span>`).join('<span class="dot">·</span>');
+  // meta line removed — tier breakdown lives in the 4 tier-stat cards below
 
   renderTierChart(completed);
 
@@ -2484,41 +2491,28 @@ function renderTierChart(completed) {
     counts[t] = (counts[t] || 0) + 1;
   });
   const total = completed.length;
-  const segments = [
-    { tier: 'excellent', label: '⭐ ดีมาก',   count: counts.excellent, color: '#38A063' },
-    { tier: 'standard',  label: '✅ มาตรฐาน', count: counts.standard,  color: '#D63622' },
-    { tier: 'improve',   label: '⚠️ ปรับปรุง', count: counts.improve,   color: '#E5A348' },
-    { tier: 'breakdown', label: '🚨 เร่งด่วน', count: counts.breakdown, color: '#C73223' },
+  const tiers = [
+    { tier: 'excellent', emoji: '⭐', label: 'ดีมาก',   sub: '≥ 90%',  count: counts.excellent },
+    { tier: 'standard',  emoji: '✅', label: 'มาตรฐาน', sub: '≥ 85%',  count: counts.standard  },
+    { tier: 'improve',   emoji: '⚠️', label: 'ปรับปรุง', sub: '≥ 70%',  count: counts.improve   },
+    { tier: 'breakdown', emoji: '🚨', label: 'เร่งด่วน', sub: '< 70%',  count: counts.breakdown },
   ];
   const container = document.getElementById('tier-chart');
   if (!container) return;
-  if (!total) {
-    container.innerHTML = '<div class="qa-chart-empty">ยังไม่มีข้อมูลการตรวจ</div>';
-    return;
-  }
-
-  // Stacked horizontal bar — one row with 4 segments sized by percentage
-  const barHTML = segments
-    .filter(s => s.count > 0)
-    .map(s => {
-      const pct = (s.count / total) * 100;
-      return `<div class="seg-bar-piece" style="background:${s.color};flex:${pct};" title="${s.label}: ${s.count}"></div>`;
-    }).join('');
-
-  // Legend rows — 2-column grid with count + pct
-  const legendHTML = segments.map(s => {
-    const pct = total ? (s.count / total * 100) : 0;
-    return `<div class="seg-legend-row ${s.count ? '' : 'is-empty'}">
-      <span class="seg-legend-dot" style="background:${s.color}"></span>
-      <span class="seg-legend-label">${s.label}</span>
-      <span class="seg-legend-count"><b>${s.count}</b> <em>${pct.toFixed(0)}%</em></span>
+  container.innerHTML = tiers.map(t => {
+    const pct = total ? (t.count / total * 100) : 0;
+    return `<div class="tier-stat tier-${t.tier} ${t.count ? 'has-data' : ''}">
+      <div class="tier-stat-top">
+        <span class="tier-stat-emoji">${t.emoji}</span>
+        <span class="tier-stat-name">${t.label}</span>
+      </div>
+      <div class="tier-stat-count">${t.count}</div>
+      <div class="tier-stat-bottom">
+        <span class="tier-stat-sub">${t.sub}</span>
+        <span class="tier-stat-pct">${pct.toFixed(0)}%</span>
+      </div>
     </div>`;
   }).join('');
-
-  container.innerHTML = `
-    <div class="seg-bar">${barHTML}</div>
-    <div class="seg-legend">${legendHTML}</div>
-  `;
 }
 
 function setTierFilter(value, btn) {
