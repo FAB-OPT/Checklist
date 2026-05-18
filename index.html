@@ -701,7 +701,6 @@ body:has(#login-screen.active) {
 
 /* ============ SIDEBAR BRAND & LOGOUT ============ */
 .nav-brand { display: none; }
-.nav-user-pill { display: none; }
 .nav-items { display: contents; }
 .nav-logout-btn { color: var(--danger); }
 .nav-logout-btn .material-symbols-rounded { color: var(--danger); }
@@ -732,11 +731,37 @@ body:has(#login-screen.active) {
 
   /* Brand block at top of sidebar */
   .nav-brand {
-    display: flex; align-items: center; gap: 12px;
-    padding: 4px 4px 16px;
+    display: flex; flex-direction: column;
+    padding: 0 4px 16px;
+    margin-bottom: 12px;
+  }
+  /* Top: app title + subtitle */
+  .nav-brand-app {
+    padding: 4px 4px 14px;
+  }
+  .nav-app-name {
+    font-weight: 800; font-size: 14px;
+    color: var(--text); letter-spacing: -0.2px;
+    line-height: 1.25;
+  }
+  .nav-app-sub {
+    font-size: 11px; font-weight: 600;
+    color: var(--text-secondary);
+    margin-top: 5px; line-height: 1.3;
+  }
+  /* Divider between app title and branch identity */
+  .nav-brand-divider {
+    height: 1px;
+    background: var(--border);
+    margin: 0 -4px;
+  }
+  /* Bottom: logo + branch name */
+  .nav-brand-branch {
+    display: flex; align-items: center; gap: 10px;
+    padding: 14px 4px 0;
   }
   .nav-brand-icon {
-    width: 40px; height: 40px;
+    width: 36px; height: 36px;
     border-radius: var(--r-sm);
     box-shadow: var(--shadow-primary);
     flex-shrink: 0;
@@ -748,32 +773,12 @@ body:has(#login-screen.active) {
     width: 100%; height: 100%; display: block;
     object-fit: cover;
   }
-  .nav-brand-text { min-width: 0; flex: 1; }
-  .nav-brand-name {
-    font-weight: 800; font-size: 14px;
-    color: var(--text); letter-spacing: -0.2px;
-    line-height: 1.2;
-  }
-  .nav-brand-sub {
-    font-size: 11px; font-weight: 600;
-    color: var(--text-secondary);
-    margin-top: 4px; line-height: 1.3;
-  }
-
-  /* Orange user pill below brand */
-  .nav-user-pill {
-    display: block;
-    margin: 0 0 16px;
-    padding: 14px 16px;
-    background: var(--primary-gradient);
-    color: white;
-    font-weight: 800;
-    font-size: 14px;
-    border-radius: var(--r-md);
-    box-shadow: var(--shadow-primary);
-    text-align: center;
-    letter-spacing: -0.1px;
-    line-height: 1.3;
+  .nav-branch-info { min-width: 0; flex: 1; }
+  .nav-branch-text {
+    font-weight: 800; font-size: 13px;
+    color: var(--text); letter-spacing: -0.1px;
+    line-height: 1.25;
+    word-break: break-word;
   }
 
   /* Hide header user-chip on desktop — info now lives in the sidebar */
@@ -1706,13 +1711,18 @@ function renderBottomNav() {
     ? `${currentUser.branchCode} ${currentUser.branchName}`
     : `${currentUser.nick || currentUser.name} · ${({ 'bzm': 'BZM', 'admin': 'Admin', 'coo': 'COO', 'vp': 'VP' }[currentUser.role] || '')}`;
   html += '<div class="nav-brand">' +
-    '<div class="nav-brand-icon">' + santaFeLogoSVG() + '</div>' +
-    '<div class="nav-brand-text">' +
-      '<div class="nav-brand-name">Quality Assurance<br>&amp; Operations Checklist</div>' +
-      '<div class="nav-brand-sub">ระบบตรวจสอบมาตรฐานการทำงาน</div>' +
+    '<div class="nav-brand-app">' +
+      '<div class="nav-app-name">Quality Assurance<br>&amp; Operations Checklist</div>' +
+      '<div class="nav-app-sub">ระบบตรวจสอบมาตรฐานการทำงาน</div>' +
+    '</div>' +
+    '<div class="nav-brand-divider"></div>' +
+    '<div class="nav-brand-branch">' +
+      '<div class="nav-brand-icon">' + santaFeLogoSVG() + '</div>' +
+      '<div class="nav-branch-info">' +
+        '<div class="nav-branch-text">' + escapeHtml(pillText) + '</div>' +
+      '</div>' +
     '</div>' +
   '</div>';
-  html += '<div class="nav-user-pill">' + escapeHtml(pillText) + '</div>';
   html += '<div class="nav-items">';
   html += '<button class="bottom-nav-item active" id="nav-dash" onclick="showDashboard()"><span class="material-symbols-rounded">dashboard</span><span>หน้าหลัก</span></button>';
   if (currentUser.role !== 'branch') {
