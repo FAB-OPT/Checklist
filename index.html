@@ -783,7 +783,7 @@ body:has(#login-screen.active) {
 
       <div class="card no-print">
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
-          <button class="btn btn-secondary" style="flex:1;min-width:130px;" onclick="goToChecklist()">
+          <button class="btn btn-secondary" id="summary-edit-btn" style="flex:1;min-width:130px;" onclick="goToChecklist()">
             <span class="material-symbols-rounded">edit</span> แก้ไข
           </button>
           <button class="btn btn-primary" style="flex:1;min-width:130px;" onclick="window.print()">
@@ -1299,13 +1299,8 @@ async function doLogin() {
   } else {
     document.getElementById('user-name').textContent = currentUser.nick || currentUser.name;
   }
-  const roleLabel = {
-    'branch': '',
-    'bzm': 'BZM',
-    'admin': 'Admin',
-    'coo': 'COO',
-    'vp': 'VP'
-  }[currentUser.role] || currentUser.role;
+  const labelMap = { 'branch': '', 'bzm': 'BZM', 'admin': 'Admin', 'coo': 'COO', 'vp': 'VP' };
+  const roleLabel = currentUser.role in labelMap ? labelMap[currentUser.role] : currentUser.role;
   const roleEl = document.getElementById('user-role');
   roleEl.textContent = roleLabel;
   roleEl.style.display = roleLabel ? '' : 'none';
@@ -1820,6 +1815,9 @@ function tierFor(pct) {
 function showSummary(readonly) {
   hideAllScreens();
   document.getElementById('summary-screen').style.display = 'block';
+  // Branches cannot edit audit summaries; hide the edit button for them
+  const editBtn = document.getElementById('summary-edit-btn');
+  if (editBtn) editBtn.style.display = (currentUser && currentUser.role === 'branch') ? 'none' : '';
 
   const info = currentAudit.branchInfo;
   document.getElementById('branch-info-summary').innerHTML = `
@@ -2038,7 +2036,8 @@ function startDailyShift(shift) {
         num: iIdx + 1,
         text,
         status: prior ? prior.status : '',
-        note: prior ? (prior.note || '') : ''
+        note: prior ? (prior.note || '') : '',
+        photos: prior && Array.isArray(prior.photos) ? prior.photos.slice() : []
       });
     });
   });
@@ -2079,6 +2078,15 @@ function renderDailyForm() {
       const isPass = item.status === 'pass';
       const isFail = item.status === 'fail';
       const isNA = item.status === 'na';
+      const photos = item.photos || [];
+      let photosHtml = '';
+      if (isFail) {
+        photosHtml = '<div class="photo-section" style="margin-top:8px;">' +
+          '<label class="photo-upload-btn"><span class="material-symbols-rounded" style="font-size:18px;">add_a_photo</span> แนบรูป<input type="file" accept="image/*" capture="environment" multiple style="display:none;" onchange="addDailyPhotos(' + globalIdx + ', this.files)"></label>' +
+          '<div class="photo-preview">' +
+          photos.map((p, pi) => '<div class="photo-thumb"><img src="'+p+'"><button class="remove-btn" onclick="removeDailyPhoto('+globalIdx+','+pi+')"><span class="material-symbols-rounded" style="font-size:14px;">close</span></button></div>').join('') +
+          '</div></div>';
+      }
       html += `<div style="border-top:1px solid var(--border);padding:12px 0;">
         <div style="font-size:13px;margin-bottom:8px;"><b>${iIdx+1}.</b> ${escapeHtml(text)}</div>
         <div style="display:flex;gap:6px;flex-wrap:wrap;">
@@ -2087,6 +2095,7 @@ function renderDailyForm() {
           <button type="button" class="btn ${isNA ? 'btn-primary' : 'btn-secondary'}" style="flex:1;min-width:60px;padding:6px;font-size:13px;background:${isNA?'var(--text-secondary)':''};border-color:${isNA?'var(--text-secondary)':''};" onclick="setDailyItem(${globalIdx},'na')">N/A</button>
         </div>
         <input type="text" class="form-control" placeholder="หมายเหตุ / Action (กรณีไม่ผ่าน)" value="${escapeAttr(item.note || '')}" oninput="setDailyNote(${globalIdx}, this.value)" style="display:${isFail ? 'block' : 'none'};margin-top:8px;font-size:13px;" id="daily-note-${globalIdx}">
+        ${photosHtml}
       </div>`;
       globalIdx++;
     });
@@ -2098,13 +2107,49 @@ function renderDailyForm() {
 function setDailyItem(idx, status) {
   if (!currentDaily) return;
   currentDaily.items[idx].status = status;
-  if (status !== 'fail') currentDaily.items[idx].note = '';
+  if (status !== 'fail') {
+    currentDaily.items[idx].note = '';
+    currentDaily.items[idx].photos = [];
+  }
   renderDailyForm();
 }
 
 function setDailyNote(idx, value) {
   if (!currentDaily) return;
   currentDaily.items[idx].note = value;
+}
+
+function addDailyPhotos(idx, files) {
+  if (!currentDaily || !files || !files.length) return;
+  const item = currentDaily.items[idx];
+  if (!item.photos) item.photos = [];
+  for (const f of files) {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const maxDim = 800;
+        let w = img.width, h = img.height;
+        if (w > h && w > maxDim) { h = h * maxDim / w; w = maxDim; }
+        else if (h > maxDim) { w = w * maxDim / h; h = maxDim; }
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        item.photos.push(canvas.toDataURL('image/jpeg', 0.7));
+        renderDailyForm();
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(f);
+  }
+}
+
+function removeDailyPhoto(idx, photoIdx) {
+  if (!currentDaily) return;
+  const item = currentDaily.items[idx];
+  if (!item.photos) return;
+  item.photos.splice(photoIdx, 1);
+  renderDailyForm();
 }
 
 async function submitDailyShift() {
@@ -2161,9 +2206,12 @@ function showDailyDetail(id) {
     bySection[secName].forEach(it => {
       const icon = it.status === 'pass' ? '✓' : (it.status === 'fail' ? '✗' : '—');
       const color = it.status === 'pass' ? 'var(--success)' : (it.status === 'fail' ? 'var(--danger)' : 'var(--text-secondary)');
+      const photos = it.photos || [];
+      const photosHtml = photos.length ? `<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:6px;">${photos.map(p => `<a href="${p}" target="_blank"><img src="${p}" style="width:60px;height:60px;object-fit:cover;border-radius:4px;cursor:zoom-in;"></a>`).join('')}</div>` : '';
       html += `<div style="padding:8px 10px;border-left:3px solid ${color};background:var(--bg);margin-bottom:6px;border-radius:4px;">
         <div style="font-size:13px;"><span style="color:${color};font-weight:700;">${icon}</span> ${escapeHtml(it.text)}</div>
         ${it.note ? `<div style="font-size:12px;color:var(--danger);margin-top:4px;">📝 ${escapeHtml(it.note)}</div>` : ''}
+        ${photosHtml}
       </div>`;
     });
   });
