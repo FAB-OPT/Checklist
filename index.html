@@ -622,69 +622,53 @@ body {
 }
 .score-card-meta .dot { opacity: 0.4; }
 
-/* Donut chart */
+/* Tier distribution — stacked horizontal bar + legend */
 .donut-wrap {
   display: flex; flex-direction: column;
-  align-items: center; gap: 22px;
-  padding: 8px 0 4px;
+  gap: 16px;
 }
-.donut-chart {
-  width: 200px; height: 200px;
-  border-radius: 50%;
-  position: relative;
-  display: flex; align-items: center; justify-content: center;
+.seg-bar {
+  display: flex;
+  width: 100%;
+  height: 16px;
+  border-radius: var(--r-pill);
+  overflow: hidden;
+  background: var(--bg-strong);
   box-shadow: inset 0 0 0 1px rgba(80,40,20,0.04);
 }
-.donut-chart-inner {
-  width: 130px; height: 130px;
-  border-radius: 50%;
-  background: var(--surface);
-  display: flex; flex-direction: column;
-  align-items: center; justify-content: center;
-  box-shadow: 0 4px 14px rgba(80,40,20,0.06);
+.seg-bar-piece {
+  height: 100%;
+  transition: flex 0.5s cubic-bezier(.4,0,.2,1);
 }
-.donut-chart-total {
-  font-size: 38px; font-weight: 900;
-  letter-spacing: -1px; color: var(--text);
-  font-variant-numeric: tabular-nums; line-height: 1;
-}
-.donut-chart-label {
-  font-size: 11px; font-weight: 700;
-  color: var(--text-secondary);
-  margin-top: 4px; letter-spacing: 0.3px;
-  text-transform: uppercase;
-}
-.donut-legend {
-  width: 100%; max-width: 320px;
-  display: flex; flex-direction: column; gap: 10px;
-}
-.donut-legend-row {
+.seg-legend {
   display: grid;
-  grid-template-columns: 14px 1fr auto;
-  align-items: center; gap: 10px;
-  font-size: 13px; font-weight: 600;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 8px 16px;
 }
-.donut-legend-row.is-empty { opacity: 0.4; }
-.donut-legend-dot {
+.seg-legend-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 6px 0;
+  font-size: 13px;
+}
+.seg-legend-row.is-empty { opacity: 0.4; }
+.seg-legend-dot {
   width: 12px; height: 12px;
   border-radius: 50%;
   box-shadow: 0 0 0 3px rgba(80,40,20,0.04);
+  flex-shrink: 0;
 }
-.donut-legend-label { color: var(--text); }
-.donut-legend-count {
-  font-size: 13px; font-variant-numeric: tabular-nums;
-  display: flex; align-items: baseline; gap: 4px;
-  color: var(--text-secondary);
+.seg-legend-label { font-weight: 700; color: var(--text); flex: 1; }
+.seg-legend-count {
+  font-variant-numeric: tabular-nums;
+  display: inline-flex; align-items: baseline; gap: 5px;
 }
-.donut-legend-count b {
+.seg-legend-count b {
   font-size: 16px; font-weight: 800;
   color: var(--text); letter-spacing: -0.2px;
 }
-@media (min-width: 1024px) {
-  .donut-wrap { flex-direction: row; justify-content: center; gap: 40px; }
-  .donut-chart { width: 220px; height: 220px; }
-  .donut-chart-inner { width: 142px; height: 142px; }
-  .donut-chart-total { font-size: 42px; }
+.seg-legend-count em {
+  font-size: 11px; font-weight: 700;
+  color: var(--text-secondary); font-style: normal;
 }
 
 /* Dashboard hero — gradient card with title, scope, big stats (legacy, kept for fallback) */
@@ -2445,10 +2429,10 @@ function renderTierChart(completed) {
   });
   const total = completed.length;
   const segments = [
-    { tier: 'excellent', label: 'ดีมาก',   count: counts.excellent, color: '#38A063' },
-    { tier: 'standard',  label: 'มาตรฐาน', count: counts.standard,  color: '#D63622' },
-    { tier: 'improve',   label: 'ปรับปรุง', count: counts.improve,   color: '#E5A348' },
-    { tier: 'breakdown', label: 'เร่งด่วน', count: counts.breakdown, color: '#C73223' },
+    { tier: 'excellent', label: '⭐ ดีมาก',   count: counts.excellent, color: '#38A063' },
+    { tier: 'standard',  label: '✅ มาตรฐาน', count: counts.standard,  color: '#D63622' },
+    { tier: 'improve',   label: '⚠️ ปรับปรุง', count: counts.improve,   color: '#E5A348' },
+    { tier: 'breakdown', label: '🚨 เร่งด่วน', count: counts.breakdown, color: '#C73223' },
   ];
   const container = document.getElementById('tier-chart');
   if (!container) return;
@@ -2457,37 +2441,27 @@ function renderTierChart(completed) {
     return;
   }
 
-  // Build conic-gradient stops
-  let cursor = 0;
-  const stops = [];
-  segments.forEach(s => {
-    if (s.count > 0) {
-      const span = (s.count / total) * 360;
-      stops.push(`${s.color} ${cursor}deg ${cursor + span}deg`);
-      cursor += span;
-    }
-  });
-  const gradient = stops.length === 1
-    ? `${segments.find(s => s.count > 0).color}`
-    : `conic-gradient(${stops.join(', ')})`;
+  // Stacked horizontal bar — one row with 4 segments sized by percentage
+  const barHTML = segments
+    .filter(s => s.count > 0)
+    .map(s => {
+      const pct = (s.count / total) * 100;
+      return `<div class="seg-bar-piece" style="background:${s.color};flex:${pct};" title="${s.label}: ${s.count}"></div>`;
+    }).join('');
 
+  // Legend rows — 2-column grid with count + pct
   const legendHTML = segments.map(s => {
     const pct = total ? (s.count / total * 100) : 0;
-    return `<div class="donut-legend-row ${s.count ? '' : 'is-empty'}">
-      <span class="donut-legend-dot" style="background:${s.color}"></span>
-      <span class="donut-legend-label">${s.label}</span>
-      <span class="donut-legend-count"><b>${s.count}</b><span>${pct.toFixed(0)}%</span></span>
+    return `<div class="seg-legend-row ${s.count ? '' : 'is-empty'}">
+      <span class="seg-legend-dot" style="background:${s.color}"></span>
+      <span class="seg-legend-label">${s.label}</span>
+      <span class="seg-legend-count"><b>${s.count}</b> <em>${pct.toFixed(0)}%</em></span>
     </div>`;
   }).join('');
 
   container.innerHTML = `
-    <div class="donut-chart" style="background:${gradient};">
-      <div class="donut-chart-inner">
-        <div class="donut-chart-total">${total}</div>
-        <div class="donut-chart-label">การตรวจ</div>
-      </div>
-    </div>
-    <div class="donut-legend">${legendHTML}</div>
+    <div class="seg-bar">${barHTML}</div>
+    <div class="seg-legend">${legendHTML}</div>
   `;
 }
 
