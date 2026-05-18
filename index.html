@@ -588,7 +588,7 @@ body:has(#login-screen.active) {
 
       <button class="btn btn-login btn-block" onclick="doLogin()">เข้าสู่ระบบ</button>
     </div>
-    <div class="login-footer">© 2026 Operation FAB · v1.0</div>
+    <div class="login-footer">© 2026 Operation FAB · v1.0 · <a href="https://fab-opt.github.io/Checklist/" target="_blank" rel="noopener" style="color:inherit;text-decoration:underline;">View on GitHub</a></div>
   </div>
 </div>
 
@@ -904,7 +904,7 @@ function renderPinCells() {
   for (let i = 0; i < len; i++) {
     const filled = i < val.length;
     const active = i === val.length;
-    html += `<div class="pin-cell ${filled ? 'filled' : ''} ${active ? 'active' : ''}">${filled ? val[i] : ''}</div>`;
+    html += `<div class="pin-cell ${filled ? 'filled' : ''} ${active ? 'active' : ''}">${filled ? '•' : ''}</div>`;
   }
   row.innerHTML = html;
 }
@@ -982,7 +982,9 @@ function logout() {
   currentAudit = null;
   document.getElementById('app-screen').classList.remove('active');
   document.getElementById('login-screen').classList.add('active');
-  document.getElementById('login-id').value = '';
+  const loginInput = document.getElementById('login-id');
+  loginInput.value = '';
+  renderPinCells();
 }
 
 // ============ NAV ============
