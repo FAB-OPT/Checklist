@@ -712,7 +712,7 @@ body:has(#login-screen.active) {
     padding-bottom: 32px;
     padding-left: 240px;
   }
-  /* Sidebar nav — bottom-nav becomes a vertical sidebar */
+  /* Sidebar nav — bottom-nav becomes a vertical sidebar with gradient bg */
   .bottom-nav {
     top: 0; bottom: 0; left: 0;
     right: auto;
@@ -723,21 +723,21 @@ body:has(#login-screen.active) {
     padding: 20px 14px 24px;
     gap: 4px;
     border-top: none;
-    border-right: 1px solid var(--border);
-    box-shadow: 2px 0 14px rgba(20,15,10,0.04);
+    border-right: none;
+    box-shadow: 2px 0 14px rgba(20,15,10,0.08);
     backdrop-filter: none;
-    background: var(--surface);
-  }
-
-  /* Brand block at top of sidebar — gradient background */
-  .nav-brand {
-    display: flex; flex-direction: column;
-    padding: 18px 16px;
-    margin: -20px -14px 16px;
     background-image: url('Screenshot 2026-05-18 222708.png');
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
+    color: white;
+  }
+
+  /* Brand block at top of sidebar (inherits gradient from parent) */
+  .nav-brand {
+    display: flex; flex-direction: column;
+    padding: 4px 4px 16px;
+    margin: 0 0 12px;
     color: white;
     text-shadow: 0 1px 2px rgba(0,0,0,0.25);
   }
@@ -795,16 +795,18 @@ body:has(#login-screen.active) {
   /* Logout pinned to bottom */
   .nav-logout-btn {
     margin-top: auto;
-    background: var(--danger-bg);
-    color: var(--danger);
-    font-weight: 700;
+    background: rgba(255,255,255,0.96);
+    color: var(--danger) !important;
+    font-weight: 800;
+    text-shadow: none !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
   }
-  .nav-logout-btn .material-symbols-rounded { color: var(--danger); }
+  .nav-logout-btn .material-symbols-rounded { color: var(--danger) !important; }
   .nav-logout-btn:hover {
     background: var(--danger);
-    color: white;
+    color: white !important;
   }
-  .nav-logout-btn:hover .material-symbols-rounded { color: white; }
+  .nav-logout-btn:hover .material-symbols-rounded { color: white !important; }
   .nav-logout-btn.active::after { display: none; }
   .bottom-nav-item {
     flex: 0 0 auto;
@@ -816,22 +818,23 @@ body:has(#login-screen.active) {
     min-height: 48px;
     text-align: left;
     font-size: 14px;
-    font-weight: 600;
-  }
-  .bottom-nav-item:hover { background: var(--surface-2); color: var(--text); }
-  .bottom-nav-item.active {
-    background: var(--primary-50);
-    color: var(--primary);
     font-weight: 700;
+    color: rgba(255,255,255,0.88);
+    text-shadow: 0 1px 2px rgba(0,0,0,0.18);
   }
-  .bottom-nav-item.active::after {
-    /* Replace top pill with a left vertical bar */
-    top: 50%; left: -14px;
-    transform: translateY(-50%);
-    width: 4px; height: 24px;
-    border-radius: 0 var(--r-pill) var(--r-pill) 0;
+  .bottom-nav-item:hover {
+    background: rgba(255,255,255,0.18);
+    color: white;
   }
-  .bottom-nav-item .material-symbols-rounded { font-size: 22px; }
+  .bottom-nav-item.active {
+    background: rgba(255,255,255,0.96);
+    color: var(--primary);
+    font-weight: 800;
+    text-shadow: none;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  }
+  .bottom-nav-item.active::after { display: none; }
+  .bottom-nav-item .material-symbols-rounded { font-size: 22px; color: inherit; }
 
   /* Hide the colorful gradient header on desktop — sidebar carries identity */
   .app-header { display: none; }
@@ -1601,6 +1604,7 @@ function selectRole(role) {
   }
   input.value = '';
   renderPinCells();
+  input.focus();
 }
 
 function renderPinCells() {
@@ -2621,6 +2625,8 @@ function showDailyDetail(id) {
 // Init
 selectRole('branch');
 renderPinCells();
+// Auto-focus the hidden PIN input so users can type immediately
+setTimeout(() => { const el = document.getElementById('login-id'); if (el) el.focus(); }, 50);
 
 </script>
 </body>
