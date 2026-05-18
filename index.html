@@ -553,6 +553,92 @@ body {
 .audit-card.improve .audit-card-progress-fill { background: linear-gradient(90deg, #FFCC33, var(--warning)); }
 .audit-card.breakdown .audit-card-progress-fill { background: linear-gradient(90deg, #E04938, var(--danger)); }
 
+/* Dashboard hero — gradient card with title, scope, big stats */
+.dashboard-hero {
+  background: var(--app-gradient);
+  border-radius: var(--r-lg);
+  padding: 22px 22px 18px;
+  margin-bottom: 14px;
+  color: white;
+  box-shadow: var(--shadow-lg);
+  position: relative; overflow: hidden;
+}
+.dashboard-hero::before {
+  content: ''; position: absolute;
+  top: -60%; right: -30%;
+  width: 280px; height: 280px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.10);
+  filter: blur(40px);
+  pointer-events: none;
+}
+.dashboard-hero-head {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
+  margin-bottom: 18px;
+  position: relative; z-index: 1;
+}
+.dashboard-hero-eyebrow {
+  font-size: 11px; font-weight: 800; letter-spacing: 0.5px;
+  text-transform: uppercase; opacity: 0.85;
+  margin-bottom: 4px;
+}
+.dashboard-hero-title {
+  font-size: 22px; font-weight: 900; letter-spacing: -0.4px;
+  line-height: 1.15; color: white;
+}
+.dashboard-hero-subtitle {
+  font-size: 12px; opacity: 0.92; font-weight: 600;
+  margin-top: 4px;
+}
+.dashboard-hero-badge {
+  display: inline-flex; align-items: center;
+  padding: 6px 12px;
+  border-radius: var(--r-pill);
+  background: rgba(255,255,255,0.22);
+  font-size: 11px; font-weight: 800; letter-spacing: 0.2px;
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255,255,255,0.18);
+  white-space: nowrap; flex-shrink: 0;
+}
+.dashboard-hero-badge.tier-excellent { background: rgba(56,160,99,0.92); }
+.dashboard-hero-badge.tier-standard  { background: rgba(255,255,255,0.30); }
+.dashboard-hero-badge.tier-improve   { background: rgba(229,163,72,0.92); }
+.dashboard-hero-badge.tier-breakdown { background: rgba(199,50,35,0.92); }
+.dashboard-hero-stats {
+  display: flex; align-items: stretch; gap: 0;
+  background: rgba(255,255,255,0.18);
+  border-radius: var(--r-md);
+  padding: 12px 4px;
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255,255,255,0.18);
+  position: relative; z-index: 1;
+}
+.hero-stat {
+  flex: 1; text-align: center;
+  padding: 2px 6px;
+  min-width: 0;
+}
+.hero-stat-value {
+  font-size: 24px; font-weight: 900; letter-spacing: -0.6px;
+  line-height: 1.1;
+}
+.hero-stat-value .pct { font-size: 12px; font-weight: 800; opacity: 0.85; margin-left: 1px; }
+.hero-stat-value.danger { color: #FFD7CC; }
+.hero-stat-label {
+  font-size: 11px; opacity: 0.92;
+  margin-top: 4px; font-weight: 600;
+}
+.hero-stat-divider {
+  width: 1px;
+  background: rgba(255,255,255,0.25);
+  margin: 4px 0;
+}
+@media (max-width: 380px) {
+  .dashboard-hero { padding: 18px 16px 14px; }
+  .dashboard-hero-title { font-size: 19px; }
+  .hero-stat-value { font-size: 20px; }
+}
+
 /* Daily form: section cards + big questions + clear pass/fail/N/A buttons */
 .daily-section-card {
   background: var(--surface);
@@ -1249,35 +1335,43 @@ body:has(#login-screen.active) {
   <div class="container">
     <!-- DASHBOARD (admin/bzm) -->
     <div id="dashboard-screen" style="display:none;">
+      <!-- Hero -->
+      <div class="dashboard-hero">
+        <div class="dashboard-hero-head">
+          <div>
+            <div class="dashboard-hero-eyebrow">Quality Assurance</div>
+            <h2 class="dashboard-hero-title" id="dashboard-title">สรุปผลตรวจ</h2>
+            <div class="dashboard-hero-subtitle" id="dashboard-hero-subtitle">—</div>
+          </div>
+          <div class="dashboard-hero-badge" id="dashboard-hero-badge">—</div>
+        </div>
+        <div class="dashboard-hero-stats" id="dashboard-hero-stats"></div>
+      </div>
+
+      <!-- Secondary stats grid -->
+      <div class="kpi-grid" id="kpi-grid"></div>
+
+      <!-- Tier distribution chart -->
       <div class="card">
         <div class="card-header">
-          <span class="material-symbols-rounded" style="color:var(--primary);">dashboard</span>
-          <h2 id="dashboard-title">สรุปผลตรวจ</h2>
+          <span class="material-symbols-rounded" style="color:var(--primary);">analytics</span>
+          <h2>การกระจายเกรด</h2>
         </div>
+        <div id="tier-chart"></div>
+      </div>
 
-        <div class="kpi-grid" id="kpi-grid"></div>
-
-        <div class="qa-chart-block">
-          <div class="qa-chart-header">
-            <span class="material-symbols-rounded" style="color:var(--primary);font-size:20px;">analytics</span>
-            <div>
-              <div class="qa-chart-title">Quality Assurance</div>
-              <div class="qa-chart-sub">การกระจายเกรดของสาขา</div>
-            </div>
-          </div>
-          <div id="tier-chart"></div>
+      <div id="zone-list" style="display:none;" class="card">
+        <div class="card-header">
+          <span class="material-symbols-rounded" style="color:var(--primary);">map</span>
+          <h2>สรุปรายโซน</h2>
         </div>
-
-        <div id="zone-list" style="display:none;">
-          <h3 style="font-size:15px;margin:16px 0 10px;">สรุปรายโซน</h3>
-          <div id="zone-list-content"></div>
-        </div>
+        <div id="zone-list-content"></div>
       </div>
 
       <div class="card">
         <div class="card-header">
-          <span class="material-symbols-rounded" style="color:var(--primary);">list_alt</span>
-          <h2>ผลการตรวจล่าสุด</h2>
+          <span class="material-symbols-rounded" style="color:var(--primary);">history</span>
+          <h2>ประวัติการตรวจ</h2>
         </div>
 
         <div class="filter-bar">
@@ -2061,8 +2155,6 @@ function showDashboard() {
 
   document.getElementById('dashboard-title').textContent = 'สรุปผลตรวจ';
 
-  // KPIs
-  const kpiGrid = document.getElementById('kpi-grid');
   const avgScore = completed.length ? completed.reduce((s,a) => s + (a.scoreData?.grandTotal||0), 0) / completed.length : 0;
   const totalBranches = currentUser.role === 'bzm'
     ? BRANCHES.filter(b => b.manager === currentUser.name).length
@@ -2071,15 +2163,52 @@ function showDashboard() {
   const excellentCount = completed.filter(a => (a.scoreData?.grandTotal||0) >= 90).length;
   const breakdownCount = completed.filter(a => (a.scoreData?.grandTotal||0) < 70).length;
 
+  // Hero subtitle (scope) + tier badge
+  const scopeMap = {
+    'branch': 'สาขา ' + currentUser.branchCode,
+    'bzm': 'ดูแลโดย ' + currentUser.nick,
+    'admin': 'ทุกสาขา · Admin',
+    'coo': 'ทุกสาขา · COO',
+    'vp': 'ทุกสาขา · VP'
+  };
+  document.getElementById('dashboard-hero-subtitle').textContent = scopeMap[currentUser.role] || '';
+  const heroTier = completed.length ? tierFor(avgScore) : null;
+  const heroBadge = document.getElementById('dashboard-hero-badge');
+  if (heroTier) {
+    heroBadge.textContent = heroTier.label;
+    heroBadge.className = 'dashboard-hero-badge tier-' + heroTier.class;
+  } else {
+    heroBadge.textContent = 'ยังไม่มีข้อมูล';
+    heroBadge.className = 'dashboard-hero-badge tier-empty';
+  }
+
+  // Hero inline stats (count, avg, breakdown count)
+  let statsHTML = '';
+  statsHTML += `<div class="hero-stat">
+    <div class="hero-stat-value">${avgScore.toFixed(1)}<span class="pct">%</span></div>
+    <div class="hero-stat-label">คะแนนเฉลี่ย</div>
+  </div>`;
+  statsHTML += `<div class="hero-stat-divider"></div>`;
+  statsHTML += `<div class="hero-stat">
+    <div class="hero-stat-value">${completed.length}</div>
+    <div class="hero-stat-label">การตรวจ</div>
+  </div>`;
+  statsHTML += `<div class="hero-stat-divider"></div>`;
+  statsHTML += `<div class="hero-stat">
+    <div class="hero-stat-value danger">${breakdownCount}</div>
+    <div class="hero-stat-label">เร่งด่วน</div>
+  </div>`;
+  document.getElementById('dashboard-hero-stats').innerHTML = statsHTML;
+
+  // Secondary KPIs (only show extra info beyond hero)
+  const kpiGrid = document.getElementById('kpi-grid');
   let kpiHTML = '';
-  kpiHTML += `<div class="kpi-card info"><div class="label">จำนวนการตรวจ</div><div class="value">${completed.length}</div><div class="sub">ครั้ง</div></div>`;
-  kpiHTML += `<div class="kpi-card"><div class="label">คะแนนเฉลี่ย</div><div class="value">${avgScore.toFixed(1)}<span style="font-size:14px;">%</span></div><div class="sub">จากทั้งหมด</div></div>`;
   kpiHTML += `<div class="kpi-card success"><div class="label">ดีมาก ≥90%</div><div class="value">${excellentCount}</div><div class="sub">สาขา</div></div>`;
-  kpiHTML += `<div class="kpi-card danger"><div class="label">เร่งด่วน <70%</div><div class="value">${breakdownCount}</div><div class="sub">สาขา</div></div>`;
   if (currentUser.role !== 'branch') {
     kpiHTML += `<div class="kpi-card warning"><div class="label">ครอบคลุม</div><div class="value">${auditedBranches}/${totalBranches}</div><div class="sub">สาขา</div></div>`;
   }
   kpiGrid.innerHTML = kpiHTML;
+  kpiGrid.style.display = kpiHTML ? 'grid' : 'none';
 
   renderTierChart(completed);
 
