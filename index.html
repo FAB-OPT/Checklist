@@ -553,6 +553,192 @@ body {
 .audit-card.improve .audit-card-progress-fill { background: linear-gradient(90deg, #FFCC33, var(--warning)); }
 .audit-card.breakdown .audit-card-progress-fill { background: linear-gradient(90deg, #E04938, var(--danger)); }
 
+/* Daily form: section cards + big questions + clear pass/fail/N/A buttons */
+.daily-section-card {
+  background: var(--surface);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow);
+  margin-bottom: 14px;
+  overflow: hidden;
+  border: 1px solid rgba(80,40,20,0.04);
+}
+.daily-section-header {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 14px 18px;
+  background: var(--primary-gradient);
+  color: white;
+  letter-spacing: 0.2px;
+}
+.daily-section-name {
+  font-size: 15px; font-weight: 800;
+  text-transform: uppercase;
+}
+.daily-section-progress {
+  font-size: 12px; font-weight: 700;
+  background: rgba(255,255,255,0.22);
+  padding: 4px 10px; border-radius: var(--r-pill);
+  font-variant-numeric: tabular-nums;
+}
+.daily-section-progress span { font-weight: 800; }
+.daily-section-body { padding: 4px 0; }
+.daily-item {
+  padding: 16px 18px;
+  border-top: 1px solid var(--border);
+  transition: background 0.18s;
+}
+.daily-item:first-child { border-top: none; }
+.daily-item.is-pass { background: rgba(45,122,74,0.04); }
+.daily-item.is-fail { background: rgba(199,50,35,0.05); }
+.daily-item.is-na   { background: var(--surface-2); }
+.daily-item-q {
+  display: flex; gap: 12px; align-items: flex-start;
+  margin-bottom: 12px;
+}
+.daily-item-num {
+  flex-shrink: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 28px; height: 28px; border-radius: 50%;
+  background: var(--bg-strong); color: var(--text-secondary);
+  font-weight: 800; font-size: 12px;
+}
+.daily-item.is-pass .daily-item-num { background: var(--success); color: white; }
+.daily-item.is-fail .daily-item-num { background: var(--danger); color: white; }
+.daily-item-text {
+  flex: 1;
+  font-size: 15px; font-weight: 600;
+  color: var(--text); line-height: 1.5;
+  padding-top: 3px;
+}
+.daily-item-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+}
+.daily-choice {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 12px 8px;
+  min-height: 48px;
+  border-radius: var(--r-md);
+  border: 1.5px solid var(--border);
+  background: var(--surface);
+  color: var(--text-secondary);
+  font-weight: 700; font-size: 14px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.18s;
+}
+.daily-choice:hover { background: var(--bg); border-color: var(--border-strong); }
+.daily-choice:active { transform: scale(0.96); }
+.daily-choice .material-symbols-rounded { font-size: 20px; }
+.daily-choice.active.pass {
+  background: var(--success); color: white; border-color: var(--success);
+  box-shadow: 0 4px 12px rgba(45,122,74,0.25);
+}
+.daily-choice.active.fail {
+  background: var(--danger); color: white; border-color: var(--danger);
+  box-shadow: 0 4px 12px rgba(199,50,35,0.25);
+}
+.daily-choice.active.na {
+  background: var(--text-secondary); color: white; border-color: var(--text-secondary);
+}
+.daily-note-input {
+  width: 100%; margin-top: 12px;
+  padding: 12px 14px;
+  border: 1.5px solid var(--danger);
+  background: var(--surface);
+  border-radius: var(--r-sm);
+  font-family: inherit; font-size: 14px;
+  color: var(--text);
+}
+.daily-note-input:focus { outline: none; box-shadow: 0 0 0 4px rgba(199,50,35,0.15); }
+
+/* Daily hub header (date inline, bigger subtitle) */
+.daily-hub-head {
+  display: flex; align-items: flex-start; gap: 12px;
+  padding-bottom: 14px; margin-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+.daily-hub-titles { flex: 1; min-width: 0; }
+.daily-hub-title-row {
+  display: flex; align-items: center; gap: 10px;
+  flex-wrap: wrap;
+}
+.daily-hub-title-row h2 {
+  font-size: 17px; font-weight: 800; color: var(--text);
+  letter-spacing: -0.2px;
+}
+.daily-date-chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 4px 10px;
+  background: var(--primary-50);
+  color: var(--primary);
+  border-radius: var(--r-pill);
+  font-size: 12px; font-weight: 800;
+  letter-spacing: 0.1px;
+  font-variant-numeric: tabular-nums;
+}
+.daily-date-chip::before {
+  content: '📅'; font-size: 12px;
+}
+.daily-hub-sub {
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-weight: 600;
+  margin-top: 4px;
+  line-height: 1.4;
+}
+
+/* Quality Assurance tier chart */
+.qa-chart-block {
+  background: var(--surface-2);
+  border-radius: var(--r-md);
+  padding: 16px;
+  margin-top: 14px;
+  border: 1px solid var(--border);
+}
+.qa-chart-header {
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 14px;
+}
+.qa-chart-title { font-size: 14px; font-weight: 800; color: var(--text); letter-spacing: -0.1px; }
+.qa-chart-sub { font-size: 11px; color: var(--text-secondary); font-weight: 600; margin-top: 1px; }
+.qa-chart-empty { text-align: center; padding: 20px; color: var(--text-secondary); font-size: 13px; }
+.tier-bar-row {
+  display: grid;
+  grid-template-columns: 96px 1fr 64px;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.tier-bar-row:last-child { margin-bottom: 0; }
+.tier-bar-label { font-size: 13px; font-weight: 700; color: var(--text); }
+.tier-bar-track {
+  height: 20px;
+  background: var(--bg-strong);
+  border-radius: var(--r-pill);
+  overflow: hidden;
+}
+.tier-bar-fill {
+  height: 100%;
+  border-radius: var(--r-pill);
+  transition: width 0.6s cubic-bezier(.4,0,.2,1);
+}
+.tier-bar-fill.tier-excellent { background: linear-gradient(90deg, #38A063, var(--success)); }
+.tier-bar-fill.tier-standard  { background: linear-gradient(90deg, var(--primary-light), var(--primary)); }
+.tier-bar-fill.tier-improve   { background: linear-gradient(90deg, #FFCC33, var(--warning)); }
+.tier-bar-fill.tier-breakdown { background: linear-gradient(90deg, #E04938, var(--danger)); }
+.tier-bar-meta {
+  font-size: 13px; text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-secondary); font-weight: 600;
+}
+.tier-bar-meta b { color: var(--text); font-size: 15px; font-weight: 800; }
+.tier-bar-meta span { font-size: 11px; opacity: 0.7; margin-left: 2px; }
+@media (max-width: 480px) {
+  .tier-bar-row { grid-template-columns: 88px 1fr 56px; gap: 8px; }
+  .tier-bar-label { font-size: 12px; }
+}
+
 /* Filter chips (horizontal scrollable pill row) */
 .chip-row {
   display: flex; gap: 8px; overflow-x: auto;
@@ -1066,10 +1252,21 @@ body:has(#login-screen.active) {
       <div class="card">
         <div class="card-header">
           <span class="material-symbols-rounded" style="color:var(--primary);">dashboard</span>
-          <h2 id="dashboard-title">Dashboard</h2>
+          <h2 id="dashboard-title">สรุปผลตรวจ</h2>
         </div>
 
         <div class="kpi-grid" id="kpi-grid"></div>
+
+        <div class="qa-chart-block">
+          <div class="qa-chart-header">
+            <span class="material-symbols-rounded" style="color:var(--primary);font-size:20px;">analytics</span>
+            <div>
+              <div class="qa-chart-title">Quality Assurance</div>
+              <div class="qa-chart-sub">การกระจายเกรดของสาขา</div>
+            </div>
+          </div>
+          <div id="tier-chart"></div>
+        </div>
 
         <div id="zone-list" style="display:none;">
           <h3 style="font-size:15px;margin:16px 0 10px;">สรุปรายโซน</h3>
@@ -1256,11 +1453,16 @@ body:has(#login-screen.active) {
     <!-- DAILY HUB SCREEN -->
     <div id="daily-hub-screen" style="display:none;">
       <div class="card" id="daily-branch-actions" style="display:none;">
-        <div class="card-header">
-          <span class="material-symbols-rounded" style="color:var(--primary);">checklist</span>
-          <h2>Daily Open-Close Checklist</h2>
+        <div class="daily-hub-head">
+          <span class="material-symbols-rounded" style="color:var(--primary);font-size:24px;">checklist</span>
+          <div class="daily-hub-titles">
+            <div class="daily-hub-title-row">
+              <h2>Daily Open-Close Checklist</h2>
+              <span class="daily-date-chip" id="daily-today-label"></span>
+            </div>
+            <p class="daily-hub-sub">เลือก shift ที่จะเช็คสำหรับวันนี้</p>
+          </div>
         </div>
-        <p style="color:var(--text-secondary);font-size:13px;margin-bottom:14px;">เลือก shift ที่จะเช็คสำหรับวันนี้ — <b id="daily-today-label"></b></p>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
           <button class="btn btn-primary btn-lg" onclick="startDailyShift('open')" style="padding:18px 12px;flex-direction:column;">
             <span class="material-symbols-rounded" style="font-size:32px;">wb_sunny</span>
@@ -1857,15 +2059,7 @@ function showDashboard() {
   const audits = getVisibleAudits();
   const completed = audits.filter(a => a.status === 'completed');
 
-  // Title
-  const title = {
-    'branch': 'ผลการตรวจสาขา ' + currentUser.branchCode,
-    'bzm': 'Dashboard BZM · ' + currentUser.nick,
-    'admin': 'Dashboard ผู้ดูแลระบบ',
-    'coo': 'Dashboard COO',
-    'vp': 'Dashboard VP'
-  }[currentUser.role];
-  document.getElementById('dashboard-title').textContent = title;
+  document.getElementById('dashboard-title').textContent = 'สรุปผลตรวจ';
 
   // KPIs
   const kpiGrid = document.getElementById('kpi-grid');
@@ -1886,6 +2080,8 @@ function showDashboard() {
     kpiHTML += `<div class="kpi-card warning"><div class="label">ครอบคลุม</div><div class="value">${auditedBranches}/${totalBranches}</div><div class="sub">สาขา</div></div>`;
   }
   kpiGrid.innerHTML = kpiHTML;
+
+  renderTierChart(completed);
 
   // Zone breakdown (admin/coo/vp only)
   if (['admin','coo','vp'].includes(currentUser.role)) {
@@ -1975,6 +2171,39 @@ function renderAuditList() {
     </div>`;
   }
   list.innerHTML = html;
+}
+
+function renderTierChart(completed) {
+  const counts = { excellent: 0, standard: 0, improve: 0, breakdown: 0 };
+  completed.forEach(a => {
+    const t = tierFor(a.scoreData?.grandTotal || 0).class;
+    counts[t] = (counts[t] || 0) + 1;
+  });
+  const total = completed.length;
+  const rows = [
+    { tier: 'excellent', label: '⭐ ดีมาก',   count: counts.excellent },
+    { tier: 'standard',  label: '✅ มาตรฐาน', count: counts.standard  },
+    { tier: 'improve',   label: '⚠️ ปรับปรุง', count: counts.improve   },
+    { tier: 'breakdown', label: '🚨 เร่งด่วน', count: counts.breakdown },
+  ];
+  const container = document.getElementById('tier-chart');
+  if (!container) return;
+  if (!total) {
+    container.innerHTML = '<div class="qa-chart-empty">ยังไม่มีข้อมูลการตรวจ</div>';
+    return;
+  }
+  const html = rows.map(r => {
+    const pct = (r.count / total) * 100;
+    const shown = pct.toFixed(0) + '%';
+    return `<div class="tier-bar-row">
+      <div class="tier-bar-label">${r.label}</div>
+      <div class="tier-bar-track">
+        <div class="tier-bar-fill tier-${r.tier}" style="width:${pct}%"></div>
+      </div>
+      <div class="tier-bar-meta"><b>${r.count}</b> <span>${shown}</span></div>
+    </div>`;
+  }).join('');
+  container.innerHTML = html;
 }
 
 function setTierFilter(value, btn) {
@@ -2452,14 +2681,7 @@ function showDailyHub() {
     branchActions.style.display = 'none';
   }
 
-  const titleMap = {
-    'branch': 'ประวัติของสาขา',
-    'bzm': 'Daily Checklist · ' + currentUser.nick,
-    'admin': 'Daily Checklist ทุกสาขา',
-    'coo': 'Daily Checklist ทุกสาขา',
-    'vp': 'Daily Checklist ทุกสาขา'
-  };
-  document.getElementById('daily-list-title').textContent = titleMap[currentUser.role] || 'Daily Checklist';
+  document.getElementById('daily-list-title').textContent = 'ประวัติ';
 
   renderDailyList();
 }
@@ -2562,7 +2784,18 @@ function renderDailyForm() {
   let html = '';
   let globalIdx = 0;
   template.forEach((sec, sIdx) => {
-    html += `<div class="card"><div class="card-header"><span class="material-symbols-rounded" style="color:var(--primary);">folder</span><h2 style="font-size:15px;">${escapeHtml(sec.name)}</h2></div>`;
+    const sectionStart = globalIdx;
+    const sectionItems = currentDaily.items.slice(sectionStart, sectionStart + sec.items.length);
+    const passCount = sectionItems.filter(i => i.status === 'pass').length;
+    const failCount = sectionItems.filter(i => i.status === 'fail').length;
+    const naCount = sectionItems.filter(i => i.status === 'na').length;
+    const doneCount = passCount + failCount + naCount;
+    html += `<div class="daily-section-card">
+      <div class="daily-section-header">
+        <div class="daily-section-name">${escapeHtml(sec.name)}</div>
+        <div class="daily-section-progress">${doneCount}/${sec.items.length}${failCount ? ` · <span style="color:var(--danger)">✗${failCount}</span>` : ''}</div>
+      </div>
+      <div class="daily-section-body">`;
     sec.items.forEach((text, iIdx) => {
       const item = currentDaily.items[globalIdx];
       const isPass = item.status === 'pass';
@@ -2571,25 +2804,37 @@ function renderDailyForm() {
       const photos = item.photos || [];
       let photosHtml = '';
       if (isFail) {
-        photosHtml = '<div class="photo-section" style="margin-top:8px;">' +
+        photosHtml = '<div class="photo-section" style="margin-top:10px;">' +
           '<label class="photo-upload-btn"><span class="material-symbols-rounded" style="font-size:18px;">add_a_photo</span> แนบรูป<input type="file" accept="image/*" capture="environment" multiple style="display:none;" onchange="addDailyPhotos(' + globalIdx + ', this.files)"></label>' +
           '<div class="photo-preview">' +
           photos.map((p, pi) => '<div class="photo-thumb"><img src="'+p+'"><button class="remove-btn" onclick="removeDailyPhoto('+globalIdx+','+pi+')"><span class="material-symbols-rounded" style="font-size:14px;">close</span></button></div>').join('') +
           '</div></div>';
       }
-      html += `<div style="border-top:1px solid var(--border);padding:12px 0;">
-        <div style="font-size:13px;margin-bottom:8px;"><b>${iIdx+1}.</b> ${escapeHtml(text)}</div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap;">
-          <button type="button" class="btn ${isPass ? 'btn-success' : 'btn-secondary'}" style="flex:1;min-width:80px;padding:6px;font-size:13px;" onclick="setDailyItem(${globalIdx},'pass')">✓ ผ่าน</button>
-          <button type="button" class="btn ${isFail ? 'btn-primary' : 'btn-secondary'}" style="flex:1;min-width:80px;padding:6px;font-size:13px;background:${isFail?'var(--danger)':''};border-color:${isFail?'var(--danger)':''};" onclick="setDailyItem(${globalIdx},'fail')">✗ ไม่ผ่าน</button>
-          <button type="button" class="btn ${isNA ? 'btn-primary' : 'btn-secondary'}" style="flex:1;min-width:60px;padding:6px;font-size:13px;background:${isNA?'var(--text-secondary)':''};border-color:${isNA?'var(--text-secondary)':''};" onclick="setDailyItem(${globalIdx},'na')">N/A</button>
+      html += `<div class="daily-item ${isPass?'is-pass':''} ${isFail?'is-fail':''} ${isNA?'is-na':''}">
+        <div class="daily-item-q">
+          <span class="daily-item-num">${iIdx+1}</span>
+          <span class="daily-item-text">${escapeHtml(text)}</span>
         </div>
-        <input type="text" class="form-control" placeholder="หมายเหตุ / Action (กรณีไม่ผ่าน)" value="${escapeAttr(item.note || '')}" oninput="setDailyNote(${globalIdx}, this.value)" style="display:${isFail ? 'block' : 'none'};margin-top:8px;font-size:13px;" id="daily-note-${globalIdx}">
+        <div class="daily-item-actions">
+          <button type="button" class="daily-choice pass ${isPass ? 'active' : ''}" onclick="setDailyItem(${globalIdx},'pass')">
+            <span class="material-symbols-rounded">check_circle</span>
+            <span>ผ่าน</span>
+          </button>
+          <button type="button" class="daily-choice fail ${isFail ? 'active' : ''}" onclick="setDailyItem(${globalIdx},'fail')">
+            <span class="material-symbols-rounded">cancel</span>
+            <span>ไม่ผ่าน</span>
+          </button>
+          <button type="button" class="daily-choice na ${isNA ? 'active' : ''}" onclick="setDailyItem(${globalIdx},'na')">
+            <span class="material-symbols-rounded">remove_circle</span>
+            <span>N/A</span>
+          </button>
+        </div>
+        <input type="text" class="daily-note-input" placeholder="หมายเหตุ / Action (กรณีไม่ผ่าน)" value="${escapeAttr(item.note || '')}" oninput="setDailyNote(${globalIdx}, this.value)" style="display:${isFail ? 'block' : 'none'};" id="daily-note-${globalIdx}">
         ${photosHtml}
       </div>`;
       globalIdx++;
     });
-    html += '</div>';
+    html += '</div></div>';
   });
   container.innerHTML = html;
 }
