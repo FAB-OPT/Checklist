@@ -1983,7 +1983,11 @@ function renderDailyList() {
     const passItems = (d.items || []).filter(i => i.status === 'pass').length;
     const failItems = (d.items || []).filter(i => i.status === 'fail').length;
     const shiftLabel = d.shift === 'open' ? '☀️ Open' : '🌙 Close';
-    const failBadge = failItems > 0 ? `<span style="background:#FFE5E0;color:var(--danger);padding:2px 8px;border-radius:8px;font-size:11px;font-weight:600;">❌ ${failItems}</span>` : `<span style="background:#E0F5E5;color:var(--success);padding:2px 8px;border-radius:8px;font-size:11px;font-weight:600;">✓ ครบ</span>`;
+    const pendingItems = totalItems - passItems - failItems - (d.items || []).filter(i => i.status === 'na').length;
+    let badge;
+    if (failItems > 0) badge = `<span style="background:#FFE5E0;color:var(--danger);padding:2px 8px;border-radius:8px;font-size:11px;font-weight:600;">❌ ${failItems}</span>`;
+    else if (pendingItems > 0) badge = `<span style="background:#FFF3E0;color:var(--warning);padding:2px 8px;border-radius:8px;font-size:11px;font-weight:600;">รอ ${pendingItems}</span>`;
+    else badge = `<span style="background:#E0F5E5;color:var(--success);padding:2px 8px;border-radius:8px;font-size:11px;font-weight:600;">✓ ครบ</span>`;
     return `<div class="audit-item" onclick="showDailyDetail('${escapeAttr(d.id)}')" style="border-left:4px solid ${d.shift==='open' ? 'var(--secondary)' : 'var(--text)'};">
       <div style="flex:1;">
         <div style="font-weight:600;font-size:14px;">${escapeHtml(d.branchCode)} ${escapeHtml(d.branchName||'')}</div>
@@ -1992,7 +1996,7 @@ function renderDailyList() {
         </div>
       </div>
       <div style="text-align:right;">
-        ${failBadge}
+        ${badge}
         <div style="font-size:11px;color:var(--text-secondary);margin-top:4px;">${passItems}/${totalItems} ผ่าน</div>
       </div>
     </div>`;
@@ -2016,7 +2020,7 @@ function startDailyShift(shift) {
         section: sec.name,
         num: iIdx + 1,
         text,
-        status: prior ? prior.status : 'pass',
+        status: prior ? prior.status : '',
         note: prior ? (prior.note || '') : ''
       });
     });
