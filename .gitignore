@@ -5,3 +5,6 @@ server.js
 audits.db
 audits.json
 audits.json.tmp
+checklist_data.json
+_daily_const.js
+Check list  Open-Close.xlsx

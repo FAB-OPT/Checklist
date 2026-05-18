@@ -588,7 +588,7 @@ body:has(#login-screen.active) {
 
       <button class="btn btn-login btn-block" onclick="doLogin()">เข้าสู่ระบบ</button>
     </div>
-    <div class="login-footer">© 2026 Operation FAB · v1.0 · <a href="https://fab-opt.github.io/Checklist/" target="_blank" rel="noopener" style="color:inherit;text-decoration:underline;">View on GitHub</a></div>
+    <div class="login-footer">© 2026 Operation FAB · v1.0</div>
   </div>
 </div>
 
@@ -794,6 +794,92 @@ body:has(#login-screen.active) {
         </div>
       </div>
     </div>
+
+    <!-- DAILY HUB SCREEN -->
+    <div id="daily-hub-screen" style="display:none;">
+      <div class="card" id="daily-branch-actions" style="display:none;">
+        <div class="card-header">
+          <span class="material-symbols-rounded" style="color:var(--primary);">checklist</span>
+          <h2>Daily Open-Close Checklist</h2>
+        </div>
+        <p style="color:var(--text-secondary);font-size:13px;margin-bottom:14px;">เลือก shift ที่จะเช็คสำหรับวันนี้ — <b id="daily-today-label"></b></p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <button class="btn btn-primary btn-lg" onclick="startDailyShift('open')" style="padding:18px 12px;flex-direction:column;">
+            <span class="material-symbols-rounded" style="font-size:32px;">wb_sunny</span>
+            <span>เช็ค Open</span>
+            <span id="daily-open-status" style="font-size:11px;opacity:.9;"></span>
+          </button>
+          <button class="btn btn-secondary btn-lg" onclick="startDailyShift('close')" style="padding:18px 12px;flex-direction:column;background:var(--text);color:#fff;">
+            <span class="material-symbols-rounded" style="font-size:32px;">bedtime</span>
+            <span>เช็ค Close</span>
+            <span id="daily-close-status" style="font-size:11px;opacity:.9;"></span>
+          </button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <span class="material-symbols-rounded" style="color:var(--primary);">list_alt</span>
+          <h2 id="daily-list-title">ประวัติ Daily Checklist</h2>
+        </div>
+        <div class="filter-bar">
+          <input type="text" id="daily-filter-search" placeholder="ค้นหาสาขา..." oninput="renderDailyList()">
+          <select id="daily-filter-shift" onchange="renderDailyList()">
+            <option value="">ทุก shift</option>
+            <option value="open">Open</option>
+            <option value="close">Close</option>
+          </select>
+          <input type="date" id="daily-filter-date" onchange="renderDailyList()">
+        </div>
+        <div class="audit-list" id="daily-list"></div>
+      </div>
+    </div>
+
+    <!-- DAILY FORM SCREEN -->
+    <div id="daily-form-screen" style="display:none;">
+      <div class="card">
+        <div class="card-header">
+          <span class="material-symbols-rounded" id="daily-form-icon" style="color:var(--primary);">wb_sunny</span>
+          <h2 id="daily-form-title">เช็ค Open</h2>
+        </div>
+        <div style="background:var(--bg);padding:10px 12px;border-radius:8px;margin-bottom:14px;font-size:13px;">
+          <div><b id="daily-form-branch"></b></div>
+          <div style="color:var(--text-secondary);" id="daily-form-meta"></div>
+        </div>
+        <div class="form-group">
+          <label>Manager on duty <span class="req">*</span></label>
+          <input type="text" class="form-control" id="daily-manager" placeholder="ชื่อผู้รับผิดชอบ shift">
+        </div>
+      </div>
+
+      <div id="daily-sections-container"></div>
+
+      <div class="card no-print">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn btn-secondary" style="flex:1;min-width:130px;" onclick="cancelDailyShift()">
+            <span class="material-symbols-rounded">arrow_back</span> ยกเลิก
+          </button>
+          <button class="btn btn-success" style="flex:1;min-width:130px;" onclick="submitDailyShift()">
+            <span class="material-symbols-rounded">save</span> บันทึก
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- DAILY DETAIL SCREEN -->
+    <div id="daily-detail-screen" style="display:none;">
+      <div class="card">
+        <div class="card-header">
+          <span class="material-symbols-rounded" id="daily-detail-icon" style="color:var(--primary);">checklist</span>
+          <h2 id="daily-detail-title">รายละเอียด</h2>
+        </div>
+        <div id="daily-detail-meta" style="background:var(--bg);padding:10px 12px;border-radius:8px;margin-bottom:14px;font-size:13px;"></div>
+        <div id="daily-detail-content"></div>
+        <button class="btn btn-secondary btn-block" style="margin-top:14px;" onclick="showDailyHub()">
+          <span class="material-symbols-rounded">arrow_back</span> กลับ
+        </button>
+      </div>
+    </div>
   </div>
 
   <!-- Bottom Nav (rendered dynamically per role) -->
@@ -865,10 +951,151 @@ let currentUser = null; // {code, name, nick, role}
 let currentRole = 'branch'; // login form mode
 let currentAudit = null; // {id, branchInfo, answers, currentSectionIdx, status}
 let allAudits = []; // loaded from storage
+let allDailyChecklists = []; // loaded from storage
+let currentDaily = null; // {id, branchCode, branchName, date, shift, manager, items, ...}
+
+// ============ DAILY CHECKLIST DATA ============
+const DAILY_OPEN = [
+  { name: "จุดเตรียมงาน", items: [
+    "ห้องสต๊อก  ปริมาณ  คุณภาพ  วันรับเข้า สินค้าและวัตถุดิบ  FIFO  เป็นระเบียบ",
+    "ตู้แช่ต่างๆ ปริมาณ  คุณภาพ  DRE  ความสะอาด  อุณหภูมิ",
+    "โต๊ะเตรียมและชั้นวาง  สะอาด  จัดเก็บเป็นระเบียบ ( แยกอุปกรณ์มีคมอย่างชัดเจน )",
+    "ภาชนะ  อุปกรณ์ ต่างๆ ใช้งานได้ปกติ  สะอาด  จัดเก็บเรียบร้อย",
+    "อุปกรณ์สำหรับการเตรียมงาน เช่น  ถังต้มน้ำร้อน  เครื่องสไลด์ผัก สะอาด สภาพดี พร้อมใช้งาน",
+    "ซิ้งค์ล้างมือ  ซิ้งค์ล้างอุปกรณ์ และบ่อดัก  สะอาด  อุปกรณ์ครบ",
+    "ถังขยะสะอาด มีฝาปิดมีถุงดำรองรับ",
+    "เครื่องกรองน้ำสะอาด  พร้อมใช้งาน  มีการบันทึกการล้างเป็นปัจจุบัน",
+    "เครื่องล้างจานสะอาด  มีน้ำยาพร้อมใช้งาน",
+    "น้ำยาทำความสะอาดมีครบ เพียงพอต่อการใช้งาน",
+    "อุปกรณ์ทำความสะอาด  จัดเก็บแยกส่วนอย่างชัดเจน  สะอาด  พร้อมใช้",
+  ]},
+  { name: "PASTA", items: [
+    "ตู้พาสต้า แล้ะแช่เฟรนฟราย สะอาด  ไม่ชำรุด  อุณหภูมิ  0 - 5  องศา",
+    "คุณภาพ  สินค้าและวัตถุดิบภายในตู้  ถูกต้องตามมาตรฐาน",
+    "ปริมาณ  สินค้าและวัตถุดิบ  เหมาะสมกับการใช้งาน",
+    "จัดเก็บสินค้าและวัตถุดิบถูกต้องตามอุณหภูมิที่กำหนด",
+    "D.R.E    สินค้าและวัตถุดิบ ระบุถูกต้อง ชัดเจน",
+    "ภาชนะ  อุปกรณ์ต่างๆมีเพียงพอต่อการใช้งาน  สะอาด  ไม่ชำรุด",
+    "น้ำสำหรับแช่อุปกรณ์หน้างานระบุ DRE ถูกต้อง",
+    "หม้ออุ่นซุป  ไมโครเวฟ  ปริ้นเตอร์  เตาแก๊สสามารถใช้งานได้ตามปกติ",
+    "อุณหภูมิ  ปริมาณน้ำในหม้อลวกถูกต้องตามมาตรฐาน",
+    "อุณหภูมิ  ปริมาณและสีของน้ำมันในเตาทอดถูกต้องตามมาตรฐาน",
+  ]},
+  { name: "STEAK", items: [
+    "ตู้สเต๊ก  สะอาด  ไม่ชำรุด  อุณหภูมิ  0 - 5  องศา",
+    "คุณภาพ  สินค้าและวัตถุดิบภายในตู้  ถูกต้องตามมาตรฐาน",
+    "ปริมาณ  สินค้าและวัตถุดิบ  เหมาะสมกับการใช้งาน",
+    "จัดเก็บสินค้าและวัตถุดิบถูกต้องตามอุณหภูมิที่กำหนด",
+    "D.R.E    สินค้าและวัตถุดิบ ระบุถูกต้อง ชัดเจน",
+    "ภาชนะ ต่างๆมีเพียงพอต่อการใช้งาน",
+    "อุปกรณ์ต่างๆ เช่น เตากริล  เตาแบน  เตาอบ  เตาแม่เหล็กไฟฟ้า  วอร์มเมอซอส  ปริ้นเตอร์ หม้อหุ้งข้าว  สะอาด  ใช้งานได้ตามปกติ",
+    "น้ำสำหรับแช่อุปกรณ์หน้างานระบุ D.R.E ถูกต้อง",
+    "ถ้วยรองน้ำมัน Hood สะอาด",
+  ]},
+  { name: "BAR", items: [
+    "พื้นที่บาร์น้ำสะอาดและแห้ง",
+    "ตู้เย็น  เครื่องอีซี่แคร์  สะอาดและอุณหภูมิได้มาตรฐาน 2-5 ◦C",
+    "คุณภาพ  สินค้าและวัตถุดิบภายในตู้  ถูกต้องตามมาตรฐาน",
+    "ปริมาณสินค้าและวัตถุดิบมีเพียงพอต่อการใช้งาน",
+    "จัดเก็บสินค้าและวัตถุดิบถูกต้องตามอุณหภูมิที่กำหนด",
+    "D.R.E    สินค้าและวัตถุดิบ ระบุถูกต้อง ชัดเจน",
+    "เตรียมซอสมะเขือเทศ ซอสพริก เพียงพอต่อการใช้งาน (แช่ตู้เย็น)",
+    "ถังน้ำแข็งและที่ตักสะอาด และมีปริมาณเพียงพอ",
+    "ภาชนะ  อุปกรณ์ต่างๆมีเพียงพอต่อการใช้งาน  สะอาด  ไม่ชำรุด",
+    "ปริ้นเตอร์ สะอาดพร้อมใช้งาน",
+    "ซิ้งค์ล้างแก้ว สะอาดพร้อมใช้งาน",
+  ]},
+  { name: "CASHIER", items: [
+    "เคาน์เตอร์และพื้นบริเวณแคชเชียร์ สะอาดเป็นระเบียบ",
+    "เครื่องแคชเชียร์สะอาด พร้อมใช้งาน  เวลาตรงกับเวลามาตรฐาน",
+    "เตรียมเงินทอนพร้อมก่อนร้านเปิดการขาย",
+    "ปริ้นเตอร์  กระดาษปริ้นเตอร์ มีเพียงพอต่อการใช้งาน",
+    "เครื่องรูดบัตร  สลิปเครดิต  จอแสดงผล / เครื่องแสกนชำระเงิน สามารถใช้งานได้ปกติ",
+  ]},
+  { name: "FOH", items: [
+    "ป้ายร้าน กล่องไฟ สื่อโฆษณาหน้าร้าน สะอาดไม่ชำรุด",
+    "กระจกรอบร้านสะอาด ไม่มีรอยนิ้วมือ",
+    "พื้นด้านนอกและภายในร้านสะอาด",
+    "หลอดไฟ  ฝ้า เพดาน ไม่มีหยากไย่และไม่ชำรุด",
+    "อุณหภูมิในร้านเหมาะสม เย็นสบาย  ( 25 - 27 องศา )",
+    "โต๊ะ เก้าอี้ สะอาดทุกตัวและไม่ชำรุด",
+    "คอมพิวเตอร์ และ เครื่องปริ้น ทุกตัวใช้งานได้ดี",
+    "Station สะอาดและจัดเป็นระเบียบทุก Station",
+    "จาน มีด ส้อม สะอาดมีเพียงพอต่อการใช้งาน",
+    "เมนู ใบช่วยขายมีเพียงพอ สะอาด ไม่ชำรุด",
+    "เตรียมน้ำยาและอุปกรณ์สำหรับเก็บโต๊ะ ที่ Station พร้อมใช้งาน",
+    "จัดเตรียมอุปกรณ์สำหรับงานบริการเพียงพอต่อการใช้งาน ( ธง กระบอกพริกไทย ช้อนซุป ช้อนพาสต้า ถาดเสิร์ฟ )",
+    "จัดเตรียมอุปกรณ์สำหรับห่อกลับเพียงพอต่อการใช้งาน",
+    "จุดเคลียร์จานพร้อมใช้งาน",
+  ]},
+];
+
+const DAILY_CLOSE = [
+  { name: "จุดเตรียม", items: [
+    "ห้องสต๊อคสะอาด  จัดเก็บของเป็นระเบียบ",
+    "ตู้แช่ต่างๆสะอาด  อุณหภูมิถูกต้องตามมาตรฐาน",
+    "วัตถุดิบที่นำมาละลายถูกต้องทั้ง ปริมาณ และ D.R.E",
+    "โต๊ะเตรียมและชั้นวาง  สะอาด  จัดเก็บเป็นระเบียบ",
+    "ภาชนะ  อุปกรณ์ ต่างๆ สะอาด  จัดเก็บเรียบร้อย",
+    "อุปกรณ์การเตรียม เช่น  ถังต้มน้ำร้อนดึงปลั๊กหลังการใช้  เครื่องสไลด์ผัก ( แยกอุปกรณ์มีคมอย่างชัดเจน ) สะอาด",
+    "ซิ้งค์ล้างมือ  ซิ้งค์ล้างอุปกรณ์ และบ่อดัก  สะอาด  มีอุปกรณ์ครบ",
+    "เครื่องกรองน้ำไม่มีน้ำหยด สภาพปกติ",
+    "เครื่องล้างจานได้รับการทำความสะอาดหลังใช้งาน",
+    "อุปกรณ์ทำความสะอาด  สะอาด  จัดเก็บแยกส่วนอย่างชัดเจน",
+    "ถังขยะทุกใบได้รับการทำความสะอาด",
+    "ไม่มีขยะเหลือค้างภายในร้าน",
+    "ปิดการใช้งานระบบแก๊ส  น้ำ  แอร์   Hood",
+  ]},
+  { name: "PASTA", items: [
+    "การจัดเก็บสินค้าและวัตถุดิบสิ้นวัน  ถูกต้องตามมาตรฐาน",
+    "การทิ้งสินค้าหรือวัตถุดิบสิ้นวันถูกต้องตามมาตรฐาน",
+    "ตู้เย็นพาสต้า  สะอาด  อุณหภูมิถูกต้องตามมาตรฐาน",
+    "เตาไมโครเวฟ  หม้ออุ่นซุป  ปริ้นเตอร์  ได้รับการทำความสะอาด",
+    "ภาชนะ  อุปกรณ์ ต่างๆ สะอาด  จัดเก็บเรียบร้อย",
+    "ชั้นวางของบริเวณครัวพาสต้า  สะอาดจัดของเป็นระเบียบ",
+    "เตาแก๊ส  เตาทอดไฟฟ้า  ได้รับการทำความสะอาดและจัดเก็บน้ำมันเก่าอย่างถูกต้อง",
+  ]},
+  { name: "STEAK", items: [
+    "การจัดเก็บสินค้าและวัตถุดิบสิ้นวัน  ถูกต้องตามมาตรฐาน",
+    "การทิ้งสินค้าหรือวัตถุดิบสิ้นวันถูกต้องตามมาตรฐาน",
+    "ตู้เย็นสเต๊ก  สะอาด  อุณหภูมิถูกต้องตามมาตรฐาน",
+    "อุปกรณ์ต่างๆ เช่น เตาแม่เหล็กไฟฟ้า  วอร์มเมอซอส  ปริ้นเตอร์ หม้อหุงข้าว  ได้รับการทำความสะอาด",
+    "ภาชนะ  อุปกรณ์ ต่างๆ สะอาด  จัดเก็บเรียบร้อย",
+    "ชั้นวางของบริเวณครัวสเต๊ก  สะอาดจัดของเป็นระเบียบ",
+    "เตาอบ  เตากริล  เตาแบน  ได้รับการทำความสะอาดและจัดเก็บน้ำมันทิ้งอย่างถูกต้อง",
+  ]},
+  { name: "BAR", items: [
+    "การจัดเก็บสินค้าและวัตถุดิบสิ้นวัน  ถูกต้องตามมาตรฐาน",
+    "การทิ้งสินค้าหรือวัตถุดิบสิ้นวันถูกต้องตามมาตรฐาน",
+    "ถังน้ำแข็งสะอาด และ มีการเทถาดรองน้ำใต้ตู้เรียบร้อย",
+    "แก้วน้ำ  ถาดคว่ำแก้ว และชั้นวาง สะอาด",
+    "เครื่อง อีซี่แคร์ สะอาดและอุปกรณ์ครบพร้อมใช้งาน",
+    "ตู้แช่เครื่องดื่ม สะอาด มีเครื่องดื่มแช่พร้อมสำหรับวันพรุ่งนี้  ( โค้กกระป๋อง เบียร์ )",
+    "ซิ้งค์และบ่อดัก สะอาด",
+    "ถังขยะสะอาด และ พร้อมใช้งาน",
+  ]},
+  { name: "CASHIER", items: [
+    "บริเวณแคชเชียร์ สะอาดเป็นระเบียบ",
+    "เงินทอนและเงินยอดขายจัดเก็บเข้าเซฟเรียบร้อย",
+    "ถังขยะสะอาด",
+  ]},
+  { name: "FOH", items: [
+    "กระจกรอบร้านสะอาด",
+    "พื้นส่วนบริการสะอาด",
+    "โต๊ะ  เก้าอี้  โซฟา  สะอาด",
+    "สื่อการขาย  เล่มเมนู  และ กล่องไม้ใส่ใบช่วยขาย  สะอาด",
+    "ตู้สเตชั่น สะอาด อุปกรณ์พร้อมใช้งาน  จัดเก็บเป็นระเบียบ  ( มีด ส้อม ช้อน แนบกิ้น )",
+    "ซอสแม็กกี้ ขวดเกลือและพริกไท สะอาด  ไม่หมดอายุ จัดเก็บถูกต้องตามมาตรฐาน",
+    "ตู้หน้าช่องส่ง  ภาชนะ  อุปกรณ์  สะอาด  จัดเก็บเป็นระเบียบ",
+    "จุดเคลียร์จานสะอาด",
+  ]},
+];
 
 // ============ STORAGE (Firebase Firestore + localStorage cache) ============
 const STORAGE_KEY = 'qa_audits_v1';
+const DAILY_STORAGE_KEY = 'qa_daily_v1';
 const AUDITS_COLLECTION = 'audits';
+const DAILY_COLLECTION = 'dailyChecklists';
 
 function loadLocalAudits() {
   try {
@@ -930,6 +1157,40 @@ async function saveAuditToBackend(audit) {
     await firebaseDb.collection(AUDITS_COLLECTION).doc(String(audit.id)).set(audit);
   } catch (e) {
     console.warn('Firestore save failed, keeping local copy.', e);
+  }
+}
+
+function loadLocalDaily() {
+  try {
+    const raw = localStorage.getItem(DAILY_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch (e) { return []; }
+}
+
+function saveDailyLocal() {
+  try { localStorage.setItem(DAILY_STORAGE_KEY, JSON.stringify(allDailyChecklists)); } catch (_) {}
+}
+
+async function loadDailyChecklists() {
+  if (firebaseDb) {
+    try {
+      const snap = await firebaseDb.collection(DAILY_COLLECTION).get();
+      allDailyChecklists = snap.docs.map(d => d.data());
+      saveDailyLocal();
+      return;
+    } catch (e) {
+      console.warn('Daily load failed, using local cache', e);
+    }
+  }
+  allDailyChecklists = loadLocalDaily();
+}
+
+async function saveDailyToBackend(daily) {
+  if (!firebaseDb || !daily || !daily.id) return;
+  try {
+    await firebaseDb.collection(DAILY_COLLECTION).doc(String(daily.id)).set(daily);
+  } catch (e) {
+    console.warn('Daily Firestore save failed', e);
   }
 }
 
@@ -1024,7 +1285,7 @@ async function doLogin() {
     currentUser = { code: id, ...user };
   }
 
-  await loadAudits();
+  await Promise.all([loadAudits(), loadDailyChecklists()]);
   document.getElementById('login-screen').classList.remove('active');
   document.getElementById('app-screen').classList.add('active');
 
@@ -1075,6 +1336,7 @@ function renderBottomNav() {
   if (currentUser.role !== 'branch') {
     html += '<button class="bottom-nav-item" id="nav-new" onclick="newAudit()"><span class="material-symbols-rounded">add_circle</span><span>ตรวจสาขา</span></button>';
   }
+  html += '<button class="bottom-nav-item" id="nav-daily" onclick="showDailyHub()"><span class="material-symbols-rounded">checklist</span><span>Open-Close</span></button>';
   html += '<button class="bottom-nav-item" id="nav-logout" onclick="logout()"><span class="material-symbols-rounded">logout</span><span>ออกระบบ</span></button>';
   nav.innerHTML = html;
 }
@@ -1086,8 +1348,9 @@ function setActiveNav(id) {
 }
 
 function hideAllScreens() {
-  ['dashboard-screen','info-screen','checklist-screen','summary-screen'].forEach(id => {
-    document.getElementById(id).style.display = 'none';
+  ['dashboard-screen','info-screen','checklist-screen','summary-screen','daily-hub-screen','daily-form-screen','daily-detail-screen'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'none';
   });
 }
 
@@ -1650,6 +1913,241 @@ function showModal(title, body) {
   document.getElementById('modal').classList.add('show');
 }
 function closeModal() { document.getElementById('modal').classList.remove('show'); }
+
+// ============ DAILY CHECKLIST ============
+function todayDateStr() {
+  const d = new Date();
+  const m = String(d.getMonth()+1).padStart(2,'0');
+  const day = String(d.getDate()).padStart(2,'0');
+  return `${d.getFullYear()}-${m}-${day}`;
+}
+
+function getVisibleDailyChecklists() {
+  if (currentUser.role === 'branch') {
+    return allDailyChecklists.filter(d => d.branchCode === currentUser.branchCode);
+  } else if (currentUser.role === 'bzm') {
+    return allDailyChecklists.filter(d => d.bzm === currentUser.name);
+  }
+  return allDailyChecklists;
+}
+
+function showDailyHub() {
+  hideAllScreens();
+  document.getElementById('daily-hub-screen').style.display = 'block';
+  setActiveNav('nav-daily');
+
+  const branchActions = document.getElementById('daily-branch-actions');
+  if (currentUser.role === 'branch') {
+    branchActions.style.display = 'block';
+    document.getElementById('daily-today-label').textContent = todayDateStr();
+    const today = todayDateStr();
+    const openDone = allDailyChecklists.find(d => d.branchCode === currentUser.branchCode && d.date === today && d.shift === 'open');
+    const closeDone = allDailyChecklists.find(d => d.branchCode === currentUser.branchCode && d.date === today && d.shift === 'close');
+    document.getElementById('daily-open-status').textContent = openDone ? '✓ บันทึกแล้ว' : 'ยังไม่ได้บันทึก';
+    document.getElementById('daily-close-status').textContent = closeDone ? '✓ บันทึกแล้ว' : 'ยังไม่ได้บันทึก';
+  } else {
+    branchActions.style.display = 'none';
+  }
+
+  const titleMap = {
+    'branch': 'ประวัติของสาขา',
+    'bzm': 'Daily Checklist · ' + currentUser.nick,
+    'admin': 'Daily Checklist ทุกสาขา',
+    'coo': 'Daily Checklist ทุกสาขา',
+    'vp': 'Daily Checklist ทุกสาขา'
+  };
+  document.getElementById('daily-list-title').textContent = titleMap[currentUser.role] || 'Daily Checklist';
+
+  renderDailyList();
+}
+
+function renderDailyList() {
+  const search = document.getElementById('daily-filter-search').value.trim().toLowerCase();
+  const shiftFilter = document.getElementById('daily-filter-shift').value;
+  const dateFilter = document.getElementById('daily-filter-date').value;
+
+  let list = getVisibleDailyChecklists();
+  if (search) list = list.filter(d => (d.branchCode + ' ' + (d.branchName||'')).toLowerCase().includes(search));
+  if (shiftFilter) list = list.filter(d => d.shift === shiftFilter);
+  if (dateFilter) list = list.filter(d => d.date === dateFilter);
+
+  list.sort((a,b) => (b.submittedAt || '').localeCompare(a.submittedAt || ''));
+
+  const container = document.getElementById('daily-list');
+  if (!list.length) {
+    container.innerHTML = '<div style="text-align:center;padding:24px;color:var(--text-secondary);">ยังไม่มีข้อมูล</div>';
+    return;
+  }
+  container.innerHTML = list.map(d => {
+    const totalItems = (d.items || []).length;
+    const passItems = (d.items || []).filter(i => i.status === 'pass').length;
+    const failItems = (d.items || []).filter(i => i.status === 'fail').length;
+    const shiftLabel = d.shift === 'open' ? '☀️ Open' : '🌙 Close';
+    const failBadge = failItems > 0 ? `<span style="background:#FFE5E0;color:var(--danger);padding:2px 8px;border-radius:8px;font-size:11px;font-weight:600;">❌ ${failItems}</span>` : `<span style="background:#E0F5E5;color:var(--success);padding:2px 8px;border-radius:8px;font-size:11px;font-weight:600;">✓ ครบ</span>`;
+    return `<div class="audit-item" onclick="showDailyDetail('${escapeAttr(d.id)}')" style="border-left:4px solid ${d.shift==='open' ? 'var(--secondary)' : 'var(--text)'};">
+      <div style="flex:1;">
+        <div style="font-weight:600;font-size:14px;">${escapeHtml(d.branchCode)} ${escapeHtml(d.branchName||'')}</div>
+        <div style="font-size:12px;color:var(--text-secondary);margin-top:2px;">
+          ${shiftLabel} · ${escapeHtml(d.date)} · ผู้บันทึก: ${escapeHtml(d.manager || '-')}
+        </div>
+      </div>
+      <div style="text-align:right;">
+        ${failBadge}
+        <div style="font-size:11px;color:var(--text-secondary);margin-top:4px;">${passItems}/${totalItems} ผ่าน</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function startDailyShift(shift) {
+  if (currentUser.role !== 'branch') return;
+  const today = todayDateStr();
+  const id = `${currentUser.branchCode}_${today}_${shift}`;
+  const existing = allDailyChecklists.find(d => d.id === id);
+
+  const template = shift === 'open' ? DAILY_OPEN : DAILY_CLOSE;
+  const items = [];
+  template.forEach((sec, sIdx) => {
+    sec.items.forEach((text, iIdx) => {
+      const key = `${sIdx}|${iIdx}`;
+      const prior = existing && (existing.items || []).find(it => it.key === key);
+      items.push({
+        key,
+        section: sec.name,
+        num: iIdx + 1,
+        text,
+        status: prior ? prior.status : 'pass',
+        note: prior ? (prior.note || '') : ''
+      });
+    });
+  });
+
+  currentDaily = {
+    id,
+    branchCode: currentUser.branchCode,
+    branchName: currentUser.branchName,
+    bzm: currentUser.bzm,
+    date: today,
+    shift,
+    manager: existing ? (existing.manager || '') : '',
+    items,
+    submittedBy: currentUser.code,
+    submittedByName: currentUser.name,
+    submittedAt: null
+  };
+
+  hideAllScreens();
+  document.getElementById('daily-form-screen').style.display = 'block';
+  document.getElementById('daily-form-title').textContent = shift === 'open' ? 'เช็ค Open' : 'เช็ค Close';
+  document.getElementById('daily-form-icon').textContent = shift === 'open' ? 'wb_sunny' : 'bedtime';
+  document.getElementById('daily-form-branch').textContent = `${currentUser.branchCode} ${currentUser.branchName}`;
+  document.getElementById('daily-form-meta').textContent = `วันที่ ${today} · BZM: ${currentUser.bzm || '-'}`;
+  document.getElementById('daily-manager').value = currentDaily.manager;
+  renderDailyForm();
+}
+
+function renderDailyForm() {
+  const container = document.getElementById('daily-sections-container');
+  const template = currentDaily.shift === 'open' ? DAILY_OPEN : DAILY_CLOSE;
+  let html = '';
+  let globalIdx = 0;
+  template.forEach((sec, sIdx) => {
+    html += `<div class="card"><div class="card-header"><span class="material-symbols-rounded" style="color:var(--primary);">folder</span><h2 style="font-size:15px;">${escapeHtml(sec.name)}</h2></div>`;
+    sec.items.forEach((text, iIdx) => {
+      const item = currentDaily.items[globalIdx];
+      const isPass = item.status === 'pass';
+      const isFail = item.status === 'fail';
+      const isNA = item.status === 'na';
+      html += `<div style="border-top:1px solid var(--border);padding:12px 0;">
+        <div style="font-size:13px;margin-bottom:8px;"><b>${iIdx+1}.</b> ${escapeHtml(text)}</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          <button type="button" class="btn ${isPass ? 'btn-success' : 'btn-secondary'}" style="flex:1;min-width:80px;padding:6px;font-size:13px;" onclick="setDailyItem(${globalIdx},'pass')">✓ ผ่าน</button>
+          <button type="button" class="btn ${isFail ? 'btn-primary' : 'btn-secondary'}" style="flex:1;min-width:80px;padding:6px;font-size:13px;background:${isFail?'var(--danger)':''};border-color:${isFail?'var(--danger)':''};" onclick="setDailyItem(${globalIdx},'fail')">✗ ไม่ผ่าน</button>
+          <button type="button" class="btn ${isNA ? 'btn-primary' : 'btn-secondary'}" style="flex:1;min-width:60px;padding:6px;font-size:13px;background:${isNA?'var(--text-secondary)':''};border-color:${isNA?'var(--text-secondary)':''};" onclick="setDailyItem(${globalIdx},'na')">N/A</button>
+        </div>
+        <input type="text" class="form-control" placeholder="หมายเหตุ / Action (กรณีไม่ผ่าน)" value="${escapeAttr(item.note || '')}" oninput="setDailyNote(${globalIdx}, this.value)" style="display:${isFail ? 'block' : 'none'};margin-top:8px;font-size:13px;" id="daily-note-${globalIdx}">
+      </div>`;
+      globalIdx++;
+    });
+    html += '</div>';
+  });
+  container.innerHTML = html;
+}
+
+function setDailyItem(idx, status) {
+  if (!currentDaily) return;
+  currentDaily.items[idx].status = status;
+  if (status !== 'fail') currentDaily.items[idx].note = '';
+  renderDailyForm();
+}
+
+function setDailyNote(idx, value) {
+  if (!currentDaily) return;
+  currentDaily.items[idx].note = value;
+}
+
+async function submitDailyShift() {
+  if (!currentDaily) return;
+  const manager = document.getElementById('daily-manager').value.trim();
+  if (!manager) {
+    showModal('กรุณากรอก Manager on duty', 'ระบุชื่อผู้รับผิดชอบ shift ก่อนบันทึก');
+    return;
+  }
+  currentDaily.manager = manager;
+  currentDaily.submittedAt = new Date().toISOString();
+
+  const idx = allDailyChecklists.findIndex(d => d.id === currentDaily.id);
+  if (idx >= 0) allDailyChecklists[idx] = currentDaily;
+  else allDailyChecklists.push(currentDaily);
+  saveDailyLocal();
+
+  await saveDailyToBackend(currentDaily);
+  showModal('บันทึกสำเร็จ', `บันทึก ${currentDaily.shift === 'open' ? 'Open' : 'Close'} shift วันที่ ${currentDaily.date} เรียบร้อยแล้ว`);
+  currentDaily = null;
+  showDailyHub();
+}
+
+function cancelDailyShift() {
+  currentDaily = null;
+  showDailyHub();
+}
+
+function showDailyDetail(id) {
+  const d = allDailyChecklists.find(x => x.id === id);
+  if (!d) return;
+  hideAllScreens();
+  document.getElementById('daily-detail-screen').style.display = 'block';
+  document.getElementById('daily-detail-title').textContent = (d.shift === 'open' ? 'Open' : 'Close') + ' · ' + d.date;
+  document.getElementById('daily-detail-icon').textContent = d.shift === 'open' ? 'wb_sunny' : 'bedtime';
+  document.getElementById('daily-detail-meta').innerHTML = `
+    <div><b>${escapeHtml(d.branchCode)} ${escapeHtml(d.branchName || '')}</b></div>
+    <div style="color:var(--text-secondary);margin-top:4px;">
+      ${d.shift === 'open' ? '☀️ Open shift' : '🌙 Close shift'} · ${escapeHtml(d.date)}<br>
+      Manager on duty: <b>${escapeHtml(d.manager || '-')}</b><br>
+      BZM: ${escapeHtml(d.bzm || '-')} · บันทึกโดย: ${escapeHtml(d.submittedByName || '-')}
+    </div>`;
+
+  // Group items by section
+  const bySection = {};
+  (d.items || []).forEach(it => {
+    if (!bySection[it.section]) bySection[it.section] = [];
+    bySection[it.section].push(it);
+  });
+
+  let html = '';
+  Object.keys(bySection).forEach(secName => {
+    html += `<h3 style="font-size:14px;margin:14px 0 8px;color:var(--primary);">${escapeHtml(secName)}</h3>`;
+    bySection[secName].forEach(it => {
+      const icon = it.status === 'pass' ? '✓' : (it.status === 'fail' ? '✗' : '—');
+      const color = it.status === 'pass' ? 'var(--success)' : (it.status === 'fail' ? 'var(--danger)' : 'var(--text-secondary)');
+      html += `<div style="padding:8px 10px;border-left:3px solid ${color};background:var(--bg);margin-bottom:6px;border-radius:4px;">
+        <div style="font-size:13px;"><span style="color:${color};font-weight:700;">${icon}</span> ${escapeHtml(it.text)}</div>
+        ${it.note ? `<div style="font-size:12px;color:var(--danger);margin-top:4px;">📝 ${escapeHtml(it.note)}</div>` : ''}
+      </div>`;
+    });
+  });
+  document.getElementById('daily-detail-content').innerHTML = html;
+}
 
 // Init
 selectRole('branch');
