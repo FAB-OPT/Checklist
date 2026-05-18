@@ -680,6 +680,155 @@ body {
 }
 .score-card-meta .dot { opacity: 0.4; }
 
+/* Hero stats card — big numbers + donut chart */
+.hero-stats-card {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 24px;
+  padding: 22px;
+}
+@media (min-width: 720px) {
+  .hero-stats-card {
+    grid-template-columns: 1fr auto;
+    align-items: center;
+  }
+}
+.hero-stats-left {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+.hero-stat-block {
+  background: var(--surface-2);
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-md);
+  padding: 18px 16px;
+  text-align: center;
+  transition: border-color 0.18s;
+}
+.hero-stat-label {
+  font-size: 12px; font-weight: 700;
+  color: var(--text-secondary);
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+.hero-stat-value {
+  font-size: 48px; font-weight: 900;
+  line-height: 1; letter-spacing: -1.5px;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.hero-stat-value .unit {
+  font-size: 18px; font-weight: 800;
+  opacity: 0.6; margin-left: 2px;
+  letter-spacing: 0;
+}
+.hero-stat-badge {
+  display: inline-flex; margin-top: 12px;
+  padding: 4px 12px;
+  border-radius: var(--r-pill);
+  font-size: 11px; font-weight: 800;
+  background: var(--bg-strong); color: var(--text-secondary);
+  letter-spacing: 0.2px;
+}
+.hero-stat-block.tone-score.tier-excellent { border-color: var(--success); }
+.hero-stat-block.tone-score.tier-excellent .hero-stat-value { color: var(--success); }
+.hero-stat-block.tone-score.tier-excellent .hero-stat-badge { background: var(--success-bg); color: #1E6B36; }
+.hero-stat-block.tone-score.tier-standard  { border-color: var(--primary); }
+.hero-stat-block.tone-score.tier-standard  .hero-stat-value { color: var(--primary); }
+.hero-stat-block.tone-score.tier-standard  .hero-stat-badge { background: var(--primary-50); color: var(--primary-dark); }
+.hero-stat-block.tone-score.tier-improve   { border-color: var(--warning); }
+.hero-stat-block.tone-score.tier-improve   .hero-stat-value { color: var(--warning); }
+.hero-stat-block.tone-score.tier-improve   .hero-stat-badge { background: var(--warning-bg); color: #7A5818; }
+.hero-stat-block.tone-score.tier-breakdown { border-color: var(--danger); }
+.hero-stat-block.tone-score.tier-breakdown .hero-stat-value { color: var(--danger); }
+.hero-stat-block.tone-score.tier-breakdown .hero-stat-badge { background: var(--danger-bg); color: #7A1F10; }
+
+@media (min-width: 1024px) {
+  .hero-stat-value { font-size: 60px; }
+  .hero-stat-block { padding: 24px 20px; }
+}
+
+/* Donut chart */
+.hero-stats-right {
+  display: flex; align-items: center; justify-content: center;
+}
+.donut-wrap {
+  display: flex; flex-direction: column;
+  align-items: center; gap: 16px;
+}
+.donut-chart {
+  width: 150px; height: 150px;
+  border-radius: 50%;
+  position: relative;
+  display: flex; align-items: center; justify-content: center;
+}
+.donut-chart-inner {
+  width: 96px; height: 96px;
+  border-radius: 50%;
+  background: var(--surface);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  box-shadow: 0 2px 8px rgba(80,40,20,0.06);
+}
+.donut-chart-total {
+  font-size: 28px; font-weight: 900;
+  letter-spacing: -0.6px; color: var(--text);
+  font-variant-numeric: tabular-nums; line-height: 1;
+}
+.donut-chart-label {
+  font-size: 10px; font-weight: 700;
+  color: var(--text-secondary);
+  margin-top: 3px; letter-spacing: 0.3px;
+  text-transform: uppercase;
+}
+.donut-empty {
+  text-align: center; padding: 30px;
+  color: var(--text-tertiary); font-size: 13px;
+}
+.donut-legend {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 12px;
+  width: 100%;
+  max-width: 280px;
+}
+.donut-legend-row {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 12px;
+}
+.donut-legend-row.is-empty { opacity: 0.4; }
+.donut-legend-dot {
+  width: 9px; height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.donut-legend-label {
+  flex: 1; font-weight: 700;
+  color: var(--text);
+  white-space: nowrap;
+}
+.donut-legend-val {
+  font-variant-numeric: tabular-nums;
+  display: inline-flex; align-items: baseline; gap: 4px;
+}
+.donut-legend-val b { font-weight: 800; color: var(--text); }
+.donut-legend-val em {
+  font-size: 10px; font-weight: 700;
+  color: var(--text-tertiary); font-style: normal;
+}
+@media (min-width: 720px) {
+  .donut-legend { grid-template-columns: 1fr; min-width: 160px; }
+  .donut-chart { width: 140px; height: 140px; }
+  .donut-chart-inner { width: 88px; height: 88px; }
+}
+@media (min-width: 1024px) {
+  .donut-chart { width: 170px; height: 170px; }
+  .donut-chart-inner { width: 108px; height: 108px; }
+  .donut-chart-total { font-size: 32px; }
+}
+
 /* Stripe/Linear style dashboard */
 .stripe-stat-grid {
   display: grid;
@@ -1698,20 +1847,26 @@ body:has(#login-screen.active) {
         </h2>
       </div>
 
-      <!-- 4-stat grid (Stripe/Linear style) -->
-      <div class="stripe-stat-grid" id="stripe-stats"></div>
-
-      <!-- Distribution table -->
-      <div class="stripe-card">
-        <div class="stripe-card-head">
-          <div>
-            <div class="stripe-card-title">การกระจายเกรด</div>
-            <div class="stripe-card-sub">ตามจำนวนการตรวจที่บันทึก</div>
+      <!-- Combined: 2 big stat tiles + donut chart -->
+      <div class="stripe-card hero-stats-card">
+        <div class="hero-stats-left">
+          <div class="hero-stat-block">
+            <div class="hero-stat-label">จำนวนครั้งที่ตรวจ</div>
+            <div class="hero-stat-value" id="stat-count">—</div>
           </div>
-          <div class="stripe-card-meta" id="dashboard-hero-badge"></div>
+          <div class="hero-stat-block tone-score" id="hero-stat-avg">
+            <div class="hero-stat-label">คะแนนเฉลี่ย</div>
+            <div class="hero-stat-value" id="stat-avg">—<span class="unit">%</span></div>
+            <div class="hero-stat-badge" id="dashboard-hero-badge">—</div>
+          </div>
         </div>
-        <div class="tier-table" id="tier-chart"></div>
+        <div class="hero-stats-right">
+          <div id="tier-chart" class="donut-wrap"></div>
+        </div>
       </div>
+
+      <!-- Hidden secondary stripe stats (kept for compatibility) -->
+      <div class="stripe-stat-grid" id="stripe-stats" style="display:none;"></div>
 
       <div id="zone-list" style="display:none;" class="stripe-card">
         <div class="stripe-card-head">
@@ -2526,49 +2681,17 @@ function showDashboard() {
   const breakdownCount = completed.filter(a => (a.scoreData?.grandTotal||0) < 70).length;
 
   const tier = completed.length ? tierFor(avgScore) : null;
-  const stats = [
-    {
-      label: 'จำนวนตรวจ',
-      value: completed.length,
-      sub: completed.length === 1 ? 'ครั้ง' : 'ครั้ง',
-    },
-    {
-      label: 'คะแนนเฉลี่ย',
-      value: completed.length ? avgScore.toFixed(1) + '<span class="unit">%</span>' : '—',
-      sub: tier ? tier.label : 'ยังไม่มีข้อมูล',
-      tone: tier ? tier.class : null,
-    },
-    {
-      label: 'ดีมาก ≥ 90%',
-      value: excellentCount,
-      sub: completed.length ? ((excellentCount/completed.length)*100).toFixed(0) + '% ของทั้งหมด' : '—',
-      tone: excellentCount ? 'excellent' : null,
-    },
-    {
-      label: 'เร่งด่วน < 70%',
-      value: breakdownCount,
-      sub: completed.length ? ((breakdownCount/completed.length)*100).toFixed(0) + '% ของทั้งหมด' : '—',
-      tone: breakdownCount ? 'breakdown' : null,
-    },
-  ];
-  if (currentUser.role !== 'branch') {
-    stats.push({
-      label: 'ครอบคลุม',
-      value: `${auditedBranches}<span class="unit">/${totalBranches}</span>`,
-      sub: 'สาขา',
-    });
+  const avgTile = document.getElementById('hero-stat-avg');
+  document.getElementById('stat-count').textContent = completed.length;
+  if (tier) {
+    document.getElementById('stat-avg').innerHTML = `${avgScore.toFixed(1)}<span class="unit">%</span>`;
+    document.getElementById('dashboard-hero-badge').textContent = tier.label;
+    avgTile.className = 'hero-stat-block tone-score tier-' + tier.class;
+  } else {
+    document.getElementById('stat-avg').innerHTML = `—<span class="unit">%</span>`;
+    document.getElementById('dashboard-hero-badge').textContent = 'ยังไม่มีข้อมูล';
+    avgTile.className = 'hero-stat-block tone-score tier-empty';
   }
-  document.getElementById('stripe-stats').innerHTML = stats.map(s => `
-    <div class="stripe-stat ${s.tone ? 'tone-' + s.tone : ''}">
-      <div class="stripe-stat-label">${escapeHtml(s.label)}</div>
-      <div class="stripe-stat-value">${s.value}</div>
-      <div class="stripe-stat-sub">${escapeHtml(s.sub)}</div>
-    </div>
-  `).join('');
-
-  // Distribution title meta line
-  const distMeta = document.getElementById('dashboard-hero-badge');
-  if (distMeta) distMeta.textContent = completed.length ? `รวม ${completed.length} การตรวจ` : '';
 
   renderTierChart(completed);
 
@@ -2668,32 +2791,52 @@ function renderTierChart(completed) {
     const t = tierFor(a.scoreData?.grandTotal || 0).class;
     counts[t] = (counts[t] || 0) + 1;
   });
-  const total = completed.length || 1;
-  const rows = [
-    { tier: 'excellent', label: 'ดีมาก',   sub: '≥ 90%',  count: counts.excellent, color: '#38A063' },
-    { tier: 'standard',  label: 'มาตรฐาน', sub: '≥ 85%',  count: counts.standard,  color: '#D63622' },
-    { tier: 'improve',   label: 'ปรับปรุง', sub: '≥ 70%',  count: counts.improve,   color: '#E5A348' },
-    { tier: 'breakdown', label: 'เร่งด่วน', sub: '< 70%',  count: counts.breakdown, color: '#C73223' },
+  const total = completed.length;
+  const segments = [
+    { tier: 'excellent', label: 'ดีมาก',   count: counts.excellent, color: '#38A063' },
+    { tier: 'standard',  label: 'มาตรฐาน', count: counts.standard,  color: '#D63622' },
+    { tier: 'improve',   label: 'ปรับปรุง', count: counts.improve,   color: '#E5A348' },
+    { tier: 'breakdown', label: 'เร่งด่วน', count: counts.breakdown, color: '#C73223' },
   ];
   const container = document.getElementById('tier-chart');
   if (!container) return;
-  container.innerHTML = rows.map(r => {
-    const pct = (r.count / total) * 100;
-    return `<div class="tier-row ${r.count ? '' : 'is-empty'}">
-      <div class="tier-row-label">
-        <span class="tier-dot" style="background:${r.color}"></span>
-        <span class="tier-row-name">${r.label}</span>
-        <span class="tier-row-sub">${r.sub}</span>
-      </div>
-      <div class="tier-row-bar">
-        <div class="tier-row-bar-fill" style="width:${pct}%;background:${r.color};"></div>
-      </div>
-      <div class="tier-row-val">
-        <span class="tier-row-count">${r.count}</span>
-        <span class="tier-row-pct">${pct.toFixed(0)}%</span>
-      </div>
+  if (!total) {
+    container.innerHTML = '<div class="donut-empty">ยังไม่มีข้อมูล</div>';
+    return;
+  }
+
+  // conic-gradient pie segments
+  let cursor = 0;
+  const stops = [];
+  segments.forEach(s => {
+    if (s.count > 0) {
+      const span = (s.count / total) * 360;
+      stops.push(`${s.color} ${cursor}deg ${cursor + span}deg`);
+      cursor += span;
+    }
+  });
+  const gradient = stops.length === 1
+    ? segments.find(s => s.count > 0).color
+    : `conic-gradient(${stops.join(', ')})`;
+
+  const legendHTML = segments.map(s => {
+    const pct = (s.count / total * 100);
+    return `<div class="donut-legend-row ${s.count ? '' : 'is-empty'}">
+      <span class="donut-legend-dot" style="background:${s.color}"></span>
+      <span class="donut-legend-label">${s.label}</span>
+      <span class="donut-legend-val"><b>${s.count}</b> <em>${pct.toFixed(0)}%</em></span>
     </div>`;
   }).join('');
+
+  container.innerHTML = `
+    <div class="donut-chart" style="background:${gradient};">
+      <div class="donut-chart-inner">
+        <div class="donut-chart-total">${total}</div>
+        <div class="donut-chart-label">การตรวจ</div>
+      </div>
+    </div>
+    <div class="donut-legend">${legendHTML}</div>
+  `;
 }
 
 function setTierFilter(value, btn) {
