@@ -567,17 +567,16 @@ body {
   text-transform: uppercase; color: var(--primary);
 }
 
-/* Score card — Apple-Health, now combined with donut */
+/* Score card */
 .score-card {
-  padding: 32px 24px 24px;
+  padding: 22px 22px 22px;
   position: relative;
   border-radius: 24px;
 }
-.score-card-top { text-align: center; }
 .score-card-divider {
   height: 1px;
   background: var(--border);
-  margin: 24px -24px 20px;
+  margin: 22px -22px 18px;
 }
 .score-card-chart-label {
   font-size: 13px; font-weight: 800;
@@ -585,6 +584,55 @@ body {
   letter-spacing: 0.5px; text-transform: uppercase;
   text-align: center;
   margin-bottom: 16px;
+}
+
+/* Framed stat tiles row (จำนวนตรวจ + คะแนนเฉลี่ย) */
+.stat-tile-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+.stat-tile {
+  background: var(--surface-2);
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-md);
+  padding: 18px 16px;
+  text-align: center;
+  transition: border-color 0.18s, transform 0.18s;
+}
+.stat-tile-value {
+  font-size: 36px; font-weight: 900;
+  line-height: 1; letter-spacing: -1.2px;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.stat-tile-value .pct {
+  font-size: 16px; font-weight: 800;
+  opacity: 0.7; margin-left: 1px;
+  letter-spacing: 0;
+}
+.stat-tile-label {
+  font-size: 12px; font-weight: 700;
+  color: var(--text-secondary);
+  margin-top: 8px; letter-spacing: 0.1px;
+}
+/* Average tile recolors to tier color when set */
+.score-card.tier-excellent .stat-tile-score { border-color: var(--success); }
+.score-card.tier-excellent .stat-tile-score .stat-tile-value { color: var(--success); }
+.score-card.tier-standard  .stat-tile-score { border-color: var(--primary); }
+.score-card.tier-standard  .stat-tile-score .stat-tile-value { color: var(--primary); }
+.score-card.tier-improve   .stat-tile-score { border-color: var(--warning); }
+.score-card.tier-improve   .stat-tile-score .stat-tile-value { color: var(--warning); }
+.score-card.tier-breakdown .stat-tile-score { border-color: var(--danger); }
+.score-card.tier-breakdown .stat-tile-score .stat-tile-value { color: var(--danger); }
+
+.score-card-badge-row { text-align: center; margin-bottom: 12px; }
+.score-card-meta { margin-top: 6px; }
+@media (min-width: 1024px) {
+  .stat-tile { padding: 22px 20px; }
+  .stat-tile-value { font-size: 44px; }
+  .stat-tile-value .pct { font-size: 18px; }
 }
 .score-card-pct {
   font-size: 88px; font-weight: 900;
@@ -1486,14 +1534,22 @@ body:has(#login-screen.active) {
         </h2>
       </div>
 
-      <!-- Combined Score + Donut card -->
+      <!-- Combined Score + Distribution card -->
       <div class="card score-card">
-        <div class="score-card-top">
-          <div class="score-card-pct" id="score-card-pct">—</div>
-          <div class="score-card-pct-unit">% คะแนนเฉลี่ย</div>
-          <div class="score-card-badge" id="dashboard-hero-badge">—</div>
-          <div class="score-card-meta" id="score-card-meta"></div>
+        <div class="stat-tile-grid">
+          <div class="stat-tile">
+            <div class="stat-tile-value" id="stat-count">—</div>
+            <div class="stat-tile-label">จำนวนครั้งที่ตรวจ</div>
+          </div>
+          <div class="stat-tile stat-tile-score" id="stat-avg-tile">
+            <div class="stat-tile-value" id="stat-avg">—<span class="pct">%</span></div>
+            <div class="stat-tile-label">คะแนนเฉลี่ย</div>
+          </div>
         </div>
+        <div class="score-card-badge-row">
+          <div class="score-card-badge" id="dashboard-hero-badge">—</div>
+        </div>
+        <div class="score-card-meta" id="score-card-meta"></div>
         <div class="score-card-divider"></div>
         <div class="score-card-chart-label">การกระจายเกรด</div>
         <div class="donut-wrap" id="tier-chart"></div>
@@ -2307,20 +2363,20 @@ function showDashboard() {
   const excellentCount = completed.filter(a => (a.scoreData?.grandTotal||0) >= 90).length;
   const breakdownCount = completed.filter(a => (a.scoreData?.grandTotal||0) < 70).length;
 
-  // Big Score card
+  // Stat tiles + tier pill
   const scoreCard = document.querySelector('.score-card');
   const tier = completed.length ? tierFor(avgScore) : null;
+  document.getElementById('stat-count').textContent = completed.length;
   if (tier) {
-    document.getElementById('score-card-pct').textContent = avgScore.toFixed(1);
+    document.getElementById('stat-avg').innerHTML = `${avgScore.toFixed(1)}<span class="pct">%</span>`;
     document.getElementById('dashboard-hero-badge').textContent = tier.label;
     scoreCard.className = 'card score-card tier-' + tier.class;
   } else {
-    document.getElementById('score-card-pct').textContent = '—';
+    document.getElementById('stat-avg').innerHTML = `—<span class="pct">%</span>`;
     document.getElementById('dashboard-hero-badge').textContent = 'ยังไม่มีข้อมูล';
     scoreCard.className = 'card score-card tier-empty';
   }
   const metaParts = [
-    `${completed.length} การตรวจ`,
     `ดีมาก ${excellentCount}`,
     `เร่งด่วน ${breakdownCount}`,
   ];
