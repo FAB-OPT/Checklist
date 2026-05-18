@@ -553,7 +553,134 @@ body {
 .audit-card.improve .audit-card-progress-fill { background: linear-gradient(90deg, #FFCC33, var(--warning)); }
 .audit-card.breakdown .audit-card-progress-fill { background: linear-gradient(90deg, #E04938, var(--danger)); }
 
-/* Dashboard hero — gradient card with title, scope, big stats */
+/* Page eyebrow (above hero) */
+.page-eyebrow {
+  display: flex; align-items: flex-end; justify-content: space-between; gap: 12px;
+  padding: 4px 4px 14px;
+}
+.page-eyebrow-label {
+  font-size: 11px; font-weight: 800; letter-spacing: 1.5px;
+  text-transform: uppercase; color: var(--primary);
+  margin-bottom: 4px;
+}
+.page-eyebrow-title {
+  font-size: 26px; font-weight: 900; color: var(--text);
+  letter-spacing: -0.5px; line-height: 1.1;
+}
+.page-eyebrow-scope {
+  font-size: 12px; font-weight: 700; color: var(--text-secondary);
+  text-align: right;
+}
+
+/* Score card (Apple-Health style — big number, tier pill, meta) */
+.score-card {
+  text-align: center;
+  padding: 36px 24px 28px;
+  position: relative;
+  border-radius: 24px;
+}
+.score-card-pct {
+  font-size: 88px; font-weight: 900;
+  line-height: 1; letter-spacing: -3px;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.score-card.tier-excellent .score-card-pct { color: var(--success); }
+.score-card.tier-standard  .score-card-pct { color: var(--primary); }
+.score-card.tier-improve   .score-card-pct { color: var(--warning); }
+.score-card.tier-breakdown .score-card-pct { color: var(--danger); }
+.score-card.tier-empty     .score-card-pct { color: var(--text-tertiary); font-size: 60px; }
+.score-card-pct-unit {
+  font-size: 13px; font-weight: 700;
+  color: var(--text-secondary);
+  margin-top: 6px; letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+.score-card-badge {
+  display: inline-flex; margin-top: 16px;
+  padding: 7px 16px;
+  border-radius: var(--r-pill);
+  font-size: 13px; font-weight: 800;
+  background: var(--bg-strong); color: var(--text-secondary);
+}
+.score-card.tier-excellent .score-card-badge { background: var(--success-bg); color: #1E6B36; }
+.score-card.tier-standard  .score-card-badge { background: var(--primary-50); color: var(--primary-dark); }
+.score-card.tier-improve   .score-card-badge { background: var(--warning-bg); color: #7A5818; }
+.score-card.tier-breakdown .score-card-badge { background: var(--danger-bg); color: #7A1F10; }
+.score-card-meta {
+  display: flex; align-items: center; justify-content: center; flex-wrap: wrap;
+  gap: 6px; margin-top: 18px;
+  font-size: 12px; font-weight: 700;
+  color: var(--text-secondary);
+}
+.score-card-meta .dot { opacity: 0.4; }
+
+/* Donut chart */
+.donut-wrap {
+  display: flex; flex-direction: column;
+  align-items: center; gap: 22px;
+  padding: 8px 0 4px;
+}
+.donut-chart {
+  width: 200px; height: 200px;
+  border-radius: 50%;
+  position: relative;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: inset 0 0 0 1px rgba(80,40,20,0.04);
+}
+.donut-chart-inner {
+  width: 130px; height: 130px;
+  border-radius: 50%;
+  background: var(--surface);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  box-shadow: 0 4px 14px rgba(80,40,20,0.06);
+}
+.donut-chart-total {
+  font-size: 38px; font-weight: 900;
+  letter-spacing: -1px; color: var(--text);
+  font-variant-numeric: tabular-nums; line-height: 1;
+}
+.donut-chart-label {
+  font-size: 11px; font-weight: 700;
+  color: var(--text-secondary);
+  margin-top: 4px; letter-spacing: 0.3px;
+  text-transform: uppercase;
+}
+.donut-legend {
+  width: 100%; max-width: 320px;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.donut-legend-row {
+  display: grid;
+  grid-template-columns: 14px 1fr auto;
+  align-items: center; gap: 10px;
+  font-size: 13px; font-weight: 600;
+}
+.donut-legend-row.is-empty { opacity: 0.4; }
+.donut-legend-dot {
+  width: 12px; height: 12px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 3px rgba(80,40,20,0.04);
+}
+.donut-legend-label { color: var(--text); }
+.donut-legend-count {
+  font-size: 13px; font-variant-numeric: tabular-nums;
+  display: flex; align-items: baseline; gap: 4px;
+  color: var(--text-secondary);
+}
+.donut-legend-count b {
+  font-size: 16px; font-weight: 800;
+  color: var(--text); letter-spacing: -0.2px;
+}
+@media (min-width: 1024px) {
+  .donut-wrap { flex-direction: row; justify-content: center; gap: 40px; }
+  .donut-chart { width: 220px; height: 220px; }
+  .donut-chart-inner { width: 142px; height: 142px; }
+  .donut-chart-total { font-size: 42px; }
+}
+
+/* Dashboard hero — gradient card with title, scope, big stats (legacy, kept for fallback) */
 .dashboard-hero {
   background: var(--app-gradient);
   border-radius: var(--r-lg);
@@ -1335,29 +1462,30 @@ body:has(#login-screen.active) {
   <div class="container">
     <!-- DASHBOARD (admin/bzm) -->
     <div id="dashboard-screen" style="display:none;">
-      <!-- Hero -->
-      <div class="dashboard-hero">
-        <div class="dashboard-hero-head">
-          <div>
-            <div class="dashboard-hero-eyebrow">Quality Assurance</div>
-            <h2 class="dashboard-hero-title" id="dashboard-title">สรุปผลตรวจ</h2>
-            <div class="dashboard-hero-subtitle" id="dashboard-hero-subtitle">—</div>
-          </div>
-          <div class="dashboard-hero-badge" id="dashboard-hero-badge">—</div>
+      <!-- Eyebrow row -->
+      <div class="page-eyebrow">
+        <div>
+          <div class="page-eyebrow-label">QUALITY ASSURANCE</div>
+          <h2 class="page-eyebrow-title" id="dashboard-title">สรุปผลตรวจ</h2>
         </div>
-        <div class="dashboard-hero-stats" id="dashboard-hero-stats"></div>
+        <div class="page-eyebrow-scope" id="dashboard-hero-subtitle">—</div>
       </div>
 
-      <!-- Secondary stats grid -->
-      <div class="kpi-grid" id="kpi-grid"></div>
+      <!-- Big Score card -->
+      <div class="card score-card">
+        <div class="score-card-pct" id="score-card-pct">—</div>
+        <div class="score-card-pct-unit">% คะแนนเฉลี่ย</div>
+        <div class="score-card-badge" id="dashboard-hero-badge">—</div>
+        <div class="score-card-meta" id="score-card-meta"></div>
+      </div>
 
-      <!-- Tier distribution chart -->
+      <!-- Donut + legend -->
       <div class="card">
         <div class="card-header">
-          <span class="material-symbols-rounded" style="color:var(--primary);">analytics</span>
+          <span class="material-symbols-rounded" style="color:var(--primary);">donut_large</span>
           <h2>การกระจายเกรด</h2>
         </div>
-        <div id="tier-chart"></div>
+        <div class="donut-wrap" id="tier-chart"></div>
       </div>
 
       <div id="zone-list" style="display:none;" class="card">
@@ -1367,6 +1495,9 @@ body:has(#login-screen.active) {
         </div>
         <div id="zone-list-content"></div>
       </div>
+
+      <!-- Hidden KPI grid kept for compatibility but not rendered -->
+      <div class="kpi-grid" id="kpi-grid" style="display:none;"></div>
 
       <div class="card">
         <div class="card-header">
@@ -2163,7 +2294,7 @@ function showDashboard() {
   const excellentCount = completed.filter(a => (a.scoreData?.grandTotal||0) >= 90).length;
   const breakdownCount = completed.filter(a => (a.scoreData?.grandTotal||0) < 70).length;
 
-  // Hero subtitle (scope) + tier badge
+  // Scope eyebrow
   const scopeMap = {
     'branch': 'สาขา ' + currentUser.branchCode,
     'bzm': 'ดูแลโดย ' + currentUser.nick,
@@ -2172,43 +2303,28 @@ function showDashboard() {
     'vp': 'ทุกสาขา · VP'
   };
   document.getElementById('dashboard-hero-subtitle').textContent = scopeMap[currentUser.role] || '';
-  const heroTier = completed.length ? tierFor(avgScore) : null;
-  const heroBadge = document.getElementById('dashboard-hero-badge');
-  if (heroTier) {
-    heroBadge.textContent = heroTier.label;
-    heroBadge.className = 'dashboard-hero-badge tier-' + heroTier.class;
+
+  // Big Score card
+  const scoreCard = document.querySelector('.score-card');
+  const tier = completed.length ? tierFor(avgScore) : null;
+  if (tier) {
+    document.getElementById('score-card-pct').textContent = avgScore.toFixed(1);
+    document.getElementById('dashboard-hero-badge').textContent = tier.label;
+    scoreCard.className = 'card score-card tier-' + tier.class;
   } else {
-    heroBadge.textContent = 'ยังไม่มีข้อมูล';
-    heroBadge.className = 'dashboard-hero-badge tier-empty';
+    document.getElementById('score-card-pct').textContent = '—';
+    document.getElementById('dashboard-hero-badge').textContent = 'ยังไม่มีข้อมูล';
+    scoreCard.className = 'card score-card tier-empty';
   }
-
-  // Hero inline stats (count, avg, breakdown count)
-  let statsHTML = '';
-  statsHTML += `<div class="hero-stat">
-    <div class="hero-stat-value">${avgScore.toFixed(1)}<span class="pct">%</span></div>
-    <div class="hero-stat-label">คะแนนเฉลี่ย</div>
-  </div>`;
-  statsHTML += `<div class="hero-stat-divider"></div>`;
-  statsHTML += `<div class="hero-stat">
-    <div class="hero-stat-value">${completed.length}</div>
-    <div class="hero-stat-label">การตรวจ</div>
-  </div>`;
-  statsHTML += `<div class="hero-stat-divider"></div>`;
-  statsHTML += `<div class="hero-stat">
-    <div class="hero-stat-value danger">${breakdownCount}</div>
-    <div class="hero-stat-label">เร่งด่วน</div>
-  </div>`;
-  document.getElementById('dashboard-hero-stats').innerHTML = statsHTML;
-
-  // Secondary KPIs (only show extra info beyond hero)
-  const kpiGrid = document.getElementById('kpi-grid');
-  let kpiHTML = '';
-  kpiHTML += `<div class="kpi-card success"><div class="label">ดีมาก ≥90%</div><div class="value">${excellentCount}</div><div class="sub">สาขา</div></div>`;
+  const metaParts = [
+    `${completed.length} การตรวจ`,
+    `ดีมาก ${excellentCount}`,
+    `เร่งด่วน ${breakdownCount}`,
+  ];
   if (currentUser.role !== 'branch') {
-    kpiHTML += `<div class="kpi-card warning"><div class="label">ครอบคลุม</div><div class="value">${auditedBranches}/${totalBranches}</div><div class="sub">สาขา</div></div>`;
+    metaParts.push(`ครอบคลุม ${auditedBranches}/${totalBranches}`);
   }
-  kpiGrid.innerHTML = kpiHTML;
-  kpiGrid.style.display = kpiHTML ? 'grid' : 'none';
+  document.getElementById('score-card-meta').innerHTML = metaParts.map(t => `<span>${escapeHtml(t)}</span>`).join('<span class="dot">·</span>');
 
   renderTierChart(completed);
 
@@ -2309,11 +2425,11 @@ function renderTierChart(completed) {
     counts[t] = (counts[t] || 0) + 1;
   });
   const total = completed.length;
-  const rows = [
-    { tier: 'excellent', label: '⭐ ดีมาก',   count: counts.excellent },
-    { tier: 'standard',  label: '✅ มาตรฐาน', count: counts.standard  },
-    { tier: 'improve',   label: '⚠️ ปรับปรุง', count: counts.improve   },
-    { tier: 'breakdown', label: '🚨 เร่งด่วน', count: counts.breakdown },
+  const segments = [
+    { tier: 'excellent', label: 'ดีมาก',   count: counts.excellent, color: '#38A063' },
+    { tier: 'standard',  label: 'มาตรฐาน', count: counts.standard,  color: '#D63622' },
+    { tier: 'improve',   label: 'ปรับปรุง', count: counts.improve,   color: '#E5A348' },
+    { tier: 'breakdown', label: 'เร่งด่วน', count: counts.breakdown, color: '#C73223' },
   ];
   const container = document.getElementById('tier-chart');
   if (!container) return;
@@ -2321,18 +2437,39 @@ function renderTierChart(completed) {
     container.innerHTML = '<div class="qa-chart-empty">ยังไม่มีข้อมูลการตรวจ</div>';
     return;
   }
-  const html = rows.map(r => {
-    const pct = (r.count / total) * 100;
-    const shown = pct.toFixed(0) + '%';
-    return `<div class="tier-bar-row">
-      <div class="tier-bar-label">${r.label}</div>
-      <div class="tier-bar-track">
-        <div class="tier-bar-fill tier-${r.tier}" style="width:${pct}%"></div>
-      </div>
-      <div class="tier-bar-meta"><b>${r.count}</b> <span>${shown}</span></div>
+
+  // Build conic-gradient stops
+  let cursor = 0;
+  const stops = [];
+  segments.forEach(s => {
+    if (s.count > 0) {
+      const span = (s.count / total) * 360;
+      stops.push(`${s.color} ${cursor}deg ${cursor + span}deg`);
+      cursor += span;
+    }
+  });
+  const gradient = stops.length === 1
+    ? `${segments.find(s => s.count > 0).color}`
+    : `conic-gradient(${stops.join(', ')})`;
+
+  const legendHTML = segments.map(s => {
+    const pct = total ? (s.count / total * 100) : 0;
+    return `<div class="donut-legend-row ${s.count ? '' : 'is-empty'}">
+      <span class="donut-legend-dot" style="background:${s.color}"></span>
+      <span class="donut-legend-label">${s.label}</span>
+      <span class="donut-legend-count"><b>${s.count}</b><span>${pct.toFixed(0)}%</span></span>
     </div>`;
   }).join('');
-  container.innerHTML = html;
+
+  container.innerHTML = `
+    <div class="donut-chart" style="background:${gradient};">
+      <div class="donut-chart-inner">
+        <div class="donut-chart-total">${total}</div>
+        <div class="donut-chart-label">การตรวจ</div>
+      </div>
+    </div>
+    <div class="donut-legend">${legendHTML}</div>
+  `;
 }
 
 function setTierFilter(value, btn) {
