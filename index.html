@@ -557,34 +557,32 @@ body {
   gap: 8px;
 }
 
-/* Audit history card (option C) — colorful tier hero + meta body */
+/* Audit history — horizontal one-line rows (option C horizontal) */
 .audit-list {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 14px;
+  display: flex; flex-direction: column;
+  gap: 10px;
 }
-@media (min-width: 720px)  { .audit-list { grid-template-columns: 1fr 1fr; } }
-@media (min-width: 1280px) { .audit-list { grid-template-columns: 1fr 1fr 1fr; } }
 .ah-card {
   display: grid;
-  grid-template-columns: 150px 1fr;
+  grid-template-columns: 56px 1fr auto auto;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 16px 12px 12px;
   background: var(--surface);
-  border-radius: var(--r-lg);
-  overflow: hidden;
+  border-radius: var(--r-md);
   cursor: pointer;
   border: 1px solid var(--border);
   transition: transform 0.18s, box-shadow 0.18s, border-color 0.18s;
 }
-.ah-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-lg); border-color: transparent; }
+.ah-card:hover { transform: translateX(3px); box-shadow: var(--shadow); border-color: var(--border-strong); }
 .ah-card:active { transform: scale(0.99); }
 .ah-hero {
-  display: flex; flex-direction: column;
-  align-items: center; justify-content: center;
-  gap: 8px;
-  padding: 18px 12px;
+  display: flex; align-items: center; justify-content: center;
+  padding: 0;
   color: white;
   position: relative; overflow: hidden;
-  text-align: center;
+  width: 56px; height: 56px;
+  border-radius: var(--r-md);
 }
 .ah-hero::after {
   content: '';
@@ -599,44 +597,54 @@ body {
 .ah-card.improve    .ah-hero { background: linear-gradient(135deg, #FFCC33 0%, #D9963C 100%); }
 .ah-card.breakdown  .ah-hero { background: linear-gradient(135deg, #E04938 0%, #7A1F10 100%); }
 .ah-icon {
-  width: 48px; height: 48px;
-  border-radius: var(--r-md);
-  background: rgba(255,255,255,0.22);
-  border: 1px solid rgba(255,255,255,0.18);
-  backdrop-filter: blur(6px);
   display: flex; align-items: center; justify-content: center;
-  flex-shrink: 0;
-  position: relative; z-index: 1;
+  width: 100%; height: 100%;
 }
 .ah-icon .material-symbols-rounded {
-  font-size: 26px; color: white;
+  font-size: 28px; color: white;
 }
-.ah-hero-text { position: relative; z-index: 1; }
-.ah-score {
-  font-size: 30px; font-weight: 900;
-  letter-spacing: -0.8px; line-height: 1;
+.ah-hero-text { display: none; }
+.ah-score-inline {
+  display: flex; flex-direction: column;
   font-variant-numeric: tabular-nums;
-  text-shadow: 0 1px 2px rgba(0,0,0,0.12);
+  white-space: nowrap;
+  min-width: 0;
+}
+.ah-score {
+  font-size: 22px; font-weight: 900;
+  letter-spacing: -0.6px; line-height: 1;
 }
 .ah-score .pct {
-  font-size: 14px; font-weight: 800; opacity: 0.85; margin-left: 1px;
+  font-size: 12px; font-weight: 800; opacity: 0.7; margin-left: 1px;
 }
+.ah-card.excellent  .ah-score { color: var(--success); }
+.ah-card.standard   .ah-score { color: var(--primary); }
+.ah-card.improve    .ah-score { color: var(--warning); }
+.ah-card.breakdown  .ah-score { color: var(--danger); }
 .ah-tier {
   font-size: 10px; font-weight: 800;
   letter-spacing: 0.5px; text-transform: uppercase;
-  margin-top: 4px;
-  opacity: 0.92;
+  margin-top: 3px;
+  color: var(--text-tertiary);
 }
 .ah-body {
-  padding: 14px 18px;
-  display: flex; flex-direction: column; justify-content: center;
+  display: flex; flex-direction: column;
+  min-width: 0;
 }
-@media (max-width: 480px) {
-  .ah-card { grid-template-columns: 120px 1fr; }
-  .ah-hero { padding: 14px 8px; }
-  .ah-score { font-size: 26px; }
-  .ah-icon { width: 40px; height: 40px; }
+.ah-body .ah-row:nth-child(2) { margin-top: 2px; }
+.ah-chev {
+  color: var(--text-tertiary);
+  font-size: 22px;
+}
+.ah-card:hover .ah-chev {
+  color: var(--primary); transform: translateX(2px);
+}
+@media (max-width: 600px) {
+  .ah-card { grid-template-columns: 44px 1fr auto; gap: 10px; padding: 10px 12px; }
+  .ah-hero { width: 44px; height: 44px; }
   .ah-icon .material-symbols-rounded { font-size: 22px; }
+  .ah-score-inline { display: none; }
+  .ah-chev { display: none; }
 }
 .ah-row {
   display: flex; align-items: center; gap: 8px;
@@ -3866,16 +3874,16 @@ function renderAuditList() {
     html += `<div class="ah-card ${tier.class}" onclick="viewAudit('${a.id}')">
       <div class="ah-hero">
         <div class="ah-icon"><span class="material-symbols-rounded">${tierIcons[tier.class]}</span></div>
-        <div class="ah-hero-text">
-          <div class="ah-score">${score.toFixed(1)}<span class="pct">%</span></div>
-          <div class="ah-tier">${tier.en}</div>
-        </div>
       </div>
       <div class="ah-body">
         <div class="ah-row"><span class="material-symbols-rounded">event</span><span>${escapeHtml(fmtDateThaiShort(a.branchInfo.date||'-'))}${time ? ' · ' + time : ''}</span></div>
-        <div class="ah-row"><span class="material-symbols-rounded">person</span><span>ผู้ตรวจ: ${escapeHtml(inspectorLabel)}</span></div>
-        ${bzm ? `<div class="ah-row"><span class="material-symbols-rounded">supervisor_account</span><span>BZM: ${escapeHtml(bzm)}</span></div>` : ''}
+        <div class="ah-row"><span class="material-symbols-rounded">person</span><span>${escapeHtml(inspectorLabel)}${bzm ? ' · BZM ' + escapeHtml(bzm) : ''}</span></div>
       </div>
+      <div class="ah-score-inline">
+        <div class="ah-score">${score.toFixed(1)}<span class="pct">%</span></div>
+        <div class="ah-tier">${tier.en}</div>
+      </div>
+      <span class="material-symbols-rounded ah-chev">chevron_right</span>
     </div>`;
   }
   list.innerHTML = html;
