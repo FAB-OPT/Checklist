@@ -396,18 +396,10 @@ body {
    global rule hides .score-card-badge on the dashboard hero. */
 .summary-tier-badge { display: inline-flex !important; }
 
-/* Per-letter section colors */
-.section-letter-badge.letter-A { background: linear-gradient(135deg, #FF6F61, #C53030); }
-.section-letter-badge.letter-B { background: linear-gradient(135deg, #FF9F43, #D97706); }
-.section-letter-badge.letter-C { background: linear-gradient(135deg, #F6C453, #B45309); }
-.section-letter-badge.letter-D { background: linear-gradient(135deg, #6FCF97, #2D7A4A); }
-.section-letter-badge.letter-E { background: linear-gradient(135deg, #4FBDBA, #0E7490); }
-.section-letter-badge.letter-F { background: linear-gradient(135deg, #5B8DEF, #1E40AF); }
-.section-letter-badge.letter-G { background: linear-gradient(135deg, #9F7AEA, #5B21B6); }
-.section-letter-badge.letter-H { background: linear-gradient(135deg, #ED64A6, #97266D); }
-.section-letter-badge.letter-I { background: linear-gradient(135deg, #A47551, #6B4423); }
-.section-letter-badge.letter-J { background: linear-gradient(135deg, #718096, #2D3748); }
-.section-letter-badge.letter-K { background: linear-gradient(135deg, #FF7849, #C2410C); }
+/* Letter badges all use the brand gradient (one color across sections) */
+.section-letter-badge[class*="letter-"] {
+  background: var(--primary-gradient);
+}
 
 /* Section summary rows (with progress bar + expandable detail) */
 .section-summary-grid { display: grid; gap: 10px; }
