@@ -579,11 +579,11 @@ body {
   color: var(--text);
   font-variant-numeric: tabular-nums;
 }
-.score-card.tier-excellent .score-card-pct { color: var(--success); }
-.score-card.tier-standard  .score-card-pct { color: var(--primary); }
-.score-card.tier-improve   .score-card-pct { color: var(--warning); }
-.score-card.tier-breakdown .score-card-pct { color: var(--danger); }
-.score-card.tier-empty     .score-card-pct { color: var(--text-tertiary); font-size: 60px; }
+.combined-card.tier-excellent .score-card-pct { color: var(--success); }
+.combined-card.tier-standard  .score-card-pct { color: var(--primary); }
+.combined-card.tier-improve   .score-card-pct { color: var(--warning); }
+.combined-card.tier-breakdown .score-card-pct { color: var(--danger); }
+.combined-card.tier-empty     .score-card-pct { color: var(--text-tertiary); font-size: 60px; }
 .score-card-pct-unit {
   font-size: 13px; font-weight: 700;
   color: var(--text-secondary);
@@ -597,10 +597,10 @@ body {
   font-size: 13px; font-weight: 800;
   background: var(--bg-strong); color: var(--text-secondary);
 }
-.score-card.tier-excellent .score-card-badge { background: var(--success-bg); color: #1E6B36; }
-.score-card.tier-standard  .score-card-badge { background: var(--primary-50); color: var(--primary-dark); }
-.score-card.tier-improve   .score-card-badge { background: var(--warning-bg); color: #7A5818; }
-.score-card.tier-breakdown .score-card-badge { background: var(--danger-bg); color: #7A1F10; }
+.combined-card.tier-excellent .score-card-badge { background: var(--success-bg); color: #1E6B36; }
+.combined-card.tier-standard  .score-card-badge { background: var(--primary-50); color: var(--primary-dark); }
+.combined-card.tier-improve   .score-card-badge { background: var(--warning-bg); color: #7A5818; }
+.combined-card.tier-breakdown .score-card-badge { background: var(--danger-bg); color: #7A1F10; }
 .score-card-meta {
   display: flex; align-items: center; justify-content: center; flex-wrap: wrap;
   gap: 6px; margin-top: 18px;
@@ -649,18 +649,18 @@ body {
   letter-spacing: 0.2px;
 }
 /* Average tile recolors to tier color when set */
-.score-card.tier-excellent .stat-tile-score { border-color: var(--success); }
-.score-card.tier-excellent .stat-tile-score .stat-tile-value { color: var(--success); }
-.score-card.tier-excellent .stat-tile-score .stat-tile-badge { background: var(--success-bg); color: #1E6B36; }
-.score-card.tier-standard  .stat-tile-score { border-color: var(--primary); }
-.score-card.tier-standard  .stat-tile-score .stat-tile-value { color: var(--primary); }
-.score-card.tier-standard  .stat-tile-score .stat-tile-badge { background: var(--primary-50); color: var(--primary-dark); }
-.score-card.tier-improve   .stat-tile-score { border-color: var(--warning); }
-.score-card.tier-improve   .stat-tile-score .stat-tile-value { color: var(--warning); }
-.score-card.tier-improve   .stat-tile-score .stat-tile-badge { background: var(--warning-bg); color: #7A5818; }
-.score-card.tier-breakdown .stat-tile-score { border-color: var(--danger); }
-.score-card.tier-breakdown .stat-tile-score .stat-tile-value { color: var(--danger); }
-.score-card.tier-breakdown .stat-tile-score .stat-tile-badge { background: var(--danger-bg); color: #7A1F10; }
+.combined-card.tier-excellent .stat-tile-score { border-color: var(--success); }
+.combined-card.tier-excellent .stat-tile-score .stat-tile-value { color: var(--success); }
+.combined-card.tier-excellent .stat-tile-score .stat-tile-badge { background: var(--success-bg); color: #1E6B36; }
+.combined-card.tier-standard  .stat-tile-score { border-color: var(--primary); }
+.combined-card.tier-standard  .stat-tile-score .stat-tile-value { color: var(--primary); }
+.combined-card.tier-standard  .stat-tile-score .stat-tile-badge { background: var(--primary-50); color: var(--primary-dark); }
+.combined-card.tier-improve   .stat-tile-score { border-color: var(--warning); }
+.combined-card.tier-improve   .stat-tile-score .stat-tile-value { color: var(--warning); }
+.combined-card.tier-improve   .stat-tile-score .stat-tile-badge { background: var(--warning-bg); color: #7A5818; }
+.combined-card.tier-breakdown .stat-tile-score { border-color: var(--danger); }
+.combined-card.tier-breakdown .stat-tile-score .stat-tile-value { color: var(--danger); }
+.combined-card.tier-breakdown .stat-tile-score .stat-tile-badge { background: var(--danger-bg); color: #7A1F10; }
 
 @media (min-width: 1024px) {
   .stat-tile { padding: 22px 20px; }
@@ -673,11 +673,11 @@ body {
   color: var(--text);
   font-variant-numeric: tabular-nums;
 }
-.score-card.tier-excellent .score-card-pct { color: var(--success); }
-.score-card.tier-standard  .score-card-pct { color: var(--primary); }
-.score-card.tier-improve   .score-card-pct { color: var(--warning); }
-.score-card.tier-breakdown .score-card-pct { color: var(--danger); }
-.score-card.tier-empty     .score-card-pct { color: var(--text-tertiary); font-size: 60px; }
+.combined-card.tier-excellent .score-card-pct { color: var(--success); }
+.combined-card.tier-standard  .score-card-pct { color: var(--primary); }
+.combined-card.tier-improve   .score-card-pct { color: var(--warning); }
+.combined-card.tier-breakdown .score-card-pct { color: var(--danger); }
+.combined-card.tier-empty     .score-card-pct { color: var(--text-tertiary); font-size: 60px; }
 .score-card-pct-unit {
   font-size: 13px; font-weight: 700;
   color: var(--text-secondary);
@@ -691,10 +691,10 @@ body {
   font-size: 13px; font-weight: 800;
   background: var(--bg-strong); color: var(--text-secondary);
 }
-.score-card.tier-excellent .score-card-badge { background: var(--success-bg); color: #1E6B36; }
-.score-card.tier-standard  .score-card-badge { background: var(--primary-50); color: var(--primary-dark); }
-.score-card.tier-improve   .score-card-badge { background: var(--warning-bg); color: #7A5818; }
-.score-card.tier-breakdown .score-card-badge { background: var(--danger-bg); color: #7A1F10; }
+.combined-card.tier-excellent .score-card-badge { background: var(--success-bg); color: #1E6B36; }
+.combined-card.tier-standard  .score-card-badge { background: var(--primary-50); color: var(--primary-dark); }
+.combined-card.tier-improve   .score-card-badge { background: var(--warning-bg); color: #7A5818; }
+.combined-card.tier-breakdown .score-card-badge { background: var(--danger-bg); color: #7A1F10; }
 .score-card-meta {
   display: flex; align-items: center; justify-content: center; flex-wrap: wrap;
   gap: 6px; margin-top: 18px;
@@ -773,34 +773,34 @@ body {
   .hero-stat-block { padding: 24px 20px; }
 }
 
-/* Distribution: donut + bracket table + pass/fail summary */
-.dist-grid {
+/* Combined card: score on left + chart area on right */
+.combined-card { padding: 26px 28px; }
+.combined-grid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 20px;
+  gap: 24px;
   align-items: center;
 }
 @media (min-width: 800px) {
-  .dist-grid {
-    grid-template-columns: auto 1fr auto;
-    gap: 28px;
+  .combined-grid {
+    grid-template-columns: minmax(180px, 240px) 1fr;
+    gap: 36px;
   }
 }
-.dist-donut { display: flex; justify-content: center; }
-.donut-chart.small {
-  width: 130px; height: 130px;
+.combined-score {
+  text-align: center;
 }
-.donut-chart.small .donut-chart-inner {
-  width: 86px; height: 86px;
+.combined-chart {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
 }
-.donut-chart.small .donut-chart-total {
-  font-size: 28px;
-}
-.donut-chart-sub {
-  font-size: 10px; font-weight: 700;
-  color: var(--text-tertiary);
-  letter-spacing: 0.3px; line-height: 1;
-  margin-bottom: 2px;
+@media (min-width: 600px) {
+  .combined-chart {
+    grid-template-columns: minmax(180px, 240px) 1fr;
+    gap: 24px;
+    align-items: start;
+  }
 }
 
 /* Bracket table */
@@ -1980,20 +1980,16 @@ body:has(#login-screen.active) {
         </h2>
       </div>
 
-      <!-- Big score card -->
-      <div class="card score-card">
-        <div class="score-card-pct" id="stat-avg">—</div>
-        <div class="score-card-pct-unit">% คะแนนเฉลี่ย</div>
-        <div class="score-card-badge" id="dashboard-hero-badge">—</div>
-      </div>
-
-      <!-- Distribution: small donut + bracket table + pass/fail summary -->
-      <div class="card">
-        <div class="card-header">
-          <span class="material-symbols-rounded" style="color:var(--primary);">bar_chart</span>
-          <h2>การกระจายผลคะแนน</h2>
+      <!-- Combined: score + summary + bracket table -->
+      <div class="card combined-card">
+        <div class="combined-grid">
+          <div class="combined-score">
+            <div class="score-card-pct" id="stat-avg">—</div>
+            <div class="score-card-pct-unit">% คะแนนเฉลี่ย</div>
+            <div class="score-card-badge" id="dashboard-hero-badge">—</div>
+          </div>
+          <div id="tier-chart" class="combined-chart"></div>
         </div>
-        <div id="tier-chart" class="dist-grid"></div>
       </div>
 
       <!-- Hidden secondary stats (kept for compatibility) -->
@@ -2813,15 +2809,15 @@ function showDashboard() {
   const breakdownCount = completed.filter(a => (a.scoreData?.grandTotal||0) < 70).length;
 
   const tier = completed.length ? tierFor(avgScore) : null;
-  const scoreCard = document.querySelector('.score-card');
+  const scoreCard = document.querySelector('.combined-card');
   if (tier) {
     document.getElementById('stat-avg').textContent = avgScore.toFixed(1);
     document.getElementById('dashboard-hero-badge').textContent = tier.label;
-    scoreCard.className = 'card score-card tier-' + tier.class;
+    scoreCard.className = 'card combined-card tier-' + tier.class;
   } else {
     document.getElementById('stat-avg').textContent = '—';
     document.getElementById('dashboard-hero-badge').textContent = 'ยังไม่มีข้อมูล';
-    scoreCard.className = 'card score-card tier-empty';
+    scoreCard.className = 'card combined-card tier-empty';
   }
   renderTierChart(completed);
 
@@ -2940,20 +2936,6 @@ function renderTierChart(completed) {
     return;
   }
 
-  // conic-gradient pie segments
-  let cursor = 0;
-  const stops = [];
-  brackets.forEach(b => {
-    if (b.count > 0) {
-      const span = (b.count / total) * 360;
-      stops.push(`${b.color} ${cursor}deg ${cursor + span}deg`);
-      cursor += span;
-    }
-  });
-  const gradient = stops.length === 1
-    ? brackets.find(b => b.count > 0).color
-    : `conic-gradient(${stops.join(', ')})`;
-
   const tableRows = brackets.map(b => {
     const pct = (b.count / total * 100);
     const colorClass = b.tone === 'pass' ? 'is-pass' : (b.range === '50-79%' ? 'is-warn' : 'is-fail');
@@ -2969,13 +2951,14 @@ function renderTierChart(completed) {
   const failPct = total ? (failCount / total * 100).toFixed(0) : 0;
 
   container.innerHTML = `
-    <div class="dist-donut">
-      <div class="donut-chart small" style="background:${gradient};">
-        <div class="donut-chart-inner">
-          <div class="donut-chart-sub">รวมประเมิน</div>
-          <div class="donut-chart-total">${total}</div>
-          <div class="donut-chart-label">ครั้ง</div>
-        </div>
+    <div class="dist-summary">
+      <div class="dist-summary-card pass">
+        <div class="dist-summary-label">ผ่านเกณฑ์ (80-100%)</div>
+        <div class="dist-summary-value"><b>${passCount}</b> <span>(${passPct}%)</span></div>
+      </div>
+      <div class="dist-summary-card fail">
+        <div class="dist-summary-label">ไม่ผ่าน (0-79%)</div>
+        <div class="dist-summary-value"><b>${failCount}</b> <span>(${failPct}%)</span></div>
       </div>
     </div>
     <div class="dist-table">
@@ -2986,16 +2969,6 @@ function renderTierChart(completed) {
         <span class="dist-pct">สัดส่วน</span>
       </div>
       ${tableRows}
-    </div>
-    <div class="dist-summary">
-      <div class="dist-summary-card pass">
-        <div class="dist-summary-label">ผ่านเกณฑ์ (80-100%)</div>
-        <div class="dist-summary-value"><b>${passCount}</b> <span>(${passPct}%)</span></div>
-      </div>
-      <div class="dist-summary-card fail">
-        <div class="dist-summary-label">ไม่ผ่าน (0-79%)</div>
-        <div class="dist-summary-value"><b>${failCount}</b> <span>(${failPct}%)</span></div>
-      </div>
     </div>
   `;
 }
