@@ -4286,26 +4286,39 @@ function showInfoScreen() {
   document.getElementById('info-screen').style.display = 'block';
   setActiveNav('nav-new');
 
-  // Populate branch select
+  // Populate branch select — BZM only sees branches they manage
   const sel = document.getElementById('branch-select');
   sel.innerHTML = '<option value="">— เลือกสาขา —</option>';
-  // Group by manager
-  const byManager = {};
-  for (const b of BRANCHES) {
-    if (!byManager[b.manager]) byManager[b.manager] = [];
-    byManager[b.manager].push(b);
-  }
-  for (const mgr of Object.keys(byManager).sort()) {
-    const group = document.createElement('optgroup');
-    group.label = 'BZM: ' + mgr;
-    for (const b of byManager[mgr]) {
+  const visible = currentUser.role === 'bzm'
+    ? BRANCHES.filter(b => b.manager === currentUser.name)
+    : BRANCHES;
+  // Group by manager (skip grouping for BZM since it's all one manager)
+  if (currentUser.role === 'bzm') {
+    for (const b of visible) {
       const opt = document.createElement('option');
       opt.value = b.code;
       opt.dataset.manager = b.manager;
       opt.textContent = b.code + ' ' + b.name;
-      group.appendChild(opt);
+      sel.appendChild(opt);
     }
-    sel.appendChild(group);
+  } else {
+    const byManager = {};
+    for (const b of visible) {
+      if (!byManager[b.manager]) byManager[b.manager] = [];
+      byManager[b.manager].push(b);
+    }
+    for (const mgr of Object.keys(byManager).sort()) {
+      const group = document.createElement('optgroup');
+      group.label = 'BZM: ' + mgr;
+      for (const b of byManager[mgr]) {
+        const opt = document.createElement('option');
+        opt.value = b.code;
+        opt.dataset.manager = b.manager;
+        opt.textContent = b.code + ' ' + b.name;
+        group.appendChild(opt);
+      }
+      sel.appendChild(group);
+    }
   }
   sel.onchange = e => {
     const opt = e.target.options[e.target.selectedIndex];
