@@ -557,13 +557,13 @@ body {
   gap: 8px;
 }
 
-/* Compact audit row — score left, info middle, chevron right */
+/* Single-line audit row — vertical color bar | score | date+meta | tier badge | chevron */
 .audit-row {
   display: grid;
-  grid-template-columns: 92px 1fr auto;
+  grid-template-columns: 4px 76px 1fr auto auto;
   align-items: center;
   gap: 14px;
-  padding: 12px 14px 12px 0;
+  padding: 12px 16px 12px 0;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--r-md);
@@ -573,17 +573,17 @@ body {
 }
 .audit-row:hover { box-shadow: var(--shadow); border-color: var(--border-strong); transform: translateX(2px); }
 .audit-row:active { transform: scale(0.99); }
-.audit-row-score {
-  display: flex; flex-direction: column;
-  align-items: center; justify-content: center;
-  padding: 8px 0;
-  border-right: 1px solid var(--border);
+.audit-row-bar {
   align-self: stretch;
+  width: 4px;
 }
-.audit-row.excellent .audit-row-score { background: linear-gradient(135deg, rgba(56,160,99,0.10), rgba(56,160,99,0.04)); }
-.audit-row.standard  .audit-row-score { background: linear-gradient(135deg, rgba(214,54,34,0.10), rgba(214,54,34,0.04)); }
-.audit-row.improve   .audit-row-score { background: linear-gradient(135deg, rgba(229,163,72,0.12), rgba(229,163,72,0.04)); }
-.audit-row.breakdown .audit-row-score { background: linear-gradient(135deg, rgba(199,50,35,0.12), rgba(199,50,35,0.05)); }
+.audit-row.excellent .audit-row-bar { background: var(--success); }
+.audit-row.standard  .audit-row-bar { background: var(--primary); }
+.audit-row.improve   .audit-row-bar { background: var(--warning); }
+.audit-row.breakdown .audit-row-bar { background: var(--danger); }
+.audit-row-score-wrap {
+  text-align: right;
+}
 .audit-row-score-value {
   font-size: 22px; font-weight: 900;
   letter-spacing: -0.6px; line-height: 1;
@@ -596,39 +596,35 @@ body {
 .audit-row.standard  .audit-row-score-value { color: var(--primary); }
 .audit-row.improve   .audit-row-score-value { color: var(--warning); }
 .audit-row.breakdown .audit-row-score-value { color: var(--danger); }
-.audit-row-tier {
-  font-size: 10px; font-weight: 800;
-  text-transform: uppercase; letter-spacing: 0.4px;
-  margin-top: 4px;
-}
-.audit-row.excellent .audit-row-tier { color: var(--success); }
-.audit-row.standard  .audit-row-tier { color: var(--primary); }
-.audit-row.improve   .audit-row-tier { color: var(--warning); }
-.audit-row.breakdown .audit-row-tier { color: var(--danger); }
-.audit-row-info { min-width: 0; padding: 4px 0; }
+.audit-row-main { min-width: 0; }
 .audit-row-date {
-  display: flex; align-items: center; gap: 6px;
-  font-size: 15px; font-weight: 800;
+  font-size: 14px; font-weight: 800;
   color: var(--text); letter-spacing: -0.1px;
   line-height: 1.2;
   font-variant-numeric: tabular-nums;
 }
-.audit-row-date .material-symbols-rounded {
-  font-size: 18px; color: var(--primary);
+.audit-row-time {
+  font-size: 12px; font-weight: 700;
+  color: var(--text-tertiary);
+  margin-left: 4px;
 }
 .audit-row-meta {
   font-size: 12px; font-weight: 600;
   color: var(--text-secondary);
-  margin-top: 6px;
-  display: flex; gap: 12px; flex-wrap: wrap;
+  margin-top: 2px;
 }
-.audit-row-meta span {
+.audit-row-tier-badge {
+  font-size: 10px; font-weight: 800;
+  letter-spacing: 0.4px;
+  padding: 4px 10px;
+  border-radius: var(--r-pill);
+  text-transform: uppercase;
   white-space: nowrap;
-  display: inline-flex; align-items: center; gap: 4px;
 }
-.audit-row-meta .material-symbols-rounded {
-  font-size: 14px; opacity: 0.7;
-}
+.audit-row.excellent .audit-row-tier-badge { background: var(--success-bg); color: #1E6B36; }
+.audit-row.standard  .audit-row-tier-badge { background: var(--primary-50); color: var(--primary-dark); }
+.audit-row.improve   .audit-row-tier-badge { background: var(--warning-bg); color: #7A5818; }
+.audit-row.breakdown .audit-row-tier-badge { background: var(--danger-bg); color: #7A1F10; }
 .audit-row-chev {
   color: var(--text-tertiary);
   font-size: 22px;
@@ -636,6 +632,16 @@ body {
 }
 .audit-row:hover .audit-row-chev {
   color: var(--primary); transform: translateX(2px);
+}
+@media (max-width: 600px) {
+  .audit-row {
+    grid-template-columns: 4px 64px 1fr auto;
+    gap: 10px;
+    padding-right: 12px;
+  }
+  .audit-row-tier-badge { display: none; }
+  .audit-row-score-value { font-size: 19px; }
+  .audit-row-date { font-size: 13px; }
 }
 
 /* Policy-style audit card */
@@ -3758,22 +3764,17 @@ function renderAuditList() {
     const tier = tierFor(score);
     const inspectorLabel = a.inspectorName || a.inspectorCode || '-';
     const bzm = a.branchInfo.bzm ? a.branchInfo.bzm.split(' ')[0] : '';
-    const time = a.branchInfo.time ? ` · ${escapeHtml(a.branchInfo.time)}` : '';
+    const time = a.branchInfo.time ? escapeHtml(a.branchInfo.time) : '';
     html += `<div class="audit-row ${tier.class}" onclick="viewAudit('${a.id}')">
-      <div class="audit-row-score">
+      <div class="audit-row-bar"></div>
+      <div class="audit-row-score-wrap">
         <div class="audit-row-score-value">${score.toFixed(1)}<span class="pct">%</span></div>
-        <div class="audit-row-tier">${tier.en}</div>
       </div>
-      <div class="audit-row-info">
-        <div class="audit-row-date">
-          <span class="material-symbols-rounded">event</span>
-          วันที่ตรวจ ${escapeHtml(fmtDateDMY(a.branchInfo.date||'-'))}${time}
-        </div>
-        <div class="audit-row-meta">
-          <span><span class="material-symbols-rounded">person</span>${escapeHtml(inspectorLabel)}</span>
-          ${bzm ? `<span><span class="material-symbols-rounded">supervisor_account</span>BZM ${escapeHtml(bzm)}</span>` : ''}
-        </div>
+      <div class="audit-row-main">
+        <div class="audit-row-date">${escapeHtml(fmtDateThaiShort(a.branchInfo.date||'-'))}${time ? ` <span class="audit-row-time">${time}</span>` : ''}</div>
+        <div class="audit-row-meta">${escapeHtml(inspectorLabel)}${bzm ? ' · BZM ' + escapeHtml(bzm) : ''}</div>
       </div>
+      <div class="audit-row-tier-badge">${tier.en}</div>
       <span class="material-symbols-rounded audit-row-chev">chevron_right</span>
     </div>`;
   }
@@ -4330,6 +4331,17 @@ function fmtDateDMY(iso) {
   const parts = iso.split('-');
   if (parts.length !== 3) return iso;
   return `${parts[2]}-${parts[1]}-${parts[0]}`;
+}
+
+const THAI_MONTH_SHORT = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+function fmtDateThaiShort(iso) {
+  if (!iso || typeof iso !== 'string') return iso || '';
+  const parts = iso.split('-');
+  if (parts.length !== 3) return iso;
+  const day = parseInt(parts[2], 10);
+  const month = THAI_MONTH_SHORT[parseInt(parts[1], 10) - 1] || parts[1];
+  const year = parseInt(parts[0], 10);
+  return `${day} ${month} ${year}`;
 }
 
 function getVisibleDailyChecklists() {
