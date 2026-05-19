@@ -779,7 +779,7 @@ body {
   display: grid;
   grid-template-columns: 1fr;
   gap: 28px;
-  align-items: start;
+  align-items: stretch;
 }
 @media (min-width: 800px) {
   .combined-grid {
@@ -790,16 +790,22 @@ body {
 .combined-left {
   display: flex; flex-direction: column;
   gap: 18px;
+  height: 100%;
 }
 .combined-score {
   text-align: center;
 }
 .combined-left .dist-summary {
-  display: block;
+  display: flex; flex-direction: column;
   min-width: 0;
+  flex: 1;
 }
 .combined-left .dist-summary-card { padding: 12px 14px; }
 .combined-left .dist-summary-value { font-size: 18px; }
+.combined-table-slot {
+  display: flex; flex-direction: column;
+  justify-content: center;
+}
 
 /* Score badge: Thai primary, English supplementary */
 .score-card-badge {
@@ -818,7 +824,11 @@ body {
   background: var(--surface-2);
   border: 1px solid var(--border);
   border-radius: var(--r-md);
-  padding: 14px 16px 16px;
+  padding: 18px 20px 18px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 .passfail-head {
   font-size: 13px; font-weight: 800;
@@ -851,9 +861,10 @@ body {
 .pf-hbar-seg.fail { background: linear-gradient(90deg, #E04938, #C73223); }
 .pf-hbar-legend {
   display: flex; flex-wrap: wrap;
-  gap: 18px 28px;
-  margin-top: 14px;
+  gap: 18px 32px;
+  margin-top: 16px;
   align-items: center;
+  justify-content: center;
 }
 .pf-leg {
   display: inline-flex; align-items: center; gap: 8px;
