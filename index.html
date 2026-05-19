@@ -1414,6 +1414,198 @@ body {
 .chip-badge-fail { background: var(--danger); color: white; }
 .chip-badge-done { background: var(--success); color: white; }
 
+/* Daily detail (รายละเอียดประวัติ) — header + meta + stats + sections */
+.detail-head-card { padding: 22px 24px 18px; }
+.detail-head-top {
+  display: flex; align-items: center; gap: 14px;
+  margin-bottom: 16px;
+}
+.detail-shift-icon {
+  width: 52px; height: 52px;
+  border-radius: var(--r-md);
+  display: inline-flex; align-items: center; justify-content: center;
+  color: white; flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(80,40,20,0.12);
+}
+.detail-head-card.shift-open  .detail-shift-icon { background: linear-gradient(135deg, #FFB833, #FF8534); }
+.detail-head-card.shift-close .detail-shift-icon { background: linear-gradient(135deg, #6E7AC8, #4A5A99); }
+.detail-shift-icon .material-symbols-rounded { font-size: 28px; color: white; }
+.detail-head-titles { flex: 1; min-width: 0; }
+.detail-head-row {
+  display: flex; align-items: baseline; gap: 12px;
+  flex-wrap: wrap; margin-bottom: 6px;
+}
+.detail-head-row h2 {
+  font-size: 22px; font-weight: 900;
+  color: var(--text); letter-spacing: -0.4px;
+}
+.detail-head-date {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 14px; font-weight: 800;
+  color: var(--primary-dark);
+  font-variant-numeric: tabular-nums;
+}
+.detail-head-date .material-symbols-rounded {
+  font-size: 16px; color: var(--primary);
+}
+.detail-head-branch {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 14px; font-weight: 700;
+  color: var(--text-secondary);
+}
+.detail-head-branch .material-symbols-rounded {
+  font-size: 16px; color: var(--primary);
+}
+
+.detail-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.detail-meta-tile {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+}
+.detail-meta-tile .material-symbols-rounded {
+  font-size: 20px; color: var(--primary);
+  flex-shrink: 0;
+}
+.detail-meta-label {
+  font-size: 11px; font-weight: 700;
+  color: var(--text-tertiary);
+  letter-spacing: 0.3px;
+}
+.detail-meta-value {
+  font-size: 13px; font-weight: 800;
+  color: var(--text);
+  margin-top: 1px;
+}
+
+.detail-stats-row {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+  padding-top: 14px;
+  border-top: 1px dashed var(--border);
+}
+@media (max-width: 480px) {
+  .detail-stats-row { grid-template-columns: repeat(5, 1fr); gap: 4px; }
+}
+.detail-stat {
+  text-align: center;
+  padding: 8px 4px;
+  border-radius: var(--r-sm);
+}
+.detail-stat .ds-v {
+  font-size: 22px; font-weight: 900;
+  color: var(--text); letter-spacing: -0.4px;
+  font-variant-numeric: tabular-nums; line-height: 1;
+}
+.detail-stat .ds-l {
+  font-size: 10px; font-weight: 700;
+  color: var(--text-tertiary);
+  margin-top: 4px; letter-spacing: 0.2px;
+  text-transform: uppercase;
+}
+.detail-stat.is-pass    { background: var(--success-bg); }
+.detail-stat.is-pass    .ds-v { color: var(--success); }
+.detail-stat.is-fail    { background: var(--danger-bg); }
+.detail-stat.is-fail    .ds-v { color: var(--danger); }
+.detail-stat.is-na      { background: var(--surface-2); }
+.detail-stat.is-na      .ds-v { color: var(--text-secondary); }
+.detail-stat.is-pending { background: var(--warning-bg); }
+.detail-stat.is-pending .ds-v { color: var(--warning); }
+
+/* Sections */
+.detail-section-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  margin-bottom: 14px;
+  overflow: hidden;
+}
+.detail-section-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 18px;
+  background: var(--primary-gradient);
+  color: white;
+}
+.detail-section-name {
+  font-size: 15px; font-weight: 800;
+  letter-spacing: 0.2px; text-transform: uppercase;
+}
+.detail-section-stat {
+  display: inline-flex; gap: 6px;
+}
+.ds-chip {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 28px; height: 22px; padding: 0 8px;
+  background: rgba(255,255,255,0.22);
+  border-radius: var(--r-pill);
+  font-size: 12px; font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.ds-chip-fail { background: rgba(255,255,255,0.92); color: var(--danger); }
+
+/* Items */
+.detail-item {
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 12px 18px;
+  border-top: 1px solid var(--border);
+  transition: background 0.18s;
+}
+.detail-item:first-of-type { border-top: none; }
+.detail-item.is-pass { background: rgba(45,122,74,0.03); }
+.detail-item.is-fail { background: rgba(199,50,35,0.05); }
+.detail-item.is-na   { background: var(--surface-2); }
+.detail-item-icon {
+  flex-shrink: 0; padding-top: 1px;
+}
+.detail-item-icon .material-symbols-rounded { font-size: 22px; }
+.detail-item.is-pass    .detail-item-icon { color: var(--success); }
+.detail-item.is-fail    .detail-item-icon { color: var(--danger); }
+.detail-item.is-na      .detail-item-icon { color: var(--text-secondary); }
+.detail-item.is-pending .detail-item-icon { color: var(--text-tertiary); }
+.detail-item-body { flex: 1; min-width: 0; }
+.detail-item-text {
+  font-size: 14px; font-weight: 600;
+  color: var(--text); line-height: 1.5;
+}
+.detail-item-note {
+  display: flex; align-items: flex-start; gap: 6px;
+  margin-top: 6px;
+  padding: 6px 10px;
+  background: var(--danger-bg);
+  color: #7A1F10;
+  border-radius: var(--r-sm);
+  font-size: 12px; font-weight: 700;
+}
+.detail-item-note .material-symbols-rounded {
+  font-size: 16px; color: var(--danger); flex-shrink: 0;
+}
+.detail-photos {
+  display: flex; gap: 6px; flex-wrap: wrap;
+  margin-top: 8px;
+}
+.detail-photos a {
+  display: inline-block;
+  width: 72px; height: 72px;
+  border-radius: var(--r-sm);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  transition: transform 0.18s;
+}
+.detail-photos a:hover { transform: scale(1.05); }
+.detail-photos img {
+  width: 100%; height: 100%;
+  object-fit: cover; display: block;
+  cursor: zoom-in;
+}
+
 /* Daily history (ประวัติ) — grouped by date, two cards per day */
 .daily-history-group {
   margin-bottom: 22px;
@@ -2603,15 +2795,28 @@ body:has(#login-screen.active) {
 
     <!-- DAILY DETAIL SCREEN -->
     <div id="daily-detail-screen" style="display:none;">
-      <div class="card">
-        <div class="card-header">
-          <span class="material-symbols-rounded" id="daily-detail-icon" style="color:var(--primary);">checklist</span>
-          <h2 id="daily-detail-title">รายละเอียด</h2>
+      <div class="card detail-head-card" id="daily-detail-head">
+        <div class="detail-head-top">
+          <div class="detail-shift-icon" id="detail-shift-icon">
+            <span class="material-symbols-rounded" id="daily-detail-icon">wb_sunny</span>
+          </div>
+          <div class="detail-head-titles">
+            <div class="detail-head-row">
+              <h2 id="daily-detail-title">Open</h2>
+              <div class="detail-head-date" id="detail-head-date">19-05-2026</div>
+            </div>
+            <div class="detail-head-branch" id="detail-head-branch"></div>
+          </div>
         </div>
-        <div id="daily-detail-meta" style="background:var(--bg);padding:10px 12px;border-radius:8px;margin-bottom:14px;font-size:13px;"></div>
-        <div id="daily-detail-content"></div>
-        <button class="btn btn-secondary btn-block" style="margin-top:14px;" onclick="showDailyHub()">
-          <span class="material-symbols-rounded">arrow_back</span> กลับ
+        <div class="detail-meta-grid" id="daily-detail-meta"></div>
+        <div class="detail-stats-row" id="detail-stats-row"></div>
+      </div>
+
+      <div id="daily-detail-content"></div>
+
+      <div class="card no-print">
+        <button class="btn btn-secondary btn-block" onclick="showDailyHub()">
+          <span class="material-symbols-rounded">arrow_back</span> กลับไปประวัติ
         </button>
       </div>
     </div>
@@ -4179,37 +4384,83 @@ function showDailyDetail(id) {
   if (!d) return;
   hideAllScreens();
   document.getElementById('daily-detail-screen').style.display = 'block';
-  document.getElementById('daily-detail-title').textContent = (d.shift === 'open' ? 'Open' : 'Close') + ' · ' + d.date;
+
+  // Head
+  const head = document.getElementById('daily-detail-head');
+  head.className = 'card detail-head-card ' + (d.shift === 'open' ? 'shift-open' : 'shift-close');
+  document.getElementById('daily-detail-title').textContent = d.shift === 'open' ? 'Open Shift' : 'Close Shift';
   document.getElementById('daily-detail-icon').textContent = d.shift === 'open' ? 'wb_sunny' : 'bedtime';
-  document.getElementById('daily-detail-meta').innerHTML = `
-    <div><b>${escapeHtml(branchLabel(d.branchCode, d.branchName))}</b></div>
-    <div style="color:var(--text-secondary);margin-top:4px;">
-      ${d.shift === 'open' ? '☀️ Open shift' : '🌙 Close shift'} · ${escapeHtml(d.date)}<br>
-      Manager on duty: <b>${escapeHtml(d.manager || '-')}</b><br>
-      BZM: ${escapeHtml(d.bzm || '-')} · บันทึกโดย: ${escapeHtml(d.submittedByName || '-')}
-    </div>`;
+  document.getElementById('detail-head-date').innerHTML = `<span class="material-symbols-rounded">calendar_today</span>${escapeHtml(fmtDateDMY(d.date))}`;
+  document.getElementById('detail-head-branch').innerHTML = `<span class="material-symbols-rounded">storefront</span><span>${escapeHtml(branchLabel(d.branchCode, d.branchName))}</span>`;
+
+  // Meta grid (manager + BZM + submitted by)
+  const meta = [
+    { icon: 'badge', label: 'Manager on duty', value: d.manager || '-' },
+    { icon: 'supervisor_account', label: 'BZM', value: d.bzm || '-' },
+    { icon: 'person_pin', label: 'บันทึกโดย', value: d.submittedByName || '-' },
+  ];
+  document.getElementById('daily-detail-meta').innerHTML = meta.map(m => `
+    <div class="detail-meta-tile">
+      <span class="material-symbols-rounded">${m.icon}</span>
+      <div>
+        <div class="detail-meta-label">${escapeHtml(m.label)}</div>
+        <div class="detail-meta-value">${escapeHtml(m.value)}</div>
+      </div>
+    </div>`).join('');
+
+  // Stats summary
+  const items = d.items || [];
+  const total = items.length;
+  const passN = items.filter(i => i.status === 'pass').length;
+  const failN = items.filter(i => i.status === 'fail').length;
+  const naN = items.filter(i => i.status === 'na').length;
+  const pendN = total - passN - failN - naN;
+  document.getElementById('detail-stats-row').innerHTML = `
+    <div class="detail-stat is-pass"><div class="ds-v">${passN}</div><div class="ds-l">ผ่าน</div></div>
+    <div class="detail-stat is-fail"><div class="ds-v">${failN}</div><div class="ds-l">ไม่ผ่าน</div></div>
+    <div class="detail-stat is-na"><div class="ds-v">${naN}</div><div class="ds-l">N/A</div></div>
+    <div class="detail-stat is-pending"><div class="ds-v">${pendN}</div><div class="ds-l">รอ</div></div>
+    <div class="detail-stat"><div class="ds-v">${total}</div><div class="ds-l">ทั้งหมด</div></div>
+  `;
 
   // Group items by section
   const bySection = {};
-  (d.items || []).forEach(it => {
+  items.forEach(it => {
     if (!bySection[it.section]) bySection[it.section] = [];
     bySection[it.section].push(it);
   });
 
   let html = '';
   Object.keys(bySection).forEach(secName => {
-    html += `<h3 style="font-size:14px;margin:14px 0 8px;color:var(--primary);">${escapeHtml(secName)}</h3>`;
-    bySection[secName].forEach(it => {
-      const icon = it.status === 'pass' ? '✓' : (it.status === 'fail' ? '✗' : '—');
-      const color = it.status === 'pass' ? 'var(--success)' : (it.status === 'fail' ? 'var(--danger)' : 'var(--text-secondary)');
+    const secItems = bySection[secName];
+    const secPass = secItems.filter(i => i.status === 'pass').length;
+    const secFail = secItems.filter(i => i.status === 'fail').length;
+    html += `<div class="detail-section-card">
+      <div class="detail-section-head">
+        <div class="detail-section-name">${escapeHtml(secName)}</div>
+        <div class="detail-section-stat">
+          <span class="ds-chip ds-chip-pass">${secPass}</span>
+          ${secFail ? `<span class="ds-chip ds-chip-fail">${secFail}</span>` : ''}
+          <span class="ds-chip ds-chip-total">${secItems.length}</span>
+        </div>
+      </div>`;
+
+    secItems.forEach((it, j) => {
+      const status = it.status || 'pending';
+      const icon = status === 'pass' ? 'check_circle' : status === 'fail' ? 'cancel' : status === 'na' ? 'remove_circle' : 'radio_button_unchecked';
       const photos = it.photos || [];
-      const photosHtml = photos.length ? `<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:6px;">${photos.map(p => `<a href="${p}" target="_blank"><img src="${p}" style="width:60px;height:60px;object-fit:cover;border-radius:4px;cursor:zoom-in;"></a>`).join('')}</div>` : '';
-      html += `<div style="padding:8px 10px;border-left:3px solid ${color};background:var(--bg);margin-bottom:6px;border-radius:4px;">
-        <div style="font-size:13px;"><span style="color:${color};font-weight:700;">${icon}</span> ${escapeHtml(it.text)}</div>
-        ${it.note ? `<div style="font-size:12px;color:var(--danger);margin-top:4px;">📝 ${escapeHtml(it.note)}</div>` : ''}
-        ${photosHtml}
+      const photosHtml = photos.length ? `<div class="detail-photos">${photos.map(p => `<a href="${p}" target="_blank"><img src="${p}"></a>`).join('')}</div>` : '';
+      html += `<div class="detail-item is-${status}">
+        <span class="detail-item-icon"><span class="material-symbols-rounded">${icon}</span></span>
+        <div class="detail-item-body">
+          <div class="detail-item-text"><b>${j+1}.</b> ${escapeHtml(it.text)}</div>
+          ${it.note ? `<div class="detail-item-note"><span class="material-symbols-rounded">edit_note</span>${escapeHtml(it.note)}</div>` : ''}
+          ${photosHtml}
+        </div>
       </div>`;
     });
+
+    html += `</div>`;
   });
   document.getElementById('daily-detail-content').innerHTML = html;
 }
