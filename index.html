@@ -1985,7 +1985,6 @@ body:has(#login-screen.active) {
         <div class="score-card-pct" id="stat-avg">—</div>
         <div class="score-card-pct-unit">% คะแนนเฉลี่ย</div>
         <div class="score-card-badge" id="dashboard-hero-badge">—</div>
-        <div class="score-card-meta" id="score-card-meta"></div>
       </div>
 
       <!-- Distribution: small donut + bracket table + pass/fail summary -->
@@ -2824,16 +2823,6 @@ function showDashboard() {
     document.getElementById('dashboard-hero-badge').textContent = 'ยังไม่มีข้อมูล';
     scoreCard.className = 'card score-card tier-empty';
   }
-  const metaParts = [
-    `${completed.length} การตรวจ`,
-    `ดีมาก ${excellentCount}`,
-    `เร่งด่วน ${breakdownCount}`,
-  ];
-  if (currentUser.role !== 'branch') {
-    metaParts.push(`ครอบคลุม ${auditedBranches}/${totalBranches}`);
-  }
-  document.getElementById('score-card-meta').innerHTML = metaParts.map(t => `<span>${escapeHtml(t)}</span>`).join('<span class="dot">·</span>');
-
   renderTierChart(completed);
 
   // Zone breakdown (admin/coo/vp only)
