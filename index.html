@@ -552,7 +552,37 @@ body {
 .kpi-card.danger { border-color: var(--danger); }
 .kpi-card.info { border-color: var(--secondary); }
 
-.audit-list { display: flex; flex-direction: column; gap: 12px; }
+.audit-list { display: flex; flex-direction: column; gap: 20px; }
+
+/* Audit history grouped by date */
+.audit-history-group {}
+.audit-history-date {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 13px; font-weight: 800;
+  color: var(--text); letter-spacing: 0.3px;
+  margin: 0 0 10px 4px;
+  text-transform: uppercase;
+}
+.audit-history-date .material-symbols-rounded {
+  font-size: 16px; color: var(--primary);
+}
+.audit-history-date-count {
+  margin-left: auto;
+  font-size: 11px; font-weight: 700;
+  color: var(--text-tertiary);
+  text-transform: none; letter-spacing: 0;
+}
+.audit-history-cards {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+@media (min-width: 800px) {
+  .audit-history-cards { grid-template-columns: 1fr 1fr; }
+}
+@media (min-width: 1280px) {
+  .audit-history-cards { grid-template-columns: 1fr 1fr 1fr; }
+}
 
 /* Policy-style audit card */
 .audit-card {
@@ -3668,26 +3698,44 @@ function renderAuditList() {
     list.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text-secondary);"><span class="material-symbols-rounded" style="font-size:42px;">inbox</span><div style="margin-top:8px;">ยังไม่มีผลการตรวจ</div></div>';
     return;
   }
+  // Group audits by date desc
+  const byDate = {};
+  audits.forEach(a => {
+    const d = a.branchInfo.date || '—';
+    if (!byDate[d]) byDate[d] = [];
+    byDate[d].push(a);
+  });
+  const dates = Object.keys(byDate).sort((a, b) => b.localeCompare(a));
+
   let html = '';
-  for (const a of audits) {
-    const score = a.scoreData?.grandTotal || 0;
-    const tier = tierFor(score);
-    const inspectorLabel = a.inspectorName || a.inspectorCode || '-';
-    const bzm = a.branchInfo.bzm ? a.branchInfo.bzm.split(' ')[0] : '';
-    html += `<div class="audit-card ${tier.class}" onclick="viewAudit('${a.id}')">
-      <div class="audit-card-top">
-        <div class="audit-card-pill">${tier.label}</div>
-        <div class="audit-card-score">${score.toFixed(1)}<span class="pct">%</span></div>
+  dates.forEach(date => {
+    html += `<div class="audit-history-group">
+      <div class="audit-history-date">
+        <span class="material-symbols-rounded">calendar_today</span>
+        <span>${escapeHtml(fmtDateDMY(date))}</span>
+        <span class="audit-history-date-count">${byDate[date].length} รายการ</span>
       </div>
-      <div class="audit-card-title">${escapeHtml(a.branchInfo.branch||'-')}</div>
-      <div class="audit-card-meta">
-        <span><span class="material-symbols-rounded">person</span> ${escapeHtml(inspectorLabel)}</span>
-        <span><span class="material-symbols-rounded">calendar_today</span> ${escapeHtml(a.branchInfo.date||'-')}</span>
-        ${bzm ? `<span><span class="material-symbols-rounded">supervisor_account</span> ${escapeHtml(bzm)}</span>` : ''}
-      </div>
-      <div class="audit-card-progress"><div class="audit-card-progress-fill" style="width:${Math.min(100, score)}%"></div></div>
-    </div>`;
-  }
+      <div class="audit-history-cards">`;
+    byDate[date].forEach(a => {
+      const score = a.scoreData?.grandTotal || 0;
+      const tier = tierFor(score);
+      const inspectorLabel = a.inspectorName || a.inspectorCode || '-';
+      const bzm = a.branchInfo.bzm ? a.branchInfo.bzm.split(' ')[0] : '';
+      html += `<div class="audit-card ${tier.class}" onclick="viewAudit('${a.id}')">
+        <div class="audit-card-top">
+          <div class="audit-card-pill">${tier.label}</div>
+          <div class="audit-card-score">${score.toFixed(1)}<span class="pct">%</span></div>
+        </div>
+        <div class="audit-card-title">${escapeHtml(a.branchInfo.branch||'-')}</div>
+        <div class="audit-card-meta">
+          <span><span class="material-symbols-rounded">person</span> ${escapeHtml(inspectorLabel)}</span>
+          ${bzm ? `<span><span class="material-symbols-rounded">supervisor_account</span> ${escapeHtml(bzm)}</span>` : ''}
+        </div>
+        <div class="audit-card-progress"><div class="audit-card-progress-fill" style="width:${Math.min(100, score)}%"></div></div>
+      </div>`;
+    });
+    html += `</div></div>`;
+  });
   list.innerHTML = html;
 }
 
