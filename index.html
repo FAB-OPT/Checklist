@@ -557,6 +557,85 @@ body {
   gap: 8px;
 }
 
+/* Audit history card (option C) — colorful tier hero + meta body */
+.audit-list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+}
+@media (min-width: 720px)  { .audit-list { grid-template-columns: 1fr 1fr; } }
+@media (min-width: 1280px) { .audit-list { grid-template-columns: 1fr 1fr 1fr; } }
+.ah-card {
+  background: var(--surface);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  transition: transform 0.18s, box-shadow 0.18s, border-color 0.18s;
+}
+.ah-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-lg); border-color: transparent; }
+.ah-card:active { transform: scale(0.99); }
+.ah-hero {
+  display: flex; align-items: center; gap: 14px;
+  padding: 18px 20px;
+  color: white;
+  position: relative; overflow: hidden;
+}
+.ah-hero::after {
+  content: '';
+  position: absolute; top: -40%; right: -20%;
+  width: 180px; height: 180px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.12);
+  filter: blur(20px); pointer-events: none;
+}
+.ah-card.excellent  .ah-hero { background: linear-gradient(135deg, #4FB87A 0%, #1E6B36 100%); }
+.ah-card.standard   .ah-hero { background: linear-gradient(135deg, #FF8534 0%, #D63622 100%); }
+.ah-card.improve    .ah-hero { background: linear-gradient(135deg, #FFCC33 0%, #D9963C 100%); }
+.ah-card.breakdown  .ah-hero { background: linear-gradient(135deg, #E04938 0%, #7A1F10 100%); }
+.ah-icon {
+  width: 60px; height: 60px;
+  border-radius: var(--r-md);
+  background: rgba(255,255,255,0.22);
+  border: 1px solid rgba(255,255,255,0.18);
+  backdrop-filter: blur(6px);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  position: relative; z-index: 1;
+}
+.ah-icon .material-symbols-rounded {
+  font-size: 32px; color: white;
+}
+.ah-hero-text { position: relative; z-index: 1; }
+.ah-score {
+  font-size: 30px; font-weight: 900;
+  letter-spacing: -0.8px; line-height: 1;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.12);
+}
+.ah-score .pct {
+  font-size: 14px; font-weight: 800; opacity: 0.85; margin-left: 1px;
+}
+.ah-tier {
+  font-size: 11px; font-weight: 800;
+  letter-spacing: 0.5px; text-transform: uppercase;
+  margin-top: 4px;
+  opacity: 0.92;
+}
+.ah-body {
+  padding: 14px 18px 16px;
+}
+.ah-row {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 13px; font-weight: 600;
+  color: var(--text-secondary);
+  padding: 4px 0;
+}
+.ah-row .material-symbols-rounded {
+  font-size: 16px; color: var(--primary); opacity: 0.7;
+  flex-shrink: 0;
+}
+
 /* Single-line audit row — vertical color bar | score | date+meta | tier badge | chevron */
 .audit-row {
   display: grid;
@@ -3758,6 +3837,12 @@ function renderAuditList() {
     list.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text-secondary);"><span class="material-symbols-rounded" style="font-size:42px;">inbox</span><div style="margin-top:8px;">ยังไม่มีผลการตรวจ</div></div>';
     return;
   }
+  const tierIcons = {
+    excellent: 'workspace_premium',
+    standard: 'verified',
+    improve: 'warning',
+    breakdown: 'crisis_alert',
+  };
   let html = '';
   for (const a of audits) {
     const score = a.scoreData?.grandTotal || 0;
@@ -3765,17 +3850,19 @@ function renderAuditList() {
     const inspectorLabel = a.inspectorName || a.inspectorCode || '-';
     const bzm = a.branchInfo.bzm ? a.branchInfo.bzm.split(' ')[0] : '';
     const time = a.branchInfo.time ? escapeHtml(a.branchInfo.time) : '';
-    html += `<div class="audit-row ${tier.class}" onclick="viewAudit('${a.id}')">
-      <div class="audit-row-bar"></div>
-      <div class="audit-row-score-wrap">
-        <div class="audit-row-score-value">${score.toFixed(1)}<span class="pct">%</span></div>
+    html += `<div class="ah-card ${tier.class}" onclick="viewAudit('${a.id}')">
+      <div class="ah-hero">
+        <div class="ah-icon"><span class="material-symbols-rounded">${tierIcons[tier.class]}</span></div>
+        <div class="ah-hero-text">
+          <div class="ah-score">${score.toFixed(1)}<span class="pct">%</span></div>
+          <div class="ah-tier">${tier.en}</div>
+        </div>
       </div>
-      <div class="audit-row-main">
-        <div class="audit-row-date">${escapeHtml(fmtDateThaiShort(a.branchInfo.date||'-'))}${time ? ` <span class="audit-row-time">${time}</span>` : ''}</div>
-        <div class="audit-row-meta">${escapeHtml(inspectorLabel)}${bzm ? ' · BZM ' + escapeHtml(bzm) : ''}</div>
+      <div class="ah-body">
+        <div class="ah-row"><span class="material-symbols-rounded">event</span><span>${escapeHtml(fmtDateThaiShort(a.branchInfo.date||'-'))}${time ? ' · ' + time : ''}</span></div>
+        <div class="ah-row"><span class="material-symbols-rounded">person</span><span>ผู้ตรวจ: ${escapeHtml(inspectorLabel)}</span></div>
+        ${bzm ? `<div class="ah-row"><span class="material-symbols-rounded">supervisor_account</span><span>BZM: ${escapeHtml(bzm)}</span></div>` : ''}
       </div>
-      <div class="audit-row-tier-badge">${tier.en}</div>
-      <span class="material-symbols-rounded audit-row-chev">chevron_right</span>
     </div>`;
   }
   list.innerHTML = html;
