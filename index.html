@@ -3714,8 +3714,8 @@ function renderScoreTrend(completed) {
   slot.innerHTML = `
     <div class="passfail-chart">
       <div class="pf-hbar">
-        ${pass > 0 ? `<div class="pf-hbar-seg pass" style="width:${passWidth}%">${passWidth >= 12 ? pass : ''}</div>` : ''}
-        ${fail > 0 ? `<div class="pf-hbar-seg fail" style="width:${failWidth}%">${failWidth >= 12 ? fail : ''}</div>` : ''}
+        ${pass > 0 ? `<div class="pf-hbar-seg pass" style="width:${passWidth}%">${passWidth >= 12 ? passPct + '%' : ''}</div>` : ''}
+        ${fail > 0 ? `<div class="pf-hbar-seg fail" style="width:${failWidth}%">${failWidth >= 12 ? failPct + '%' : ''}</div>` : ''}
       </div>
       <div class="pf-hbar-legend">
         <div class="pf-leg">
