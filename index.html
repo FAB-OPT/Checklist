@@ -783,7 +783,7 @@ body {
 }
 @media (min-width: 800px) {
   .combined-grid {
-    grid-template-columns: minmax(220px, 280px) 1fr;
+    grid-template-columns: minmax(340px, 400px) 1fr;
     gap: 40px;
   }
 }
@@ -831,6 +831,24 @@ body {
   display: inline-flex; align-items: center; justify-content: center;
 }
 .dist-icon .material-symbols-rounded { font-size: 22px; }
+.dist-range-block { min-width: 0; }
+.dist-range-name {
+  font-weight: 800; font-size: 14px;
+  color: var(--text); letter-spacing: -0.1px;
+  line-height: 1.2;
+  display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap;
+}
+.dist-range-en {
+  font-size: 11px; font-weight: 700;
+  color: var(--text-tertiary);
+  letter-spacing: 0.3px;
+}
+.dist-range-sub {
+  font-size: 12px; font-weight: 600;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+  margin-top: 2px;
+}
 .dist-dot {
   width: 12px; height: 12px;
   border-radius: 3px;
@@ -2921,10 +2939,10 @@ function renderAuditList() {
 function renderTierChart(completed) {
   // Bracket the audits into 4 score ranges
   const brackets = [
-    { key: 'b1', range: '90-100%', count: 0, color: '#2D7A4A', tone: 'pass', icon: 'workspace_premium' },
-    { key: 'b2', range: '80-89%',  count: 0, color: '#5BAF4A', tone: 'pass', icon: 'verified' },
-    { key: 'b3', range: '50-79%',  count: 0, color: '#E5A348', tone: 'fail', icon: 'warning' },
-    { key: 'b4', range: '0-49%',   count: 0, color: '#C73223', tone: 'fail', icon: 'crisis_alert' },
+    { key: 'b1', range: '90-100%', count: 0, color: '#2D7A4A', tone: 'pass', icon: 'workspace_premium', thai: 'ดีมาก',   en: 'Excellent' },
+    { key: 'b2', range: '80-89%',  count: 0, color: '#5BAF4A', tone: 'pass', icon: 'verified',          thai: 'มาตรฐาน', en: 'Standard'  },
+    { key: 'b3', range: '50-79%',  count: 0, color: '#E5A348', tone: 'fail', icon: 'warning',           thai: 'ปรับปรุง', en: 'Improve'   },
+    { key: 'b4', range: '0-49%',   count: 0, color: '#C73223', tone: 'fail', icon: 'crisis_alert',      thai: 'เร่งด่วน', en: 'Critical'  },
   ];
   completed.forEach(a => {
     const s = a.scoreData?.grandTotal || 0;
@@ -2948,7 +2966,10 @@ function renderTierChart(completed) {
     const colorClass = b.tone === 'pass' ? 'is-pass' : (b.range === '50-79%' ? 'is-warn' : 'is-fail');
     return `<div class="dist-row ${b.count ? '' : 'is-empty'} ${colorClass}">
       <span class="dist-icon" style="color:${b.color}"><span class="material-symbols-rounded">${b.icon}</span></span>
-      <span class="dist-range">${b.range}</span>
+      <div class="dist-range-block">
+        <div class="dist-range-name">${b.thai} <span class="dist-range-en">${b.en}</span></div>
+        <div class="dist-range-sub">${b.range}</div>
+      </div>
       <span class="dist-count">${b.count}</span>
       <span class="dist-pct">${pct.toFixed(0)}%</span>
     </div>`;
@@ -2962,11 +2983,11 @@ function renderTierChart(completed) {
     summarySlot.innerHTML = `
       <div class="dist-summary-card pass">
         <div class="dist-summary-label">ผ่านเกณฑ์ (80-100%)</div>
-        <div class="dist-summary-value"><b>${passCount}</b> <span>(${passPct}%)</span></div>
+        <div class="dist-summary-value"><b>${passCount}</b> ครั้ง <span>(${passPct}%)</span></div>
       </div>
       <div class="dist-summary-card fail">
         <div class="dist-summary-label">ไม่ผ่าน (0-79%)</div>
-        <div class="dist-summary-value"><b>${failCount}</b> <span>(${failPct}%)</span></div>
+        <div class="dist-summary-value"><b>${failCount}</b> ครั้ง <span>(${failPct}%)</span></div>
       </div>`;
   }
 
