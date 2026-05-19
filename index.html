@@ -564,7 +564,7 @@ body {
 }
 .ah-card {
   display: grid;
-  grid-template-columns: 56px 1fr auto auto;
+  grid-template-columns: 56px auto 1fr auto;
   align-items: center;
   gap: 14px;
   padding: 12px 16px 12px 12px;
@@ -640,10 +640,11 @@ body {
   color: var(--primary); transform: translateX(2px);
 }
 @media (max-width: 600px) {
-  .ah-card { grid-template-columns: 44px 1fr auto; gap: 10px; padding: 10px 12px; }
+  .ah-card { grid-template-columns: 44px auto 1fr; gap: 10px; padding: 10px 12px; }
   .ah-hero { width: 44px; height: 44px; }
   .ah-icon .material-symbols-rounded { font-size: 22px; }
-  .ah-score-inline { display: none; }
+  .ah-score { font-size: 18px; }
+  .ah-tier { font-size: 9px; }
   .ah-chev { display: none; }
 }
 .ah-row {
@@ -3875,13 +3876,13 @@ function renderAuditList() {
       <div class="ah-hero">
         <div class="ah-icon"><span class="material-symbols-rounded">${tierIcons[tier.class]}</span></div>
       </div>
-      <div class="ah-body">
-        <div class="ah-row"><span class="material-symbols-rounded">event</span><span>${escapeHtml(fmtDateThaiShort(a.branchInfo.date||'-'))}${time ? ' · ' + time : ''}</span></div>
-        <div class="ah-row"><span class="material-symbols-rounded">person</span><span>${escapeHtml(inspectorLabel)}${bzm ? ' · BZM ' + escapeHtml(bzm) : ''}</span></div>
-      </div>
       <div class="ah-score-inline">
         <div class="ah-score">${score.toFixed(1)}<span class="pct">%</span></div>
         <div class="ah-tier">${tier.en}</div>
+      </div>
+      <div class="ah-body">
+        <div class="ah-row"><span class="material-symbols-rounded">event</span><span>${escapeHtml(fmtDateThaiShort(a.branchInfo.date||'-'))}${time ? ' · ' + time : ''}</span></div>
+        <div class="ah-row"><span class="material-symbols-rounded">person</span><span>${escapeHtml(inspectorLabel)}${bzm ? ' · BZM ' + escapeHtml(bzm) : ''}</span></div>
       </div>
       <span class="material-symbols-rounded ah-chev">chevron_right</span>
     </div>`;
