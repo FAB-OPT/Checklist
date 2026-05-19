@@ -1801,12 +1801,13 @@ body {
   border: 1px solid rgba(255,255,255,0.6);
 }
 .brand-logo {
-  width: 76px; height: 76px; border-radius: 22px;
-  background: linear-gradient(135deg, #FF8534 0%, #D63622 100%);
-  color: white;
+  width: 96px; height: 96px;
   display: flex; align-items: center; justify-content: center;
-  box-shadow: 0 12px 32px rgba(214,54,34,0.35), inset 0 1px 0 rgba(255,255,255,0.2);
-  margin: 0 auto 18px;
+  margin: 0 auto 14px;
+}
+.brand-logo img {
+  width: 100%; height: 100%;
+  object-fit: contain; display: block;
 }
 .brand-logo .material-symbols-rounded { font-size: 42px; color: white; }
 .brand-title {
@@ -2141,7 +2142,7 @@ body:has(#login-screen.active) {
     <div class="login-bg-blob blob-4"></div>
     <div class="login-box">
       <div class="brand-logo">
-        <span class="material-symbols-rounded">fact_check</span>
+        <img src="Screenshot 2026-05-18 092954.png" alt="Fab" />
       </div>
       <h1 class="brand-title">Quality Assurance &amp; Operations Checklist</h1>
       <p class="brand-subtitle">ระบบตรวจสอบมาตรฐานการทำงาน</p>
