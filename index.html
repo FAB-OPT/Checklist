@@ -566,6 +566,8 @@ body {
 @media (min-width: 720px)  { .audit-list { grid-template-columns: 1fr 1fr; } }
 @media (min-width: 1280px) { .audit-list { grid-template-columns: 1fr 1fr 1fr; } }
 .ah-card {
+  display: grid;
+  grid-template-columns: 150px 1fr;
   background: var(--surface);
   border-radius: var(--r-lg);
   overflow: hidden;
@@ -576,10 +578,13 @@ body {
 .ah-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-lg); border-color: transparent; }
 .ah-card:active { transform: scale(0.99); }
 .ah-hero {
-  display: flex; align-items: center; gap: 14px;
-  padding: 18px 20px;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 8px;
+  padding: 18px 12px;
   color: white;
   position: relative; overflow: hidden;
+  text-align: center;
 }
 .ah-hero::after {
   content: '';
@@ -594,7 +599,7 @@ body {
 .ah-card.improve    .ah-hero { background: linear-gradient(135deg, #FFCC33 0%, #D9963C 100%); }
 .ah-card.breakdown  .ah-hero { background: linear-gradient(135deg, #E04938 0%, #7A1F10 100%); }
 .ah-icon {
-  width: 60px; height: 60px;
+  width: 48px; height: 48px;
   border-radius: var(--r-md);
   background: rgba(255,255,255,0.22);
   border: 1px solid rgba(255,255,255,0.18);
@@ -604,7 +609,7 @@ body {
   position: relative; z-index: 1;
 }
 .ah-icon .material-symbols-rounded {
-  font-size: 32px; color: white;
+  font-size: 26px; color: white;
 }
 .ah-hero-text { position: relative; z-index: 1; }
 .ah-score {
@@ -617,13 +622,21 @@ body {
   font-size: 14px; font-weight: 800; opacity: 0.85; margin-left: 1px;
 }
 .ah-tier {
-  font-size: 11px; font-weight: 800;
+  font-size: 10px; font-weight: 800;
   letter-spacing: 0.5px; text-transform: uppercase;
   margin-top: 4px;
   opacity: 0.92;
 }
 .ah-body {
-  padding: 14px 18px 16px;
+  padding: 14px 18px;
+  display: flex; flex-direction: column; justify-content: center;
+}
+@media (max-width: 480px) {
+  .ah-card { grid-template-columns: 120px 1fr; }
+  .ah-hero { padding: 14px 8px; }
+  .ah-score { font-size: 26px; }
+  .ah-icon { width: 40px; height: 40px; }
+  .ah-icon .material-symbols-rounded { font-size: 22px; }
 }
 .ah-row {
   display: flex; align-items: center; gap: 8px;
