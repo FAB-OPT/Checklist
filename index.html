@@ -1434,25 +1434,27 @@ body {
 .daily-form-head-card.is-open  .daily-form-shift-icon { background: linear-gradient(135deg, #FFB833, #FF8534); }
 .daily-form-head-card.is-close .daily-form-shift-icon { background: linear-gradient(135deg, #6E7AC8, #4A5A99); }
 .daily-form-titles { flex: 1; min-width: 0; }
+.daily-form-title-row {
+  display: flex; align-items: center; gap: 12px;
+  flex-wrap: wrap;
+}
 .daily-form-titles h2 {
   font-size: 19px; font-weight: 900;
   color: var(--text); letter-spacing: -0.3px;
   line-height: 1.2;
-  margin-bottom: 6px;
 }
 .daily-form-date {
-  display: inline-flex; align-items: center; gap: 8px;
-  padding: 8px 16px;
-  background: var(--primary-50);
-  border: 1.5px solid var(--primary-100);
-  border-radius: var(--r-md);
-  font-size: 16px; font-weight: 800;
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  font-size: 15px; font-weight: 800;
   color: var(--primary-dark);
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.2px;
 }
 .daily-form-date .material-symbols-rounded {
-  font-size: 20px; color: var(--primary);
+  font-size: 18px; color: var(--primary);
 }
 .daily-form-head-card .daily-form-head-top { margin-bottom: 20px; }
 .daily-form-input-row {
@@ -2453,8 +2455,10 @@ body:has(#login-screen.active) {
             <span class="material-symbols-rounded" id="daily-form-icon">wb_sunny</span>
           </div>
           <div class="daily-form-titles">
-            <h2 id="daily-form-title">เช็ค Open</h2>
-            <div class="daily-form-date" id="daily-form-date-chip">—</div>
+            <div class="daily-form-title-row">
+              <h2 id="daily-form-title">เช็ค Open</h2>
+              <div class="daily-form-date" id="daily-form-date-chip">—</div>
+            </div>
           </div>
         </div>
         <span class="daily-form-branch-hidden" id="daily-form-branch" style="display:none;"></span>
