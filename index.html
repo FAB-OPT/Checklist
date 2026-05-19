@@ -1414,6 +1414,121 @@ body {
 .chip-badge-fail { background: var(--danger); color: white; }
 .chip-badge-done { background: var(--success); color: white; }
 
+/* Daily history (ประวัติ) — grouped by date, two cards per day */
+.daily-history-group {
+  margin-bottom: 22px;
+}
+.daily-history-date {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 13px; font-weight: 800;
+  color: var(--text); letter-spacing: 0.3px;
+  margin: 0 0 10px 4px;
+  text-transform: uppercase;
+}
+.daily-history-date .material-symbols-rounded {
+  font-size: 16px; color: var(--primary);
+}
+.daily-history-cards {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+@media (min-width: 720px) {
+  .daily-history-cards { grid-template-columns: 1fr 1fr; }
+}
+.daily-history-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--border);
+  border-radius: var(--r-md);
+  padding: 14px 16px 12px;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.18s;
+}
+.daily-history-card:hover { box-shadow: var(--shadow); transform: translateY(-1px); }
+.daily-history-card:active { transform: scale(0.99); }
+.daily-history-card.shift-open  { border-left-color: #FF8534; }
+.daily-history-card.shift-close { border-left-color: #6E7AC8; }
+.dhc-head {
+  display: flex; align-items: center; gap: 12px;
+  margin-bottom: 10px;
+}
+.dhc-shift-icon {
+  width: 36px; height: 36px;
+  border-radius: var(--r-sm);
+  display: inline-flex; align-items: center; justify-content: center;
+  color: white;
+  flex-shrink: 0;
+}
+.daily-history-card.shift-open  .dhc-shift-icon { background: linear-gradient(135deg, #FFB833, #FF8534); }
+.daily-history-card.shift-close .dhc-shift-icon { background: linear-gradient(135deg, #6E7AC8, #4A5A99); }
+.dhc-shift-icon .material-symbols-rounded { font-size: 20px; color: white; }
+.dhc-titles { flex: 1; min-width: 0; }
+.dhc-shift-name {
+  font-size: 15px; font-weight: 800;
+  color: var(--text); letter-spacing: -0.1px;
+  line-height: 1.1;
+}
+.dhc-shift-thai {
+  font-size: 12px; font-weight: 700;
+  color: var(--text-tertiary); margin-left: 2px;
+}
+.dhc-meta {
+  font-size: 12px; font-weight: 600;
+  color: var(--text-secondary);
+  margin-top: 3px;
+}
+.dhc-meta b { color: var(--text); font-weight: 800; }
+.dhc-status {
+  padding: 4px 10px;
+  border-radius: var(--r-pill);
+  font-size: 11px; font-weight: 800;
+  letter-spacing: 0.2px; white-space: nowrap;
+}
+.daily-history-card.is-done    .dhc-status { background: var(--success-bg); color: #1E6B36; }
+.daily-history-card.is-pending .dhc-status { background: var(--warning-bg); color: #7A5818; }
+.daily-history-card.is-fail    .dhc-status { background: var(--danger-bg);  color: #7A1F10; }
+.dhc-branch {
+  font-size: 12px; font-weight: 700;
+  color: var(--text-secondary);
+  padding: 6px 10px;
+  background: var(--surface-2);
+  border-radius: var(--r-sm);
+  margin-bottom: 10px;
+}
+.dhc-stats {
+  display: grid; grid-template-columns: 1fr 1fr 1fr;
+  gap: 6px;
+  border-top: 1px dashed var(--border);
+  padding-top: 10px;
+}
+.dhc-stat {
+  text-align: center;
+  padding: 4px 2px;
+}
+.dhc-stat-value {
+  font-size: 20px; font-weight: 900;
+  color: var(--text); letter-spacing: -0.4px;
+  line-height: 1; font-variant-numeric: tabular-nums;
+}
+.dhc-stat.is-pass .dhc-stat-value { color: var(--success); }
+.dhc-stat.is-fail .dhc-stat-value { color: var(--danger); }
+.dhc-stat-label {
+  font-size: 10px; font-weight: 700;
+  color: var(--text-tertiary);
+  margin-top: 3px; letter-spacing: 0.3px;
+  text-transform: uppercase;
+}
+.daily-empty {
+  text-align: center;
+  padding: 36px 20px;
+  color: var(--text-tertiary);
+}
+.daily-empty .material-symbols-rounded {
+  font-size: 40px; opacity: 0.5;
+  margin-bottom: 8px; display: block;
+}
+
 /* Daily form: header card with shift, date, BZM, branch, manager input */
 .daily-form-head-card {
   padding: 20px 22px;
@@ -3730,34 +3845,74 @@ function renderDailyList() {
   if (shiftFilter) list = list.filter(d => d.shift === shiftFilter);
   if (dateFilter) list = list.filter(d => d.date === dateFilter);
 
-  list.sort((a,b) => (b.submittedAt || '').localeCompare(a.submittedAt || ''));
+  // Group by date desc, then sort within date: open before close
+  const byDate = {};
+  list.forEach(d => {
+    if (!byDate[d.date]) byDate[d.date] = [];
+    byDate[d.date].push(d);
+  });
+  Object.values(byDate).forEach(arr => arr.sort((a, b) => (a.shift === 'open' ? -1 : 1)));
+  const dates = Object.keys(byDate).sort((a, b) => b.localeCompare(a));
 
   const container = document.getElementById('daily-list');
-  if (!list.length) {
-    container.innerHTML = '<div style="text-align:center;padding:24px;color:var(--text-secondary);">ยังไม่มีข้อมูล</div>';
+  if (!dates.length) {
+    container.innerHTML = '<div class="daily-empty"><span class="material-symbols-rounded">event_busy</span><div>ยังไม่มีประวัติ</div></div>';
     return;
   }
-  container.innerHTML = list.map(d => {
-    const totalItems = (d.items || []).length;
-    const passItems = (d.items || []).filter(i => i.status === 'pass').length;
-    const failItems = (d.items || []).filter(i => i.status === 'fail').length;
-    const shiftLabel = d.shift === 'open' ? '☀️ Open' : '🌙 Close';
-    const pendingItems = totalItems - passItems - failItems - (d.items || []).filter(i => i.status === 'na').length;
-    let badge;
-    if (failItems > 0) badge = `<span style="background:#FFE5E0;color:var(--danger);padding:2px 8px;border-radius:8px;font-size:11px;font-weight:600;">❌ ${failItems}</span>`;
-    else if (pendingItems > 0) badge = `<span style="background:#FFF3E0;color:var(--warning);padding:2px 8px;border-radius:8px;font-size:11px;font-weight:600;">รอ ${pendingItems}</span>`;
-    else badge = `<span style="background:#E0F5E5;color:var(--success);padding:2px 8px;border-radius:8px;font-size:11px;font-weight:600;">✓ ครบ</span>`;
-    return `<div class="audit-item" onclick="showDailyDetail('${escapeAttr(d.id)}')" style="border-left:4px solid ${d.shift==='open' ? 'var(--secondary)' : 'var(--text)'};">
-      <div style="flex:1;">
-        <div style="font-weight:600;font-size:14px;">${escapeHtml(branchLabel(d.branchCode, d.branchName))}</div>
-        <div style="font-size:12px;color:var(--text-secondary);margin-top:2px;">
-          ${shiftLabel} · ${escapeHtml(d.date)} · ผู้บันทึก: ${escapeHtml(d.manager || '-')}
+
+  const isBranch = currentUser.role === 'branch';
+  container.innerHTML = dates.map(date => {
+    const dayItems = byDate[date];
+    const cards = dayItems.map(d => {
+      const totalItems = (d.items || []).length;
+      const passItems = (d.items || []).filter(i => i.status === 'pass').length;
+      const failItems = (d.items || []).filter(i => i.status === 'fail').length;
+      const naItems = (d.items || []).filter(i => i.status === 'na').length;
+      const pending = totalItems - passItems - failItems - naItems;
+
+      let status, statusClass;
+      if (failItems > 0) { status = `เร่งด่วน · ${failItems}`; statusClass = 'is-fail'; }
+      else if (pending > 0) { status = `รอ · ${pending}`; statusClass = 'is-pending'; }
+      else { status = 'ครบ'; statusClass = 'is-done'; }
+
+      const shiftClass = d.shift === 'open' ? 'shift-open' : 'shift-close';
+      const shiftIcon = d.shift === 'open' ? 'wb_sunny' : 'bedtime';
+      const shiftName = d.shift === 'open' ? 'Open' : 'Close';
+      const shiftThai = d.shift === 'open' ? 'เช้า' : 'ค่ำ';
+
+      return `<div class="daily-history-card ${shiftClass} ${statusClass}" onclick="showDailyDetail('${escapeAttr(d.id)}')">
+        <div class="dhc-head">
+          <div class="dhc-shift-icon"><span class="material-symbols-rounded">${shiftIcon}</span></div>
+          <div class="dhc-titles">
+            <div class="dhc-shift-name">${shiftName} <span class="dhc-shift-thai">· ${shiftThai}</span></div>
+            <div class="dhc-meta">ผู้บันทึก: <b>${escapeHtml(d.manager || '-')}</b></div>
+          </div>
+          <div class="dhc-status">${escapeHtml(status)}</div>
         </div>
+        ${!isBranch ? `<div class="dhc-branch">${escapeHtml(branchLabel(d.branchCode, d.branchName))}</div>` : ''}
+        <div class="dhc-stats">
+          <div class="dhc-stat is-pass">
+            <div class="dhc-stat-value">${passItems}</div>
+            <div class="dhc-stat-label">ผ่าน</div>
+          </div>
+          <div class="dhc-stat is-fail">
+            <div class="dhc-stat-value">${failItems}</div>
+            <div class="dhc-stat-label">ไม่ผ่าน</div>
+          </div>
+          <div class="dhc-stat">
+            <div class="dhc-stat-value">${totalItems}</div>
+            <div class="dhc-stat-label">ทั้งหมด</div>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+
+    return `<div class="daily-history-group">
+      <div class="daily-history-date">
+        <span class="material-symbols-rounded">calendar_today</span>
+        <span>${escapeHtml(fmtDateDMY(date))}</span>
       </div>
-      <div style="text-align:right;">
-        ${badge}
-        <div style="font-size:11px;color:var(--text-secondary);margin-top:4px;">${passItems}/${totalItems} ผ่าน</div>
-      </div>
+      <div class="daily-history-cards">${cards}</div>
     </div>`;
   }).join('');
 }
