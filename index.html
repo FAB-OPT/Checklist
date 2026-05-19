@@ -1603,18 +1603,16 @@ body {
 }
 .daily-date-chip {
   display: inline-flex; align-items: center; gap: 6px;
-  padding: 8px 14px;
-  background: var(--primary-50);
+  padding: 0;
+  background: transparent;
   color: var(--primary-dark);
-  border: 1.5px solid var(--primary-100);
-  border-radius: var(--r-md);
-  font-size: 15px; font-weight: 800;
+  border: none;
+  font-size: 16px; font-weight: 800;
   letter-spacing: 0.2px;
   font-variant-numeric: tabular-nums;
-  box-shadow: 0 2px 6px rgba(214,54,34,0.08);
 }
 .daily-date-chip::before {
-  content: '📅'; font-size: 15px;
+  content: '📅'; font-size: 16px;
 }
 .daily-hub-sub {
   color: var(--text-secondary);
@@ -3675,6 +3673,14 @@ function todayDateStr() {
   return `${d.getFullYear()}-${m}-${day}`;
 }
 
+function fmtDateDMY(iso) {
+  // Convert "YYYY-MM-DD" → "DD-MM-YYYY"
+  if (!iso || typeof iso !== 'string') return iso || '';
+  const parts = iso.split('-');
+  if (parts.length !== 3) return iso;
+  return `${parts[2]}-${parts[1]}-${parts[0]}`;
+}
+
 function getVisibleDailyChecklists() {
   if (currentUser.role === 'branch') {
     return allDailyChecklists.filter(d => d.branchCode === currentUser.branchCode);
@@ -3692,7 +3698,7 @@ function showDailyHub() {
   const branchActions = document.getElementById('daily-branch-actions');
   if (currentUser.role === 'branch') {
     branchActions.style.display = 'block';
-    document.getElementById('daily-today-label').textContent = todayDateStr();
+    document.getElementById('daily-today-label').textContent = fmtDateDMY(todayDateStr());
     const today = todayDateStr();
     const openDone = allDailyChecklists.find(d => d.branchCode === currentUser.branchCode && d.date === today && d.shift === 'open');
     const closeDone = allDailyChecklists.find(d => d.branchCode === currentUser.branchCode && d.date === today && d.shift === 'close');
@@ -3815,7 +3821,7 @@ function startDailyShift(shift) {
   document.getElementById('daily-form-title').textContent = (isEdit ? 'แก้ไข ' : 'เช็ค ') + shiftLabel;
   document.getElementById('daily-form-icon').textContent = shift === 'open' ? 'wb_sunny' : 'bedtime';
   document.getElementById('daily-form-branch').textContent = branchLabel(currentUser.branchCode, currentUser.branchName);
-  document.getElementById('daily-form-date-chip').innerHTML = `<span class="material-symbols-rounded">calendar_today</span><span>${today}</span>`;
+  document.getElementById('daily-form-date-chip').innerHTML = `<span class="material-symbols-rounded">calendar_today</span><span>${fmtDateDMY(today)}</span>`;
   document.getElementById('daily-form-head').className = 'card daily-form-head-card ' + (shift === 'open' ? 'is-open' : 'is-close');
   document.getElementById('daily-manager').value = currentDaily.manager;
   renderDailyForm();
