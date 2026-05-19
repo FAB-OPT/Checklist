@@ -1489,6 +1489,28 @@ body {
 .daily-item.is-pass { background: rgba(45,122,74,0.04); }
 .daily-item.is-fail { background: rgba(199,50,35,0.05); }
 .daily-item.is-na   { background: var(--surface-2); }
+.daily-item.is-required-photo {
+  border-left: 3px solid var(--primary);
+  background: linear-gradient(90deg, rgba(214,54,34,0.05), transparent 80%);
+}
+.daily-item-photo-badge {
+  display: inline-flex; align-items: center;
+  margin-left: 8px;
+  padding: 2px 8px;
+  background: var(--primary);
+  color: white;
+  border-radius: var(--r-pill);
+  font-size: 11px; font-weight: 800;
+  letter-spacing: 0.2px;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+.photo-section.is-missing {
+  border-radius: var(--r-sm);
+  padding: 8px 10px;
+  background: rgba(214,54,34,0.06);
+  border: 1.5px dashed var(--primary);
+}
 .daily-item-q {
   display: flex; gap: 12px; align-items: flex-start;
   margin-bottom: 12px;
@@ -3738,6 +3760,24 @@ function startDailyShift(shift) {
     });
   });
 
+  // Randomly select 10 items per shift that REQUIRE a photo.
+  // The selection is recorded with the daily record so re-editing
+  // the same shift keeps the same required-photo items, but each
+  // new shift picks a different set so users can't recycle photos.
+  let requiredPhotos;
+  if (existing && Array.isArray(existing.requiredPhotos) && existing.requiredPhotos.length) {
+    requiredPhotos = existing.requiredPhotos.slice();
+  } else {
+    const N = items.length;
+    const count = Math.min(10, N);
+    const pool = Array.from({ length: N }, (_, i) => i);
+    for (let i = pool.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [pool[i], pool[j]] = [pool[j], pool[i]];
+    }
+    requiredPhotos = pool.slice(0, count).sort((a, b) => a - b);
+  }
+
   currentDaily = {
     id,
     branchCode: currentUser.branchCode,
@@ -3747,6 +3787,7 @@ function startDailyShift(shift) {
     shift,
     manager: existing ? (existing.manager || '') : '',
     items,
+    requiredPhotos,
     submittedBy: currentUser.code,
     submittedByName: currentUser.name,
     submittedAt: null
@@ -3819,18 +3860,22 @@ function renderDailyForm() {
       const isFail = item.status === 'fail';
       const isNA = item.status === 'na';
       const photos = item.photos || [];
+      const isRequired = (currentDaily.requiredPhotos || []).includes(globalIdx);
+      const showPhotos = isRequired || isFail;
       let photosHtml = '';
-      if (isFail) {
-        photosHtml = '<div class="photo-section" style="margin-top:10px;">' +
+      if (showPhotos) {
+        const missing = isRequired && photos.length === 0;
+        photosHtml = '<div class="photo-section ' + (missing ? 'is-missing' : '') + '" style="margin-top:10px;">' +
+          (isRequired ? '<div class="photo-required-label"><span class="material-symbols-rounded" style="font-size:16px;">photo_camera</span> ต้องแนบรูปหลักฐาน</div>' : '') +
           '<label class="photo-upload-btn"><span class="material-symbols-rounded" style="font-size:18px;">add_a_photo</span> แนบรูป<input type="file" accept="image/*" capture="environment" multiple style="display:none;" onchange="addDailyPhotos(' + globalIdx + ', this.files)"></label>' +
           '<div class="photo-preview">' +
           photos.map((p, pi) => '<div class="photo-thumb"><img src="'+p+'"><button class="remove-btn" onclick="removeDailyPhoto('+globalIdx+','+pi+')"><span class="material-symbols-rounded" style="font-size:14px;">close</span></button></div>').join('') +
           '</div></div>';
       }
-      html += `<div class="daily-item ${isPass?'is-pass':''} ${isFail?'is-fail':''} ${isNA?'is-na':''}">
+      html += `<div class="daily-item ${isPass?'is-pass':''} ${isFail?'is-fail':''} ${isNA?'is-na':''} ${isRequired?'is-required-photo':''}">
         <div class="daily-item-q">
           <span class="daily-item-num">${iIdx+1}</span>
-          <span class="daily-item-text">${escapeHtml(text)}</span>
+          <span class="daily-item-text">${escapeHtml(text)}${isRequired ? '<span class="daily-item-photo-badge">📷 ต้องแนบรูป</span>' : ''}</span>
         </div>
         <div class="daily-item-actions">
           <button type="button" class="daily-choice pass ${isPass ? 'active' : ''}" onclick="setDailyItem(${globalIdx},'pass')">
@@ -3859,9 +3904,11 @@ function renderDailyForm() {
 function setDailyItem(idx, status) {
   if (!currentDaily) return;
   currentDaily.items[idx].status = status;
+  const isRequired = (currentDaily.requiredPhotos || []).includes(idx);
   if (status !== 'fail') {
     currentDaily.items[idx].note = '';
-    currentDaily.items[idx].photos = [];
+    // Don't clear photos on required-photo items — they're mandatory regardless of pass/fail
+    if (!isRequired) currentDaily.items[idx].photos = [];
   }
   renderDailyForm();
 }
@@ -3909,6 +3956,19 @@ async function submitDailyShift() {
   const manager = document.getElementById('daily-manager').value.trim();
   if (!manager) {
     showModal('กรุณากรอก Manager on duty', 'ระบุชื่อผู้รับผิดชอบ shift ก่อนบันทึก');
+    return;
+  }
+  // Validate that all required-photo items have at least one photo
+  const required = currentDaily.requiredPhotos || [];
+  const missingPhoto = required.filter(idx => {
+    const it = currentDaily.items[idx];
+    return !it || !it.photos || it.photos.length === 0;
+  });
+  if (missingPhoto.length > 0) {
+    showModal('แนบรูปไม่ครบ', `ยังมีข้อที่ต้องแนบรูปอีก ${missingPhoto.length} ข้อ ติ๊กที่ "📷 ต้องแนบรูป" แล้วถ่ายภาพให้ครบก่อนบันทึก`);
+    // Scroll to the first missing one
+    const target = document.querySelectorAll('.daily-item')[missingPhoto[0]];
+    if (target) target.scrollIntoView({ behavior: 'smooth', block: 'center' });
     return;
   }
   currentDaily.manager = manager;
