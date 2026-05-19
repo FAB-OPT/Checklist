@@ -3961,9 +3961,15 @@ function renderBottomNav() {
   const nav = document.getElementById('bottom-nav');
   let html = '';
   const isBranch = currentUser.role === 'branch';
-  const pillText = isBranch
-    ? `${currentUser.branchCode} ${currentUser.branchName}`
-    : `${currentUser.nick || currentUser.name} · ${({ 'bzm': 'BZM', 'admin': 'Admin', 'coo': 'COO', 'vp': 'VP' }[currentUser.role] || '')}`;
+  let pillText;
+  if (isBranch) {
+    pillText = `${currentUser.branchCode} ${currentUser.branchName}`;
+  } else {
+    const roleLabel = ({ 'bzm': 'BZM', 'admin': 'Admin', 'coo': 'COO', 'vp': 'VP' }[currentUser.role] || '');
+    const fullName = currentUser.name || '';
+    const nick = currentUser.nick && currentUser.nick !== currentUser.name ? ` (${currentUser.nick})` : '';
+    pillText = `${fullName}${nick}${roleLabel ? ' · ' + roleLabel : ''}`;
+  }
   html += '<div class="nav-brand">' +
     '<div class="nav-brand-app">' +
       '<div class="nav-app-name">Quality Assurance<br>&amp; Operations Checklist</div>' +
