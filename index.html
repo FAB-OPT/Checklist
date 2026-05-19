@@ -773,34 +773,31 @@ body {
   .hero-stat-block { padding: 24px 20px; }
 }
 
-/* Combined card: score on left + chart area on right */
+/* Combined card: score+summary on left, bracket table on right */
 .combined-card { padding: 26px 28px; }
 .combined-grid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 24px;
-  align-items: center;
+  gap: 28px;
+  align-items: start;
 }
 @media (min-width: 800px) {
   .combined-grid {
-    grid-template-columns: minmax(180px, 240px) 1fr;
-    gap: 36px;
+    grid-template-columns: minmax(220px, 280px) 1fr;
+    gap: 40px;
   }
+}
+.combined-left {
+  display: flex; flex-direction: column;
+  gap: 18px;
 }
 .combined-score {
   text-align: center;
 }
-.combined-chart {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 20px;
-}
-@media (min-width: 600px) {
-  .combined-chart {
-    grid-template-columns: minmax(180px, 240px) 1fr;
-    gap: 24px;
-    align-items: start;
-  }
+.combined-left .dist-summary {
+  display: flex; flex-direction: column;
+  gap: 10px;
+  min-width: 0;
 }
 
 /* Bracket table */
@@ -1980,15 +1977,18 @@ body:has(#login-screen.active) {
         </h2>
       </div>
 
-      <!-- Combined: score + summary + bracket table -->
+      <!-- Combined: score + summary (left) | bracket table (right) -->
       <div class="card combined-card">
         <div class="combined-grid">
-          <div class="combined-score">
-            <div class="score-card-pct" id="stat-avg">—</div>
-            <div class="score-card-pct-unit">% คะแนนเฉลี่ย</div>
-            <div class="score-card-badge" id="dashboard-hero-badge">—</div>
+          <div class="combined-left">
+            <div class="combined-score">
+              <div class="score-card-pct" id="stat-avg">—</div>
+              <div class="score-card-pct-unit">% คะแนนเฉลี่ย</div>
+              <div class="score-card-badge" id="dashboard-hero-badge">—</div>
+            </div>
+            <div id="dist-summary-slot" class="dist-summary"></div>
           </div>
-          <div id="tier-chart" class="combined-chart"></div>
+          <div id="tier-chart" class="combined-table-slot"></div>
         </div>
       </div>
 
@@ -2950,8 +2950,9 @@ function renderTierChart(completed) {
   const passPct = total ? (passCount / total * 100).toFixed(0) : 0;
   const failPct = total ? (failCount / total * 100).toFixed(0) : 0;
 
-  container.innerHTML = `
-    <div class="dist-summary">
+  const summarySlot = document.getElementById('dist-summary-slot');
+  if (summarySlot) {
+    summarySlot.innerHTML = `
       <div class="dist-summary-card pass">
         <div class="dist-summary-label">ผ่านเกณฑ์ (80-100%)</div>
         <div class="dist-summary-value"><b>${passCount}</b> <span>(${passPct}%)</span></div>
@@ -2959,8 +2960,10 @@ function renderTierChart(completed) {
       <div class="dist-summary-card fail">
         <div class="dist-summary-label">ไม่ผ่าน (0-79%)</div>
         <div class="dist-summary-value"><b>${failCount}</b> <span>(${failPct}%)</span></div>
-      </div>
-    </div>
+      </div>`;
+  }
+
+  container.innerHTML = `
     <div class="dist-table">
       <div class="dist-row dist-row-head">
         <span></span>
