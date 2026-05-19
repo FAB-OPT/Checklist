@@ -1427,28 +1427,21 @@ body {
   line-height: 1.2;
   margin-bottom: 6px;
 }
-.daily-form-meta-row {
-  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
-}
-.daily-form-meta-chip {
-  display: inline-flex; align-items: center; gap: 4px;
-  padding: 4px 10px;
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-  border-radius: var(--r-pill);
-  font-size: 12px; font-weight: 700;
-  color: var(--text-secondary);
-  font-variant-numeric: tabular-nums;
-}
-.daily-form-branch-row {
-  display: flex; align-items: center; gap: 8px;
-  padding: 12px 14px;
+.daily-form-date {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 8px 16px;
   background: var(--primary-50);
-  border-radius: var(--r-sm);
-  font-size: 14px; font-weight: 800;
+  border: 1.5px solid var(--primary-100);
+  border-radius: var(--r-md);
+  font-size: 16px; font-weight: 800;
   color: var(--primary-dark);
-  margin-bottom: 16px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.2px;
 }
+.daily-form-date .material-symbols-rounded {
+  font-size: 20px; color: var(--primary);
+}
+.daily-form-head-card .daily-form-head-top { margin-bottom: 20px; }
 .daily-form-input-row {
   display: flex; flex-direction: column; gap: 8px;
 }
@@ -2426,16 +2419,11 @@ body:has(#login-screen.active) {
           </div>
           <div class="daily-form-titles">
             <h2 id="daily-form-title">เช็ค Open</h2>
-            <div class="daily-form-meta-row">
-              <span class="daily-form-meta-chip" id="daily-form-date-chip">📅 —</span>
-              <span class="daily-form-meta-chip" id="daily-form-bzm-chip">BZM —</span>
-            </div>
+            <div class="daily-form-date" id="daily-form-date-chip">—</div>
           </div>
         </div>
-        <div class="daily-form-branch-row">
-          <span class="material-symbols-rounded" style="color:var(--primary);font-size:20px;">storefront</span>
-          <span id="daily-form-branch"></span>
-        </div>
+        <span class="daily-form-branch-hidden" id="daily-form-branch" style="display:none;"></span>
+        <span class="daily-form-branch-hidden" id="daily-form-bzm-chip" style="display:none;"></span>
         <div class="daily-form-input-row">
           <label class="daily-form-input-label">Manager on duty <span class="req">*</span></label>
           <input type="text" class="form-control" id="daily-manager" placeholder="ชื่อผู้รับผิดชอบ shift">
@@ -3771,8 +3759,7 @@ function startDailyShift(shift) {
   document.getElementById('daily-form-title').textContent = (isEdit ? 'แก้ไข ' : 'เช็ค ') + shiftLabel;
   document.getElementById('daily-form-icon').textContent = shift === 'open' ? 'wb_sunny' : 'bedtime';
   document.getElementById('daily-form-branch').textContent = branchLabel(currentUser.branchCode, currentUser.branchName);
-  document.getElementById('daily-form-date-chip').innerHTML = `📅 ${today}`;
-  document.getElementById('daily-form-bzm-chip').innerHTML = `<span class="material-symbols-rounded" style="font-size:14px;vertical-align:-2px;">supervisor_account</span> ${escapeHtml(currentUser.bzm || '-')}`;
+  document.getElementById('daily-form-date-chip').innerHTML = `<span class="material-symbols-rounded">calendar_today</span><span>${today}</span>`;
   document.getElementById('daily-form-head').className = 'card daily-form-head-card ' + (shift === 'open' ? 'is-open' : 'is-close');
   document.getElementById('daily-manager').value = currentDaily.manager;
   renderDailyForm();
