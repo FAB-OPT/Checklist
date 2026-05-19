@@ -355,42 +355,46 @@ body {
 .score-display .score-label { font-size: 16px; font-weight: 600; margin-top: 8px; opacity: 0.95; }
 .score-display .score-tier { font-size: 13px; opacity: 0.95; margin-top: 6px; }
 
-/* Summary meta tiles (top of audit summary) */
-.summary-meta-card { padding: 16px; }
-.summary-meta-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 10px;
+/* Summary meta vertical list (inside left column of combined-card) */
+.summary-meta-list {
+  display: flex; flex-direction: column;
+  gap: 8px;
+  margin-top: 16px;
 }
-.summary-meta-tile {
+.summary-meta-row {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 10px 12px;
   background: var(--surface-2);
   border: 1px solid var(--border);
   border-radius: var(--r-sm);
-  padding: 10px 12px;
 }
-.summary-meta-tile.primary {
+.summary-meta-row.primary {
   background: var(--primary-50);
   border-color: var(--primary-100);
-  grid-column: 1 / -1;
 }
-.summary-meta-label {
-  display: flex; align-items: center; gap: 4px;
-  font-size: 11px; font-weight: 700;
+.summary-meta-row > .material-symbols-rounded {
+  font-size: 18px; color: var(--primary); opacity: 0.85;
+  flex-shrink: 0; margin-top: 1px;
+}
+.summary-meta-row-body { min-width: 0; flex: 1; }
+.summary-meta-row-label {
+  font-size: 10px; font-weight: 700;
   color: var(--text-secondary);
   letter-spacing: 0.3px;
   text-transform: uppercase;
-  margin-bottom: 4px;
 }
-.summary-meta-label .material-symbols-rounded {
-  font-size: 14px; color: var(--primary); opacity: 0.8;
-}
-.summary-meta-value {
-  font-size: 14px; font-weight: 800;
+.summary-meta-row-value {
+  font-size: 13px; font-weight: 800;
   color: var(--text); line-height: 1.3;
+  margin-top: 2px;
 }
-.summary-meta-tile.primary .summary-meta-value {
-  font-size: 16px; color: var(--primary-dark);
+.summary-meta-row.primary .summary-meta-row-value {
+  font-size: 14px; color: var(--primary-dark);
 }
+
+/* Force-show the tier badge inside the summary card even though the
+   global rule hides .score-card-badge on the dashboard hero. */
+.summary-tier-badge { display: inline-flex !important; }
 
 /* Section summary rows (with progress bar) */
 .section-summary-grid { display: grid; gap: 10px; }
@@ -3177,23 +3181,25 @@ body:has(#login-screen.active) {
         <h2 class="page-eyebrow-title">สรุปผลการตรวจ <span class="page-eyebrow-inline">Audit Summary</span></h2>
       </div>
 
-      <div class="card summary-meta-card">
-        <div id="branch-info-summary" class="summary-meta-grid"></div>
-      </div>
-
-      <div id="score-display" class="score-display">
-        <div class="score-value" id="total-score">0.0</div>
-        <div class="score-label">% คะแนนรวม</div>
-        <div class="score-tier" id="score-tier">—</div>
-      </div>
-
-      <div class="card">
-        <div class="card-header">
-          <span class="material-symbols-rounded" style="color:var(--primary);">stacked_bar_chart</span>
-          <h2>คะแนนแยกตามหมวด</h2>
+      <div class="card combined-card" id="summary-card">
+        <div class="combined-grid">
+          <div class="combined-left">
+            <div class="combined-score">
+              <div class="score-card-pct" id="total-score">0.0</div>
+              <div class="score-card-pct-unit">% คะแนนรวม</div>
+              <div class="score-card-badge summary-tier-badge" id="score-tier">—</div>
+            </div>
+            <div id="branch-info-summary" class="summary-meta-list"></div>
+          </div>
+          <div class="combined-table-slot">
+            <div class="score-card-chart-label">คะแนนแยกตามหมวด · Section Scores</div>
+            <div class="section-summary-grid" id="section-summary-grid"></div>
+          </div>
         </div>
-        <div class="section-summary-grid" id="section-summary-grid"></div>
       </div>
+
+      <!-- Legacy element kept for any external CSS that targets it -->
+      <div id="score-display" style="display:none;"></div>
 
       <div class="card" id="ncr-card">
         <div class="card-header">
@@ -4410,38 +4416,55 @@ function showSummary(readonly) {
   const info = currentAudit.branchInfo;
   const dateLine = (info.date ? fmtDateDMY(info.date) : '-') + (info.time ? ' · ' + escapeHtml(info.time) : '');
   document.getElementById('branch-info-summary').innerHTML = `
-    <div class="summary-meta-tile primary">
-      <div class="summary-meta-label"><span class="material-symbols-rounded">storefront</span> สาขา</div>
-      <div class="summary-meta-value">${escapeHtml(info.branch||'-')}</div>
+    <div class="summary-meta-row primary">
+      <span class="material-symbols-rounded">storefront</span>
+      <div class="summary-meta-row-body">
+        <div class="summary-meta-row-label">สาขา</div>
+        <div class="summary-meta-row-value">${escapeHtml(info.branch||'-')}</div>
+      </div>
     </div>
-    <div class="summary-meta-tile">
-      <div class="summary-meta-label"><span class="material-symbols-rounded">event</span> วันที่ตรวจ</div>
-      <div class="summary-meta-value">${dateLine}</div>
+    <div class="summary-meta-row">
+      <span class="material-symbols-rounded">event</span>
+      <div class="summary-meta-row-body">
+        <div class="summary-meta-row-label">วันที่ตรวจ</div>
+        <div class="summary-meta-row-value">${dateLine}</div>
+      </div>
     </div>
-    <div class="summary-meta-tile">
-      <div class="summary-meta-label"><span class="material-symbols-rounded">person</span> ผู้ตรวจ</div>
-      <div class="summary-meta-value">${escapeHtml(info.inspector||'-')}</div>
+    <div class="summary-meta-row">
+      <span class="material-symbols-rounded">person</span>
+      <div class="summary-meta-row-body">
+        <div class="summary-meta-row-label">ผู้ตรวจ</div>
+        <div class="summary-meta-row-value">${escapeHtml(info.inspector||'-')}</div>
+      </div>
     </div>
-    <div class="summary-meta-tile">
-      <div class="summary-meta-label"><span class="material-symbols-rounded">supervisor_account</span> BZM</div>
-      <div class="summary-meta-value">${escapeHtml(info.bzm||'-')}</div>
+    <div class="summary-meta-row">
+      <span class="material-symbols-rounded">supervisor_account</span>
+      <div class="summary-meta-row-body">
+        <div class="summary-meta-row-label">BZM</div>
+        <div class="summary-meta-row-value">${escapeHtml(info.bzm||'-')}</div>
+      </div>
     </div>
-    <div class="summary-meta-tile">
-      <div class="summary-meta-label"><span class="material-symbols-rounded">manage_accounts</span> ผจก.สาขา</div>
-      <div class="summary-meta-value">${escapeHtml(info.manager||'-')}</div>
+    <div class="summary-meta-row">
+      <span class="material-symbols-rounded">manage_accounts</span>
+      <div class="summary-meta-row-body">
+        <div class="summary-meta-row-label">ผจก.สาขา</div>
+        <div class="summary-meta-row-value">${escapeHtml(info.manager||'-')}</div>
+      </div>
     </div>
-    <div class="summary-meta-tile">
-      <div class="summary-meta-label"><span class="material-symbols-rounded">groups</span> ทีมงาน</div>
-      <div class="summary-meta-value">ผจก. ${info.numManagers||0} · บริการ ${info.numService||0} · ครัว ${info.numKitchen||0}</div>
+    <div class="summary-meta-row">
+      <span class="material-symbols-rounded">groups</span>
+      <div class="summary-meta-row-body">
+        <div class="summary-meta-row-label">ทีมงาน</div>
+        <div class="summary-meta-row-value">ผจก. ${info.numManagers||0} · บริการ ${info.numService||0} · ครัว ${info.numKitchen||0}</div>
+      </div>
     </div>
   `;
 
   const scores = currentAudit.scoreData || computeScores();
   const tier = tierFor(scores.grandTotal);
-  const scoreEl = document.getElementById('score-display');
-  scoreEl.className = 'score-display ' + tier.class;
+  document.getElementById('summary-card').className = 'card combined-card tier-' + tier.class;
   document.getElementById('total-score').textContent = scores.grandTotal.toFixed(2);
-  document.getElementById('score-tier').textContent = tier.label + ' (' + tier.desc + ')';
+  document.getElementById('score-tier').textContent = tier.label + ' · ' + tier.desc;
 
   const grid = document.getElementById('section-summary-grid');
   let html = '';
