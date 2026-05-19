@@ -795,10 +795,13 @@ body {
   text-align: center;
 }
 .combined-left .dist-summary {
-  display: flex; flex-direction: column;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 10px;
   min-width: 0;
 }
+.combined-left .dist-summary-card { padding: 12px 14px; }
+.combined-left .dist-summary-value { font-size: 18px; }
 
 /* Bracket table */
 .dist-table {
@@ -807,7 +810,7 @@ body {
 }
 .dist-row {
   display: grid;
-  grid-template-columns: 18px 1fr auto auto;
+  grid-template-columns: 28px 1fr auto auto;
   align-items: center;
   gap: 14px;
   padding: 10px 6px;
@@ -824,6 +827,10 @@ body {
   padding-bottom: 8px;
 }
 .dist-row-head .dist-count, .dist-row-head .dist-pct { color: var(--text-tertiary); }
+.dist-icon {
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.dist-icon .material-symbols-rounded { font-size: 22px; }
 .dist-dot {
   width: 12px; height: 12px;
   border-radius: 3px;
@@ -2914,10 +2921,10 @@ function renderAuditList() {
 function renderTierChart(completed) {
   // Bracket the audits into 4 score ranges
   const brackets = [
-    { key: 'b1', range: '90-100%', count: 0, color: '#2D7A4A', tone: 'pass' },
-    { key: 'b2', range: '80-89%',  count: 0, color: '#5BAF4A', tone: 'pass' },
-    { key: 'b3', range: '50-79%',  count: 0, color: '#E5A348', tone: 'fail' },
-    { key: 'b4', range: '0-49%',   count: 0, color: '#C73223', tone: 'fail' },
+    { key: 'b1', range: '90-100%', count: 0, color: '#2D7A4A', tone: 'pass', icon: 'workspace_premium' },
+    { key: 'b2', range: '80-89%',  count: 0, color: '#5BAF4A', tone: 'pass', icon: 'verified' },
+    { key: 'b3', range: '50-79%',  count: 0, color: '#E5A348', tone: 'fail', icon: 'warning' },
+    { key: 'b4', range: '0-49%',   count: 0, color: '#C73223', tone: 'fail', icon: 'crisis_alert' },
   ];
   completed.forEach(a => {
     const s = a.scoreData?.grandTotal || 0;
@@ -2940,7 +2947,7 @@ function renderTierChart(completed) {
     const pct = (b.count / total * 100);
     const colorClass = b.tone === 'pass' ? 'is-pass' : (b.range === '50-79%' ? 'is-warn' : 'is-fail');
     return `<div class="dist-row ${b.count ? '' : 'is-empty'} ${colorClass}">
-      <span class="dist-dot" style="background:${b.color}"></span>
+      <span class="dist-icon" style="color:${b.color}"><span class="material-symbols-rounded">${b.icon}</span></span>
       <span class="dist-range">${b.range}</span>
       <span class="dist-count">${b.count}</span>
       <span class="dist-pct">${pct.toFixed(0)}%</span>
