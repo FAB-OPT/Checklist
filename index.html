@@ -437,23 +437,63 @@ body {
 }
 .sec-detail-subtitle:first-child { margin-top: 0; }
 .sec-detail-item {
-  display: flex; align-items: flex-start; gap: 8px;
-  padding: 6px 0;
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 10px 12px;
+  margin-bottom: 6px;
   font-size: 13px;
-  border-top: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  border-left: 4px solid var(--border);
+  background: var(--surface-2);
 }
-.sec-detail-item:first-child { border-top: none; }
-.sec-detail-item .material-symbols-rounded { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+.sec-detail-item .material-symbols-rounded {
+  font-size: 22px; flex-shrink: 0; margin-top: 0;
+}
+.sec-detail-item.is-pass {
+  background: var(--success-bg);
+  border-left-color: var(--success);
+}
 .sec-detail-item.is-pass .material-symbols-rounded { color: var(--success); }
+.sec-detail-item.is-fail {
+  background: var(--danger-bg);
+  border-left-color: var(--danger);
+}
 .sec-detail-item.is-fail .material-symbols-rounded { color: var(--danger); }
+.sec-detail-item.is-na {
+  background: var(--bg-strong);
+  border-left-color: var(--text-secondary);
+  opacity: 0.85;
+}
 .sec-detail-item.is-na   .material-symbols-rounded { color: var(--text-secondary); }
+.sec-detail-item.is-pending {
+  background: var(--surface-2);
+  border-left-color: var(--border);
+}
 .sec-detail-item.is-pending .material-symbols-rounded { color: var(--text-tertiary); }
 .sec-detail-item-body { flex: 1; min-width: 0; }
-.sec-detail-item-text { line-height: 1.5; color: var(--text); }
+.sec-detail-item-text {
+  line-height: 1.5; color: var(--text);
+  font-weight: 600;
+}
+.sec-detail-item.is-pending .sec-detail-item-text {
+  color: var(--text-secondary); font-weight: 500;
+}
 .sec-detail-item-note {
   font-size: 12px; color: var(--danger);
-  margin-top: 4px; font-weight: 600;
+  margin-top: 4px; font-weight: 700;
 }
+.sec-detail-item-status {
+  align-self: center;
+  font-size: 10px; font-weight: 800;
+  letter-spacing: 0.3px; text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: var(--r-pill);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.sec-detail-item.is-pass .sec-detail-item-status { background: var(--success); color: white; }
+.sec-detail-item.is-fail .sec-detail-item-status { background: var(--danger); color: white; }
+.sec-detail-item.is-na   .sec-detail-item-status { background: var(--text-secondary); color: white; }
+.sec-detail-item.is-pending .sec-detail-item-status { background: var(--bg-strong); color: var(--text-tertiary); }
 .sec-row-name { min-width: 0; }
 .sec-row-title {
   font-size: 14px; font-weight: 800;
@@ -4543,12 +4583,14 @@ function openSectionModal(letter) {
       else if (value === 'na') na++;
       const iconName = value === 'pass' ? 'check_circle' : value === 'fail' ? 'cancel' : value === 'na' ? 'remove_circle' : 'radio_button_unchecked';
       const stateCls = value === 'pass' ? 'is-pass' : value === 'fail' ? 'is-fail' : value === 'na' ? 'is-na' : 'is-pending';
+      const stateLabel = value === 'pass' ? 'ผ่าน' : value === 'fail' ? 'ไม่ผ่าน' : value === 'na' ? 'N/A' : 'ยังไม่ตอบ';
       html += `<div class="sec-detail-item ${stateCls}">
         <span class="material-symbols-rounded">${iconName}</span>
         <div class="sec-detail-item-body">
           <div class="sec-detail-item-text">${it.num}. ${escapeHtml(it.text)}</div>
           ${ans && ans.note ? `<div class="sec-detail-item-note">📝 ${escapeHtml(ans.note)}</div>` : ''}
         </div>
+        <span class="sec-detail-item-status">${stateLabel}</span>
       </div>`;
     });
   });
