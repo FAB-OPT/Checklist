@@ -2100,7 +2100,7 @@ body:has(#login-screen.active) {
             <div class="combined-score">
               <div class="score-card-pct" id="stat-avg">—</div>
               <div class="score-card-pct-unit">% คะแนนเฉลี่ย</div>
-              <div class="score-card-badge" id="dashboard-hero-badge">—</div>
+              <div class="score-card-badge" id="dashboard-hero-badge" style="display:none;"></div>
             </div>
             <div id="dist-summary-slot" class="dist-summary"></div>
           </div>
@@ -3051,7 +3051,6 @@ function renderScoreTrend(completed) {
   const failWidth = total ? (fail / total * 100) : 0;
   slot.innerHTML = `
     <div class="passfail-chart">
-      <div class="passfail-head">ผ่าน / ไม่ผ่าน <span>Pass / Fail</span></div>
       <div class="pf-hbar">
         ${pass > 0 ? `<div class="pf-hbar-seg pass" style="width:${passWidth}%">${passWidth >= 12 ? pass : ''}</div>` : ''}
         ${fail > 0 ? `<div class="pf-hbar-seg fail" style="width:${failWidth}%">${failWidth >= 12 ? fail : ''}</div>` : ''}
