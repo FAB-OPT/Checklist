@@ -627,8 +627,10 @@ body {
   display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;
 }
 .page-eyebrow-inline {
-  font-size: 11px; font-weight: 800; letter-spacing: 1.5px;
-  text-transform: uppercase; color: var(--primary);
+  font-size: inherit; font-weight: 900;
+  letter-spacing: inherit; text-transform: none;
+  color: var(--primary);
+  margin-left: 4px;
 }
 
 /* Score card — Apple-Health big number */
@@ -2765,26 +2767,22 @@ body:has(#login-screen.active) {
       </div>
       <div class="stripe-card">
 
-        <div class="filter-bar">
-          <input type="text" id="filter-search" placeholder="ค้นหาสาขา..." oninput="renderAuditList()">
-          <select id="filter-bzm" onchange="renderAuditList()">
-            <option value="">ทุก BZM</option>
-          </select>
-          <select id="filter-tier" onchange="renderAuditList()" style="display:none;">
-            <option value="">ทุกเกรด</option>
-            <option value="excellent">ดีมาก</option>
-            <option value="standard">มาตรฐาน</option>
-            <option value="improve">ปรับปรุง</option>
-            <option value="breakdown">เร่งด่วน</option>
-          </select>
-        </div>
+        <input type="text" id="filter-search" style="display:none;">
+        <select id="filter-bzm" style="display:none;"></select>
+        <select id="filter-tier" onchange="renderAuditList()" style="display:none;">
+          <option value="">ทุกเกรด</option>
+          <option value="excellent">ดีมาก</option>
+          <option value="standard">มาตรฐาน</option>
+          <option value="improve">ปรับปรุง</option>
+          <option value="breakdown">เร่งด่วน</option>
+        </select>
 
         <div class="chip-row" id="tier-chips">
-          <button type="button" class="chip active" data-tier="" onclick="setTierFilter('', this)">ทั้งหมด</button>
-          <button type="button" class="chip" data-tier="excellent" onclick="setTierFilter('excellent', this)">⭐ ดีมาก</button>
-          <button type="button" class="chip" data-tier="standard" onclick="setTierFilter('standard', this)">✅ มาตรฐาน</button>
-          <button type="button" class="chip" data-tier="improve" onclick="setTierFilter('improve', this)">⚠️ ปรับปรุง</button>
-          <button type="button" class="chip" data-tier="breakdown" onclick="setTierFilter('breakdown', this)">🚨 เร่งด่วน</button>
+          <button type="button" class="chip active" data-tier="" onclick="setTierFilter('', this)">ทั้งหมด All</button>
+          <button type="button" class="chip" data-tier="excellent" onclick="setTierFilter('excellent', this)">⭐ ดีมาก Excellent</button>
+          <button type="button" class="chip" data-tier="standard" onclick="setTierFilter('standard', this)">✅ มาตรฐาน Standard</button>
+          <button type="button" class="chip" data-tier="improve" onclick="setTierFilter('improve', this)">⚠️ ปรับปรุง Improve</button>
+          <button type="button" class="chip" data-tier="breakdown" onclick="setTierFilter('breakdown', this)">🚨 เร่งด่วน Critical</button>
         </div>
 
         <div class="audit-list" id="audit-list"></div>
@@ -4100,10 +4098,10 @@ function computeScores() {
 }
 
 function tierFor(pct) {
-  if (pct >= 90) return { class:'excellent', label:'⭐ ดีมาก',   en:'Excellent', desc:'≥ 90%' };
-  if (pct >= 85) return { class:'standard',  label:'✅ มาตรฐาน', en:'Standard',  desc:'≥ 85%' };
-  if (pct >= 70) return { class:'improve',   label:'⚠️ ปรับปรุง', en:'Improve',   desc:'≥ 70%' };
-  return            { class:'breakdown', label:'🚨 เร่งด่วน', en:'Critical',  desc:'< 70%' };
+  if (pct >= 90) return { class:'excellent', label:'⭐ ดีมาก Excellent',   en:'Excellent', desc:'≥ 90%' };
+  if (pct >= 85) return { class:'standard',  label:'✅ มาตรฐาน Standard', en:'Standard',  desc:'≥ 85%' };
+  if (pct >= 70) return { class:'improve',   label:'⚠️ ปรับปรุง Improve', en:'Improve',   desc:'≥ 70%' };
+  return            { class:'breakdown', label:'🚨 เร่งด่วน Critical', en:'Critical',  desc:'< 70%' };
 }
 
 function showSummary(readonly) {
