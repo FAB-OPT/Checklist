@@ -1387,7 +1387,20 @@ body {
 }
 .daily-section-chip {
   position: relative;
-  padding-right: 14px;
+  padding: 8px 12px;
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.daily-section-chip .chip-name { font-weight: 800; }
+.daily-section-chip .chip-count {
+  font-size: 11px; font-weight: 700;
+  padding: 2px 7px;
+  border-radius: var(--r-pill);
+  background: var(--bg-strong);
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+.daily-section-chip.active .chip-count {
+  background: rgba(255,255,255,0.25); color: white;
 }
 .daily-section-chip .chip-badge {
   display: inline-flex; align-items: center; justify-content: center;
@@ -1589,17 +1602,19 @@ body {
   letter-spacing: -0.2px;
 }
 .daily-date-chip {
-  display: inline-flex; align-items: center; gap: 4px;
-  padding: 4px 10px;
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 14px;
   background: var(--primary-50);
-  color: var(--primary);
-  border-radius: var(--r-pill);
-  font-size: 12px; font-weight: 800;
-  letter-spacing: 0.1px;
+  color: var(--primary-dark);
+  border: 1.5px solid var(--primary-100);
+  border-radius: var(--r-md);
+  font-size: 15px; font-weight: 800;
+  letter-spacing: 0.2px;
   font-variant-numeric: tabular-nums;
+  box-shadow: 0 2px 6px rgba(214,54,34,0.08);
 }
 .daily-date-chip::before {
-  content: '📅'; font-size: 12px;
+  content: '📅'; font-size: 15px;
 }
 .daily-hub-sub {
   color: var(--text-secondary);
@@ -3822,7 +3837,9 @@ function renderDailySectionTabs() {
     if (failCount) badgeHtml = `<span class="chip-badge chip-badge-fail">${failCount}</span>`;
     else if (allDone) badgeHtml = `<span class="chip-badge chip-badge-done">✓</span>`;
     return `<button type="button" class="chip daily-section-chip" onclick="scrollToDailySection(${sIdx})">
-      ${escapeHtml(sec.name)}${badgeHtml}
+      <span class="chip-name">${escapeHtml(sec.name)}</span>
+      <span class="chip-count">${doneCount}/${sec.items.length}</span>
+      ${badgeHtml}
     </button>`;
   }).join('');
   tabs.innerHTML = html;
