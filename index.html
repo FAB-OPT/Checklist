@@ -1401,6 +1401,64 @@ body {
 .chip-badge-fail { background: var(--danger); color: white; }
 .chip-badge-done { background: var(--success); color: white; }
 
+/* Daily form: header card with shift, date, BZM, branch, manager input */
+.daily-form-head-card {
+  padding: 20px 22px;
+}
+.daily-form-head-top {
+  display: flex; align-items: center; gap: 14px;
+  margin-bottom: 16px;
+}
+.daily-form-shift-icon {
+  width: 48px; height: 48px;
+  border-radius: var(--r-md);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  color: white;
+  box-shadow: 0 4px 12px rgba(80,40,20,0.12);
+}
+.daily-form-shift-icon .material-symbols-rounded { font-size: 26px; color: white; }
+.daily-form-head-card.is-open  .daily-form-shift-icon { background: linear-gradient(135deg, #FFB833, #FF8534); }
+.daily-form-head-card.is-close .daily-form-shift-icon { background: linear-gradient(135deg, #6E7AC8, #4A5A99); }
+.daily-form-titles { flex: 1; min-width: 0; }
+.daily-form-titles h2 {
+  font-size: 19px; font-weight: 900;
+  color: var(--text); letter-spacing: -0.3px;
+  line-height: 1.2;
+  margin-bottom: 6px;
+}
+.daily-form-meta-row {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+}
+.daily-form-meta-chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 4px 10px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-pill);
+  font-size: 12px; font-weight: 700;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+.daily-form-branch-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 12px 14px;
+  background: var(--primary-50);
+  border-radius: var(--r-sm);
+  font-size: 14px; font-weight: 800;
+  color: var(--primary-dark);
+  margin-bottom: 16px;
+}
+.daily-form-input-row {
+  display: flex; flex-direction: column; gap: 8px;
+}
+.daily-form-input-label {
+  font-size: 13px; font-weight: 700;
+  color: var(--text-secondary);
+  letter-spacing: 0.2px;
+}
+.daily-form-input-label .req { color: var(--danger); margin-left: 2px; }
+
 /* Daily form: section cards + big questions + clear pass/fail/N/A buttons */
 .daily-section-card {
   background: var(--surface);
@@ -2361,17 +2419,25 @@ body:has(#login-screen.active) {
 
     <!-- DAILY FORM SCREEN -->
     <div id="daily-form-screen" style="display:none;">
-      <div class="card">
-        <div class="card-header">
-          <span class="material-symbols-rounded" id="daily-form-icon" style="color:var(--primary);">wb_sunny</span>
-          <h2 id="daily-form-title">เช็ค Open</h2>
+      <div class="card daily-form-head-card" id="daily-form-head">
+        <div class="daily-form-head-top">
+          <div class="daily-form-shift-icon" id="daily-form-shift-icon">
+            <span class="material-symbols-rounded" id="daily-form-icon">wb_sunny</span>
+          </div>
+          <div class="daily-form-titles">
+            <h2 id="daily-form-title">เช็ค Open</h2>
+            <div class="daily-form-meta-row">
+              <span class="daily-form-meta-chip" id="daily-form-date-chip">📅 —</span>
+              <span class="daily-form-meta-chip" id="daily-form-bzm-chip">BZM —</span>
+            </div>
+          </div>
         </div>
-        <div style="background:var(--bg);padding:10px 12px;border-radius:8px;margin-bottom:14px;font-size:13px;">
-          <div><b id="daily-form-branch"></b></div>
-          <div style="color:var(--text-secondary);" id="daily-form-meta"></div>
+        <div class="daily-form-branch-row">
+          <span class="material-symbols-rounded" style="color:var(--primary);font-size:20px;">storefront</span>
+          <span id="daily-form-branch"></span>
         </div>
-        <div class="form-group">
-          <label>Manager on duty <span class="req">*</span></label>
+        <div class="daily-form-input-row">
+          <label class="daily-form-input-label">Manager on duty <span class="req">*</span></label>
           <input type="text" class="form-control" id="daily-manager" placeholder="ชื่อผู้รับผิดชอบ shift">
         </div>
       </div>
@@ -3705,7 +3771,9 @@ function startDailyShift(shift) {
   document.getElementById('daily-form-title').textContent = (isEdit ? 'แก้ไข ' : 'เช็ค ') + shiftLabel;
   document.getElementById('daily-form-icon').textContent = shift === 'open' ? 'wb_sunny' : 'bedtime';
   document.getElementById('daily-form-branch').textContent = branchLabel(currentUser.branchCode, currentUser.branchName);
-  document.getElementById('daily-form-meta').textContent = `วันที่ ${today} · BZM: ${currentUser.bzm || '-'}`;
+  document.getElementById('daily-form-date-chip').innerHTML = `📅 ${today}`;
+  document.getElementById('daily-form-bzm-chip').innerHTML = `<span class="material-symbols-rounded" style="font-size:14px;vertical-align:-2px;">supervisor_account</span> ${escapeHtml(currentUser.bzm || '-')}`;
+  document.getElementById('daily-form-head').className = 'card daily-form-head-card ' + (shift === 'open' ? 'is-open' : 'is-close');
   document.getElementById('daily-manager').value = currentDaily.manager;
   renderDailyForm();
 }
