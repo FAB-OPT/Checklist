@@ -355,7 +355,98 @@ body {
 .score-display .score-label { font-size: 16px; font-weight: 600; margin-top: 8px; opacity: 0.95; }
 .score-display .score-tier { font-size: 13px; opacity: 0.95; margin-top: 6px; }
 
-.section-summary-grid { display: grid; gap: 8px; }
+/* Summary meta tiles (top of audit summary) */
+.summary-meta-card { padding: 16px; }
+.summary-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+}
+.summary-meta-tile {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  padding: 10px 12px;
+}
+.summary-meta-tile.primary {
+  background: var(--primary-50);
+  border-color: var(--primary-100);
+  grid-column: 1 / -1;
+}
+.summary-meta-label {
+  display: flex; align-items: center; gap: 4px;
+  font-size: 11px; font-weight: 700;
+  color: var(--text-secondary);
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+.summary-meta-label .material-symbols-rounded {
+  font-size: 14px; color: var(--primary); opacity: 0.8;
+}
+.summary-meta-value {
+  font-size: 14px; font-weight: 800;
+  color: var(--text); line-height: 1.3;
+}
+.summary-meta-tile.primary .summary-meta-value {
+  font-size: 16px; color: var(--primary-dark);
+}
+
+/* Section summary rows (with progress bar) */
+.section-summary-grid { display: grid; gap: 10px; }
+.sec-row {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: 12px 14px 14px;
+}
+.sec-row.good { border-color: rgba(45,122,74,0.25); background: var(--success-bg); }
+.sec-row.bad  { border-color: rgba(199,50,35,0.25); background: var(--danger-bg); }
+.sec-row-head {
+  display: grid;
+  grid-template-columns: 32px 1fr auto;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+.sec-row-name { min-width: 0; }
+.sec-row-title {
+  font-size: 14px; font-weight: 800;
+  color: var(--text); letter-spacing: -0.1px;
+}
+.sec-row-sub {
+  font-size: 11px; font-weight: 600;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+.sec-row-score {
+  text-align: right;
+  display: flex; align-items: baseline; gap: 2px;
+  font-variant-numeric: tabular-nums;
+}
+.sec-row-earned {
+  font-size: 18px; font-weight: 900;
+  color: var(--text); letter-spacing: -0.4px;
+}
+.sec-row.good .sec-row-earned { color: var(--success); }
+.sec-row.bad  .sec-row-earned { color: var(--danger); }
+.sec-row-weight {
+  font-size: 12px; font-weight: 700;
+  color: var(--text-tertiary);
+}
+.sec-row-bar {
+  height: 6px;
+  background: rgba(80,40,20,0.08);
+  border-radius: var(--r-pill);
+  overflow: hidden;
+}
+.sec-row-bar-fill {
+  height: 100%; border-radius: var(--r-pill);
+  background: linear-gradient(90deg, var(--primary-light), var(--primary));
+  transition: width 0.5s cubic-bezier(.4,0,.2,1);
+}
+.sec-row.good .sec-row-bar-fill { background: linear-gradient(90deg, #4FB87A, #2D7A4A); }
+.sec-row.bad  .sec-row-bar-fill { background: linear-gradient(90deg, #E04938, #C73223); }
 .section-summary-row {
   display: grid; grid-template-columns: 32px 1fr auto auto;
   gap: 12px; align-items: center;
@@ -3082,21 +3173,25 @@ body:has(#login-screen.active) {
 
     <!-- SUMMARY SCREEN -->
     <div id="summary-screen" style="display:none;">
+      <div class="page-eyebrow page-eyebrow-section">
+        <h2 class="page-eyebrow-title">สรุปผลการตรวจ <span class="page-eyebrow-inline">Audit Summary</span></h2>
+      </div>
+
+      <div class="card summary-meta-card">
+        <div id="branch-info-summary" class="summary-meta-grid"></div>
+      </div>
+
+      <div id="score-display" class="score-display">
+        <div class="score-value" id="total-score">0.0</div>
+        <div class="score-label">% คะแนนรวม</div>
+        <div class="score-tier" id="score-tier">—</div>
+      </div>
+
       <div class="card">
         <div class="card-header">
-          <span class="material-symbols-rounded" style="color:var(--primary);">leaderboard</span>
-          <h2>สรุปผลการตรวจ</h2>
+          <span class="material-symbols-rounded" style="color:var(--primary);">stacked_bar_chart</span>
+          <h2>คะแนนแยกตามหมวด</h2>
         </div>
-
-        <div id="branch-info-summary" style="background:var(--bg);padding:12px;border-radius:8px;margin-bottom:16px;font-size:13px;"></div>
-
-        <div id="score-display" class="score-display">
-          <div class="score-value" id="total-score">0.0</div>
-          <div class="score-label">% คะแนนรวม</div>
-          <div class="score-tier" id="score-tier">—</div>
-        </div>
-
-        <h3 style="font-size:15px;margin-bottom:12px;">คะแนนแยกตามหมวด</h3>
         <div class="section-summary-grid" id="section-summary-grid"></div>
       </div>
 
@@ -4313,17 +4408,31 @@ function showSummary(readonly) {
   if (editBtn) editBtn.style.display = (currentUser && currentUser.role === 'branch') ? 'none' : '';
 
   const info = currentAudit.branchInfo;
+  const dateLine = (info.date ? fmtDateDMY(info.date) : '-') + (info.time ? ' · ' + escapeHtml(info.time) : '');
   document.getElementById('branch-info-summary').innerHTML = `
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;">
-      <div><b>สาขา:</b> ${escapeHtml(info.branch||'-')}</div>
-      <div><b>BZM:</b> ${escapeHtml(info.bzm||'-')}</div>
-      <div><b>วันที่:</b> ${escapeHtml(info.date||'-')}</div>
-      <div><b>เวลา:</b> ${escapeHtml(info.time||'-')}</div>
-      <div><b>ผู้ตรวจ:</b> ${escapeHtml(info.inspector||'-')}</div>
-      <div><b>ผจก.สาขา:</b> ${escapeHtml(info.manager||'-')}</div>
-      <div><b>ทีมผจก.:</b> ${info.numManagers||0} คน</div>
-      <div><b>พนง.บริการ:</b> ${info.numService||0} คน</div>
-      <div><b>พนง.ครัว:</b> ${info.numKitchen||0} คน</div>
+    <div class="summary-meta-tile primary">
+      <div class="summary-meta-label"><span class="material-symbols-rounded">storefront</span> สาขา</div>
+      <div class="summary-meta-value">${escapeHtml(info.branch||'-')}</div>
+    </div>
+    <div class="summary-meta-tile">
+      <div class="summary-meta-label"><span class="material-symbols-rounded">event</span> วันที่ตรวจ</div>
+      <div class="summary-meta-value">${dateLine}</div>
+    </div>
+    <div class="summary-meta-tile">
+      <div class="summary-meta-label"><span class="material-symbols-rounded">person</span> ผู้ตรวจ</div>
+      <div class="summary-meta-value">${escapeHtml(info.inspector||'-')}</div>
+    </div>
+    <div class="summary-meta-tile">
+      <div class="summary-meta-label"><span class="material-symbols-rounded">supervisor_account</span> BZM</div>
+      <div class="summary-meta-value">${escapeHtml(info.bzm||'-')}</div>
+    </div>
+    <div class="summary-meta-tile">
+      <div class="summary-meta-label"><span class="material-symbols-rounded">manage_accounts</span> ผจก.สาขา</div>
+      <div class="summary-meta-value">${escapeHtml(info.manager||'-')}</div>
+    </div>
+    <div class="summary-meta-tile">
+      <div class="summary-meta-label"><span class="material-symbols-rounded">groups</span> ทีมงาน</div>
+      <div class="summary-meta-value">ผจก. ${info.numManagers||0} · บริการ ${info.numService||0} · ครัว ${info.numKitchen||0}</div>
     </div>
   `;
 
@@ -4338,18 +4447,51 @@ function showSummary(readonly) {
   let html = '';
   for (const s of scores.sectionScores) {
     const cls = s.pct >= 90 ? 'good' : (s.pct < 70 ? 'bad' : '');
-    html += '<div class="section-summary-row">';
-    html += '<div class="section-letter-badge">'+s.letter+'</div>';
-    html += '<div class="section-name">'+escapeHtml(s.title.split(':')[0])+'<div style="font-size:11px;color:var(--text-secondary);font-weight:400;">ผ่าน '+s.passed+'/'+s.total+'</div></div>';
-    html += '<div style="font-size:11px;color:var(--text-secondary);">น้ำหนัก '+s.weight+'</div>';
-    html += '<div class="section-pct '+cls+'">'+s.earned.toFixed(2)+'</div>';
-    html += '</div>';
+    const fillPct = s.weight > 0 ? Math.min(100, (s.earned / s.weight) * 100) : 0;
+    html += `<div class="sec-row ${cls}">
+      <div class="sec-row-head">
+        <div class="section-letter-badge">${s.letter}</div>
+        <div class="sec-row-name">
+          <div class="sec-row-title">${escapeHtml(s.title.split(':')[0])}</div>
+          <div class="sec-row-sub">ผ่าน ${s.passed}/${s.total} · น้ำหนัก ${s.weight}</div>
+        </div>
+        <div class="sec-row-score">
+          <div class="sec-row-earned">${s.earned.toFixed(2)}</div>
+          <div class="sec-row-weight">/ ${s.weight}</div>
+        </div>
+      </div>
+      <div class="sec-row-bar">
+        <div class="sec-row-bar-fill" style="width:${fillPct}%"></div>
+      </div>
+    </div>`;
   }
   if (scores.lDeduct > 0) {
-    html += '<div class="section-summary-row" style="background:#F0EBE0;"><div class="section-letter-badge" style="background:var(--warning);">L</div><div class="section-name">Pest Control · พบสัตว์พาหะ</div><div></div><div class="section-pct bad">-'+scores.lDeduct.toFixed(2)+'</div></div>';
+    html += `<div class="sec-row bad">
+      <div class="sec-row-head">
+        <div class="section-letter-badge" style="background:var(--warning);">L</div>
+        <div class="sec-row-name">
+          <div class="sec-row-title">Pest Control</div>
+          <div class="sec-row-sub">พบสัตว์พาหะ</div>
+        </div>
+        <div class="sec-row-score">
+          <div class="sec-row-earned" style="color:var(--danger)">-${scores.lDeduct.toFixed(2)}</div>
+        </div>
+      </div>
+    </div>`;
   }
   if (scores.mDeduct > 0) {
-    html += '<div class="section-summary-row" style="background:#F0E0DA;"><div class="section-letter-badge" style="background:var(--danger);">M</div><div class="section-name">Critical Issue · เหตุการณ์วิกฤต</div><div></div><div class="section-pct bad">-'+scores.mDeduct.toFixed(2)+'</div></div>';
+    html += `<div class="sec-row bad">
+      <div class="sec-row-head">
+        <div class="section-letter-badge" style="background:var(--danger);">M</div>
+        <div class="sec-row-name">
+          <div class="sec-row-title">Critical Issue</div>
+          <div class="sec-row-sub">เหตุการณ์วิกฤต</div>
+        </div>
+        <div class="sec-row-score">
+          <div class="sec-row-earned" style="color:var(--danger)">-${scores.mDeduct.toFixed(2)}</div>
+        </div>
+      </div>
+    </div>`;
   }
   grid.innerHTML = html;
 
