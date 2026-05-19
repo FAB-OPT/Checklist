@@ -1690,6 +1690,131 @@ body {
 .detail-photo-btn:hover .detail-photo-zoom { opacity: 1; }
 .detail-photo-zoom .material-symbols-rounded { font-size: 16px; color: white; }
 
+/* Daily detail — filter chips + clean section rows */
+.detail-filter-chips {
+  margin: 0 -16px 14px;
+  padding: 4px 16px 4px;
+  position: sticky;
+  top: 0; z-index: 40;
+  background: var(--bg);
+}
+.chip-mini {
+  display: inline-flex; align-items: center; justify-content: center;
+  margin-left: 6px;
+  min-width: 22px; height: 20px;
+  padding: 0 6px;
+  border-radius: var(--r-pill);
+  background: var(--bg-strong);
+  color: var(--text-secondary);
+  font-size: 11px; font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.chip.active .chip-mini { background: rgba(255,255,255,0.25); color: white; }
+
+.detail-section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  margin-bottom: 14px;
+  overflow: hidden;
+}
+.detail-section-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; flex-wrap: wrap;
+  padding: 14px 18px;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border);
+}
+.detail-section-title {
+  font-size: 15px; font-weight: 800;
+  color: var(--text); letter-spacing: -0.1px;
+  text-transform: uppercase;
+}
+.detail-section-pills {
+  display: inline-flex; gap: 6px; flex-wrap: wrap;
+}
+.sec-pill {
+  display: inline-flex; align-items: center;
+  padding: 3px 10px;
+  border-radius: var(--r-pill);
+  font-size: 11px; font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.2px;
+}
+.sec-pill.p-pass { background: var(--success-bg); color: #1E6B36; }
+.sec-pill.p-fail { background: var(--danger-bg);  color: #7A1F10; }
+.sec-pill.p-na   { background: var(--bg-strong);  color: var(--text-secondary); }
+.sec-pill.p-pend { background: var(--warning-bg); color: #7A5818; }
+
+.detail-section-items {
+  display: flex; flex-direction: column;
+}
+.detail-row {
+  padding: 12px 18px;
+  border-top: 1px solid var(--border);
+  transition: background 0.18s;
+}
+.detail-row:first-child { border-top: none; }
+.detail-row.is-pass { background: rgba(45,122,74,0.03); }
+.detail-row.is-fail { background: rgba(199,50,35,0.04); }
+.detail-row.is-na   { background: var(--surface-2); }
+.detail-row.is-pending {}
+
+.detail-row-main {
+  display: flex; align-items: flex-start; gap: 10px;
+}
+.detail-row-num {
+  flex-shrink: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 24px; padding: 0 4px; height: 22px;
+  border-radius: var(--r-sm);
+  background: var(--bg-strong);
+  color: var(--text-secondary);
+  font-size: 12px; font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  margin-top: 1px;
+}
+.detail-row.is-pass .detail-row-num { background: var(--success-bg); color: #1E6B36; }
+.detail-row.is-fail .detail-row-num { background: var(--danger-bg);  color: #7A1F10; }
+.detail-row-icon {
+  flex-shrink: 0;
+  display: inline-flex; align-items: center;
+  margin-top: 1px;
+}
+.detail-row-icon .material-symbols-rounded { font-size: 20px; }
+.detail-row.is-pass    .detail-row-icon { color: var(--success); }
+.detail-row.is-fail    .detail-row-icon { color: var(--danger); }
+.detail-row.is-na      .detail-row-icon { color: var(--text-secondary); }
+.detail-row.is-pending .detail-row-icon { color: var(--text-tertiary); }
+.detail-row-text {
+  flex: 1; min-width: 0;
+  font-size: 14px; font-weight: 600;
+  color: var(--text); line-height: 1.5;
+}
+.detail-row-note {
+  display: flex; align-items: flex-start; gap: 6px;
+  margin: 8px 0 0 34px;
+  padding: 8px 12px;
+  background: var(--danger-bg);
+  color: #7A1F10;
+  border-radius: var(--r-sm);
+  font-size: 12px; font-weight: 700;
+}
+.detail-row-note .material-symbols-rounded {
+  font-size: 16px; color: var(--danger); flex-shrink: 0;
+}
+.detail-row .detail-photos { margin-left: 34px; }
+
+.detail-empty {
+  text-align: center;
+  padding: 36px 20px;
+  color: var(--text-tertiary);
+}
+.detail-empty .material-symbols-rounded {
+  font-size: 40px; opacity: 0.5;
+  margin-bottom: 8px; display: block;
+}
+
 /* Daily history (ประวัติ) — grouped by date, two cards per day */
 .daily-history-group {
   margin-bottom: 22px;
@@ -2896,6 +3021,7 @@ body:has(#login-screen.active) {
         <div class="detail-stats-row" id="detail-stats-row"></div>
       </div>
 
+      <div class="chip-row detail-filter-chips" id="detail-filter-chips"></div>
       <div id="daily-detail-content"></div>
 
       <div class="card no-print">
@@ -4474,6 +4600,14 @@ function cancelDailyShift() {
 
 let lightboxImages = [];
 let lightboxIdx = 0;
+let currentDetail = null;
+let detailFilter = 'all';
+
+function setDetailFilter(value, btn) {
+  detailFilter = value;
+  document.querySelectorAll('#detail-filter-chips .chip').forEach(c => c.classList.toggle('active', c === btn));
+  renderDetailContent();
+}
 
 function openLightbox(idx) {
   if (!lightboxImages.length) return;
