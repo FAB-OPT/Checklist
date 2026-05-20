@@ -355,11 +355,40 @@ body {
 .score-display .score-label { font-size: 16px; font-weight: 600; margin-top: 8px; opacity: 0.95; }
 .score-display .score-tier { font-size: 13px; opacity: 0.95; margin-top: 6px; }
 
-/* Summary meta vertical list (inside left column of combined-card) */
+/* Summary hero — score + meta horizontal on desktop */
+.summary-hero {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 22px;
+  padding: 26px 28px;
+}
+@media (min-width: 720px) {
+  .summary-hero {
+    grid-template-columns: minmax(220px, 280px) 1fr;
+    gap: 32px;
+    align-items: center;
+  }
+}
+.summary-hero-score { text-align: center; }
+.summary-hero-score .score-card-pct { font-size: 64px; }
+@media (min-width: 720px) {
+  .summary-hero-score .score-card-pct { font-size: 76px; }
+}
+
+/* Summary meta — vertical list on mobile, 2-col on tablet+, 3-col on wide */
 .summary-meta-list {
-  display: flex; flex-direction: column;
+  display: grid;
+  grid-template-columns: 1fr;
   gap: 8px;
-  margin-top: 16px;
+}
+@media (min-width: 600px) {
+  .summary-meta-list { grid-template-columns: 1fr 1fr; }
+}
+@media (min-width: 1100px) {
+  .summary-meta-list { grid-template-columns: 1fr 1fr 1fr; }
+}
+.summary-meta-list .summary-meta-row.primary {
+  grid-column: 1 / -1;
 }
 .summary-meta-row {
   display: flex; align-items: flex-start; gap: 10px;
@@ -401,8 +430,21 @@ body {
   background: var(--primary-gradient);
 }
 
-/* Section summary rows (with progress bar + expandable detail) */
-.section-summary-grid { display: grid; gap: 10px; }
+/* Section summary rows (with progress bar) */
+.section-summary-grid {
+  display: grid; gap: 10px;
+  grid-template-columns: 1fr;
+}
+@media (min-width: 720px)  { .section-summary-grid { grid-template-columns: 1fr 1fr; } }
+@media (min-width: 1200px) { .section-summary-grid { grid-template-columns: 1fr 1fr 1fr; } }
+
+/* English caption inside card-header h2 */
+.card-header-en {
+  font-size: 12px; font-weight: 700;
+  color: var(--text-tertiary);
+  letter-spacing: 0.3px;
+  margin-left: 6px;
+}
 .sec-row {
   background: var(--surface-2);
   border: 1px solid var(--border);
@@ -3325,21 +3367,23 @@ body:has(#login-screen.active) {
         <h2 class="page-eyebrow-title">สรุปผลการตรวจ <span class="page-eyebrow-inline">Audit Summary</span></h2>
       </div>
 
-      <div class="card combined-card" id="summary-card">
-        <div class="combined-grid">
-          <div class="combined-left">
-            <div class="combined-score">
-              <div class="score-card-pct" id="total-score">0.0</div>
-              <div class="score-card-pct-unit">% คะแนนรวม</div>
-              <div class="score-card-badge summary-tier-badge" id="score-tier">—</div>
-            </div>
-            <div id="branch-info-summary" class="summary-meta-list"></div>
-          </div>
-          <div class="combined-table-slot">
-            <div class="score-card-chart-label">คะแนนแยกตามหมวด · Section Scores</div>
-            <div class="section-summary-grid" id="section-summary-grid"></div>
-          </div>
+      <!-- Hero: score + meta side-by-side on desktop -->
+      <div class="card summary-hero" id="summary-card">
+        <div class="summary-hero-score">
+          <div class="score-card-pct" id="total-score">0.0</div>
+          <div class="score-card-pct-unit">% คะแนนรวม</div>
+          <div class="score-card-badge summary-tier-badge" id="score-tier">—</div>
         </div>
+        <div id="branch-info-summary" class="summary-meta-list"></div>
+      </div>
+
+      <!-- Section grid (multi-column on desktop) -->
+      <div class="card">
+        <div class="card-header">
+          <span class="material-symbols-rounded" style="color:var(--primary);">stacked_bar_chart</span>
+          <h2>คะแนนแยกตามหมวด <span class="card-header-en">Section Scores</span></h2>
+        </div>
+        <div class="section-summary-grid" id="section-summary-grid"></div>
       </div>
 
       <!-- Legacy element kept for any external CSS that targets it -->
@@ -4690,7 +4734,7 @@ function showSummary(readonly) {
 
   const scores = currentAudit.scoreData || computeScores();
   const tier = tierFor(scores.grandTotal);
-  document.getElementById('summary-card').className = 'card combined-card tier-' + tier.class;
+  document.getElementById('summary-card').className = 'card summary-hero combined-card tier-' + tier.class;
   document.getElementById('total-score').textContent = scores.grandTotal.toFixed(2);
   document.getElementById('score-tier').textContent = tier.label + ' · ' + tier.desc;
 
