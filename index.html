@@ -9,7 +9,7 @@
 <title>Quality Assurance & Operations Checklist</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&family=Prompt:wght@400;500;600;700&family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0&display=swap" rel="stylesheet">
 <style>
 :root {
   /* Brand — Warm Sunset spectrum */
@@ -3124,42 +3124,57 @@ body:has(#login-screen.active) {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 18px;
+  gap: 28px;
   padding: 32px 20px;
 }
 .brand-pick-hint {
-  font-size: 14px; font-weight: 700;
-  color: var(--text-secondary);
-  letter-spacing: 0.2px;
+  font-family: 'Prompt', 'Inter', system-ui, -apple-system, sans-serif;
+  font-size: 17px; font-weight: 600;
+  color: var(--text);
+  letter-spacing: 0.3px;
   margin: 0;
+  text-align: center;
+  position: relative;
+  padding: 0 18px;
 }
+.brand-pick-hint::before,
+.brand-pick-hint::after {
+  content: '';
+  position: absolute; top: 50%;
+  width: 24px; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--border-strong));
+}
+.brand-pick-hint::before { right: 100%; transform: scaleX(-1); }
+.brand-pick-hint::after  { left:  100%; }
 /* Brand picker — choose Santa Fe vs เจ๊แดงสามย่าน before PIN entry */
 .brand-pick-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 8px;
-  margin: 4px auto 8px;
-  max-width: 190px;
+  gap: 22px;
+  margin: 0 auto;
+  max-width: 360px;
+  width: 100%;
 }
 .brand-pick-card {
   display: flex; align-items: center; justify-content: center;
   padding: 0;
-  width: 100%; height: 80px;
+  width: 100%; aspect-ratio: 1;
   background: transparent;
   border: none;
   cursor: pointer;
-  transition: transform 0.18s, filter 0.18s;
+  transition: transform 0.22s ease, filter 0.22s ease;
 }
 .brand-pick-card:hover {
-  transform: translateY(-2px);
-  filter: drop-shadow(0 8px 18px rgba(80,40,20,0.18));
+  transform: translateY(-4px) scale(1.03);
+  filter: drop-shadow(0 14px 28px rgba(80,40,20,0.22));
 }
-.brand-pick-card:active { transform: scale(0.96); }
+.brand-pick-card:active { transform: scale(0.97); }
 .brand-pick-img {
   width: 100%; height: 100%;
   object-fit: cover;
   display: block;
-  border-radius: 16px;
+  border-radius: 32px;
+  box-shadow: 0 8px 22px rgba(80,40,20,0.14);
 }
 .brand-back-btn {
   display: inline-flex; align-items: center; gap: 4px;
@@ -3425,7 +3440,6 @@ body:has(#login-screen.active) {
     <div class="login-bg-blob blob-4"></div>
     <div class="login-bg-blob blob-5"></div>
     <div id="brand-stage" class="brand-pick-screen">
-      <p class="brand-pick-hint">เลือกแบรนด์เพื่อเข้าสู่ระบบ</p>
       <div class="brand-pick-grid">
         <button type="button" class="brand-pick-card brand-pick-santafe" onclick="selectBrand('santafe')" aria-label="Santa Fe">
           <img src="logo santafe.jpg" alt="Santa Fe" class="brand-pick-img">
@@ -3434,6 +3448,7 @@ body:has(#login-screen.active) {
           <img src="Logo-Jaedang_samyan.png" alt="เจ๊แดงสามย่าน" class="brand-pick-img">
         </button>
       </div>
+      <p class="brand-pick-hint">เลือกแบรนด์เพื่อเข้าสู่ระบบ</p>
     </div>
 
     <div class="login-box" id="login-stage" style="display:none;">
