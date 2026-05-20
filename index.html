@@ -3447,7 +3447,7 @@ body:has(#login-screen.active) {
       <div class="brand-logo">
         <img src="Screenshot 2026-05-18 092954.png" alt="Fab" />
       </div>
-      <h1 class="brand-title">Quality Assurance &amp; Operations Checklist</h1>
+      <h1 class="brand-title" id="login-title">Quality Assurance &amp; Operations Checklist</h1>
       <p class="brand-subtitle" id="login-subtitle">ระบบตรวจสอบมาตรฐานการทำงาน</p>
 
       <div class="role-toggle" id="role-toggle">
@@ -4186,13 +4186,16 @@ function selectBrand(brand) {
   currentBrand = brand;
   document.getElementById('brand-stage').style.display = 'none';
   document.getElementById('login-stage').style.display = '';
+  const title = document.getElementById('login-title');
   const subtitle = document.getElementById('login-subtitle');
   const toggle = document.getElementById('role-toggle');
   if (brand === 'santafe') {
-    subtitle.textContent = 'Santa Fe Steakhouse';
+    title.textContent = 'Operations Standard Skill & Operations Checklist';
+    subtitle.textContent = 'Santa Fe Happy Steak';
     toggle.style.display = '';
     selectRole('branch');
   } else {
+    title.textContent = 'Quality Assurance & Operations Checklist';
     subtitle.textContent = 'เจ๊แดงสามย่าน';
     toggle.style.display = 'none';
     selectRole('staff');
