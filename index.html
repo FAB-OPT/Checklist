@@ -388,34 +388,44 @@ body {
   grid-column: 1 / -1;
 }
 .summary-meta-row {
-  display: flex; align-items: flex-start; gap: 10px;
-  padding: 10px 12px;
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-  border-radius: var(--r-sm);
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 12px 14px;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--border);
 }
-.summary-meta-row.primary {
-  background: var(--primary-50);
-  border-color: var(--primary-100);
+/* Drop bottom border for the very last row(s) so the block ends clean */
+.summary-meta-list .summary-meta-row:last-child,
+.summary-meta-list .summary-meta-row:nth-last-child(2):not(.span-all) {
+  border-bottom: none;
 }
 .summary-meta-row > .material-symbols-rounded {
-  font-size: 18px; color: var(--primary); opacity: 0.85;
+  font-size: 22px;
   flex-shrink: 0; margin-top: 1px;
 }
+/* Icon colors per field */
+.summary-meta-row[data-icon="storefront"] > .material-symbols-rounded,
+.summary-meta-row.primary > .material-symbols-rounded { color: #D63622; }
+.summary-meta-row[data-icon="event"] > .material-symbols-rounded { color: #4A7BD8; }
+.summary-meta-row[data-icon="person"] > .material-symbols-rounded { color: #38A063; }
+.summary-meta-row[data-icon="supervisor_account"] > .material-symbols-rounded { color: #FF8534; }
+.summary-meta-row[data-icon="manage_accounts"] > .material-symbols-rounded { color: #8B5A9F; }
+.summary-meta-row[data-icon="groups"] > .material-symbols-rounded { color: #0E7490; }
+
 .summary-meta-row-body { min-width: 0; flex: 1; }
 .summary-meta-row-label {
   font-size: 10px; font-weight: 700;
   color: var(--text-secondary);
-  letter-spacing: 0.3px;
+  letter-spacing: 0.4px;
   text-transform: uppercase;
 }
 .summary-meta-row-value {
-  font-size: 13px; font-weight: 800;
+  font-size: 14px; font-weight: 800;
   color: var(--text); line-height: 1.3;
-  margin-top: 2px;
+  margin-top: 3px;
 }
 .summary-meta-row.primary .summary-meta-row-value {
-  font-size: 14px; color: var(--primary-dark);
+  font-size: 16px;
 }
 
 /* Force-show the tier badge inside the summary card even though the
@@ -4685,42 +4695,42 @@ function showSummary(readonly) {
   const info = currentAudit.branchInfo;
   const dateLine = (info.date ? fmtDateDMY(info.date) : '-') + (info.time ? ' · ' + escapeHtml(info.time) : '');
   document.getElementById('branch-info-summary').innerHTML = `
-    <div class="summary-meta-row primary span-all">
+    <div class="summary-meta-row primary span-all" data-icon="storefront">
       <span class="material-symbols-rounded">storefront</span>
       <div class="summary-meta-row-body">
         <div class="summary-meta-row-label">สาขา</div>
         <div class="summary-meta-row-value">${escapeHtml(info.branch||'-')}</div>
       </div>
     </div>
-    <div class="summary-meta-row">
+    <div class="summary-meta-row" data-icon="event">
       <span class="material-symbols-rounded">event</span>
       <div class="summary-meta-row-body">
         <div class="summary-meta-row-label">วันที่ตรวจ</div>
         <div class="summary-meta-row-value">${dateLine}</div>
       </div>
     </div>
-    <div class="summary-meta-row">
+    <div class="summary-meta-row" data-icon="person">
       <span class="material-symbols-rounded">person</span>
       <div class="summary-meta-row-body">
         <div class="summary-meta-row-label">ผู้ตรวจ</div>
         <div class="summary-meta-row-value">${escapeHtml(info.inspector||'-')}</div>
       </div>
     </div>
-    <div class="summary-meta-row">
+    <div class="summary-meta-row" data-icon="supervisor_account">
       <span class="material-symbols-rounded">supervisor_account</span>
       <div class="summary-meta-row-body">
         <div class="summary-meta-row-label">BZM</div>
         <div class="summary-meta-row-value">${escapeHtml(info.bzm||'-')}</div>
       </div>
     </div>
-    <div class="summary-meta-row">
+    <div class="summary-meta-row" data-icon="manage_accounts">
       <span class="material-symbols-rounded">manage_accounts</span>
       <div class="summary-meta-row-body">
         <div class="summary-meta-row-label">ผจก.สาขา</div>
         <div class="summary-meta-row-value">${escapeHtml(info.manager||'-')}</div>
       </div>
     </div>
-    <div class="summary-meta-row span-all">
+    <div class="summary-meta-row span-all" data-icon="groups">
       <span class="material-symbols-rounded">groups</span>
       <div class="summary-meta-row-body">
         <div class="summary-meta-row-label">ทีมงาน</div>
