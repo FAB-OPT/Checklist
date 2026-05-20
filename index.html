@@ -375,7 +375,7 @@ body {
   .summary-hero-score .score-card-pct { font-size: 76px; }
 }
 
-/* Summary meta — vertical list on mobile, 2-col on tablet+, 3-col on wide */
+/* Summary meta — 2-column grid; primary + team rows span full width */
 .summary-meta-list {
   display: grid;
   grid-template-columns: 1fr;
@@ -384,10 +384,7 @@ body {
 @media (min-width: 600px) {
   .summary-meta-list { grid-template-columns: 1fr 1fr; }
 }
-@media (min-width: 1100px) {
-  .summary-meta-list { grid-template-columns: 1fr 1fr 1fr; }
-}
-.summary-meta-list .summary-meta-row.primary {
+.summary-meta-list .summary-meta-row.span-all {
   grid-column: 1 / -1;
 }
 .summary-meta-row {
@@ -4688,7 +4685,7 @@ function showSummary(readonly) {
   const info = currentAudit.branchInfo;
   const dateLine = (info.date ? fmtDateDMY(info.date) : '-') + (info.time ? ' · ' + escapeHtml(info.time) : '');
   document.getElementById('branch-info-summary').innerHTML = `
-    <div class="summary-meta-row primary">
+    <div class="summary-meta-row primary span-all">
       <span class="material-symbols-rounded">storefront</span>
       <div class="summary-meta-row-body">
         <div class="summary-meta-row-label">สาขา</div>
@@ -4723,7 +4720,7 @@ function showSummary(readonly) {
         <div class="summary-meta-row-value">${escapeHtml(info.manager||'-')}</div>
       </div>
     </div>
-    <div class="summary-meta-row">
+    <div class="summary-meta-row span-all">
       <span class="material-symbols-rounded">groups</span>
       <div class="summary-meta-row-body">
         <div class="summary-meta-row-label">ทีมงาน</div>
