@@ -2201,46 +2201,54 @@ body {
 }
 .detail-section-head {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 12px 18px;
+  gap: 10px;
+  padding: 10px 16px;
   background: var(--primary-gradient);
   color: white;
 }
 .detail-section-name {
-  font-size: 15px; font-weight: 800;
-  letter-spacing: 0.2px; text-transform: uppercase;
+  font-size: 14px; font-weight: 800;
+  letter-spacing: 0.3px; text-transform: uppercase;
 }
 .detail-section-stat {
-  display: inline-flex; gap: 6px;
+  display: inline-flex; gap: 5px;
 }
 .ds-chip {
   display: inline-flex; align-items: center; justify-content: center;
-  min-width: 28px; height: 22px; padding: 0 8px;
+  min-width: 26px; height: 20px; padding: 0 7px;
   background: rgba(255,255,255,0.22);
   border-radius: var(--r-pill);
-  font-size: 12px; font-weight: 800;
+  font-size: 11px; font-weight: 800;
   font-variant-numeric: tabular-nums;
 }
 .ds-chip-fail { background: rgba(255,255,255,0.92); color: var(--danger); }
 
 /* Items */
 .detail-item {
-  display: flex; align-items: flex-start; gap: 12px;
-  padding: 12px 18px;
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 10px 16px;
   border-top: 1px solid var(--border);
   transition: background 0.18s;
 }
 .detail-item:first-of-type { border-top: none; }
-.detail-item.is-pass { background: rgba(45,122,74,0.03); }
-.detail-item.is-fail { background: rgba(199,50,35,0.05); }
+.detail-item.is-pass { background: rgba(45,122,74,0.04); }
+.detail-item.is-fail { background: rgba(199,50,35,0.06); }
 .detail-item.is-na   { background: var(--surface-2); }
-.detail-item-icon {
-  flex-shrink: 0; padding-top: 1px;
+.detail-status-pill {
+  flex-shrink: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 56px; height: 22px;
+  padding: 0 10px;
+  border-radius: var(--r-pill);
+  font-size: 11px; font-weight: 800;
+  letter-spacing: 0.2px;
+  margin-top: 1px;
+  white-space: nowrap;
 }
-.detail-item-icon .material-symbols-rounded { font-size: 22px; }
-.detail-item.is-pass    .detail-item-icon { color: var(--success); }
-.detail-item.is-fail    .detail-item-icon { color: var(--danger); }
-.detail-item.is-na      .detail-item-icon { color: var(--text-secondary); }
-.detail-item.is-pending .detail-item-icon { color: var(--text-tertiary); }
+.detail-item.is-pass    .detail-status-pill { background: var(--success-bg); color: #1E6B36; }
+.detail-item.is-fail    .detail-status-pill { background: var(--danger-bg);  color: #7A1F10; }
+.detail-item.is-na      .detail-status-pill { background: var(--surface-2);  color: var(--text-secondary); border: 1px solid var(--border); }
+.detail-item.is-pending .detail-status-pill { background: var(--warning-bg); color: #7A5818; }
 .detail-item-body { flex: 1; min-width: 0; }
 .detail-item-text {
   font-size: 14px; font-weight: 600;
@@ -5557,7 +5565,7 @@ function showDailyDetail(id) {
 
     secItems.forEach((it, j) => {
       const status = it.status || 'pending';
-      const icon = status === 'pass' ? 'check_circle' : status === 'fail' ? 'cancel' : status === 'na' ? 'remove_circle' : 'radio_button_unchecked';
+      const pillLabel = status === 'pass' ? 'ผ่าน' : status === 'fail' ? 'ไม่ผ่าน' : status === 'na' ? 'N/A' : 'รอ';
       const photos = it.photos || [];
       let photosHtml = '';
       if (photos.length) {
@@ -5567,7 +5575,7 @@ function showDailyDetail(id) {
         }).join('') + '</div>';
       }
       html += `<div class="detail-item is-${status}">
-        <span class="detail-item-icon"><span class="material-symbols-rounded">${icon}</span></span>
+        <span class="detail-status-pill">${pillLabel}</span>
         <div class="detail-item-body">
           <div class="detail-item-text"><b>${j+1}.</b> ${escapeHtml(it.text)}</div>
           ${it.note ? `<div class="detail-item-note"><span class="material-symbols-rounded">edit_note</span>${escapeHtml(it.note)}</div>` : ''}
