@@ -3580,22 +3580,21 @@ body:has(#login-screen.active) {
         </div>
       </div>
 
-      <div class="card">
-        <div class="card-header">
-          <span class="material-symbols-rounded" style="color:var(--primary);">list_alt</span>
-          <h2 id="daily-list-title">ประวัติ Daily Checklist</h2>
-        </div>
-        <div class="filter-bar">
-          <input type="text" id="daily-filter-search" placeholder="ค้นหาสาขา..." oninput="renderDailyList()">
-          <select id="daily-filter-shift" onchange="renderDailyList()">
-            <option value="">ทุก shift</option>
-            <option value="open">Open</option>
-            <option value="close">Close</option>
-          </select>
-          <input type="date" id="daily-filter-date" onchange="renderDailyList()">
-        </div>
-        <div class="audit-list" id="daily-list"></div>
+      <div class="page-eyebrow page-eyebrow-section">
+        <h2 class="page-eyebrow-title" id="daily-list-title">
+          ประวัติ <span class="page-eyebrow-inline">Daily Open-Close Checklist</span>
+        </h2>
       </div>
+      <div class="filter-bar" id="daily-filter-bar">
+        <input type="text" id="daily-filter-search" placeholder="ค้นหาสาขา..." oninput="renderDailyList()">
+        <select id="daily-filter-shift" onchange="renderDailyList()">
+          <option value="">ทุก shift</option>
+          <option value="open">Open</option>
+          <option value="close">Close</option>
+        </select>
+        <input type="date" id="daily-filter-date" onchange="renderDailyList()">
+      </div>
+      <div class="audit-list" id="daily-list"></div>
     </div>
 
     <!-- DAILY FORM SCREEN -->
@@ -5084,7 +5083,10 @@ function showDailyHub() {
     branchActions.style.display = 'none';
   }
 
-  document.getElementById('daily-list-title').textContent = 'ประวัติ';
+  document.getElementById('daily-list-title').innerHTML = 'ประวัติ <span class="page-eyebrow-inline">Daily Open-Close Checklist</span>';
+  // Branch users only see their own branch; the search field is useless to them
+  const searchInput = document.getElementById('daily-filter-search');
+  if (searchInput) searchInput.style.display = currentUser.role === 'branch' ? 'none' : '';
 
   renderDailyList();
 }
