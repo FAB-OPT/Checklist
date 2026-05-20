@@ -411,6 +411,25 @@ body {
 .summary-meta-row[data-icon="supervisor_account"] > .material-symbols-rounded { color: #FF8534; }
 .summary-meta-row[data-icon="manage_accounts"] > .material-symbols-rounded { color: #8B5A9F; }
 .summary-meta-row[data-icon="groups"] > .material-symbols-rounded { color: #0E7490; }
+.summary-meta-row[data-icon="badge"] > .material-symbols-rounded { color: #38A063; }
+.summary-meta-row[data-icon="fact_check"] > .material-symbols-rounded { color: #4A7BD8; }
+
+/* Daily detail hero — kicker above the big percentage */
+.daily-detail-hero .daily-shift-kicker {
+  display: inline-flex; align-items: center; justify-content: center;
+  gap: 6px; flex-wrap: wrap;
+  font-size: 13px; font-weight: 800;
+  color: var(--text-secondary);
+  letter-spacing: 0.3px;
+  margin-bottom: 6px;
+  font-variant-numeric: tabular-nums;
+}
+.daily-detail-hero .daily-shift-kicker .material-symbols-rounded {
+  font-size: 18px;
+}
+.daily-detail-hero.shift-open  .daily-shift-kicker .material-symbols-rounded { color: #FF8534; }
+.daily-detail-hero.shift-close .daily-shift-kicker .material-symbols-rounded { color: #6E7AC8; }
+.daily-detail-hero .daily-shift-kicker .kicker-dot { opacity: 0.45; }
 
 .summary-meta-row-body { min-width: 0; flex: 1; }
 .summary-meta-row-label {
@@ -3654,21 +3673,14 @@ body:has(#login-screen.active) {
 
     <!-- DAILY DETAIL SCREEN -->
     <div id="daily-detail-screen" style="display:none;">
-      <div class="card detail-head-card" id="daily-detail-head">
-        <div class="detail-head-top">
-          <div class="detail-shift-icon" id="detail-shift-icon">
-            <span class="material-symbols-rounded" id="daily-detail-icon">wb_sunny</span>
-          </div>
-          <div class="detail-head-titles">
-            <div class="detail-head-row">
-              <h2 id="daily-detail-title">Open</h2>
-              <div class="detail-head-date" id="detail-head-date">19-05-2026</div>
-            </div>
-            <div class="detail-head-branch" id="detail-head-branch"></div>
-          </div>
+      <div class="card summary-hero daily-detail-hero" id="daily-detail-head">
+        <div class="summary-hero-score">
+          <div class="daily-shift-kicker" id="daily-detail-kicker"></div>
+          <div class="score-card-pct" id="daily-pass-pct">0.0</div>
+          <div class="score-card-pct-unit">% ผ่านเกณฑ์</div>
+          <div class="score-card-badge summary-tier-badge" id="daily-status-badge">—</div>
         </div>
-        <div class="detail-meta-grid" id="daily-detail-meta"></div>
-        <div class="detail-stats-row" id="detail-stats-row"></div>
+        <div id="daily-detail-meta" class="summary-meta-list"></div>
       </div>
 
       <div class="chip-row detail-filter-chips" id="detail-filter-chips"></div>
@@ -5498,43 +5510,62 @@ function showDailyDetail(id) {
   hideAllScreens();
   document.getElementById('daily-detail-screen').style.display = 'block';
 
-  // Head
-  const head = document.getElementById('daily-detail-head');
-  head.className = 'card detail-head-card ' + (d.shift === 'open' ? 'shift-open' : 'shift-close');
-  document.getElementById('daily-detail-title').textContent = d.shift === 'open' ? 'Open Shift' : 'Close Shift';
-  document.getElementById('daily-detail-icon').textContent = d.shift === 'open' ? 'wb_sunny' : 'bedtime';
-  document.getElementById('detail-head-date').innerHTML = `<span class="material-symbols-rounded">calendar_today</span>${escapeHtml(fmtDateDMY(d.date))}`;
-  document.getElementById('detail-head-branch').innerHTML = `<span class="material-symbols-rounded">storefront</span><span>${escapeHtml(branchLabel(d.branchCode, d.branchName))}</span>`;
-
-  // Meta grid (manager + BZM + submitted by)
-  const meta = [
-    { icon: 'badge', label: 'Manager on duty', value: d.manager || '-' },
-    { icon: 'supervisor_account', label: 'BZM', value: d.bzm || '-' },
-    { icon: 'person_pin', label: 'บันทึกโดย', value: d.submittedByName || '-' },
-  ];
-  document.getElementById('daily-detail-meta').innerHTML = meta.map(m => `
-    <div class="detail-meta-tile">
-      <span class="material-symbols-rounded">${m.icon}</span>
-      <div>
-        <div class="detail-meta-label">${escapeHtml(m.label)}</div>
-        <div class="detail-meta-value">${escapeHtml(m.value)}</div>
-      </div>
-    </div>`).join('');
-
-  // Stats summary
+  // Stats first — needed for the hero percentage and tier badge
   const items = d.items || [];
   const total = items.length;
   const passN = items.filter(i => i.status === 'pass').length;
   const failN = items.filter(i => i.status === 'fail').length;
   const naN = items.filter(i => i.status === 'na').length;
   const pendN = total - passN - failN - naN;
-  document.getElementById('detail-stats-row').innerHTML = `
-    <div class="detail-stat is-pass"><div class="ds-v">${passN}</div><div class="ds-l">ผ่าน</div></div>
-    <div class="detail-stat is-fail"><div class="ds-v">${failN}</div><div class="ds-l">ไม่ผ่าน</div></div>
-    <div class="detail-stat is-na"><div class="ds-v">${naN}</div><div class="ds-l">N/A</div></div>
-    <div class="detail-stat is-pending"><div class="ds-v">${pendN}</div><div class="ds-l">รอ</div></div>
-    <div class="detail-stat"><div class="ds-v">${total}</div><div class="ds-l">ทั้งหมด</div></div>
-  `;
+  const denom = total - naN;
+  const pct = denom > 0 ? (passN / denom * 100) : 0;
+
+  let tierClass, badgeText;
+  if (failN > 0) {
+    tierClass = 'tier-breakdown';
+    badgeText = `เร่งด่วน Critical · ${failN} ไม่ผ่าน`;
+  } else if (pendN > 0) {
+    tierClass = 'tier-improve';
+    badgeText = `รอ Pending · ${pendN} ยังไม่ตอบ`;
+  } else if (total === 0) {
+    tierClass = 'tier-empty';
+    badgeText = 'ยังไม่เริ่ม';
+  } else {
+    tierClass = 'tier-excellent';
+    badgeText = 'ครบ Complete · 100%';
+  }
+
+  // Hero: kicker + big % + tier badge
+  const head = document.getElementById('daily-detail-head');
+  head.className = 'card summary-hero daily-detail-hero combined-card ' + tierClass +
+                   (d.shift === 'open' ? ' shift-open' : ' shift-close');
+  const shiftLabel = d.shift === 'open' ? 'Open Shift' : 'Close Shift';
+  const shiftIcon = d.shift === 'open' ? 'wb_sunny' : 'bedtime';
+  document.getElementById('daily-detail-kicker').innerHTML =
+    `<span class="material-symbols-rounded">${shiftIcon}</span>` +
+    `<span>${shiftLabel}</span>` +
+    `<span class="kicker-dot">·</span>` +
+    `<span>${escapeHtml(fmtDateDMY(d.date))}</span>`;
+  document.getElementById('daily-pass-pct').textContent = pct.toFixed(1);
+  document.getElementById('daily-status-badge').textContent = badgeText;
+
+  // Meta list — mirror audit summary layout
+  const branchTxt = branchLabel(d.branchCode, d.branchName);
+  const metaRows = [
+    { icon: 'storefront',         label: 'สาขา',            value: branchTxt,                 cls: 'span-all primary' },
+    { icon: 'badge',              label: 'Manager on duty', value: d.manager || '-' },
+    { icon: 'supervisor_account', label: 'BZM',             value: d.bzm || '-' },
+    { icon: 'person',             label: 'บันทึกโดย',       value: d.submittedByName || '-' },
+    { icon: 'fact_check',         label: 'สถานะรายการ',     value: `ผ่าน ${passN} · ไม่ผ่าน ${failN} · N/A ${naN} · รอ ${pendN} · ทั้งหมด ${total}` },
+  ];
+  document.getElementById('daily-detail-meta').innerHTML = metaRows.map(m => `
+    <div class="summary-meta-row ${m.cls || ''}" data-icon="${m.icon}">
+      <span class="material-symbols-rounded">${m.icon}</span>
+      <div class="summary-meta-row-body">
+        <div class="summary-meta-row-label">${escapeHtml(m.label)}</div>
+        <div class="summary-meta-row-value">${escapeHtml(m.value)}</div>
+      </div>
+    </div>`).join('');
 
   // Group items by section
   const bySection = {};
