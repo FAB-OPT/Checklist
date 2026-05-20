@@ -4695,17 +4695,10 @@ function showSummary(readonly) {
   const info = currentAudit.branchInfo;
   const dateLine = (info.date ? fmtDateDMY(info.date) : '-') + (info.time ? ' · ' + escapeHtml(info.time) : '');
   document.getElementById('branch-info-summary').innerHTML = `
-    <div class="summary-meta-row primary span-all" data-icon="storefront">
-      <span class="material-symbols-rounded">storefront</span>
-      <div class="summary-meta-row-body">
-        <div class="summary-meta-row-label">สาขา</div>
-        <div class="summary-meta-row-value">${escapeHtml(info.branch||'-')}</div>
-      </div>
-    </div>
     <div class="summary-meta-row" data-icon="event">
       <span class="material-symbols-rounded">event</span>
       <div class="summary-meta-row-body">
-        <div class="summary-meta-row-label">วันที่ตรวจ</div>
+        <div class="summary-meta-row-label">วันที่-เวลาที่ตรวจ</div>
         <div class="summary-meta-row-value">${dateLine}</div>
       </div>
     </div>
@@ -4716,6 +4709,13 @@ function showSummary(readonly) {
         <div class="summary-meta-row-value">${escapeHtml(info.inspector||'-')}</div>
       </div>
     </div>
+    <div class="summary-meta-row" data-icon="manage_accounts">
+      <span class="material-symbols-rounded">manage_accounts</span>
+      <div class="summary-meta-row-body">
+        <div class="summary-meta-row-label">ทีมผู้จัดการ</div>
+        <div class="summary-meta-row-value">${escapeHtml(info.manager||'-')}</div>
+      </div>
+    </div>
     <div class="summary-meta-row" data-icon="supervisor_account">
       <span class="material-symbols-rounded">supervisor_account</span>
       <div class="summary-meta-row-body">
@@ -4723,18 +4723,11 @@ function showSummary(readonly) {
         <div class="summary-meta-row-value">${escapeHtml(info.bzm||'-')}</div>
       </div>
     </div>
-    <div class="summary-meta-row" data-icon="manage_accounts">
-      <span class="material-symbols-rounded">manage_accounts</span>
-      <div class="summary-meta-row-body">
-        <div class="summary-meta-row-label">ผจก.สาขา</div>
-        <div class="summary-meta-row-value">${escapeHtml(info.manager||'-')}</div>
-      </div>
-    </div>
     <div class="summary-meta-row span-all" data-icon="groups">
       <span class="material-symbols-rounded">groups</span>
       <div class="summary-meta-row-body">
-        <div class="summary-meta-row-label">ทีมงาน</div>
-        <div class="summary-meta-row-value">ผจก. ${info.numManagers||0} · บริการ ${info.numService||0} · ครัว ${info.numKitchen||0}</div>
+        <div class="summary-meta-row-label">จำนวนพนักงาน</div>
+        <div class="summary-meta-row-value">ทีมผู้จัดการ ${info.numManagers||0} คน · พนักงานบริการ ${info.numService||0} คน · พนักงานครัว ${info.numKitchen||0} คน</div>
       </div>
     </div>
   `;
