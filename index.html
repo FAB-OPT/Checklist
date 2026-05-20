@@ -3116,6 +3116,23 @@ body:has(#login-screen.active) {
   min-height: 100dvh;
 }
 
+/* Brand picker — standalone screen shown before the login box */
+.brand-pick-screen {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  padding: 32px 20px;
+}
+.brand-pick-hint {
+  font-size: 14px; font-weight: 700;
+  color: var(--text-secondary);
+  letter-spacing: 0.2px;
+  margin: 0;
+}
 /* Brand picker — choose Santa Fe vs เจ๊แดงสามย่าน before PIN entry */
 .brand-pick-grid {
   display: grid;
@@ -3407,45 +3424,42 @@ body:has(#login-screen.active) {
     <div class="login-bg-blob blob-3"></div>
     <div class="login-bg-blob blob-4"></div>
     <div class="login-bg-blob blob-5"></div>
-    <div class="login-box">
+    <div id="brand-stage" class="brand-pick-screen">
+      <p class="brand-pick-hint">เลือกแบรนด์เพื่อเข้าสู่ระบบ</p>
+      <div class="brand-pick-grid">
+        <button type="button" class="brand-pick-card brand-pick-santafe" onclick="selectBrand('santafe')" aria-label="Santa Fe">
+          <img src="logo santafe.jpg" alt="Santa Fe" class="brand-pick-img">
+        </button>
+        <button type="button" class="brand-pick-card brand-pick-jaedaeng" onclick="selectBrand('jaedaeng')" aria-label="เจ๊แดงสามย่าน">
+          <img src="Logo-Jaedang_samyan.png" alt="เจ๊แดงสามย่าน" class="brand-pick-img">
+        </button>
+      </div>
+    </div>
+
+    <div class="login-box" id="login-stage" style="display:none;">
+      <button type="button" class="brand-back-btn" onclick="backToBrand()">
+        <span class="material-symbols-rounded">arrow_back</span>
+        <span id="brand-back-label">เปลี่ยนแบรนด์</span>
+      </button>
       <div class="brand-logo">
         <img src="Screenshot 2026-05-18 092954.png" alt="Fab" />
       </div>
       <h1 class="brand-title">Quality Assurance &amp; Operations Checklist</h1>
-      <p class="brand-subtitle" id="login-subtitle">เลือกแบรนด์เพื่อเข้าสู่ระบบ</p>
+      <p class="brand-subtitle" id="login-subtitle">ระบบตรวจสอบมาตรฐานการทำงาน</p>
 
-      <div id="brand-stage">
-        <div class="brand-pick-grid">
-          <button type="button" class="brand-pick-card brand-pick-santafe" onclick="selectBrand('santafe')" aria-label="Santa Fe">
-            <img src="logo santafe.jpg" alt="Santa Fe" class="brand-pick-img">
-          </button>
-          <button type="button" class="brand-pick-card brand-pick-jaedaeng" onclick="selectBrand('jaedaeng')" aria-label="เจ๊แดงสามย่าน">
-            <img src="Logo-Jaedang_samyan.png" alt="เจ๊แดงสามย่าน" class="brand-pick-img">
-          </button>
-        </div>
+      <div class="role-toggle" id="role-toggle">
+        <div class="role-toggle-slider"></div>
+        <button class="role-toggle-btn active" data-role="branch" onclick="selectRole('branch')">สาขา</button>
+        <button class="role-toggle-btn" data-role="staff" onclick="selectRole('staff')">Team Management</button>
       </div>
 
-      <div id="login-stage" style="display:none;">
-        <button type="button" class="brand-back-btn" onclick="backToBrand()">
-          <span class="material-symbols-rounded">arrow_back</span>
-          <span id="brand-back-label">เปลี่ยนแบรนด์</span>
-        </button>
-
-        <div class="role-toggle" id="role-toggle">
-          <div class="role-toggle-slider"></div>
-          <button class="role-toggle-btn active" data-role="branch" onclick="selectRole('branch')">สาขา</button>
-          <button class="role-toggle-btn" data-role="staff" onclick="selectRole('staff')">Team Management</button>
-        </div>
-
-        <div class="pin-section" onclick="focusPin()">
-          <label class="pin-label" id="pin-label">กรอกรหัส 4 หลัก</label>
-          <div class="pin-row" id="pin-row"></div>
-          <input type="tel" inputmode="numeric" id="login-id" autocomplete="off" maxlength="4" oninput="onPinInput()" onkeydown="onPinKeyDown(event)" style="position:absolute;opacity:0;pointer-events:none;width:1px;height:1px;">
-        </div>
-
-        <button class="btn btn-login btn-block" onclick="doLogin()">เข้าสู่ระบบ</button>
+      <div class="pin-section" onclick="focusPin()">
+        <label class="pin-label" id="pin-label">กรอกรหัส 4 หลัก</label>
+        <div class="pin-row" id="pin-row"></div>
+        <input type="tel" inputmode="numeric" id="login-id" autocomplete="off" maxlength="4" oninput="onPinInput()" onkeydown="onPinKeyDown(event)" style="position:absolute;opacity:0;pointer-events:none;width:1px;height:1px;">
       </div>
 
+      <button class="btn btn-login btn-block" onclick="doLogin()">เข้าสู่ระบบ</button>
       <div class="login-footer">© 2026 Operation FAB · v1.0</div>
     </div>
   </div>
@@ -4180,10 +4194,10 @@ function selectBrand(brand) {
 
 function backToBrand() {
   currentBrand = null;
-  document.getElementById('login-id').value = '';
+  const input = document.getElementById('login-id');
+  if (input) input.value = '';
   document.getElementById('login-stage').style.display = 'none';
   document.getElementById('brand-stage').style.display = '';
-  document.getElementById('login-subtitle').textContent = 'เลือกแบรนด์เพื่อเข้าสู่ระบบ';
 }
 
 function selectRole(role) {
