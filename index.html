@@ -2460,17 +2460,25 @@ body {
 .dhc-stats-card {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-left: 4px solid var(--border);
   border-radius: var(--r-md);
-  padding: 14px 16px;
+  padding: 18px 20px;
+  position: relative; overflow: hidden;
   transition: box-shadow 0.18s, border-color 0.18s, transform 0.15s;
 }
+.dhc-stats-card::before {
+  content: ''; position: absolute;
+  top: 0; left: 0; right: 0; height: 4px;
+}
+.daily-history-card.shift-open  .dhc-stats-card::before {
+  background: linear-gradient(90deg, #FFB833, #FF8534);
+}
+.daily-history-card.shift-close .dhc-stats-card::before {
+  background: linear-gradient(90deg, #6E7AC8, #4A5A99);
+}
 .daily-history-card:hover .dhc-stats-card {
-  box-shadow: var(--shadow); transform: translateY(-1px);
+  box-shadow: var(--shadow-lg); transform: translateY(-2px);
   border-color: var(--border-strong);
 }
-.daily-history-card.shift-open  .dhc-stats-card { border-left-color: #FF8534; }
-.daily-history-card.shift-close .dhc-stats-card { border-left-color: #6E7AC8; }
 .dhc-shift-icon {
   width: 36px; height: 36px;
   border-radius: var(--r-sm);
@@ -2523,16 +2531,16 @@ body {
   padding: 4px 2px;
 }
 .dhc-stat-value {
-  font-size: 20px; font-weight: 900;
-  color: var(--text); letter-spacing: -0.4px;
+  font-size: 28px; font-weight: 900;
+  color: var(--text); letter-spacing: -0.6px;
   line-height: 1; font-variant-numeric: tabular-nums;
 }
 .dhc-stat.is-pass .dhc-stat-value { color: var(--success); }
 .dhc-stat.is-fail .dhc-stat-value { color: var(--danger); }
 .dhc-stat-label {
-  font-size: 10px; font-weight: 700;
+  font-size: 11px; font-weight: 700;
   color: var(--text-tertiary);
-  margin-top: 3px; letter-spacing: 0.3px;
+  margin-top: 6px; letter-spacing: 0.4px;
   text-transform: uppercase;
 }
 .daily-empty {
