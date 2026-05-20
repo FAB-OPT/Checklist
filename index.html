@@ -4199,8 +4199,8 @@ function renderBottomNav() {
   if (currentUser.role === 'bzm') {
     html += '<button class="bottom-nav-item" id="nav-new" onclick="newAudit()"><span class="material-symbols-rounded">add_circle</span><span>ตรวจสาขา</span></button>';
   }
-  // Open-Close checklist is for branches and BZM oversight only.
-  if (currentUser.role === 'branch' || currentUser.role === 'bzm') {
+  // Open-Close checklist is for branch logins only.
+  if (currentUser.role === 'branch') {
     html += '<button class="bottom-nav-item" id="nav-daily" onclick="showDailyHub()"><span class="material-symbols-rounded">checklist</span><span>Open-Close</span></button>';
   }
   html += '</div>';
