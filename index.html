@@ -2711,7 +2711,29 @@ body {
 }
 .daily-note-input:focus { outline: none; box-shadow: 0 0 0 4px rgba(199,50,35,0.15); }
 
-/* Daily hub header (date inline, bigger subtitle) */
+/* Daily Hub eyebrow heading (lives outside the action card) */
+.daily-hub-eyebrow .page-eyebrow-title {
+  display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;
+}
+.daily-eyebrow-date {
+  font-size: 16px; font-weight: 800;
+  color: var(--primary-dark);
+  letter-spacing: 0.2px;
+  text-transform: none;
+  font-variant-numeric: tabular-nums;
+}
+.daily-eyebrow-date::before {
+  content: '📅 '; font-size: 16px;
+}
+.daily-hub-eyebrow .daily-hub-sub {
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-weight: 600;
+  margin-top: 6px;
+}
+.daily-hub-actions { padding: 22px 22px; }
+
+/* Daily hub header (legacy — date inline, bigger subtitle) */
 .daily-hub-head {
   display: flex; align-items: flex-start; gap: 12px;
   padding-bottom: 14px; margin-bottom: 16px;
@@ -3534,28 +3556,27 @@ body:has(#login-screen.active) {
 
     <!-- DAILY HUB SCREEN -->
     <div id="daily-hub-screen" style="display:none;">
-      <div class="card" id="daily-branch-actions" style="display:none;">
-        <div class="daily-hub-head">
-          <span class="material-symbols-rounded" style="color:var(--primary);font-size:24px;">checklist</span>
-          <div class="daily-hub-titles">
-            <div class="daily-hub-title-row">
-              <h2>Daily Open-Close Checklist</h2>
-              <span class="daily-date-chip" id="daily-today-label"></span>
-            </div>
-            <p class="daily-hub-sub">เลือก shift ที่จะเช็คสำหรับวันนี้</p>
-          </div>
+      <div id="daily-branch-actions" style="display:none;">
+        <div class="page-eyebrow page-eyebrow-section daily-hub-eyebrow">
+          <h2 class="page-eyebrow-title">
+            Daily Open-Close Checklist
+            <span class="page-eyebrow-inline daily-eyebrow-date" id="daily-today-label"></span>
+          </h2>
+          <p class="daily-hub-sub">เลือก shift ที่จะเช็คสำหรับวันนี้</p>
         </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-          <button class="btn btn-primary btn-lg" onclick="startDailyShift('open')" style="padding:18px 12px;flex-direction:column;">
-            <span class="material-symbols-rounded" style="font-size:32px;">wb_sunny</span>
-            <span id="daily-open-label">เช็ค Open</span>
-            <span id="daily-open-status" style="font-size:11px;opacity:.9;"></span>
-          </button>
-          <button class="btn btn-secondary btn-lg" onclick="startDailyShift('close')" style="padding:18px 12px;flex-direction:column;background:var(--text);color:#fff;">
-            <span class="material-symbols-rounded" style="font-size:32px;">bedtime</span>
-            <span id="daily-close-label">เช็ค Close</span>
-            <span id="daily-close-status" style="font-size:11px;opacity:.9;"></span>
-          </button>
+        <div class="card daily-hub-actions">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            <button class="btn btn-primary btn-lg" onclick="startDailyShift('open')" style="padding:18px 12px;flex-direction:column;">
+              <span class="material-symbols-rounded" style="font-size:32px;">wb_sunny</span>
+              <span id="daily-open-label">เช็ค Open</span>
+              <span id="daily-open-status" style="font-size:11px;opacity:.9;"></span>
+            </button>
+            <button class="btn btn-secondary btn-lg" onclick="startDailyShift('close')" style="padding:18px 12px;flex-direction:column;background:var(--text);color:#fff;">
+              <span class="material-symbols-rounded" style="font-size:32px;">bedtime</span>
+              <span id="daily-close-label">เช็ค Close</span>
+              <span id="daily-close-status" style="font-size:11px;opacity:.9;"></span>
+            </button>
+          </div>
         </div>
       </div>
 
