@@ -4196,7 +4196,8 @@ async function doLogin() {
 }
 
 function showWelcomeModal() {
-  const groupLabel = currentUser.role === 'branch' ? 'สาขา' : 'Team Management';
+  const roleLabels = { branch: 'สาขา', bzm: 'BZM', admin: 'Admin', coo: 'COO', vp: 'VP' };
+  const roleLabel = roleLabels[currentUser.role] || currentUser.role;
   let nameLabel;
   if (currentUser.role === 'branch') {
     nameLabel = branchLabel(currentUser.branchCode, currentUser.branchName);
@@ -4204,7 +4205,7 @@ function showWelcomeModal() {
     nameLabel = currentUser.nick || currentUser.name || '-';
   }
   document.getElementById('welcome-sub').innerHTML =
-    `${escapeHtml(groupLabel)} · <b>${escapeHtml(nameLabel)}</b>`;
+    `<b>${escapeHtml(nameLabel)}</b> (${escapeHtml(roleLabel)})`;
   document.getElementById('welcome-modal').classList.add('show');
 }
 function closeWelcomeModal() {
