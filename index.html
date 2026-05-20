@@ -4641,11 +4641,11 @@ function openSectionModal(letter) {
   if (!section) return;
   let pass = 0, fail = 0, na = 0, total = 0;
   let html = '';
-  section.subsections.forEach(sub => {
+  section.subsections.forEach((sub, subIdx) => {
     if (sub.title) html += `<div class="sec-detail-subtitle">${escapeHtml(sub.title)}</div>`;
     sub.items.forEach(it => {
       total++;
-      const key = `${letter}|${it.num}`;
+      const key = `${letter}|${subIdx}|${it.num}`;
       const ans = currentAudit.answers && currentAudit.answers[key];
       const value = ans && ans.value;
       if (value === 'pass') pass++;
