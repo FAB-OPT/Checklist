@@ -3166,17 +3166,20 @@ body:has(#login-screen.active) {
   box-shadow: 0 8px 22px rgba(80,40,20,0.14);
 }
 .brand-back-link {
-  display: inline-flex; align-items: center; gap: 4px;
-  margin: 12px auto 0;
-  padding: 6px 12px 6px 8px;
+  display: flex; align-items: center; justify-content: center; gap: 4px;
+  width: 100%;
+  margin: 12px 0 0;
+  padding: 6px 12px;
   background: transparent; border: none;
-  font-size: 12px; font-weight: 700;
-  color: var(--text-tertiary);
+  font-family: 'IBM Plex Sans Thai', 'Sarabun', sans-serif;
+  font-size: 13px; font-weight: 600;
+  color: var(--danger);
   cursor: pointer; border-radius: var(--r-pill);
   transition: background 0.15s, color 0.15s;
+  letter-spacing: 0.1px;
 }
-.brand-back-link:hover { background: var(--surface-2); color: var(--text); }
-.brand-back-link .material-symbols-rounded { font-size: 15px; }
+.brand-back-link:hover { background: var(--danger-bg); color: #7A1F10; }
+.brand-back-link .material-symbols-rounded { font-size: 16px; }
 
 /* ============ END LOGIN STYLES ============ */
 
