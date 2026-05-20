@@ -3169,7 +3169,7 @@ body:has(#login-screen.active) {
       </div>
 
       <div class="pin-section" onclick="focusPin()">
-        <label class="pin-label" id="pin-label">กรอกรหัสสาขา 4 หลัก</label>
+        <label class="pin-label" id="pin-label">กรอกรหัส 4 หลัก</label>
         <div class="pin-row" id="pin-row"></div>
         <input type="tel" inputmode="numeric" id="login-id" autocomplete="off" maxlength="4" oninput="onPinInput()" onkeydown="onPinKeyDown(event)" style="position:absolute;opacity:0;pointer-events:none;width:1px;height:1px;">
       </div>
@@ -3895,10 +3895,10 @@ function selectRole(role) {
   const label = document.getElementById('pin-label');
   if (role === 'branch') {
     input.maxLength = 4;
-    label.textContent = 'กรอกรหัสสาขา 4 หลัก';
+    label.textContent = 'กรอกรหัส 4 หลัก';
   } else {
     input.maxLength = 6;
-    label.textContent = 'กรอกรหัส Admin 6 หลัก';
+    label.textContent = 'กรอกรหัส 6 หลัก';
   }
   input.value = '';
   renderPinCells();
