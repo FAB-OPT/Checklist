@@ -4036,10 +4036,14 @@ function renderBottomNav() {
   '</div>';
   html += '<div class="nav-items">';
   html += '<button class="bottom-nav-item active" id="nav-dash" onclick="showDashboard()"><span class="material-symbols-rounded">dashboard</span><span>หน้าหลัก</span></button>';
-  if (currentUser.role !== 'branch') {
+  // ตรวจสาขา is for branches' BZM only; VP / COO / Admin only review results.
+  if (currentUser.role === 'bzm') {
     html += '<button class="bottom-nav-item" id="nav-new" onclick="newAudit()"><span class="material-symbols-rounded">add_circle</span><span>ตรวจสาขา</span></button>';
   }
-  html += '<button class="bottom-nav-item" id="nav-daily" onclick="showDailyHub()"><span class="material-symbols-rounded">checklist</span><span>Open-Close</span></button>';
+  // Open-Close checklist is for branches and BZM oversight only.
+  if (currentUser.role === 'branch' || currentUser.role === 'bzm') {
+    html += '<button class="bottom-nav-item" id="nav-daily" onclick="showDailyHub()"><span class="material-symbols-rounded">checklist</span><span>Open-Close</span></button>';
+  }
   html += '</div>';
   html += '<button class="bottom-nav-item nav-logout-btn" id="nav-logout" onclick="logout()"><span class="material-symbols-rounded">logout</span><span>ออกระบบ</span></button>';
   nav.innerHTML = html;
