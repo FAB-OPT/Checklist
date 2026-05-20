@@ -3165,18 +3165,18 @@ body:has(#login-screen.active) {
   border-radius: 32px;
   box-shadow: 0 8px 22px rgba(80,40,20,0.14);
 }
-.brand-back-btn {
+.brand-back-link {
   display: inline-flex; align-items: center; gap: 4px;
-  margin: 0 0 10px;
-  padding: 6px 10px 6px 6px;
+  margin: 12px auto 0;
+  padding: 6px 12px 6px 8px;
   background: transparent; border: none;
-  font-size: 12px; font-weight: 800;
-  color: var(--text-secondary);
+  font-size: 12px; font-weight: 700;
+  color: var(--text-tertiary);
   cursor: pointer; border-radius: var(--r-pill);
   transition: background 0.15s, color 0.15s;
 }
-.brand-back-btn:hover { background: var(--surface-2); color: var(--text); }
-.brand-back-btn .material-symbols-rounded { font-size: 16px; }
+.brand-back-link:hover { background: var(--surface-2); color: var(--text); }
+.brand-back-link .material-symbols-rounded { font-size: 15px; }
 
 /* ============ END LOGIN STYLES ============ */
 
@@ -3441,10 +3441,6 @@ body:has(#login-screen.active) {
     </div>
 
     <div class="login-box" id="login-stage" style="display:none;">
-      <button type="button" class="brand-back-btn" onclick="backToBrand()">
-        <span class="material-symbols-rounded">arrow_back</span>
-        <span id="brand-back-label">เปลี่ยนแบรนด์</span>
-      </button>
       <div class="brand-logo">
         <img src="Screenshot 2026-05-18 092954.png" alt="Fab" />
       </div>
@@ -3464,6 +3460,10 @@ body:has(#login-screen.active) {
       </div>
 
       <button class="btn btn-login btn-block" onclick="doLogin()">เข้าสู่ระบบ</button>
+      <button type="button" class="brand-back-link" onclick="backToBrand()">
+        <span class="material-symbols-rounded">arrow_back</span>
+        <span>เปลี่ยนแบรนด์</span>
+      </button>
       <div class="login-footer">© 2026 Operation FAB · v1.0</div>
     </div>
   </div>
