@@ -9,7 +9,7 @@
 <title>Quality Assurance & Operations Checklist</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&family=Prompt:wght@400;500;600;700&family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&family=Bai+Jamjuree:wght@500;600;700&family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0&display=swap" rel="stylesheet">
 <style>
 :root {
   /* Brand — Warm Sunset spectrum */
@@ -3128,24 +3128,22 @@ body:has(#login-screen.active) {
   padding: 32px 20px;
 }
 .brand-pick-hint {
-  font-family: 'Prompt', 'Inter', system-ui, -apple-system, sans-serif;
-  font-size: 17px; font-weight: 600;
-  color: var(--text);
-  letter-spacing: 0.3px;
+  font-family: 'Bai Jamjuree', 'Sarabun', sans-serif;
+  font-size: 16px; font-weight: 600;
+  color: var(--text-secondary);
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
   margin: 0;
   text-align: center;
-  position: relative;
-  padding: 0 18px;
+  display: inline-flex; align-items: center; gap: 14px;
 }
 .brand-pick-hint::before,
 .brand-pick-hint::after {
   content: '';
-  position: absolute; top: 50%;
-  width: 24px; height: 1px;
-  background: linear-gradient(90deg, transparent, var(--border-strong));
+  width: 28px; height: 1px;
+  background: var(--border-strong);
+  opacity: 0.7;
 }
-.brand-pick-hint::before { right: 100%; transform: scaleX(-1); }
-.brand-pick-hint::after  { left:  100%; }
 /* Brand picker — choose Santa Fe vs เจ๊แดงสามย่าน before PIN entry */
 .brand-pick-grid {
   display: grid;
