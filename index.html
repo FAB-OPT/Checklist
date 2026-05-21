@@ -3478,7 +3478,7 @@ body:has(#login-screen.active) {
   <div class="app-header">
     <div class="app-header-inner">
       <div>
-        <h1><span class="material-symbols-rounded">restaurant</span><span class="app-title-text">Quality Service Cleanliness &amp; Operations Checklist</span></h1>
+        <h1><span class="material-symbols-rounded">restaurant</span><span class="app-title-text" id="app-title-text">Quality Service Cleanliness &amp; Operations Checklist</span></h1>
         <div class="subtitle" id="header-subtitle">ระบบตรวจสอบมาตรฐานการทำงาน</div>
       </div>
       <div class="user-chip">
@@ -4306,9 +4306,26 @@ async function doLogin() {
   roleEl.textContent = roleLabel;
   roleEl.style.display = roleLabel ? '' : 'none';
 
+  applyBrandHeader();
   renderBottomNav();
   routeByRole();
   showWelcomeModal();
+}
+
+function applyBrandHeader() {
+  const titleEl = document.getElementById('app-title-text');
+  const subEl = document.getElementById('header-subtitle');
+  if (!titleEl || !subEl) return;
+  if (currentUser && currentUser.brand === 'santafe') {
+    titleEl.textContent = 'Operations Standard Skill & Operations Checklist';
+    subEl.textContent = 'Santa Fe Happy Steak';
+  } else if (currentUser && currentUser.brand === 'jaedaeng') {
+    titleEl.textContent = 'Quality Service Cleanliness & Operations Checklist';
+    subEl.textContent = 'เจ๊แดงสามย่าน';
+  } else {
+    titleEl.textContent = 'Quality Service Cleanliness & Operations Checklist';
+    subEl.textContent = 'ระบบตรวจสอบมาตรฐานการทำงาน';
+  }
 }
 
 function showWelcomeModal() {
