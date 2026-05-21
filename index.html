@@ -4312,16 +4312,15 @@ async function doLogin() {
 }
 
 function showWelcomeModal() {
-  const roleLabels = { branch: 'สาขา', bzm: 'BZM', admin: 'Admin', coo: 'COO', vp: 'VP' };
-  const roleLabel = roleLabels[currentUser.role] || currentUser.role;
-  let nameLabel;
+  const roleLabels = { bzm: 'BZM', admin: 'Admin', coo: 'COO', vp: 'VP' };
+  const sub = document.getElementById('welcome-sub');
   if (currentUser.role === 'branch') {
-    nameLabel = branchLabel(currentUser.branchCode, currentUser.branchName);
+    sub.innerHTML = `<b>${escapeHtml(branchLabel(currentUser.branchCode, currentUser.branchName))}</b>`;
   } else {
-    nameLabel = currentUser.nick || currentUser.name || '-';
+    const roleLabel = roleLabels[currentUser.role] || currentUser.role;
+    const nameLabel = currentUser.nick || currentUser.name || '-';
+    sub.innerHTML = `<b>${escapeHtml(nameLabel)}</b> (${escapeHtml(roleLabel)})`;
   }
-  document.getElementById('welcome-sub').innerHTML =
-    `<b>${escapeHtml(nameLabel)}</b> (${escapeHtml(roleLabel)})`;
   document.getElementById('welcome-modal').classList.add('show');
 }
 function closeWelcomeModal() {
@@ -5228,7 +5227,11 @@ function branchLabel(code, name) {
 }
 
 function santaFeLogoSVG() {
-  return '<img src="logo.jpg" alt="Santa Fe" loading="lazy">';
+  const brand = currentUser && currentUser.brand;
+  if (brand === 'jaedaeng') {
+    return '<img src="Logo-Jaedang_samyan.png" alt="เจ๊แดงสามย่าน" loading="lazy">';
+  }
+  return '<img src="logo santafe.jpg" alt="Santa Fe" loading="lazy">';
 }
 
 function escapeHtml(s) {
