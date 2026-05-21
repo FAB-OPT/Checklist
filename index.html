@@ -4752,9 +4752,16 @@ async function doLogin() {
       bzm: branch.manager
     };
   } else {
-    // Staff login — table depends on selected brand
-    const table = currentBrand === 'jaedaeng' ? USERS_JAEDAENG : USERS;
-    const user = table[id];
+    // Staff login — check the picked brand's table first, fall back to the
+    // other brand for users marked crossBrand so Admin/COO can sign in via
+    // either brand picker.
+    const primary = currentBrand === 'jaedaeng' ? USERS_JAEDAENG : USERS;
+    const secondary = currentBrand === 'jaedaeng' ? USERS : USERS_JAEDAENG;
+    let user = primary[id];
+    if (!user) {
+      const other = secondary[id];
+      if (other && other.crossBrand) user = other;
+    }
     if (!user) {
       showModal('ไม่พบรหัสพนักงาน', 'กรุณาตรวจสอบรหัสพนักงานอีกครั้ง');
       return;
