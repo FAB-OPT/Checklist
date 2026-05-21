@@ -5130,7 +5130,16 @@ function showSummary(readonly) {
 
   const grid = document.getElementById('section-summary-grid');
   let html = '';
-  for (const s of scores.sectionScores) {
+  const sortedSections = scores.sectionScores.slice().sort((a, b) => {
+    const aAns = (a.passed || 0) + (a.failed || 0) + (a.na || 0);
+    const bAns = (b.passed || 0) + (b.failed || 0) + (b.na || 0);
+    // Sections with answered items first; among answered, higher % first.
+    if (aAns === 0 && bAns > 0) return 1;
+    if (bAns === 0 && aAns > 0) return -1;
+    if (b.pct !== a.pct) return b.pct - a.pct;
+    return (b.weight || 0) - (a.weight || 0);
+  });
+  for (const s of sortedSections) {
     const answered = (s.passed || 0) + (s.failed || 0) + (s.na || 0);
     let cls;
     if (answered === 0) cls = 'empty';
