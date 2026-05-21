@@ -4754,7 +4754,17 @@ function selectRole(role) {
   }
   input.value = '';
   renderPinCells();
-  input.focus();
+  // Defer focus so it lands after the login stage is actually visible
+  setTimeout(() => input.focus(), 30);
+}
+
+function clearPinAndFocus() {
+  const input = document.getElementById('login-id');
+  if (!input) return;
+  input.value = '';
+  renderPinCells();
+  // Defer past the modal close so the focus actually lands on the PIN input
+  setTimeout(() => input.focus(), 500);
 }
 
 function renderPinCells() {
@@ -4787,13 +4797,14 @@ function onPinKeyDown(e) {
 
 async function doLogin() {
   const id = document.getElementById('login-id').value.trim().toUpperCase();
-  if (!id) { showModal('กรุณากรอกรหัส', 'โปรดกรอกรหัสเพื่อเข้าสู่ระบบ'); return; }
+  if (!id) { showModal('กรุณากรอกรหัส', 'โปรดกรอกรหัสเพื่อเข้าสู่ระบบ'); clearPinAndFocus(); return; }
 
   if (currentRole === 'branch') {
     // Branch login - find matching branch by code
     const branch = BRANCHES.find(b => b.code === id);
     if (!branch) {
       showModal('ไม่พบรหัสสาขา', 'กรุณาตรวจสอบรหัสสาขาอีกครั้ง');
+      clearPinAndFocus();
       return;
     }
     currentUser = {
@@ -4819,6 +4830,7 @@ async function doLogin() {
     }
     if (!user) {
       showModal('ไม่พบรหัสพนักงาน', 'กรุณาตรวจสอบรหัสพนักงานอีกครั้ง');
+      clearPinAndFocus();
       return;
     }
     currentUser = { code: id, brand: currentBrand, ...user };
