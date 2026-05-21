@@ -924,6 +924,11 @@ body {
   outline: none; border-color: var(--primary);
   background: var(--surface);
 }
+.jd-form-static {
+  padding: 8px 12px;
+  font-size: 14px; font-weight: 800;
+  color: var(--text);
+}
 .jd-section-card {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -4025,8 +4030,13 @@ body:has(#login-screen.active) {
     <div id="jaedaeng-audit-screen" style="display:none;">
       <div class="card jd-form-head">
         <div class="jd-form-head-row">
-          <label class="jd-form-label">ชื่อสาขา/ร้าน</label>
-          <input type="text" id="jd-store-name" class="jd-form-input" placeholder="เช่น เจ๊แดงสามย่าน — สาขาสามย่าน" oninput="setJDStore('store', this.value)">
+          <label class="jd-form-label">สาขา</label>
+          <input type="text" id="jd-store-name" class="jd-form-input" list="jd-branch-list" placeholder="พิมพ์หรือเลือกสาขา" oninput="setJDStore('store', this.value)">
+          <datalist id="jd-branch-list"></datalist>
+        </div>
+        <div class="jd-form-head-row" id="jd-bzm-row" style="display:none;">
+          <label class="jd-form-label">ทีม BZM</label>
+          <div class="jd-form-static" id="jd-bzm-display">—</div>
         </div>
         <div class="jd-form-head-row">
           <label class="jd-form-label">ผู้ตรวจ</label>
@@ -4170,6 +4180,68 @@ function subsectionRequiresPhoto(section, subsection) {
 let currentUser = null; // {code, name, nick, role}
 let currentRole = 'branch'; // login form mode
 let currentBrand = null; // 'santafe' | 'jaedaeng'
+// Jae Daeng branches — keyed by name (no branch code yet). Truncated names
+// from the source screenshot are marked with "…" so they're easy to spot
+// and clean up later.
+const JAEDAENG_BRANCHES = [
+  // นุชจรินทร์ ใจยศ (พี่กัส)
+  { name: "ร้านส้มตำเจ๊แดง (ธนิยะ)",                      manager: "นุชจรินทร์ ใจยศ",   managerNick: "พี่กัส" },
+  { name: "ร้านส้มตำเจ๊แดง (ดุสิต เซ็นทรัล พาร์ค)",        manager: "นุชจรินทร์ ใจยศ",   managerNick: "พี่กัส" },
+  { name: "ร้านส้มตำเจ๊แดง (พรานนก)",                     manager: "นุชจรินทร์ ใจยศ",   managerNick: "พี่กัส" },
+  { name: "ร้านส้มตำเจ๊แดง (Paseo กาญจนาภิเษก)",          manager: "นุชจรินทร์ ใจยศ",   managerNick: "พี่กัส" },
+  { name: "ร้านส้มตำเจ๊แดง (เซ็นทรัลพระราม 2)",            manager: "นุชจรินทร์ ใจยศ",   managerNick: "พี่กัส" },
+  { name: "ร้านส้มตำเจ๊แดง (The Bright พระราม 2)",         manager: "นุชจรินทร์ ใจยศ",   managerNick: "พี่กัส" },
+  { name: "ร้านส้มตำเจ๊แดง (ศาลายา ปั๊ม PT)",              manager: "นุชจรินทร์ ใจยศ",   managerNick: "พี่กัส" },
+  { name: "ร้านส้มตำเจ๊แดง (ปั๊ม ปตท.เวสวิลเลจ)",          manager: "นุชจรินทร์ ใจยศ",   managerNick: "พี่กัส" },
+  { name: "ร้านส้มตำเจ๊แดง (ปตท.บรมราชชนนี)",              manager: "นุชจรินทร์ ใจยศ",   managerNick: "พี่กัส" },
+  { name: "ร้านส้มตำเจ๊แดง (บางจาก ราชพฤกษ์)",             manager: "นุชจรินทร์ ใจยศ",   managerNick: "พี่กัส" },
+  { name: "ร้านส้มตำเจ๊แดง (PTT ราชพฤกษ์)",                manager: "นุชจรินทร์ ใจยศ",   managerNick: "พี่กัส" },
+  // คณัฐวรรณ อิ่มสำราญ (พี่เฟิร์น)
+  { name: "ร้านส้มตำเจ๊แดง (มอเตอร์เวย์-ชลบุรี)",          manager: "คณัฐวรรณ อิ่มสำราญ", managerNick: "พี่เฟิร์น" },
+  { name: "ร้านส้มตำเจ๊แดง (เอกเกณฑ์ พัทยา)",              manager: "คณัฐวรรณ อิ่มสำราญ", managerNick: "พี่เฟิร์น" },
+  { name: "ร้านส้มตำเจ๊แดง (The Street รัชดา)",            manager: "คณัฐวรรณ อิ่มสำราญ", managerNick: "พี่เฟิร์น" },
+  { name: "ร้านส้มตำเจ๊แดง (PTT. นวลจันทร์)",              manager: "คณัฐวรรณ อิ่มสำราญ", managerNick: "พี่เฟิร์น" },
+  { name: "ร้านส้มตำเจ๊แดง (ปตท. พระราม 4)",               manager: "คณัฐวรรณ อิ่มสำราญ", managerNick: "พี่เฟิร์น" },
+  { name: "ร้านส้มตำเจ๊แดง (ต้นซุง)",                       manager: "คณัฐวรรณ อิ่มสำราญ", managerNick: "พี่เฟิร์น" },
+  { name: "ร้านส้มตำเจ๊แดง (ฟอร์จุนทาวน์)",                manager: "คณัฐวรรณ อิ่มสำราญ", managerNick: "พี่เฟิร์น" },
+  // ขวัญดาว บุญเรือง (พี่ดาว)
+  { name: "ร้านส้มตำเจ๊แดง (สยาม)",                         manager: "ขวัญดาว บุญเรือง",  managerNick: "พี่ดาว" },
+  { name: "ร้านส้มตำเจ๊แดง (สยามพารากอน)",                  manager: "ขวัญดาว บุญเรือง",  managerNick: "พี่ดาว" },
+  { name: "ร้านส้มตำเจ๊แดง (เซ็นทรัลเวิลด์)",               manager: "ขวัญดาว บุญเรือง",  managerNick: "พี่ดาว" },
+  { name: "ร้านส้มตำเจ๊แดง (คู่บอน)",                       manager: "ขวัญดาว บุญเรือง",  managerNick: "พี่ดาว" },
+  { name: "ร้านส้มตำเจ๊แดง (บางจากสุขุมวิท 62)",            manager: "ขวัญดาว บุญเรือง",  managerNick: "พี่ดาว" },
+  { name: "ร้านส้มตำเจ๊แดง (ทากะทาวน์)",                    manager: "ขวัญดาว บุญเรือง",  managerNick: "พี่ดาว" },
+  { name: "ร้านส้มตำเจ๊แดง (Emporium)",                     manager: "ขวัญดาว บุญเรือง",  managerNick: "พี่ดาว" },
+  { name: "ร้านส้มตำเจ๊แดง (True Digital Park)",            manager: "ขวัญดาว บุญเรือง",  managerNick: "พี่ดาว" },
+  { name: "ร้านส้มตำเจ๊แดง (For you park บางน…)",          manager: "ขวัญดาว บุญเรือง",  managerNick: "พี่ดาว" },
+  { name: "ร้านส้มตำเจ๊แดง (เดอะมอลล์ งามวงศ์…)",          manager: "ขวัญดาว บุญเรือง",  managerNick: "พี่ดาว" },
+  { name: "ร้านส้มตำเจ๊แดง (เซ็นทรัลอีสต์วิลล์)",            manager: "ขวัญดาว บุญเรือง",  managerNick: "พี่ดาว" },
+  // พิมพ์พิชชา ชั่ววาล (พี่อ้อย)
+  { name: "ร้านส้มตำเจ๊แดง (Charn at the Aveni…)",          manager: "พิมพ์พิชชา ชั่ววาล", managerNick: "พี่อ้อย" },
+  { name: "ร้านส้มตำเจ๊แดง (ปตท. สายไหม 56)",               manager: "พิมพ์พิชชา ชั่ววาล", managerNick: "พี่อ้อย" },
+  { name: "ร้านส้มตำเจ๊แดง (บางจากรังสิต คลอ…)",            manager: "พิมพ์พิชชา ชั่ววาล", managerNick: "พี่อ้อย" },
+  { name: "ร้านส้มตำเจ๊แดง (ฟิวเจอร์ปาร์ค รังสิต)",          manager: "พิมพ์พิชชา ชั่ววาล", managerNick: "พี่อ้อย" },
+  { name: "ร้านส้มตำเจ๊แดง (เมืองทองธานี)",                  manager: "พิมพ์พิชชา ชั่ววาล", managerNick: "พี่อ้อย" },
+  { name: "ร้านส้มตำเจ๊แดง (เทพารักษ์-สายไหม)",              manager: "พิมพ์พิชชา ชั่ววาล", managerNick: "พี่อ้อย" },
+  { name: "ร้านส้มตำเจ๊แดง (ปั๊มบางจาก-ศาลายา)",            manager: "พิมพ์พิชชา ชั่ววาล", managerNick: "พี่อ้อย" },
+  { name: "ร้านส้มตำเจ๊แดง (ประชาชื่น)",                     manager: "พิมพ์พิชชา ชั่ววาล", managerNick: "พี่อ้อย" },
+  { name: "4007 ซีคอนศรีนครินทร์ (เจ๊แดง จุ่มนัว)",         manager: "พิมพ์พิชชา ชั่ววาล", managerNick: "พี่อ้อย" },
+  { name: "4008 เซ็นทรัลศาลายา (เจ๊แดง จุ่มนัว)",            manager: "พิมพ์พิชชา ชั่ววาล", managerNick: "พี่อ้อย" },
+  { name: "4018 เทอมินอล21 พระราม 3 (เจ๊แดง จุ่มนัว)",       manager: "พิมพ์พิชชา ชั่ววาล", managerNick: "พี่อ้อย" },
+  // จุรีพร ทองอาจ (พี่อีฟ)
+  { name: "ร้านส้มตำเจ๊แดง (S-Oasis)",                       manager: "จุรีพร ทองอาจ",     managerNick: "พี่อีฟ" },
+  { name: "ร้านส้มตำเจ๊แดง (ท็อปส์ เซ็นทรัล ลาด…)",          manager: "จุรีพร ทองอาจ",     managerNick: "พี่อีฟ" },
+  { name: "ร้านส้มตำเจ๊แดง (Little Walk Rattana…)",          manager: "จุรีพร ทองอาจ",     managerNick: "พี่อีฟ" },
+  { name: "ร้านส้มตำเจ๊แดง (The Circle ราชพฤก…)",            manager: "จุรีพร ทองอาจ",     managerNick: "พี่อีฟ" },
+  { name: "ร้านส้มตำเจ๊แดง (ไอคอนสยาม)",                     manager: "จุรีพร ทองอาจ",     managerNick: "พี่อีฟ" },
+  { name: "ร้านส้มตำเจ๊แดง (กรุงเทพกริฑา)",                   manager: "จุรีพร ทองอาจ",     managerNick: "พี่อีฟ" },
+  { name: "ร้านส้มตำเจ๊แดง (ปั๊มบางจาก รามคำ…)",            manager: "จุรีพร ทองอาจ",     managerNick: "พี่อีฟ" },
+  { name: "ร้านส้มตำเจ๊แดง (เสนานิคม)",                       manager: "จุรีพร ทองอาจ",     managerNick: "พี่อีฟ" },
+  { name: "4001 แฟชั่น ไอส์แลนด์ (เจ๊แดง จุ่มนัว)",          manager: "จุรีพร ทองอาจ",     managerNick: "พี่อีฟ" },
+  { name: "4005 ซีคอนบางแค (เจ๊แดง จุ่มนัว)",                manager: "จุรีพร ทองอาจ",     managerNick: "พี่อีฟ" },
+  { name: "4015 เดอะมอลล์ท่าพระ (เจ๊แดง จุ่มนัว)",            manager: "จุรีพร ทองอาจ",     managerNick: "พี่อีฟ" },
+];
+
 const USERS_JAEDAENG = {
   "550713": { name: "ณฤกร เอื้อสถาพร",      nick: "พี่ป๋อ",   role: "vp" },
   "590022": { name: "คณัฐวรรณ อิ่มสำราญ",   nick: "พี่เฟิร์น", role: "bzm" },
@@ -6293,12 +6365,32 @@ function startJaedaengAudit() {
   document.getElementById('jd-store-name').value = '';
   document.getElementById('jd-auditor').value = currentJDAudit.auditor;
   document.getElementById('jd-date').value = today;
+  // Populate branch datalist
+  const list = document.getElementById('jd-branch-list');
+  list.innerHTML = JAEDAENG_BRANCHES.map(b => `<option value="${escapeAttr(b.name)}">`).join('');
+  document.getElementById('jd-bzm-row').style.display = 'none';
   renderJaedaengForm();
 }
 
 function setJDStore(field, value) {
   if (!currentJDAudit) return;
-  if (field === 'store') currentJDAudit.storeName = value;
+  if (field === 'store') {
+    currentJDAudit.storeName = value;
+    // Auto-fill BZM if the branch is known
+    const match = JAEDAENG_BRANCHES.find(b => b.name === value);
+    const row = document.getElementById('jd-bzm-row');
+    const disp = document.getElementById('jd-bzm-display');
+    if (match) {
+      currentJDAudit.bzm = match.manager;
+      currentJDAudit.bzmNick = match.managerNick;
+      disp.textContent = `${match.manager} (${match.managerNick})`;
+      row.style.display = '';
+    } else {
+      currentJDAudit.bzm = '';
+      currentJDAudit.bzmNick = '';
+      row.style.display = 'none';
+    }
+  }
   else if (field === 'auditor') currentJDAudit.auditor = value;
   else if (field === 'date') currentJDAudit.date = value;
 }
@@ -6385,6 +6477,8 @@ async function submitJaedaengAudit() {
     id: currentJDAudit.id,
     brand: 'jaedaeng',
     storeName: currentJDAudit.storeName.trim(),
+    bzm: currentJDAudit.bzm || '',
+    bzmNick: currentJDAudit.bzmNick || '',
     auditor: (currentJDAudit.auditor || '').trim() || '-',
     date: currentJDAudit.date || todayDateStr(),
     items: items,
@@ -6437,6 +6531,13 @@ function showJaedaengDetail(id) {
         <div class="summary-meta-row-value">${escapeHtml(r.auditor)}</div>
       </div>
     </div>
+    ${r.bzm ? `<div class="summary-meta-row" data-icon="supervisor_account">
+      <span class="material-symbols-rounded">supervisor_account</span>
+      <div class="summary-meta-row-body">
+        <div class="summary-meta-row-label">ทีม BZM</div>
+        <div class="summary-meta-row-value">${escapeHtml(r.bzm)}${r.bzmNick ? ` (${escapeHtml(r.bzmNick)})` : ''}</div>
+      </div>
+    </div>` : ''}
     <div class="summary-meta-row" data-icon="fact_check">
       <span class="material-symbols-rounded">fact_check</span>
       <div class="summary-meta-row-body">
