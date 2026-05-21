@@ -578,9 +578,23 @@ body {
 .sec-row-sub {
   font-size: 11px; font-weight: 600;
   color: var(--text-secondary);
-  margin-top: 1px;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  margin-top: 2px;
+  display: flex; align-items: baseline; gap: 4px; flex-wrap: nowrap;
+  overflow: hidden;
 }
+.sec-row-stat {
+  display: inline-flex; align-items: baseline; gap: 3px;
+  white-space: nowrap;
+}
+.sec-row-stat b {
+  font-weight: 900; color: var(--text); font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.sec-row-stat-label {
+  color: var(--text-tertiary); font-weight: 700;
+  letter-spacing: 0.1px;
+}
+.sec-row-stat-dot { color: var(--text-tertiary); opacity: 0.55; }
 .sec-row-score {
   text-align: right;
   display: flex; align-items: baseline; gap: 2px;
@@ -895,50 +909,50 @@ body {
 .fail-list-item .fail-photos { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
 .fail-list-item .fail-photos img { width: 64px; height: 64px; object-fit: cover; border-radius: var(--r-sm); }
 
-/* NCR — fail summary cards */
-.ncr-summary {
-  display: flex; align-items: center; gap: 10px;
-  padding: 10px 14px;
+/* NCR — count chip in the card header */
+.ncr-count-chip {
+  display: inline-flex; align-items: center;
+  padding: 3px 10px;
   background: var(--danger-bg);
-  border: 1px solid rgba(199,50,35,0.25);
-  border-radius: var(--r-md);
-  margin-bottom: 14px;
-  font-size: 14px; font-weight: 700;
   color: #7A1F10;
+  font-size: 12px; font-weight: 800;
+  letter-spacing: 0.2px;
+  border-radius: var(--r-pill);
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
 }
-.ncr-summary .material-symbols-rounded {
-  color: var(--danger); font-size: 22px;
-}
-.ncr-summary b { font-weight: 900; font-size: 18px; margin: 0 2px; }
 
+/* NCR — fail summary cards */
 .ncr-grid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 10px;
+  gap: 8px;
 }
 @media (min-width: 720px)  { .ncr-grid { grid-template-columns: 1fr 1fr; } }
 @media (min-width: 1280px) { .ncr-grid { grid-template-columns: 1fr 1fr 1fr; } }
 
 .ncr-card {
   display: grid;
-  grid-template-columns: 64px 1fr;
-  gap: 14px;
-  padding: 14px;
+  grid-template-columns: auto 1fr;
+  gap: 12px;
+  padding: 12px 14px;
   background: var(--surface);
-  border: 1px solid rgba(199,50,35,0.18);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--danger);
   border-radius: var(--r-md);
-  transition: box-shadow 0.18s, border-color 0.18s;
+  transition: box-shadow 0.18s, border-color 0.18s, transform 0.12s;
 }
-.ncr-card:hover { box-shadow: var(--shadow); border-color: rgba(199,50,35,0.35); }
+.ncr-card:hover { box-shadow: var(--shadow); border-color: var(--border-strong); border-left-color: var(--danger); transform: translateX(2px); }
 .ncr-card-tag {
-  display: flex; align-items: center; justify-content: center;
-  background: linear-gradient(135deg, #E04938, #C73223);
-  color: white;
-  border-radius: var(--r-sm);
-  font-size: 15px; font-weight: 900;
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 52px; padding: 0 8px; height: 26px;
+  align-self: flex-start;
+  background: var(--danger-bg);
+  color: var(--danger);
+  border-radius: var(--r-pill);
+  font-size: 12px; font-weight: 900;
   letter-spacing: 0.2px;
   font-variant-numeric: tabular-nums;
-  box-shadow: 0 4px 12px rgba(199,50,35,0.22);
 }
 .ncr-card-body { min-width: 0; }
 .ncr-card-section {
@@ -3707,7 +3721,8 @@ body:has(#login-screen.active) {
       <div class="card" id="ncr-card">
         <div class="card-header">
           <span class="material-symbols-rounded" style="color:var(--danger);">warning</span>
-          <h2>รายการที่ไม่ผ่าน (NCR)</h2>
+          <h2>รายการที่ไม่ผ่าน <span class="card-header-en">(NCR)</span></h2>
+          <span class="ncr-count-chip" id="ncr-count-chip" style="display:none;"></span>
         </div>
         <div id="ncr-list"></div>
       </div>
@@ -5151,7 +5166,13 @@ function showSummary(readonly) {
       <div class="section-letter-badge letter-${s.letter}">${s.letter}</div>
       <div class="sec-row-name">
         <div class="sec-row-title">${escapeHtml(s.title.split(':')[0])}</div>
-        <div class="sec-row-sub">ผ่าน ${s.passed}/${s.total} · น้ำหนัก ${s.weight}</div>
+        <div class="sec-row-sub">
+          <span class="sec-row-stat"><b>${s.passed}</b><span class="sec-row-stat-label">ผ่าน</span></span>
+          <span class="sec-row-stat-dot">·</span>
+          <span class="sec-row-stat"><b>${s.total}</b><span class="sec-row-stat-label">เต็ม</span></span>
+          <span class="sec-row-stat-dot">·</span>
+          <span class="sec-row-stat"><b>${s.weight}</b><span class="sec-row-stat-label">น้ำหนัก</span></span>
+        </div>
       </div>
       <div class="sec-row-bar">
         <div class="sec-row-bar-fill" style="width:${fillPct}%"></div>
@@ -5235,18 +5256,20 @@ function renderNCR() {
   // Stash photos on a closure for the lightbox open call
   window._ncrPhotos = photoIndex;
 
+  const chip = document.getElementById('ncr-count-chip');
   if (count === 0) {
+    if (chip) chip.style.display = 'none';
     list.innerHTML = `<div class="ncr-empty">
       <span class="material-symbols-rounded">verified</span>
       <div class="ncr-empty-title">ไม่พบรายการที่ไม่ผ่าน</div>
       <div class="ncr-empty-sub">เยี่ยมมาก!</div>
     </div>`;
   } else {
-    list.innerHTML = `<div class="ncr-summary">
-      <span class="material-symbols-rounded">error</span>
-      <span>พบ <b>${count}</b> รายการที่ต้องแก้ไข</span>
-    </div>
-    <div class="ncr-grid">${cardsHtml}</div>`;
+    if (chip) {
+      chip.style.display = '';
+      chip.textContent = `${count} รายการ`;
+    }
+    list.innerHTML = `<div class="ncr-grid">${cardsHtml}</div>`;
   }
 }
 
