@@ -931,6 +931,7 @@ body.test-mode-on { box-shadow: inset 0 0 0 3px #F59E0B; }
   color: white;
 }
 .test-mode-toggle.is-on:hover { background: #D97706; color: white; }
+.nav-test-mode { margin: 10px 12px 0; justify-content: center; }
 
 /* Jae Daeng audit form */
 .jd-form-head .jd-form-head-row {
@@ -3699,10 +3700,6 @@ body:has(#login-screen.active) {
         </button>
       </div>
       <p class="brand-pick-hint">เลือกแบรนด์เพื่อเข้าสู่ระบบ</p>
-      <button type="button" class="test-mode-toggle" id="test-mode-toggle" onclick="toggleTestMode()">
-        <span class="material-symbols-rounded">science</span>
-        <span id="test-mode-toggle-label">เปิดโหมดทดสอบ</span>
-      </button>
     </div>
 
     <div class="login-box" id="login-stage" style="display:none;">
@@ -5025,6 +5022,13 @@ function renderBottomNav() {
       `<button type="button" class="nav-view-pill ${view === 'santafe' ? 'active' : ''}" onclick="switchViewBrand('santafe')">Santa Fe</button>` +
       `<button type="button" class="nav-view-pill ${view === 'jaedaeng' ? 'active' : ''}" onclick="switchViewBrand('jaedaeng')">เจ๊แดง</button>` +
     '</div>';
+  }
+  // Test mode toggle — admin only.
+  if (currentUser.role === 'admin') {
+    html += `<button type="button" class="test-mode-toggle nav-test-mode ${testMode ? 'is-on' : ''}" id="test-mode-toggle" onclick="toggleTestMode()">` +
+      '<span class="material-symbols-rounded">science</span>' +
+      `<span id="test-mode-toggle-label">${testMode ? 'ปิดโหมดทดสอบ' : 'เปิดโหมดทดสอบ'}</span>` +
+    '</button>';
   }
   html += '</div>';
   html += '<button class="bottom-nav-item nav-logout-btn" id="nav-logout" onclick="logout()"><span class="material-symbols-rounded">logout</span><span>ออกระบบ</span></button>';
