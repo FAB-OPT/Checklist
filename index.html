@@ -894,6 +894,44 @@ body {
   .card { box-shadow: none; border: 1px solid #ccc; page-break-inside: avoid; }
 }
 
+/* Test mode banner + toggle */
+.test-mode-banner {
+  position: sticky; top: 0;
+  z-index: 300;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 8px 14px;
+  background: linear-gradient(90deg, #F59E0B, #D97706);
+  color: white;
+  font-size: 13px; font-weight: 700;
+  text-align: center;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(217,119,6,0.25);
+}
+.test-mode-banner .material-symbols-rounded { font-size: 18px; }
+.test-mode-banner b { font-weight: 900; }
+body.test-mode-on { box-shadow: inset 0 0 0 3px #F59E0B; }
+.test-mode-toggle {
+  display: inline-flex; align-items: center; gap: 6px;
+  margin-top: 6px;
+  padding: 8px 16px;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-pill);
+  font-size: 12px; font-weight: 700;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s;
+}
+.test-mode-toggle:hover { border-color: var(--warning); color: var(--warning); }
+.test-mode-toggle .material-symbols-rounded { font-size: 16px; }
+.test-mode-toggle.is-on {
+  background: var(--warning);
+  border-color: var(--warning);
+  color: white;
+}
+.test-mode-toggle.is-on:hover { background: #D97706; color: white; }
+
 /* Jae Daeng audit form */
 .jd-form-head .jd-form-head-row {
   display: grid;
@@ -3637,6 +3675,12 @@ body:has(#login-screen.active) {
 </head>
 <body>
 
+<!-- Test mode banner — visible when testMode is true -->
+<div id="test-mode-banner" class="test-mode-banner" style="display:none;" onclick="toggleTestMode()">
+  <span class="material-symbols-rounded">science</span>
+  <span><b>โหมดทดสอบเปิดอยู่</b> · การเปลี่ยนแปลงจะไม่ถูกบันทึก — กดเพื่อปิด</span>
+</div>
+
 <!-- LOGIN SCREEN -->
 <div id="login-screen" class="screen active">
   <div class="login-container">
@@ -3655,6 +3699,10 @@ body:has(#login-screen.active) {
         </button>
       </div>
       <p class="brand-pick-hint">เลือกแบรนด์เพื่อเข้าสู่ระบบ</p>
+      <button type="button" class="test-mode-toggle" id="test-mode-toggle" onclick="toggleTestMode()">
+        <span class="material-symbols-rounded">science</span>
+        <span id="test-mode-toggle-label">เปิดโหมดทดสอบ</span>
+      </button>
     </div>
 
     <div class="login-box" id="login-stage" style="display:none;">
@@ -4282,6 +4330,7 @@ let currentDaily = null; // {id, branchCode, branchName, date, shift, manager, i
 let currentJDAudit = null; // Jae Daeng audit being filled
 let allJaedaengAudits = []; // loaded from storage
 let currentView = null; // 'santafe' | 'jaedaeng' — defaults to user's brand; cross-brand users can toggle
+let testMode = false; // when true, all writes are in-memory only — exiting reloads real data
 
 // ============ DAILY CHECKLIST DATA ============
 const DAILY_OPEN = [
@@ -4555,6 +4604,7 @@ async function loadAudits() {
 }
 
 function saveAudits() {
+  if (testMode) return;
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(allAudits));
   } catch (e) {
@@ -4564,6 +4614,7 @@ function saveAudits() {
 }
 
 async function saveAuditToBackend(audit) {
+  if (testMode) return;
   if (!firebaseDb || !audit || !audit.id) return;
   try {
     await firebaseDb.collection(AUDITS_COLLECTION).doc(String(audit.id)).set(audit);
@@ -4580,6 +4631,7 @@ function loadLocalDaily() {
 }
 
 function saveDailyLocal() {
+  if (testMode) return;
   try { localStorage.setItem(DAILY_STORAGE_KEY, JSON.stringify(allDailyChecklists)); } catch (_) {}
 }
 
@@ -4598,6 +4650,7 @@ async function loadDailyChecklists() {
 }
 
 async function saveDailyToBackend(daily) {
+  if (testMode) return;
   if (!firebaseDb || !daily || !daily.id) return;
   try {
     await firebaseDb.collection(DAILY_COLLECTION).doc(String(daily.id)).set(daily);
@@ -4616,6 +4669,7 @@ function loadLocalJaedaeng() {
   } catch (_) { return []; }
 }
 function saveJaedaengLocal() {
+  if (testMode) return;
   try { localStorage.setItem(JAEDAENG_STORAGE_KEY, JSON.stringify(allJaedaengAudits)); } catch (_) {}
 }
 async function loadJaedaengAudits() {
@@ -4632,6 +4686,7 @@ async function loadJaedaengAudits() {
   allJaedaengAudits = loadLocalJaedaeng();
 }
 async function saveJaedaengToBackend(audit) {
+  if (testMode) return;
   if (!firebaseDb || !audit || !audit.id) return;
   try {
     await firebaseDb.collection(JAEDAENG_COLLECTION).doc(String(audit.id)).set(audit);
@@ -4860,6 +4915,45 @@ function routeByRole() {
     showDashboard();
   } else {
     showDashboard();
+  }
+}
+
+async function toggleTestMode() {
+  if (!testMode) {
+    // Enter test mode — confirm with user
+    if (!confirm('เปิดโหมดทดสอบ?\n\nข้อมูลที่บันทึกระหว่างทดสอบจะไม่ถูกเก็บ และจะหายไปทันทีที่ปิดโหมด')) return;
+    testMode = true;
+    document.body.classList.add('test-mode-on');
+    document.getElementById('test-mode-banner').style.display = 'flex';
+    updateTestModeToggle();
+  } else {
+    // Exit test mode — wipe in-memory test data by reloading from real storage
+    if (!confirm('ปิดโหมดทดสอบ?\n\nข้อมูลที่กรอกตอนทดสอบจะถูกลบทั้งหมด')) return;
+    testMode = false;
+    document.body.classList.remove('test-mode-on');
+    document.getElementById('test-mode-banner').style.display = 'none';
+    updateTestModeToggle();
+    // Refresh data from real storage; cancel any open form so test-only state doesn't leak
+    currentAudit = null;
+    currentDaily = null;
+    currentJDAudit = null;
+    if (currentUser) {
+      await Promise.all([loadAudits(), loadDailyChecklists(), loadJaedaengAudits()]);
+      routeByRole();
+    }
+  }
+}
+
+function updateTestModeToggle() {
+  const btn = document.getElementById('test-mode-toggle');
+  const label = document.getElementById('test-mode-toggle-label');
+  if (!btn || !label) return;
+  if (testMode) {
+    btn.classList.add('is-on');
+    label.textContent = 'ปิดโหมดทดสอบ';
+  } else {
+    btn.classList.remove('is-on');
+    label.textContent = 'เปิดโหมดทดสอบ';
   }
 }
 
