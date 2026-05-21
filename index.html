@@ -6524,10 +6524,24 @@ function startJaedaengAudit() {
   });
   hideAllScreens();
   document.getElementById('jaedaeng-audit-screen').style.display = 'block';
-  // Populate branch dropdown
+  // Populate branch dropdown — group stores by their BZM zone
   const select = document.getElementById('jd-store-name');
-  select.innerHTML = '<option value="">— เลือกสาขา —</option>' +
-    JAEDAENG_BRANCHES.map(b => `<option value="${escapeAttr(b.name)}">${escapeHtml(b.name)}</option>`).join('');
+  const zones = {};
+  const zoneOrder = [];
+  JAEDAENG_BRANCHES.forEach(b => {
+    const key = b.managerNick ? `${b.managerNick} (${b.manager})` : (b.manager || 'อื่นๆ');
+    if (!zones[key]) { zones[key] = []; zoneOrder.push(key); }
+    zones[key].push(b);
+  });
+  let opts = '<option value="">— เลือกสาขา —</option>';
+  zoneOrder.forEach(z => {
+    opts += `<optgroup label="โซน ${escapeHtml(z)}">`;
+    zones[z].forEach(b => {
+      opts += `<option value="${escapeAttr(b.name)}">${escapeHtml(b.name)}</option>`;
+    });
+    opts += '</optgroup>';
+  });
+  select.innerHTML = opts;
   select.value = '';
   document.getElementById('jd-auditor').value = currentJDAudit.auditor;
   document.getElementById('jd-date').value = today;
