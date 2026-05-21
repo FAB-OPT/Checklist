@@ -579,14 +579,9 @@ body {
   font-size: 11px; font-weight: 600;
   color: var(--text-secondary);
   margin-top: 2px;
-  display: flex; align-items: baseline; gap: 4px; flex-wrap: nowrap;
-  overflow: hidden;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.sec-row-stat {
-  display: inline-flex; align-items: baseline; gap: 3px;
-  white-space: nowrap;
-}
-.sec-row-stat b {
+.sec-row-sub b {
   font-weight: 900; color: var(--text); font-size: 12px;
   font-variant-numeric: tabular-nums;
 }
@@ -594,7 +589,7 @@ body {
   color: var(--text-tertiary); font-weight: 700;
   letter-spacing: 0.1px;
 }
-.sec-row-stat-dot { color: var(--text-tertiary); opacity: 0.55; }
+.sec-row-stat-dot { color: var(--text-tertiary); opacity: 0.55; margin: 0 1px; }
 .sec-row-score {
   text-align: right;
   display: flex; align-items: baseline; gap: 2px;
@@ -5166,13 +5161,7 @@ function showSummary(readonly) {
       <div class="section-letter-badge letter-${s.letter}">${s.letter}</div>
       <div class="sec-row-name">
         <div class="sec-row-title">${escapeHtml(s.title.split(':')[0])}</div>
-        <div class="sec-row-sub">
-          <span class="sec-row-stat"><b>${s.passed}</b><span class="sec-row-stat-label">ผ่าน</span></span>
-          <span class="sec-row-stat-dot">·</span>
-          <span class="sec-row-stat"><b>${s.total}</b><span class="sec-row-stat-label">เต็ม</span></span>
-          <span class="sec-row-stat-dot">·</span>
-          <span class="sec-row-stat"><b>${s.weight}</b><span class="sec-row-stat-label">น้ำหนัก</span></span>
-        </div>
+        <div class="sec-row-sub"><b>${s.passed}</b> <span class="sec-row-stat-label">ผ่าน</span> <span class="sec-row-stat-dot">·</span> <b>${s.total}</b> <span class="sec-row-stat-label">เต็ม</span> <span class="sec-row-stat-dot">·</span> <b>${s.weight}</b> <span class="sec-row-stat-label">น้ำหนัก</span></div>
       </div>
       <div class="sec-row-bar">
         <div class="sec-row-bar-fill" style="width:${fillPct}%"></div>
