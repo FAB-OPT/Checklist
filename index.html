@@ -3497,7 +3497,7 @@ body:has(#login-screen.active) {
       <!-- Eyebrow row -->
       <div class="page-eyebrow">
         <h2 class="page-eyebrow-title" id="dashboard-title">
-          สรุปผลตรวจ <span class="page-eyebrow-inline">Quality Assurance</span>
+          สรุปผลตรวจ <span class="page-eyebrow-inline brand-eyebrow-label">Quality Assurance</span>
         </h2>
       </div>
 
@@ -3536,7 +3536,7 @@ body:has(#login-screen.active) {
 
       <div class="page-eyebrow page-eyebrow-section">
         <h2 class="page-eyebrow-title">
-          ประวัติการตรวจ <span class="page-eyebrow-inline">Quality Assurance</span>
+          ประวัติการตรวจ <span class="page-eyebrow-inline brand-eyebrow-label">Quality Assurance</span>
         </h2>
       </div>
       <div class="stripe-card">
@@ -3664,7 +3664,7 @@ body:has(#login-screen.active) {
     <!-- SUMMARY SCREEN -->
     <div id="summary-screen" style="display:none;">
       <div class="page-eyebrow page-eyebrow-section">
-        <h2 class="page-eyebrow-title">ประวัติการตรวจ <span class="page-eyebrow-inline">Quality Assurance</span></h2>
+        <h2 class="page-eyebrow-title">ประวัติการตรวจ <span class="page-eyebrow-inline brand-eyebrow-label">Quality Assurance</span></h2>
       </div>
 
       <!-- Hero: score + meta side-by-side on desktop -->
@@ -4315,17 +4315,25 @@ async function doLogin() {
 function applyBrandHeader() {
   const titleEl = document.getElementById('app-title-text');
   const subEl = document.getElementById('header-subtitle');
-  if (!titleEl || !subEl) return;
+  let appTitle, appSub, eyebrow;
   if (currentUser && currentUser.brand === 'santafe') {
-    titleEl.textContent = 'Operations Standard Skill & Operations Checklist';
-    subEl.textContent = 'Santa Fe Happy Steak';
+    appTitle = 'Operations Standard Skill & Operations Checklist';
+    appSub   = 'Santa Fe Happy Steak';
+    eyebrow  = 'Operations Standard Skill';
   } else if (currentUser && currentUser.brand === 'jaedaeng') {
-    titleEl.textContent = 'Quality Service Cleanliness & Operations Checklist';
-    subEl.textContent = 'เจ๊แดงสามย่าน';
+    appTitle = 'Quality Service Cleanliness & Operations Checklist';
+    appSub   = 'เจ๊แดงสามย่าน';
+    eyebrow  = 'Quality Service Cleanliness';
   } else {
-    titleEl.textContent = 'Quality Service Cleanliness & Operations Checklist';
-    subEl.textContent = 'ระบบตรวจสอบมาตรฐานการทำงาน';
+    appTitle = 'Quality Service Cleanliness & Operations Checklist';
+    appSub   = 'ระบบตรวจสอบมาตรฐานการทำงาน';
+    eyebrow  = 'Quality Service Cleanliness';
   }
+  if (titleEl) titleEl.textContent = appTitle;
+  if (subEl)   subEl.textContent   = appSub;
+  document.querySelectorAll('.brand-eyebrow-label').forEach(el => {
+    el.textContent = eyebrow;
+  });
 }
 
 function showWelcomeModal() {
@@ -4448,7 +4456,8 @@ function showDashboard() {
   const audits = getVisibleAudits();
   const completed = audits.filter(a => a.status === 'completed');
 
-  document.getElementById('dashboard-title').innerHTML = 'สรุปผลตรวจ <span class="page-eyebrow-inline">Quality Assurance</span>';
+  document.getElementById('dashboard-title').innerHTML = 'สรุปผลตรวจ <span class="page-eyebrow-inline brand-eyebrow-label"></span>';
+  applyBrandHeader();
 
   const avgScore = completed.length ? completed.reduce((s,a) => s + (a.scoreData?.grandTotal||0), 0) / completed.length : 0;
   const totalBranches = currentUser.role === 'bzm'
