@@ -894,6 +894,166 @@ body {
   .card { box-shadow: none; border: 1px solid #ccc; page-break-inside: avoid; }
 }
 
+/* Jae Daeng audit form */
+.jd-form-head .jd-form-head-row {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px dashed var(--border);
+}
+.jd-form-head .jd-form-head-row:last-child { border-bottom: none; }
+.jd-form-label {
+  font-size: 12px; font-weight: 800;
+  color: var(--text-secondary);
+  letter-spacing: 0.2px;
+  text-transform: uppercase;
+}
+.jd-form-input {
+  width: 100%;
+  padding: 10px 12px;
+  font-size: 14px; font-weight: 600;
+  color: var(--text);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  font-family: inherit;
+}
+.jd-form-input:focus {
+  outline: none; border-color: var(--primary);
+  background: var(--surface);
+}
+.jd-section-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+.jd-section-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 18px;
+  background: linear-gradient(135deg, #E84A4A, #B22222);
+  color: white;
+}
+.jd-section-name {
+  font-size: 14px; font-weight: 800;
+  letter-spacing: 0.2px;
+}
+.jd-section-progress {
+  font-size: 12px; font-weight: 800;
+  background: rgba(255,255,255,0.22);
+  padding: 3px 10px;
+  border-radius: var(--r-pill);
+  font-variant-numeric: tabular-nums;
+}
+.jd-item {
+  padding: 12px 16px;
+  border-top: 1px solid var(--border);
+  transition: background 0.18s;
+}
+.jd-item:first-of-type { border-top: none; }
+.jd-item.is-pass { background: rgba(45,122,74,0.04); }
+.jd-item.is-fail { background: rgba(199,50,35,0.05); }
+.jd-item.is-na   { background: var(--surface-2); }
+.jd-item-q {
+  display: flex; align-items: flex-start; gap: 10px;
+  margin-bottom: 10px;
+}
+.jd-item-num {
+  flex-shrink: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 22px; height: 22px; padding: 0 6px;
+  background: var(--surface-2);
+  border-radius: var(--r-pill);
+  font-size: 11px; font-weight: 900;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+.jd-item-text {
+  flex: 1;
+  font-size: 14px; font-weight: 600;
+  color: var(--text); line-height: 1.5;
+}
+.jd-item-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 6px;
+}
+.jd-choice {
+  display: inline-flex; align-items: center; justify-content: center; gap: 4px;
+  padding: 8px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  font-size: 12px; font-weight: 800;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s;
+}
+.jd-choice:hover { border-color: var(--border-strong); }
+.jd-choice .material-symbols-rounded { font-size: 16px; }
+.jd-choice.pass.active { background: var(--success); border-color: var(--success); color: white; }
+.jd-choice.fail.active { background: var(--danger);  border-color: var(--danger);  color: white; }
+.jd-choice.na.active   { background: var(--text-secondary); border-color: var(--text-secondary); color: white; }
+.jd-note-input {
+  width: 100%; margin-top: 10px;
+  padding: 8px 10px;
+  background: var(--danger-bg);
+  border: 1px solid rgba(199,50,35,0.25);
+  border-radius: var(--r-sm);
+  font-size: 13px; font-weight: 600;
+  color: var(--text);
+  font-family: inherit;
+}
+.jd-hub-actions { padding: 16px 18px; }
+.jd-history-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--danger);
+  border-radius: var(--r-md);
+  padding: 12px 16px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  transition: box-shadow 0.18s, transform 0.12s;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 12px;
+}
+.jd-history-card:hover { box-shadow: var(--shadow); transform: translateX(2px); }
+.jd-history-name {
+  font-size: 14px; font-weight: 800;
+  color: var(--text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.jd-history-meta {
+  font-size: 11px; font-weight: 600;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+.jd-history-score {
+  font-size: 20px; font-weight: 900;
+  letter-spacing: -0.4px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+  text-align: right;
+}
+.jd-history-score-unit {
+  font-size: 10px; font-weight: 700;
+  color: var(--text-tertiary);
+  letter-spacing: 0.3px;
+}
+.jd-history-card.tier-good  { border-left-color: var(--success); }
+.jd-history-card.tier-warn  { border-left-color: var(--warning); }
+.jd-history-card.tier-bad   { border-left-color: var(--danger); }
+.jd-history-empty {
+  text-align: center; padding: 36px 20px;
+  color: var(--text-tertiary);
+}
+
 /* Legacy fail-list-item kept for older code paths */
 .fail-list-item {
   padding: 12px 14px; background: var(--danger-bg);
@@ -3842,6 +4002,71 @@ body:has(#login-screen.active) {
         </button>
       </div>
     </div>
+
+    <!-- JAE DAENG HUB -->
+    <div id="jaedaeng-hub-screen" style="display:none;">
+      <div class="page-eyebrow page-eyebrow-section">
+        <h2 class="page-eyebrow-title">
+          ตรวจร้าน <span class="page-eyebrow-inline">เจ๊แดงสามย่าน</span>
+        </h2>
+      </div>
+      <div class="card jd-hub-actions">
+        <button class="btn btn-primary btn-block btn-lg" onclick="startJaedaengAudit()">
+          <span class="material-symbols-rounded">add_circle</span> ตรวจร้านใหม่
+        </button>
+      </div>
+      <div class="page-eyebrow page-eyebrow-section">
+        <h2 class="page-eyebrow-title">ประวัติการตรวจ</h2>
+      </div>
+      <div id="jaedaeng-list"></div>
+    </div>
+
+    <!-- JAE DAENG AUDIT FORM -->
+    <div id="jaedaeng-audit-screen" style="display:none;">
+      <div class="card jd-form-head">
+        <div class="jd-form-head-row">
+          <label class="jd-form-label">ชื่อสาขา/ร้าน</label>
+          <input type="text" id="jd-store-name" class="jd-form-input" placeholder="เช่น เจ๊แดงสามย่าน — สาขาสามย่าน" oninput="setJDStore('store', this.value)">
+        </div>
+        <div class="jd-form-head-row">
+          <label class="jd-form-label">ผู้ตรวจ</label>
+          <input type="text" id="jd-auditor" class="jd-form-input" placeholder="ชื่อผู้ตรวจ" oninput="setJDStore('auditor', this.value)">
+        </div>
+        <div class="jd-form-head-row">
+          <label class="jd-form-label">วันที่ตรวจ</label>
+          <input type="date" id="jd-date" class="jd-form-input" oninput="setJDStore('date', this.value)">
+        </div>
+      </div>
+      <div id="jaedaeng-sections-container"></div>
+      <div class="card no-print">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn btn-secondary" style="flex:1;min-width:130px;" onclick="cancelJaedaengAudit()">
+            <span class="material-symbols-rounded">arrow_back</span> ยกเลิก
+          </button>
+          <button class="btn btn-success" style="flex:1;min-width:130px;" onclick="submitJaedaengAudit()">
+            <span class="material-symbols-rounded">save</span> บันทึก
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- JAE DAENG DETAIL -->
+    <div id="jaedaeng-detail-screen" style="display:none;">
+      <div class="card summary-hero" id="jd-detail-head">
+        <div class="summary-hero-score">
+          <div class="score-card-pct" id="jd-detail-pct">0.0</div>
+          <div class="score-card-pct-unit">% ผ่านเกณฑ์</div>
+          <div class="score-card-badge summary-tier-badge" id="jd-detail-badge">—</div>
+        </div>
+        <div id="jd-detail-meta" class="summary-meta-list"></div>
+      </div>
+      <div id="jd-detail-content"></div>
+      <div class="card no-print">
+        <button class="btn btn-secondary btn-block" onclick="showJaedaengHub()">
+          <span class="material-symbols-rounded">arrow_back</span> กลับไปประวัติ
+        </button>
+      </div>
+    </div>
   </div>
 
   <!-- Bottom Nav (rendered dynamically per role) -->
@@ -3952,6 +4177,8 @@ let currentAudit = null; // {id, branchInfo, answers, currentSectionIdx, status}
 let allAudits = []; // loaded from storage
 let allDailyChecklists = []; // loaded from storage
 let currentDaily = null; // {id, branchCode, branchName, date, shift, manager, items, ...}
+let currentJDAudit = null; // Jae Daeng audit being filled
+let allJaedaengAudits = []; // loaded from storage
 
 // ============ DAILY CHECKLIST DATA ============
 const DAILY_OPEN = [
@@ -4276,6 +4503,40 @@ async function saveDailyToBackend(daily) {
   }
 }
 
+// Jae Daeng audits — separate collection so Santa Fe data stays untouched
+const JAEDAENG_STORAGE_KEY = 'qa_jaedaeng_v1';
+const JAEDAENG_COLLECTION = 'jaedaengAudits';
+function loadLocalJaedaeng() {
+  try {
+    const raw = localStorage.getItem(JAEDAENG_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch (_) { return []; }
+}
+function saveJaedaengLocal() {
+  try { localStorage.setItem(JAEDAENG_STORAGE_KEY, JSON.stringify(allJaedaengAudits)); } catch (_) {}
+}
+async function loadJaedaengAudits() {
+  if (firebaseDb) {
+    try {
+      const snap = await firebaseDb.collection(JAEDAENG_COLLECTION).get();
+      allJaedaengAudits = snap.docs.map(d => d.data());
+      saveJaedaengLocal();
+      return;
+    } catch (e) {
+      console.warn('Jae Daeng load failed, using local cache', e);
+    }
+  }
+  allJaedaengAudits = loadLocalJaedaeng();
+}
+async function saveJaedaengToBackend(audit) {
+  if (!firebaseDb || !audit || !audit.id) return;
+  try {
+    await firebaseDb.collection(JAEDAENG_COLLECTION).doc(String(audit.id)).set(audit);
+  } catch (e) {
+    console.warn('Jae Daeng Firestore save failed', e);
+  }
+}
+
 function saveCurrentAudit() {
   if (!currentAudit) return;
   const idx = allAudits.findIndex(a => a.id === currentAudit.id);
@@ -4398,7 +4659,7 @@ async function doLogin() {
     currentUser = { code: id, brand: currentBrand, ...user };
   }
 
-  await Promise.all([loadAudits(), loadDailyChecklists()]);
+  await Promise.all([loadAudits(), loadDailyChecklists(), loadJaedaengAudits()]);
   document.getElementById('login-screen').classList.remove('active');
   document.getElementById('app-screen').classList.add('active');
 
@@ -4477,6 +4738,10 @@ function logout() {
 
 // ============ NAV ============
 function routeByRole() {
+  if (currentUser.brand === 'jaedaeng') {
+    showJaedaengHub();
+    return;
+  }
   if (currentUser.role === 'branch') {
     showDashboard();
   } else if (currentUser.role === 'bzm') {
@@ -4513,14 +4778,18 @@ function renderBottomNav() {
     '</div>' +
   '</div>';
   html += '<div class="nav-items">';
-  html += '<button class="bottom-nav-item active" id="nav-dash" onclick="showDashboard()"><span class="material-symbols-rounded">dashboard</span><span>หน้าหลัก</span></button>';
-  // ตรวจสาขา is for branches' BZM only; VP / COO / Admin only review results.
-  if (currentUser.role === 'bzm') {
-    html += '<button class="bottom-nav-item" id="nav-new" onclick="newAudit()"><span class="material-symbols-rounded">add_circle</span><span>ตรวจสาขา</span></button>';
-  }
-  // Open-Close checklist is for branch logins only.
-  if (currentUser.role === 'branch') {
-    html += '<button class="bottom-nav-item" id="nav-daily" onclick="showDailyHub()"><span class="material-symbols-rounded">checklist</span><span>Open-Close</span></button>';
+  if (currentUser.brand === 'jaedaeng') {
+    html += '<button class="bottom-nav-item active" id="nav-dash" onclick="showJaedaengHub()"><span class="material-symbols-rounded">checklist</span><span>ตรวจร้าน</span></button>';
+  } else {
+    html += '<button class="bottom-nav-item active" id="nav-dash" onclick="showDashboard()"><span class="material-symbols-rounded">dashboard</span><span>หน้าหลัก</span></button>';
+    // ตรวจสาขา is for branches' BZM only; VP / COO / Admin only review results.
+    if (currentUser.role === 'bzm') {
+      html += '<button class="bottom-nav-item" id="nav-new" onclick="newAudit()"><span class="material-symbols-rounded">add_circle</span><span>ตรวจสาขา</span></button>';
+    }
+    // Open-Close checklist is for branch logins only.
+    if (currentUser.role === 'branch') {
+      html += '<button class="bottom-nav-item" id="nav-daily" onclick="showDailyHub()"><span class="material-symbols-rounded">checklist</span><span>Open-Close</span></button>';
+    }
   }
   html += '</div>';
   html += '<button class="bottom-nav-item nav-logout-btn" id="nav-logout" onclick="logout()"><span class="material-symbols-rounded">logout</span><span>ออกระบบ</span></button>';
@@ -4534,7 +4803,7 @@ function setActiveNav(id) {
 }
 
 function hideAllScreens() {
-  ['dashboard-screen','info-screen','checklist-screen','summary-screen','daily-hub-screen','daily-form-screen','daily-detail-screen'].forEach(id => {
+  ['dashboard-screen','info-screen','checklist-screen','summary-screen','daily-hub-screen','daily-form-screen','daily-detail-screen','jaedaeng-hub-screen','jaedaeng-audit-screen','jaedaeng-detail-screen'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.style.display = 'none';
   });
@@ -5956,6 +6225,254 @@ function showDailyDetail(id) {
     html += `</div>`;
   });
   document.getElementById('daily-detail-content').innerHTML = html;
+}
+
+// ============ JAE DAENG AUDIT ============
+function showJaedaengHub() {
+  hideAllScreens();
+  document.getElementById('jaedaeng-hub-screen').style.display = 'block';
+  setActiveNav('nav-dash');
+  renderJaedaengList();
+}
+
+function renderJaedaengList() {
+  const list = document.getElementById('jaedaeng-list');
+  const records = (allJaedaengAudits || []).slice().sort((a, b) => (b.submittedAt || b.date || '').localeCompare(a.submittedAt || a.date || ''));
+  if (records.length === 0) {
+    list.innerHTML = `<div class="jd-history-empty">
+      <span class="material-symbols-rounded" style="font-size:40px;opacity:0.5;display:block;margin-bottom:8px;">history</span>
+      ยังไม่มีประวัติการตรวจ
+    </div>`;
+    return;
+  }
+  list.innerHTML = records.map(r => {
+    const tier = r.passPct >= 90 ? 'tier-good' : r.passPct >= 70 ? 'tier-warn' : 'tier-bad';
+    return `<div class="jd-history-card ${tier}" onclick="showJaedaengDetail('${escapeAttr(r.id)}')">
+      <div>
+        <div class="jd-history-name">${escapeHtml(r.storeName || '-')}</div>
+        <div class="jd-history-meta">${escapeHtml(fmtDateDMY(r.date))} · ผู้ตรวจ ${escapeHtml(r.auditor || '-')} · ผ่าน ${r.passCount}/${r.totalCount - r.naCount} ข้อ</div>
+      </div>
+      <div>
+        <div class="jd-history-score">${r.passPct.toFixed(1)}<span class="jd-history-score-unit"> %</span></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function startJaedaengAudit() {
+  const today = todayDateStr();
+  const id = `jd_${Date.now()}`;
+  currentJDAudit = {
+    id,
+    storeName: '',
+    auditor: currentUser.nick || currentUser.name || '',
+    date: today,
+    items: [],
+  };
+  JAEDAENG_CHECKLIST.forEach((sec, sIdx) => {
+    sec.items.forEach((text, iIdx) => {
+      currentJDAudit.items.push({
+        key: `${sIdx}|${iIdx}`,
+        section: sec.name,
+        sectionIdx: sIdx,
+        num: iIdx + 1,
+        text,
+        status: '',
+        note: '',
+      });
+    });
+  });
+  hideAllScreens();
+  document.getElementById('jaedaeng-audit-screen').style.display = 'block';
+  document.getElementById('jd-store-name').value = '';
+  document.getElementById('jd-auditor').value = currentJDAudit.auditor;
+  document.getElementById('jd-date').value = today;
+  renderJaedaengForm();
+}
+
+function setJDStore(field, value) {
+  if (!currentJDAudit) return;
+  if (field === 'store') currentJDAudit.storeName = value;
+  else if (field === 'auditor') currentJDAudit.auditor = value;
+  else if (field === 'date') currentJDAudit.date = value;
+}
+
+function renderJaedaengForm() {
+  const container = document.getElementById('jaedaeng-sections-container');
+  let html = '';
+  JAEDAENG_CHECKLIST.forEach((sec, sIdx) => {
+    const sectionItems = currentJDAudit.items.filter(i => i.sectionIdx === sIdx);
+    const passCount = sectionItems.filter(i => i.status === 'pass').length;
+    const failCount = sectionItems.filter(i => i.status === 'fail').length;
+    const naCount = sectionItems.filter(i => i.status === 'na').length;
+    const doneCount = passCount + failCount + naCount;
+    html += `<div class="jd-section-card">
+      <div class="jd-section-header">
+        <div class="jd-section-name">${escapeHtml(sec.name)}</div>
+        <div class="jd-section-progress">${doneCount}/${sec.items.length}${failCount ? ` · ✗${failCount}` : ''}</div>
+      </div>`;
+    sectionItems.forEach((it, j) => {
+      const idx = currentJDAudit.items.indexOf(it);
+      const isPass = it.status === 'pass';
+      const isFail = it.status === 'fail';
+      const isNA = it.status === 'na';
+      html += `<div class="jd-item ${isPass ? 'is-pass' : ''} ${isFail ? 'is-fail' : ''} ${isNA ? 'is-na' : ''}">
+        <div class="jd-item-q">
+          <span class="jd-item-num">${j + 1}</span>
+          <span class="jd-item-text">${escapeHtml(it.text)}</span>
+        </div>
+        <div class="jd-item-actions">
+          <button type="button" class="jd-choice pass ${isPass ? 'active' : ''}" onclick="setJDAnswer(${idx},'pass')">
+            <span class="material-symbols-rounded">check_circle</span><span>ผ่าน</span>
+          </button>
+          <button type="button" class="jd-choice fail ${isFail ? 'active' : ''}" onclick="setJDAnswer(${idx},'fail')">
+            <span class="material-symbols-rounded">cancel</span><span>ไม่ผ่าน</span>
+          </button>
+          <button type="button" class="jd-choice na ${isNA ? 'active' : ''}" onclick="setJDAnswer(${idx},'na')">
+            <span class="material-symbols-rounded">remove_circle</span><span>N/A</span>
+          </button>
+        </div>
+        ${isFail ? `<input type="text" class="jd-note-input" placeholder="หมายเหตุ / Action" value="${escapeAttr(it.note || '')}" oninput="setJDNote(${idx}, this.value)">` : ''}
+      </div>`;
+    });
+    html += `</div>`;
+  });
+  container.innerHTML = html;
+}
+
+function setJDAnswer(idx, value) {
+  if (!currentJDAudit) return;
+  currentJDAudit.items[idx].status = value;
+  if (value !== 'fail') currentJDAudit.items[idx].note = '';
+  renderJaedaengForm();
+}
+
+function setJDNote(idx, value) {
+  if (!currentJDAudit) return;
+  currentJDAudit.items[idx].note = value;
+}
+
+function cancelJaedaengAudit() {
+  if (!confirm('ยกเลิกการตรวจ? ข้อมูลที่กรอกจะไม่ถูกบันทึก')) return;
+  currentJDAudit = null;
+  showJaedaengHub();
+}
+
+async function submitJaedaengAudit() {
+  if (!currentJDAudit) return;
+  if (!currentJDAudit.storeName || !currentJDAudit.storeName.trim()) {
+    showModal('กรุณากรอกชื่อสาขา', 'ระบุชื่อสาขาก่อนบันทึก');
+    return;
+  }
+  const items = currentJDAudit.items;
+  const totalCount = items.length;
+  const passCount = items.filter(i => i.status === 'pass').length;
+  const failCount = items.filter(i => i.status === 'fail').length;
+  const naCount = items.filter(i => i.status === 'na').length;
+  const pending = totalCount - passCount - failCount - naCount;
+  if (pending > 0) {
+    if (!confirm(`ยังมี ${pending} ข้อที่ยังไม่ตอบ ต้องการบันทึกเลยหรือไม่?`)) return;
+  }
+  const denom = totalCount - naCount;
+  const passPct = denom > 0 ? (passCount / denom) * 100 : 0;
+  const record = {
+    id: currentJDAudit.id,
+    brand: 'jaedaeng',
+    storeName: currentJDAudit.storeName.trim(),
+    auditor: (currentJDAudit.auditor || '').trim() || '-',
+    date: currentJDAudit.date || todayDateStr(),
+    items: items,
+    passCount, failCount, naCount, totalCount,
+    passPct,
+    submittedAt: new Date().toISOString(),
+    submittedBy: currentUser.code,
+    submittedByName: currentUser.nick || currentUser.name,
+  };
+  const idx = allJaedaengAudits.findIndex(a => a.id === record.id);
+  if (idx >= 0) allJaedaengAudits[idx] = record;
+  else allJaedaengAudits.push(record);
+  saveJaedaengLocal();
+  saveJaedaengToBackend(record);
+  currentJDAudit = null;
+  showModal('บันทึกสำเร็จ', `ผ่านเกณฑ์ ${passPct.toFixed(1)}% (ผ่าน ${passCount} · ไม่ผ่าน ${failCount} · N/A ${naCount})`);
+  showJaedaengHub();
+}
+
+function showJaedaengDetail(id) {
+  const r = allJaedaengAudits.find(x => x.id === id);
+  if (!r) return;
+  hideAllScreens();
+  document.getElementById('jaedaeng-detail-screen').style.display = 'block';
+
+  const tierClass = r.passPct >= 90 ? 'tier-excellent' : r.passPct >= 70 ? 'tier-improve' : 'tier-breakdown';
+  const badgeText = r.passPct >= 90 ? 'ครบ Complete · ดีเยี่ยม' : r.passPct >= 70 ? 'ผ่านเกณฑ์ Pass' : `เร่งด่วน Critical · ${r.failCount} ไม่ผ่าน`;
+  document.getElementById('jd-detail-head').className = 'card summary-hero combined-card ' + tierClass;
+  document.getElementById('jd-detail-pct').textContent = r.passPct.toFixed(1);
+  document.getElementById('jd-detail-badge').textContent = badgeText;
+  document.getElementById('jd-detail-meta').innerHTML = `
+    <div class="summary-meta-row span-all primary" data-icon="storefront">
+      <span class="material-symbols-rounded">storefront</span>
+      <div class="summary-meta-row-body">
+        <div class="summary-meta-row-label">สาขา</div>
+        <div class="summary-meta-row-value">${escapeHtml(r.storeName)}</div>
+      </div>
+    </div>
+    <div class="summary-meta-row" data-icon="event">
+      <span class="material-symbols-rounded">event</span>
+      <div class="summary-meta-row-body">
+        <div class="summary-meta-row-label">วันที่ตรวจ</div>
+        <div class="summary-meta-row-value">${escapeHtml(fmtDateDMY(r.date))}</div>
+      </div>
+    </div>
+    <div class="summary-meta-row" data-icon="person">
+      <span class="material-symbols-rounded">person</span>
+      <div class="summary-meta-row-body">
+        <div class="summary-meta-row-label">ผู้ตรวจ</div>
+        <div class="summary-meta-row-value">${escapeHtml(r.auditor)}</div>
+      </div>
+    </div>
+    <div class="summary-meta-row" data-icon="fact_check">
+      <span class="material-symbols-rounded">fact_check</span>
+      <div class="summary-meta-row-body">
+        <div class="summary-meta-row-label">สถานะรายการ</div>
+        <div class="summary-meta-row-value">ผ่าน ${r.passCount} · ไม่ผ่าน ${r.failCount} · N/A ${r.naCount} · ทั้งหมด ${r.totalCount}</div>
+      </div>
+    </div>
+  `;
+
+  const bySection = {};
+  (r.items || []).forEach(it => {
+    if (!bySection[it.section]) bySection[it.section] = [];
+    bySection[it.section].push(it);
+  });
+  let html = '';
+  Object.keys(bySection).forEach(secName => {
+    const items = bySection[secName];
+    const secPass = items.filter(i => i.status === 'pass').length;
+    const secFail = items.filter(i => i.status === 'fail').length;
+    html += `<div class="detail-section-card">
+      <div class="detail-section-head">
+        <div class="detail-section-name">${escapeHtml(secName)}</div>
+        <div class="detail-section-stat">
+          <span class="ds-chip ds-chip-pass">${secPass}</span>
+          ${secFail ? `<span class="ds-chip ds-chip-fail">${secFail}</span>` : ''}
+          <span class="ds-chip ds-chip-total">${items.length}</span>
+        </div>
+      </div>`;
+    items.forEach((it, j) => {
+      const status = it.status || 'pending';
+      const pillLabel = status === 'pass' ? 'ผ่าน' : status === 'fail' ? 'ไม่ผ่าน' : status === 'na' ? 'N/A' : 'รอ';
+      html += `<div class="detail-item is-${status}">
+        <span class="detail-status-pill">${pillLabel}</span>
+        <div class="detail-item-body">
+          <div class="detail-item-text"><b>${j+1}.</b> ${escapeHtml(it.text)}</div>
+          ${it.note ? `<div class="detail-item-note"><span class="material-symbols-rounded">edit_note</span>${escapeHtml(it.note)}</div>` : ''}
+        </div>
+      </div>`;
+    });
+    html += `</div>`;
+  });
+  document.getElementById('jd-detail-content').innerHTML = html;
 }
 
 // Init
