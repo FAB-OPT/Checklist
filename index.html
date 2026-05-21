@@ -4100,8 +4100,9 @@ body:has(#login-screen.active) {
       <div class="card jd-form-head">
         <div class="jd-form-head-row">
           <label class="jd-form-label">สาขา</label>
-          <input type="text" id="jd-store-name" class="jd-form-input" list="jd-branch-list" placeholder="พิมพ์หรือเลือกสาขา" oninput="setJDStore('store', this.value)">
-          <datalist id="jd-branch-list"></datalist>
+          <select id="jd-store-name" class="jd-form-input" onchange="setJDStore('store', this.value)">
+            <option value="">— เลือกสาขา —</option>
+          </select>
         </div>
         <div class="jd-form-head-row" id="jd-bzm-row" style="display:none;">
           <label class="jd-form-label">ทีม BZM</label>
@@ -6523,12 +6524,13 @@ function startJaedaengAudit() {
   });
   hideAllScreens();
   document.getElementById('jaedaeng-audit-screen').style.display = 'block';
-  document.getElementById('jd-store-name').value = '';
+  // Populate branch dropdown
+  const select = document.getElementById('jd-store-name');
+  select.innerHTML = '<option value="">— เลือกสาขา —</option>' +
+    JAEDAENG_BRANCHES.map(b => `<option value="${escapeAttr(b.name)}">${escapeHtml(b.name)}</option>`).join('');
+  select.value = '';
   document.getElementById('jd-auditor').value = currentJDAudit.auditor;
   document.getElementById('jd-date').value = today;
-  // Populate branch datalist
-  const list = document.getElementById('jd-branch-list');
-  list.innerHTML = JAEDAENG_BRANCHES.map(b => `<option value="${escapeAttr(b.name)}">`).join('');
   document.getElementById('jd-bzm-row').style.display = 'none';
   renderJaedaengForm();
 }
