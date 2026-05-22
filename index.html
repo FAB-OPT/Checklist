@@ -4460,6 +4460,13 @@ body:has(#login-screen.active) {
         </div>
         <div id="jd-dash-by-bzm"></div>
       </div>
+      <div class="card">
+        <div class="card-header">
+          <span class="material-symbols-rounded" style="color:var(--text-secondary);">history</span>
+          <h2>ผลตรวจล่าสุด — คลิกเพื่อดูรายละเอียด</h2>
+        </div>
+        <div id="jd-dash-recent"></div>
+      </div>
     </div>
 
     <!-- JAE DAENG HUB -->
@@ -7203,12 +7210,14 @@ function renderJaedaengDashboard() {
   const branchesEl = document.getElementById('jd-dash-branches');
   const topFailsEl = document.getElementById('jd-dash-top-fails');
   const byBzmEl = document.getElementById('jd-dash-by-bzm');
+  const recentEl = document.getElementById('jd-dash-recent');
 
   if (records.length === 0) {
     kpis.innerHTML = '';
     branchesEl.innerHTML = '<div class="jd-dash-empty">ยังไม่มีข้อมูลการตรวจ</div>';
     topFailsEl.innerHTML = '<div class="jd-dash-empty">ยังไม่มีข้อมูลการตรวจ</div>';
     byBzmEl.innerHTML = '<div class="jd-dash-empty">ยังไม่มีข้อมูลการตรวจ</div>';
+    if (recentEl) recentEl.innerHTML = '<div class="jd-dash-empty">ยังไม่มีข้อมูลการตรวจ</div>';
     return;
   }
 
@@ -7299,6 +7308,20 @@ function renderJaedaengDashboard() {
     </div>`;
   }).join('');
 
+  // Recent 5 — clickable to detail
+  if (recentEl) {
+    const recent = records.slice().sort((a, b) => (b.submittedAt || b.date || '').localeCompare(a.submittedAt || a.date || '')).slice(0, 5);
+    recentEl.innerHTML = recent.map(r => {
+      const tier = r.passPct >= 90 ? 'is-good' : r.passPct < 70 ? 'is-bad' : 'is-warn';
+      return `<div class="jd-dash-row" onclick="showJaedaengDetail('${escapeAttr(r.id)}')" style="cursor:pointer;">
+        <div>
+          <div class="jd-dash-row-name">${escapeHtml(r.storeName)}</div>
+          <div class="jd-dash-row-meta">${escapeHtml(fmtDateDMY(r.date))}${r.time ? ' · ' + escapeHtml(r.time) : ''} · ${escapeHtml(r.auditor || '-')}</div>
+        </div>
+        <div class="jd-dash-row-value ${tier}">${r.passPct.toFixed(1)}%</div>
+      </div>`;
+    }).join('');
+  }
 }
 
 function showJaedaengHub() {
