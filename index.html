@@ -4427,16 +4427,9 @@ body:has(#login-screen.active) {
       <div class="card">
         <div class="card-header">
           <span class="material-symbols-rounded" style="color:#0E7490;">groups</span>
-          <h2>ความถี่ในการตรวจ ต่อ BZM</h2>
+          <h2>สรุปต่อโซน (BZM)</h2>
         </div>
         <div id="jd-dash-by-bzm"></div>
-      </div>
-      <div class="card">
-        <div class="card-header">
-          <span class="material-symbols-rounded" style="color:var(--text-secondary);">history</span>
-          <h2>ประวัติการตรวจล่าสุด</h2>
-        </div>
-        <div id="jd-dash-recent"></div>
       </div>
     </div>
 
@@ -4514,9 +4507,14 @@ body:has(#login-screen.active) {
       </div>
       <div id="jd-detail-content"></div>
       <div class="card no-print">
-        <button class="btn btn-secondary btn-block" onclick="showJaedaengHub()">
-          <span class="material-symbols-rounded">arrow_back</span> กลับไปประวัติ
-        </button>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn btn-secondary" style="flex:1;min-width:130px;" onclick="showJaedaengHub()">
+            <span class="material-symbols-rounded">arrow_back</span> กลับไปประวัติ
+          </button>
+          <button class="btn btn-danger" id="jd-detail-delete-btn" style="flex:1;min-width:130px;display:none;" onclick="deleteJaedaengAudit()">
+            <span class="material-symbols-rounded">delete</span> ลบผลตรวจ
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -4672,13 +4670,13 @@ const JAEDAENG_BRANCHES = [
   { name: "ร้านส้มตำเจ๊แดง (ทากะทาวน์)",                    manager: "ขวัญดาว",  managerNick: "พี่ดาว" },
   { name: "ร้านส้มตำเจ๊แดง (Emporium)",                     manager: "ขวัญดาว",  managerNick: "พี่ดาว" },
   { name: "ร้านส้มตำเจ๊แดง (True Digital Park)",            manager: "ขวัญดาว",  managerNick: "พี่ดาว" },
-  { name: "ร้านส้มตำเจ๊แดง (For you park บางน…)",          manager: "ขวัญดาว",  managerNick: "พี่ดาว" },
-  { name: "ร้านส้มตำเจ๊แดง (เดอะมอลล์ งามวงศ์…)",          manager: "ขวัญดาว",  managerNick: "พี่ดาว" },
+  { name: "ร้านส้มตำเจ๊แดง (For you park บางนา)",          manager: "ขวัญดาว",  managerNick: "พี่ดาว" },
+  { name: "ร้านส้มตำเจ๊แดง (เดอะมอลล์ งามวงศ์วาน)",        manager: "ขวัญดาว",  managerNick: "พี่ดาว" },
   { name: "ร้านส้มตำเจ๊แดง (เซ็นทรัลอีสต์วิลล์)",            manager: "ขวัญดาว",  managerNick: "พี่ดาว" },
   // พิมพ์พิชชา (พี่อ้อย)
-  { name: "ร้านส้มตำเจ๊แดง (Charn at the Aveni…)",          manager: "พิมพ์พิชชา", managerNick: "พี่อ้อย" },
+  { name: "ร้านส้มตำเจ๊แดง (Charn at the Avenue)",           manager: "พิมพ์พิชชา", managerNick: "พี่อ้อย" },
   { name: "ร้านส้มตำเจ๊แดง (ปตท. สายไหม 56)",               manager: "พิมพ์พิชชา", managerNick: "พี่อ้อย" },
-  { name: "ร้านส้มตำเจ๊แดง (บางจากรังสิต คลอ…)",            manager: "พิมพ์พิชชา", managerNick: "พี่อ้อย" },
+  { name: "ร้านส้มตำเจ๊แดง (บางจากรังสิต คลองสอง)",         manager: "พิมพ์พิชชา", managerNick: "พี่อ้อย" },
   { name: "ร้านส้มตำเจ๊แดง (ฟิวเจอร์ปาร์ค รังสิต)",          manager: "พิมพ์พิชชา", managerNick: "พี่อ้อย" },
   { name: "ร้านส้มตำเจ๊แดง (เมืองทองธานี)",                  manager: "พิมพ์พิชชา", managerNick: "พี่อ้อย" },
   { name: "ร้านส้มตำเจ๊แดง (เทพารักษ์-สายไหม)",              manager: "พิมพ์พิชชา", managerNick: "พี่อ้อย" },
@@ -4689,12 +4687,12 @@ const JAEDAENG_BRANCHES = [
   { name: "4018 เทอมินอล21 พระราม 3 (เจ๊แดง จุ่มนัว)",       manager: "พิมพ์พิชชา", managerNick: "พี่อ้อย" },
   // จุรีพร (พี่อีฟ)
   { name: "ร้านส้มตำเจ๊แดง (S-Oasis)",                       manager: "จุรีพร",     managerNick: "พี่อีฟ" },
-  { name: "ร้านส้มตำเจ๊แดง (ท็อปส์ เซ็นทรัล ลาด…)",          manager: "จุรีพร",     managerNick: "พี่อีฟ" },
-  { name: "ร้านส้มตำเจ๊แดง (Little Walk Rattana…)",          manager: "จุรีพร",     managerNick: "พี่อีฟ" },
-  { name: "ร้านส้มตำเจ๊แดง (The Circle ราชพฤก…)",            manager: "จุรีพร",     managerNick: "พี่อีฟ" },
+  { name: "ร้านส้มตำเจ๊แดง (ท็อปส์ เซ็นทรัลลาดพร้าว)",       manager: "จุรีพร",     managerNick: "พี่อีฟ" },
+  { name: "ร้านส้มตำเจ๊แดง (Little Walk รัตนาธิเบศร์)",      manager: "จุรีพร",     managerNick: "พี่อีฟ" },
+  { name: "ร้านส้มตำเจ๊แดง (The Circle ราชพฤกษ์)",          manager: "จุรีพร",     managerNick: "พี่อีฟ" },
   { name: "ร้านส้มตำเจ๊แดง (ไอคอนสยาม)",                     manager: "จุรีพร",     managerNick: "พี่อีฟ" },
   { name: "ร้านส้มตำเจ๊แดง (กรุงเทพกริฑา)",                   manager: "จุรีพร",     managerNick: "พี่อีฟ" },
-  { name: "ร้านส้มตำเจ๊แดง (ปั๊มบางจาก รามคำ…)",            manager: "จุรีพร",     managerNick: "พี่อีฟ" },
+  { name: "ร้านส้มตำเจ๊แดง (ปั๊มบางจาก รามคำแหง)",          manager: "จุรีพร",     managerNick: "พี่อีฟ" },
   { name: "ร้านส้มตำเจ๊แดง (เสนานิคม)",                       manager: "จุรีพร",     managerNick: "พี่อีฟ" },
   { name: "4001 แฟชั่น ไอส์แลนด์ (เจ๊แดง จุ่มนัว)",          manager: "จุรีพร",     managerNick: "พี่อีฟ" },
   { name: "4005 ซีคอนบางแค (เจ๊แดง จุ่มนัว)",                manager: "จุรีพร",     managerNick: "พี่อีฟ" },
@@ -7060,12 +7058,18 @@ function showJaedaengDashboard() {
   renderJaedaengDashboard();
 }
 
-// BZM only sees the stores they manage; higher roles see everything.
+// BZM sees the stores they manage AND any audit they personally conducted;
+// higher roles see everything.
 function getVisibleJaedaengAudits() {
   const all = (allJaedaengAudits || []).slice();
   if (!currentUser) return all;
   if (currentUser.role === 'bzm') {
-    return all.filter(r => r.bzm === currentUser.name || r.bzmNick === currentUser.nick);
+    return all.filter(r =>
+      r.bzm === currentUser.name ||
+      r.bzmNick === currentUser.nick ||
+      r.auditorCode === currentUser.code ||
+      r.submittedBy === currentUser.code
+    );
   }
   return all;
 }
@@ -7160,14 +7164,12 @@ function renderJaedaengDashboard() {
   const branchesEl = document.getElementById('jd-dash-branches');
   const topFailsEl = document.getElementById('jd-dash-top-fails');
   const byBzmEl = document.getElementById('jd-dash-by-bzm');
-  const recentEl = document.getElementById('jd-dash-recent');
 
   if (records.length === 0) {
     kpis.innerHTML = '';
     branchesEl.innerHTML = '<div class="jd-dash-empty">ยังไม่มีข้อมูลการตรวจ</div>';
     topFailsEl.innerHTML = '<div class="jd-dash-empty">ยังไม่มีข้อมูลการตรวจ</div>';
     byBzmEl.innerHTML = '<div class="jd-dash-empty">ยังไม่มีข้อมูลการตรวจ</div>';
-    recentEl.innerHTML = '<div class="jd-dash-empty">ยังไม่มีข้อมูลการตรวจ</div>';
     return;
   }
 
@@ -7258,26 +7260,6 @@ function renderJaedaengDashboard() {
     </div>`;
   }).join('');
 
-  // Recent 5
-  const recent = records.slice().sort((a, b) => (b.submittedAt || b.date || '').localeCompare(a.submittedAt || a.date || '')).slice(0, 5);
-  recentEl.innerHTML = recent.map(r => {
-    const tier = r.passPct >= 90 ? 'is-good' : r.passPct < 70 ? 'is-bad' : 'is-warn';
-    let gpsTag = '';
-    if (r.gps) {
-      const matched = r.gps.nearestBranch && jdBranchMatchesLocation(r.storeName || '', r.gps.nearestBranch);
-      const cls = matched ? 'is-good' : 'is-bad';
-      gpsTag = ` · <span style="font-weight:800;color:${matched ? 'var(--success)' : 'var(--danger)'};">📍 ${(r.gps.nearestDistance || 0).toLocaleString()}ม. ${matched ? '(ตรง)' : '(ไม่ตรง)'}</span>`;
-    } else {
-      gpsTag = ' · <span style="font-weight:800;color:var(--text-tertiary);">📍 —</span>';
-    }
-    return `<div class="jd-dash-row" onclick="showJaedaengDetail('${escapeAttr(r.id)}')" style="cursor:pointer;">
-      <div>
-        <div class="jd-dash-row-name">${escapeHtml(r.storeName)}</div>
-        <div class="jd-dash-row-meta">${escapeHtml(fmtDateDMY(r.date))}${r.time ? ' · ' + escapeHtml(r.time) : ''} · ${escapeHtml(r.auditor || '-')}${gpsTag}</div>
-      </div>
-      <div class="jd-dash-row-value ${tier}">${r.passPct.toFixed(1)}%</div>
-    </div>`;
-  }).join('');
 }
 
 function showJaedaengHub() {
@@ -7364,10 +7346,14 @@ function _startJaedaengAuditWithGps(gps) {
   const now = new Date();
   const hhmm = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
   const id = `jd_${Date.now()}`;
+  // Display the auditor as "ชื่อจริง (ชื่อเล่น)" when both are known.
+  const aName = currentUser.name || '';
+  const aNick = currentUser.nick || '';
+  const auditorDisplay = aName && aNick && aName !== aNick ? `${aName} (${aNick})` : (aName || aNick || '');
   currentJDAudit = {
     id,
     storeName: '',
-    auditor: currentUser.nick || currentUser.name || '',
+    auditor: auditorDisplay,
     auditorCode: currentUser.code || '',
     date: today,
     time: hhmm,
@@ -7388,10 +7374,8 @@ function _startJaedaengAuditWithGps(gps) {
       });
     });
   });
-  // Pick photo-required items: at least one from EVERY section, then fill
-  // the rest with random picks from any section, capped at 10 total.
-  // Items in JAEDAENG_PHOTO_EXEMPT are never eligible.
-  const MAX_REQUIRED = 10;
+  // Pick exactly one random photo-required item per section. Items in
+  // JAEDAENG_PHOTO_EXEMPT are never eligible.
   const isEligible = idx => !JAEDAENG_PHOTO_EXEMPT.has(currentJDAudit.items[idx].text);
   const bySection = {};
   currentJDAudit.items.forEach((it, idx) => {
@@ -7401,21 +7385,10 @@ function _startJaedaengAuditWithGps(gps) {
   });
   const required = new Set();
   Object.values(bySection).forEach(sectionItems => {
-    if (required.size >= MAX_REQUIRED || sectionItems.length === 0) return;
+    if (sectionItems.length === 0) return;
     const pick = sectionItems[Math.floor(Math.random() * sectionItems.length)];
     required.add(pick);
   });
-  const remaining = currentJDAudit.items
-    .map((_, i) => i)
-    .filter(i => !required.has(i) && isEligible(i));
-  for (let i = remaining.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [remaining[i], remaining[j]] = [remaining[j], remaining[i]];
-  }
-  for (const i of remaining) {
-    if (required.size >= MAX_REQUIRED) break;
-    required.add(i);
-  }
   currentJDAudit.requiredPhotos = Array.from(required).sort((a, b) => a - b);
   hideAllScreens();
   document.getElementById('jaedaeng-audit-screen').style.display = 'block';
@@ -7432,9 +7405,7 @@ function _startJaedaengAuditWithGps(gps) {
   zoneOrder.forEach(z => {
     opts += `<optgroup label="◆ โซน ${escapeHtml(z)}">`;
     zones[z].forEach(b => {
-      // Drop the "ร้านส้มตำเจ๊แดง" prefix so the dropdown is easier to scan.
-      const trimmed = b.name.replace(/^ร้านส้มตำเจ๊แดง\s*/, '');
-      opts += `<option value="${escapeAttr(b.name)}">${escapeHtml(trimmed)}</option>`;
+      opts += `<option value="${escapeAttr(b.name)}">${escapeHtml(b.name)}</option>`;
     });
     opts += '</optgroup>';
   });
@@ -7487,7 +7458,15 @@ function setJDStore(field, value) {
         const distTxt = g.nearestBranch
           ? `GPS ห่าง ${(g.nearestDistance || 0).toLocaleString()} ม.`
           : 'GPS อยู่นอกรัศมีสาขา';
-        showModalHtml('⚠️ ตำแหน่งไม่ตรงกับสาขา', `${distTxt} — ตรวจต่อได้`);
+        showModalHtml('⚠️ ตำแหน่งไม่ตรงกับสาขา', `${distTxt}<br><br><b>ยืนยันว่าตรวจสาขานี้จริงหรือไม่?</b><br>ถ้าใช่ กด "ยืนยัน" เพื่อตรวจต่อ`);
+        // Tweak button label to "ยืนยัน" while this confirm-style modal is open
+        const okBtn = document.getElementById('modal-ok');
+        if (okBtn) {
+          const orig = okBtn.textContent;
+          okBtn.textContent = 'ยืนยัน';
+          const restore = () => { okBtn.textContent = orig; okBtn.removeEventListener('click', restore); };
+          okBtn.addEventListener('click', restore);
+        }
       }
     }
   }
@@ -7853,7 +7832,15 @@ async function submitJaedaengAudit() {
     return !it || !it.photos || it.photos.length === 0;
   });
   if (missing.length > 0) {
-    showModal('ยังขาดรูปหลักฐาน', `มี ${missing.length} ข้อที่ต้องแนบรูปแต่ยังไม่ได้แนบ — เลื่อนไปดูข้อที่มีกรอบส้ม`);
+    showModal('ยังขาดรูปหลักฐาน', `มี ${missing.length} ข้อที่ต้องแนบรูปแต่ยังไม่ได้แนบ`);
+    return;
+  }
+  // Every "fail" item must have at least one photo
+  const failsWithoutPhoto = currentJDAudit.items.filter(it =>
+    it.status === 'fail' && (!it.photos || it.photos.length === 0)
+  );
+  if (failsWithoutPhoto.length > 0) {
+    showModal('ข้อไม่ผ่านต้องแนบรูป', `มี ${failsWithoutPhoto.length} ข้อที่ตอบ "ไม่ผ่าน" แต่ยังไม่ได้แนบรูปหลักฐาน — ถ่ายรูปก่อนแล้วบันทึก`);
     return;
   }
   const items = currentJDAudit.items;
@@ -7896,11 +7883,41 @@ async function submitJaedaengAudit() {
   showJaedaengHub();
 }
 
+let currentJDDetailId = null;
+
+async function deleteJaedaengAudit() {
+  if (!currentJDDetailId) return;
+  if (!currentUser || currentUser.role !== 'admin') {
+    showModal('ไม่มีสิทธิ์ลบ', 'เฉพาะ Admin เท่านั้นที่ลบผลตรวจได้');
+    return;
+  }
+  if (!confirm('ลบผลตรวจนี้? การดำเนินการนี้ไม่สามารถย้อนกลับได้')) return;
+  const id = currentJDDetailId;
+  allJaedaengAudits = allJaedaengAudits.filter(r => r.id !== id);
+  saveJaedaengLocal();
+  if (firebaseDb && !testMode) {
+    try {
+      await firebaseDb.collection(JAEDAENG_COLLECTION).doc(String(id)).delete();
+    } catch (e) {
+      console.warn('Firestore delete failed', e);
+    }
+  }
+  currentJDDetailId = null;
+  showJaedaengHub();
+}
+
 function showJaedaengDetail(id) {
   const r = allJaedaengAudits.find(x => x.id === id);
   if (!r) return;
+  currentJDDetailId = id;
   hideAllScreens();
   document.getElementById('jaedaeng-detail-screen').style.display = 'block';
+  // Show the delete button only for admin
+  const delBtn = document.getElementById('jd-detail-delete-btn');
+  if (delBtn) delBtn.style.display = (currentUser && currentUser.role === 'admin') ? '' : 'none';
+  // Build lightbox source list of every photo URL in this audit
+  lightboxImages = [];
+  (r.items || []).forEach(it => (it.photos || []).forEach(p => lightboxImages.push(p)));
 
   const tierClass = r.passPct >= 90 ? 'tier-excellent' : r.passPct >= 70 ? 'tier-improve' : 'tier-breakdown';
   const badgeText = r.passPct >= 90 ? 'ครบ Complete · ดีเยี่ยม' : r.passPct >= 70 ? 'ผ่านเกณฑ์ Pass' : `เร่งด่วน Critical · ${r.failCount} ไม่ผ่าน`;
@@ -7979,9 +7996,10 @@ function showJaedaengDetail(id) {
       const status = it.status || 'pending';
       const pillLabel = status === 'pass' ? 'ผ่าน' : status === 'fail' ? 'ไม่ผ่าน' : status === 'na' ? 'N/A' : 'รอ';
       const photos = it.photos || [];
-      const photosHtml = photos.length ? '<div class="detail-photos">' + photos.map(p =>
-        `<button type="button" class="detail-photo-btn"><img src="${p}" alt=""></button>`
-      ).join('') + '</div>' : (r.photosPurgedAt && (it.status === 'fail' || (r.requiredPhotos || []).map(i => (r.items||[])[i] && r.items[i].key).includes(it.key))
+      const photosHtml = photos.length ? '<div class="detail-photos">' + photos.map(p => {
+        const lbIdx = lightboxImages.indexOf(p);
+        return `<button type="button" class="detail-photo-btn" onclick="openLightbox(${lbIdx})"><img src="${p}" alt=""><span class="detail-photo-zoom"><span class="material-symbols-rounded">zoom_in</span></span></button>`;
+      }).join('') + '</div>' : (r.photosPurgedAt && (it.status === 'fail' || (r.requiredPhotos || []).map(i => (r.items||[])[i] && r.items[i].key).includes(it.key))
         ? '<div class="detail-item-note" style="background:var(--surface-2);color:var(--text-tertiary);border-color:var(--border);"><span class="material-symbols-rounded">photo_camera</span>รูปถูกลบหลังเก็บครบ 45 วัน</div>'
         : '');
       html += `<div class="detail-item is-${status}">
