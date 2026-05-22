@@ -846,6 +846,35 @@ body {
 .modal h3 { font-size: 18px; font-weight: 800; margin-bottom: 12px; }
 .modal-actions { display: flex; gap: 10px; margin-top: 18px; }
 
+/* Centered warning-style modal body (used by the GPS mismatch confirm) */
+.modal:has(.modal-warn-body) h3 { text-align: center; }
+.modal-warn-body { text-align: center; padding: 4px 8px 0; }
+.modal-warn-icon {
+  width: 76px; height: 76px;
+  margin: 0 auto 14px;
+  border-radius: 50%;
+  background: var(--warning-bg);
+  display: flex; align-items: center; justify-content: center;
+}
+.modal-warn-icon .material-symbols-rounded {
+  font-size: 42px; color: var(--warning);
+}
+.modal-warn-dist {
+  font-size: 14px; font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 14px;
+}
+.modal-warn-dist b { font-weight: 900; color: var(--text); }
+.modal-warn-q {
+  font-size: 16px; font-weight: 900;
+  color: var(--text);
+}
+.modal-warn-hint {
+  font-size: 12px; font-weight: 700;
+  color: var(--text-tertiary);
+  margin-top: 4px;
+}
+
 /* Welcome popup — emoji + greeting + role/name + OK */
 .welcome-modal {
   background: var(--surface); border-radius: 28px;
@@ -7392,19 +7421,22 @@ function _startJaedaengAuditWithGps(gps) {
   currentJDAudit.requiredPhotos = Array.from(required).sort((a, b) => a - b);
   hideAllScreens();
   document.getElementById('jaedaeng-audit-screen').style.display = 'block';
-  // Populate branch dropdown — group stores by their BZM zone
+  // Populate branch dropdown — group stores by their BZM zone, label as
+  // "โซน <full name> (<nick>)" so the zone owner is unambiguous.
   const select = document.getElementById('jd-store-name');
   const zones = {};
   const zoneOrder = [];
   JAEDAENG_BRANCHES.forEach(b => {
-    const key = b.managerNick ? `${b.managerNick} (${b.manager})` : (b.manager || 'อื่นๆ');
-    if (!zones[key]) { zones[key] = []; zoneOrder.push(key); }
-    zones[key].push(b);
+    const key = b.manager || b.managerNick || 'อื่นๆ';
+    if (!zones[key]) { zones[key] = { items: [], nick: b.managerNick || '' }; zoneOrder.push(key); }
+    zones[key].items.push(b);
   });
   let opts = '<option value="">— เลือกสาขา —</option>';
   zoneOrder.forEach(z => {
-    opts += `<optgroup label="◆ โซน ${escapeHtml(z)}">`;
-    zones[z].forEach(b => {
+    const zoneData = zones[z];
+    const label = zoneData.nick ? `โซน ${z} (${zoneData.nick})` : `โซน ${z}`;
+    opts += `<optgroup label="${escapeAttr(label)}">`;
+    zoneData.items.forEach(b => {
       opts += `<option value="${escapeAttr(b.name)}">${escapeHtml(b.name)}</option>`;
     });
     opts += '</optgroup>';
@@ -7456,9 +7488,14 @@ function setJDStore(field, value) {
       const within = g.nearby500.some(b => jdBranchMatchesLocation(value, b.name));
       if (!within) {
         const distTxt = g.nearestBranch
-          ? `GPS ห่าง ${(g.nearestDistance || 0).toLocaleString()} ม.`
+          ? `GPS ห่าง <b>${(g.nearestDistance || 0).toLocaleString()}</b> ม.`
           : 'GPS อยู่นอกรัศมีสาขา';
-        showModalHtml('⚠️ ตำแหน่งไม่ตรงกับสาขา', `${distTxt}<br><br><b>ยืนยันว่าตรวจสาขานี้จริงหรือไม่?</b><br>ถ้าใช่ กด "ยืนยัน" เพื่อตรวจต่อ`);
+        showModalHtml('ตำแหน่งไม่ตรงกับสาขา', `<div class="modal-warn-body">
+          <div class="modal-warn-icon"><span class="material-symbols-rounded">wrong_location</span></div>
+          <div class="modal-warn-dist">${distTxt}</div>
+          <div class="modal-warn-q">ยืนยันว่าตรวจสาขานี้จริงหรือไม่?</div>
+          <div class="modal-warn-hint">ถ้าใช่ กด "ยืนยัน" เพื่อตรวจต่อ</div>
+        </div>`);
         // Tweak button label to "ยืนยัน" while this confirm-style modal is open
         const okBtn = document.getElementById('modal-ok');
         if (okBtn) {
