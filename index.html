@@ -4419,6 +4419,10 @@ body:has(#login-screen.active) {
           <label class="jd-form-label">เวลาที่ตรวจ <span class="req">*</span></label>
           <input type="time" id="jd-time" class="jd-form-input" onchange="setJDStore('time', this.value)">
         </div>
+        <div class="jd-form-head-row" id="jd-gps-row" style="display:none;">
+          <label class="jd-form-label">ตำแหน่ง GPS</label>
+          <div class="jd-form-static" id="jd-gps-display">—</div>
+        </div>
       </div>
       <div class="jd-section-tabs" id="jd-section-tabs"></div>
       <div id="jaedaeng-sections-container"></div>
@@ -4770,6 +4774,82 @@ const DAILY_CLOSE = [
     "จุดเคลียร์จานสะอาด",
   ]},
 ];
+
+// ============ JAE DAENG BRANCH LOCATIONS ============
+// Coordinates parsed from "Location  Jaedang Samyan.xlsx". 49 of 53 branches.
+// Missing coords: สยามพารากอน, ปั๊มปตท.พรานนก, เซ็นทรัลอีสวิลล์, ปตท.พระราม 4.
+const JAEDAENG_LOCATIONS = [
+  { name: "ธนิยะ",                                lat: 13.7301775, lng: 100.5307144 },
+  { name: "สยามสแควร์ ซอย10",                    lat: 13.7353013, lng: 100.5108902 },
+  { name: "สามเสน",                              lat: 13.7808056, lng: 100.528749  },
+  { name: "เดอะ เรสแอเรีย ประชาชื่น",            lat: 13.8417627, lng: 100.5307696 },
+  { name: "ทากะทาวน์",                            lat: 13.7453243, lng: 100.5700709 },
+  { name: "ทาวน์อินทาวน์",                       lat: 13.7711908, lng: 100.604315  },
+  { name: "เมืองทองธานี",                         lat: 13.9147566, lng: 100.5371567 },
+  { name: "ไอคอนสยาม",                            lat: 13.7264086, lng: 100.500041  },
+  { name: "พาซิโอ กาญจนาภิเษก",                 lat: 13.7665982, lng: 100.4036471 },
+  { name: "ปั๊มบางจากราชพฤกษ์ - สวนผัก",        lat: 13.7907227, lng: 100.4446842 },
+  { name: "ฟิวเจอร์พาร์ค รังสิต",                  lat: 13.9892012, lng: 100.6148237 },
+  { name: "เดอะเซอร์เคิล ราชพฤกษ์",              lat: 13.7672438, lng: 100.4397739 },
+  { name: "ฟอร์ยูพาร์ค บางนา",                    lat: 13.6712974, lng: 100.6183834 },
+  { name: "เซ็นทรัลพระราม 2",                     lat: 13.662599,  lng: 100.4347654 },
+  { name: "เดอะสตรีท รัชดา",                      lat: 13.7535468, lng: 100.4455941 },
+  { name: "ปั๊มบางจาก เสนานิคม",                 lat: 13.8341619, lng: 100.5799618 },
+  { name: "แจ๊สกรีน คู้บอน",                      lat: 13.8548134, lng: 100.67797   },
+  { name: "พีทีแม็กซ์ ศาลายา",                   lat: 13.7887022, lng: 100.3393726 },
+  { name: "เอ็มโพเรี่ยม",                          lat: 13.7428975, lng: 100.564992  },
+  { name: "เทอมินอล 21 พระราม3",                  lat: 13.689139,  lng: 100.4295476 },
+  { name: "ปั๊มปตท.เวสต์วิลเลจ บางใหญ่",         lat: 13.8567282, lng: 100.407688  },
+  { name: "ปั๊มบางจาก กรุงเทพกรีฑา",             lat: 13.7537365, lng: 100.7145711 },
+  { name: "ปั๊มบางจาก เทพรักษ์-สายไหม",          lat: 13.8812783, lng: 100.6239798 },
+  { name: "ปั๊มบางจาก ศาลายา",                    lat: 13.8068012, lng: 100.3129815 },
+  { name: "ปตท.ราชพฤกษ์ (นนทบุรี)",              lat: 13.8408768, lng: 100.4077997 },
+  { name: "ทรูดิจิดอล",                            lat: 13.6866139, lng: 100.6348432 },
+  { name: "the bright พระราม 2",                  lat: 13.6687652, lng: 100.4497944 },
+  { name: "ปั๊มบางจาก รามคำแหง",                  lat: 13.7789767, lng: 100.6750197 },
+  { name: "ท็อปฟู้ดฮอลล์ เซ็นทรัลเวิล์ด",         lat: 13.7447218, lng: 100.4645232 },
+  { name: "ปั๊มบางจากสุขุมวิท 62",                 lat: 13.6952912, lng: 100.6033721 },
+  { name: "ปั๊มปตท. บรม 97",                       lat: 13.7819421, lng: 100.4105383 },
+  { name: "ปั๊มปตท. สายไหม56",                    lat: 13.9184717, lng: 100.6576505 },
+  { name: "ปั๊มบางจากคลองสอง",                    lat: 13.9885509, lng: 100.6373587 },
+  { name: "ท็อปฟู้ดฮอลล์  เซ็นทรัลลาดพร้าว",      lat: 13.8159219, lng: 100.5583448 },
+  { name: "ปั๊มปตท.นวลจันทร์",                    lat: 13.8182153, lng: 100.6462443 },
+  { name: "ชาน แอท ดิ อเวนิว",                    lat: 13.8007595, lng: 100.3735592 },
+  { name: "มอเตอร์เวย์",                          lat: 13.5393791, lng: 101.006768  },
+  { name: "Little Walk รัตนาธิเบศร์",            lat: 13.8650669, lng: 100.4921928 },
+  { name: "เดอะมอลล์ งามวงศ์วาน",                lat: 13.8558865, lng: 100.5390694 },
+  { name: "ฟอร์จูนทาว์น",                         lat: 13.759541,  lng: 100.5649858 },
+  { name: "ซันทาวเวอร์ส",                          lat: 13.807992,  lng: 100.5550711 },
+  { name: "ดุสิต เซ็นทรัล พาร์ค Dusit Central Park", lat: 13.7283064, lng: 100.534965 },
+  { name: "แฟชั่นไอซ์แลนด์",                       lat: 13.8253442, lng: 100.6788238 },
+  { name: "ซีคอน บางแค",                            lat: 13.7123589, lng: 100.4308969 },
+  { name: "ซีคอน สแควร์",                           lat: 13.6932864, lng: 100.6453704 },
+  { name: "เซ็นทรัล ศาลายา",                       lat: 13.7873021, lng: 100.2733108 },
+  { name: "เดอะมอลล์ ท่าพระ",                      lat: 13.7139355, lng: 100.477666  },
+  { name: "เทอร์มินอล 21 พระราม3",                  lat: 13.6881731, lng: 100.5002317 },
+  { name: "อเกณฑ์ พัทยา",                          lat: 12.9510719, lng: 100.8857879 },
+];
+
+function jdHaversineMeters(lat1, lng1, lat2, lng2) {
+  const R = 6371000;
+  const toRad = d => d * Math.PI / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a = Math.sin(dLat / 2) ** 2 +
+            Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+            Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(a));
+}
+
+function findNearestJaedaengBranch(lat, lng) {
+  if (lat == null || lng == null) return null;
+  let best = null;
+  for (const b of JAEDAENG_LOCATIONS) {
+    const m = jdHaversineMeters(lat, lng, b.lat, b.lng);
+    if (!best || m < best.distance) best = { name: b.name, lat: b.lat, lng: b.lng, distance: m };
+  }
+  return best;
+}
 
 // ============ JAE DAENG CHECKLIST ============
 // Items in this set are never picked for the random photo-required selection.
@@ -7087,12 +7167,18 @@ function startJaedaengAudit() {
   navigator.geolocation.getCurrentPosition(
     pos => {
       closeModal();
-      _startJaedaengAuditWithGps({
+      const gps = {
         lat: pos.coords.latitude,
         lng: pos.coords.longitude,
         accuracy: pos.coords.accuracy,
-        capturedAt: new Date().toISOString()
-      });
+        capturedAt: new Date().toISOString(),
+      };
+      const nearest = findNearestJaedaengBranch(gps.lat, gps.lng);
+      if (nearest) {
+        gps.nearestBranch = nearest.name;
+        gps.nearestDistance = Math.round(nearest.distance);
+      }
+      _startJaedaengAuditWithGps(gps);
     },
     err => {
       closeModal();
@@ -7188,6 +7274,14 @@ function _startJaedaengAuditWithGps(gps) {
   document.getElementById('jd-date').value = today;
   document.getElementById('jd-time').value = hhmm;
   document.getElementById('jd-bzm-row').style.display = 'none';
+  const gpsRow = document.getElementById('jd-gps-row');
+  const gpsDisp = document.getElementById('jd-gps-display');
+  if (gpsRow && gpsDisp && currentJDAudit.gps) {
+    const g = currentJDAudit.gps;
+    const near = g.nearestBranch ? `ใกล้ <b>${escapeHtml(g.nearestBranch)}</b> · ${g.nearestDistance.toLocaleString()} ม.` : '—';
+    gpsDisp.innerHTML = `<a href="https://www.google.com/maps?q=${g.lat},${g.lng}" target="_blank" rel="noopener" style="color:var(--primary-dark);text-decoration:underline;">เปิด Google Maps</a> <span style="font-size:11px;color:var(--text-tertiary);">±${Math.round(g.accuracy || 0)} m</span><div style="font-size:12px;margin-top:4px;color:var(--text-secondary);">${near}</div>`;
+    gpsRow.style.display = '';
+  }
   renderJaedaengForm();
 }
 
@@ -7459,6 +7553,7 @@ function showJaedaengDetail(id) {
         <div class="summary-meta-row-value">
           <a href="https://www.google.com/maps?q=${r.gps.lat},${r.gps.lng}" target="_blank" rel="noopener" style="color:var(--primary-dark);text-decoration:underline;">เปิดบน Google Maps</a>
           <span style="font-size:11px;color:var(--text-tertiary);margin-left:6px;">±${Math.round(r.gps.accuracy || 0)} m</span>
+          ${r.gps.nearestBranch ? `<div style="font-size:12px;margin-top:4px;color:var(--text-secondary);">ใกล้ <b>${escapeHtml(r.gps.nearestBranch)}</b> · ${(r.gps.nearestDistance || 0).toLocaleString()} ม.</div>` : ''}
         </div>
       </div>
     </div>` : ''}
