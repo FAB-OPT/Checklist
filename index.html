@@ -5169,18 +5169,50 @@ function saveJaedaengLocal() {
   if (testMode) return;
   try { localStorage.setItem(JAEDAENG_STORAGE_KEY, JSON.stringify(allJaedaengAudits)); } catch (_) {}
 }
+// Strip photos from any Jae Daeng audit submitted more than 45 days ago and
+// write the trimmed record back to Firestore. Keeps storage bounded.
+const JD_PHOTO_RETENTION_DAYS = 45;
+async function pruneOldJaedaengPhotos() {
+  if (testMode) return;
+  const cutoff = Date.now() - JD_PHOTO_RETENTION_DAYS * 86400 * 1000;
+  let touched = false;
+  for (const r of allJaedaengAudits || []) {
+    const tsStr = r.submittedAt || r.date;
+    if (!tsStr) continue;
+    const ts = new Date(tsStr).getTime();
+    if (!Number.isFinite(ts) || ts >= cutoff) continue;
+    if (r.photosPurgedAt) continue;
+    let anyHadPhotos = false;
+    (r.items || []).forEach(it => {
+      if (it.photos && it.photos.length > 0) {
+        anyHadPhotos = true;
+        it.photos = [];
+      }
+    });
+    if (anyHadPhotos) {
+      r.photosPurgedAt = new Date().toISOString();
+      touched = true;
+      saveJaedaengToBackend(r);
+    }
+  }
+  if (touched) saveJaedaengLocal();
+}
+
 async function loadJaedaengAudits() {
   if (firebaseDb) {
     try {
       const snap = await firebaseDb.collection(JAEDAENG_COLLECTION).get();
       allJaedaengAudits = snap.docs.map(d => d.data());
       saveJaedaengLocal();
+      // Background cleanup — doesn't block the UI
+      pruneOldJaedaengPhotos();
       return;
     } catch (e) {
       console.warn('Jae Daeng load failed, using local cache', e);
     }
   }
   allJaedaengAudits = loadLocalJaedaeng();
+  pruneOldJaedaengPhotos();
 }
 async function saveJaedaengToBackend(audit) {
   if (testMode) return;
@@ -7631,14 +7663,17 @@ function captureJDPhoto() {
   if (!currentJDAudit || jdCameraItemIdx == null) return;
   const video = document.getElementById('jd-camera-video');
   const canvas = document.getElementById('jd-camera-canvas');
-  const maxDim = 1000;
+  // 600 px max + JPEG 0.5 keeps each shot around 40-60 KB so even
+  // a 10-photo audit fits well under the 1 MiB Firestore document
+  // limit and the photos auto-expire after 45 days.
+  const maxDim = 600;
   let w = video.videoWidth || 800;
   let h = video.videoHeight || 600;
   if (w > h && w > maxDim) { h = h * maxDim / w; w = maxDim; }
   else if (h > maxDim) { w = w * maxDim / h; h = maxDim; }
   canvas.width = w; canvas.height = h;
   canvas.getContext('2d').drawImage(video, 0, 0, w, h);
-  const dataUrl = canvas.toDataURL('image/jpeg', 0.72);
+  const dataUrl = canvas.toDataURL('image/jpeg', 0.5);
   const item = currentJDAudit.items[jdCameraItemIdx];
   if (!item.photos) item.photos = [];
   item.photos.push(dataUrl);
@@ -7818,7 +7853,9 @@ function showJaedaengDetail(id) {
       const photos = it.photos || [];
       const photosHtml = photos.length ? '<div class="detail-photos">' + photos.map(p =>
         `<button type="button" class="detail-photo-btn"><img src="${p}" alt=""></button>`
-      ).join('') + '</div>' : '';
+      ).join('') + '</div>' : (r.photosPurgedAt && (it.status === 'fail' || (r.requiredPhotos || []).map(i => (r.items||[])[i] && r.items[i].key).includes(it.key))
+        ? '<div class="detail-item-note" style="background:var(--surface-2);color:var(--text-tertiary);border-color:var(--border);"><span class="material-symbols-rounded">photo_camera</span>รูปถูกลบหลังเก็บครบ 45 วัน</div>'
+        : '');
       html += `<div class="detail-item is-${status}">
         <span class="detail-status-pill">${pillLabel}</span>
         <div class="detail-item-body">
