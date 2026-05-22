@@ -1163,6 +1163,77 @@ input[type="time"].jd-form-input {
 }
 .jd-photo-remove .material-symbols-rounded { font-size: 14px; color: white; }
 .jd-hub-actions { padding: 16px 18px; }
+.jd-dash-kpis {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin-bottom: 14px;
+}
+@media (min-width: 720px) {
+  .jd-dash-kpis { grid-template-columns: repeat(4, 1fr); }
+}
+.jd-kpi {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--primary);
+  border-radius: var(--r-md);
+  padding: 14px 16px;
+}
+.jd-kpi.is-success { border-left-color: var(--success); }
+.jd-kpi.is-danger  { border-left-color: var(--danger); }
+.jd-kpi.is-warn    { border-left-color: var(--warning); }
+.jd-kpi-label {
+  font-size: 11px; font-weight: 800;
+  color: var(--text-tertiary);
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+}
+.jd-kpi-value {
+  font-size: 26px; font-weight: 900;
+  color: var(--text); letter-spacing: -0.5px;
+  margin-top: 4px;
+  font-variant-numeric: tabular-nums;
+}
+.jd-kpi-sub {
+  font-size: 11px; font-weight: 700;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+.jd-dash-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 4px;
+  border-bottom: 1px dashed var(--border);
+  font-size: 13px;
+}
+.jd-dash-row:last-child { border-bottom: none; }
+.jd-dash-row-name { font-weight: 700; color: var(--text); }
+.jd-dash-row-meta { font-size: 11px; color: var(--text-secondary); margin-top: 2px; }
+.jd-dash-row-value {
+  font-weight: 900; font-variant-numeric: tabular-nums;
+  text-align: right; min-width: 70px;
+  letter-spacing: -0.3px;
+}
+.jd-dash-row-value.is-good { color: var(--success); }
+.jd-dash-row-value.is-warn { color: var(--warning); }
+.jd-dash-row-value.is-bad  { color: var(--danger); }
+.jd-dash-bar {
+  height: 6px; border-radius: var(--r-pill);
+  background: rgba(80,40,20,0.08); overflow: hidden;
+  margin-top: 4px;
+}
+.jd-dash-bar-fill {
+  height: 100%; border-radius: var(--r-pill);
+  background: linear-gradient(90deg, #4FB87A, #2D7A4A);
+}
+.jd-dash-bar-fill.warn { background: linear-gradient(90deg, #FBBF24, #F59E0B); }
+.jd-dash-bar-fill.bad  { background: linear-gradient(90deg, #E04938, #C73223); }
+.jd-dash-empty {
+  text-align: center; padding: 24px;
+  color: var(--text-tertiary); font-size: 13px;
+}
 .jd-history-card {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -4228,6 +4299,44 @@ body:has(#login-screen.active) {
       </div>
     </div>
 
+    <!-- JAE DAENG DASHBOARD -->
+    <div id="jaedaeng-dashboard-screen" style="display:none;">
+      <div class="page-eyebrow">
+        <h2 class="page-eyebrow-title">
+          แดชบอร์ด <span class="page-eyebrow-inline">เจ๊แดงสามย่าน</span>
+        </h2>
+      </div>
+      <div class="jd-dash-kpis" id="jd-dash-kpis"></div>
+      <div class="card">
+        <div class="card-header">
+          <span class="material-symbols-rounded" style="color:var(--primary);">leaderboard</span>
+          <h2>คะแนนเฉลี่ยต่อสาขา</h2>
+        </div>
+        <div id="jd-dash-branches"></div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <span class="material-symbols-rounded" style="color:var(--danger);">priority_high</span>
+          <h2>หัวข้อที่ตกบ่อย <span class="card-header-en">Top failed items</span></h2>
+        </div>
+        <div id="jd-dash-top-fails"></div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <span class="material-symbols-rounded" style="color:#0E7490;">groups</span>
+          <h2>ความถี่ในการตรวจ ต่อ BZM</h2>
+        </div>
+        <div id="jd-dash-by-bzm"></div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <span class="material-symbols-rounded" style="color:var(--text-secondary);">history</span>
+          <h2>ประวัติการตรวจล่าสุด</h2>
+        </div>
+        <div id="jd-dash-recent"></div>
+      </div>
+    </div>
+
     <!-- JAE DAENG HUB -->
     <div id="jaedaeng-hub-screen" style="display:none;">
       <div class="page-eyebrow page-eyebrow-section">
@@ -5125,7 +5234,7 @@ function logout() {
 // ============ NAV ============
 function routeByRole() {
   if (currentView === 'jaedaeng') {
-    showJaedaengHub();
+    showJaedaengDashboard();
     return;
   }
   if (currentUser.role === 'branch') {
@@ -5214,7 +5323,8 @@ function renderBottomNav() {
   html += '<div class="nav-items">';
   const view = currentView || currentUser.brand;
   if (view === 'jaedaeng') {
-    html += '<button class="bottom-nav-item active" id="nav-dash" onclick="showJaedaengHub()"><span class="material-symbols-rounded">checklist</span><span>ตรวจร้าน</span></button>';
+    html += '<button class="bottom-nav-item active" id="nav-dash" onclick="showJaedaengDashboard()"><span class="material-symbols-rounded">dashboard</span><span>แดชบอร์ด</span></button>';
+    html += '<button class="bottom-nav-item" id="nav-jd-hub" onclick="showJaedaengHub()"><span class="material-symbols-rounded">checklist</span><span>ตรวจร้าน</span></button>';
   } else {
     html += '<button class="bottom-nav-item active" id="nav-dash" onclick="showDashboard()"><span class="material-symbols-rounded">dashboard</span><span>หน้าหลัก</span></button>';
     // ตรวจสาขา is for branches' BZM only; VP / COO / Admin only review results.
@@ -5252,7 +5362,7 @@ function setActiveNav(id) {
 }
 
 function hideAllScreens() {
-  ['dashboard-screen','info-screen','checklist-screen','summary-screen','daily-hub-screen','daily-form-screen','daily-detail-screen','jaedaeng-hub-screen','jaedaeng-audit-screen','jaedaeng-detail-screen'].forEach(id => {
+  ['dashboard-screen','info-screen','checklist-screen','summary-screen','daily-hub-screen','daily-form-screen','daily-detail-screen','jaedaeng-dashboard-screen','jaedaeng-hub-screen','jaedaeng-audit-screen','jaedaeng-detail-screen'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.style.display = 'none';
   });
@@ -6677,10 +6787,135 @@ function showDailyDetail(id) {
 }
 
 // ============ JAE DAENG AUDIT ============
+function showJaedaengDashboard() {
+  hideAllScreens();
+  document.getElementById('jaedaeng-dashboard-screen').style.display = 'block';
+  setActiveNav('nav-dash');
+  renderJaedaengDashboard();
+}
+
+function renderJaedaengDashboard() {
+  const records = (allJaedaengAudits || []).slice();
+  const kpis = document.getElementById('jd-dash-kpis');
+  const branchesEl = document.getElementById('jd-dash-branches');
+  const topFailsEl = document.getElementById('jd-dash-top-fails');
+  const byBzmEl = document.getElementById('jd-dash-by-bzm');
+  const recentEl = document.getElementById('jd-dash-recent');
+
+  if (records.length === 0) {
+    kpis.innerHTML = '';
+    branchesEl.innerHTML = '<div class="jd-dash-empty">ยังไม่มีข้อมูลการตรวจ</div>';
+    topFailsEl.innerHTML = '<div class="jd-dash-empty">ยังไม่มีข้อมูลการตรวจ</div>';
+    byBzmEl.innerHTML = '<div class="jd-dash-empty">ยังไม่มีข้อมูลการตรวจ</div>';
+    recentEl.innerHTML = '<div class="jd-dash-empty">ยังไม่มีข้อมูลการตรวจ</div>';
+    return;
+  }
+
+  // KPI numbers
+  const totalAudits = records.length;
+  const avgPct = records.reduce((s, r) => s + (r.passPct || 0), 0) / totalAudits;
+  const totalFails = records.reduce((s, r) => s + (r.failCount || 0), 0);
+  const distinctBranches = new Set(records.map(r => r.storeName)).size;
+  // Audits this month
+  const now = new Date();
+  const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const thisMonth = records.filter(r => (r.date || '').startsWith(monthKey)).length;
+
+  kpis.innerHTML = `
+    <div class="jd-kpi"><div class="jd-kpi-label">การตรวจทั้งหมด</div><div class="jd-kpi-value">${totalAudits}</div><div class="jd-kpi-sub">เดือนนี้ ${thisMonth} ครั้ง</div></div>
+    <div class="jd-kpi ${avgPct >= 90 ? 'is-success' : avgPct < 70 ? 'is-danger' : 'is-warn'}"><div class="jd-kpi-label">คะแนนเฉลี่ย</div><div class="jd-kpi-value">${avgPct.toFixed(1)}<span style="font-size:14px;">%</span></div><div class="jd-kpi-sub">ผ่านเกณฑ์</div></div>
+    <div class="jd-kpi is-danger"><div class="jd-kpi-label">รวมข้อไม่ผ่าน</div><div class="jd-kpi-value">${totalFails}</div><div class="jd-kpi-sub">NCRs</div></div>
+    <div class="jd-kpi"><div class="jd-kpi-label">สาขาที่ตรวจแล้ว</div><div class="jd-kpi-value">${distinctBranches}</div><div class="jd-kpi-sub">จาก ${JAEDAENG_BRANCHES.length} สาขา</div></div>
+  `;
+
+  // Branch leaderboard — sort by avg pass%
+  const byBranch = {};
+  records.forEach(r => {
+    if (!byBranch[r.storeName]) byBranch[r.storeName] = { count: 0, sumPct: 0, fails: 0 };
+    byBranch[r.storeName].count++;
+    byBranch[r.storeName].sumPct += r.passPct || 0;
+    byBranch[r.storeName].fails += r.failCount || 0;
+  });
+  const branchList = Object.entries(byBranch)
+    .map(([name, s]) => ({ name, count: s.count, avg: s.sumPct / s.count, fails: s.fails }))
+    .sort((a, b) => b.avg - a.avg);
+  branchesEl.innerHTML = branchList.map(b => {
+    const tier = b.avg >= 90 ? 'is-good' : b.avg < 70 ? 'is-bad' : 'is-warn';
+    const fillCls = b.avg >= 90 ? '' : b.avg < 70 ? 'bad' : 'warn';
+    return `<div class="jd-dash-row">
+      <div>
+        <div class="jd-dash-row-name">${escapeHtml(b.name)}</div>
+        <div class="jd-dash-row-meta">ตรวจ ${b.count} ครั้ง · NCR ${b.fails}</div>
+        <div class="jd-dash-bar"><div class="jd-dash-bar-fill ${fillCls}" style="width:${Math.min(100, b.avg)}%"></div></div>
+      </div>
+      <div class="jd-dash-row-value ${tier}">${b.avg.toFixed(1)}%</div>
+    </div>`;
+  }).join('');
+
+  // Top failed items — count failed items by text
+  const failCounts = {};
+  records.forEach(r => {
+    (r.items || []).forEach(it => {
+      if (it.status === 'fail') {
+        if (!failCounts[it.text]) failCounts[it.text] = { count: 0, section: it.section };
+        failCounts[it.text].count++;
+      }
+    });
+  });
+  const topFails = Object.entries(failCounts)
+    .map(([text, s]) => ({ text, count: s.count, section: s.section }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 10);
+  topFailsEl.innerHTML = topFails.length === 0
+    ? '<div class="jd-dash-empty">ยังไม่มีข้อไม่ผ่าน</div>'
+    : topFails.map(f => `<div class="jd-dash-row">
+        <div>
+          <div class="jd-dash-row-name">${escapeHtml(f.text)}</div>
+          <div class="jd-dash-row-meta">${escapeHtml(f.section)}</div>
+        </div>
+        <div class="jd-dash-row-value is-bad">${f.count} ครั้ง</div>
+      </div>`).join('');
+
+  // By BZM
+  const byBzm = {};
+  records.forEach(r => {
+    const key = r.bzmNick || r.bzm || 'ไม่ระบุ';
+    if (!byBzm[key]) byBzm[key] = { count: 0, sumPct: 0, full: r.bzm };
+    byBzm[key].count++;
+    byBzm[key].sumPct += r.passPct || 0;
+  });
+  const bzmList = Object.entries(byBzm)
+    .map(([nick, s]) => ({ nick, full: s.full, count: s.count, avg: s.sumPct / s.count }))
+    .sort((a, b) => b.count - a.count);
+  byBzmEl.innerHTML = bzmList.map(b => {
+    const tier = b.avg >= 90 ? 'is-good' : b.avg < 70 ? 'is-bad' : 'is-warn';
+    return `<div class="jd-dash-row">
+      <div>
+        <div class="jd-dash-row-name">${escapeHtml(b.nick)}${b.full && b.full !== b.nick ? ` <span class="jd-dash-row-meta" style="display:inline;">(${escapeHtml(b.full)})</span>` : ''}</div>
+        <div class="jd-dash-row-meta">ตรวจ ${b.count} ครั้ง · เฉลี่ย ${b.avg.toFixed(1)}%</div>
+      </div>
+      <div class="jd-dash-row-value ${tier}">${b.count}</div>
+    </div>`;
+  }).join('');
+
+  // Recent 5
+  const recent = records.slice().sort((a, b) => (b.submittedAt || b.date || '').localeCompare(a.submittedAt || a.date || '')).slice(0, 5);
+  recentEl.innerHTML = recent.map(r => {
+    const tier = r.passPct >= 90 ? 'is-good' : r.passPct < 70 ? 'is-bad' : 'is-warn';
+    return `<div class="jd-dash-row" onclick="showJaedaengDetail('${escapeAttr(r.id)}')" style="cursor:pointer;">
+      <div>
+        <div class="jd-dash-row-name">${escapeHtml(r.storeName)}</div>
+        <div class="jd-dash-row-meta">${escapeHtml(fmtDateDMY(r.date))}${r.time ? ' · ' + escapeHtml(r.time) : ''} · ${escapeHtml(r.auditor || '-')}</div>
+      </div>
+      <div class="jd-dash-row-value ${tier}">${r.passPct.toFixed(1)}%</div>
+    </div>`;
+  }).join('');
+}
+
 function showJaedaengHub() {
   hideAllScreens();
   document.getElementById('jaedaeng-hub-screen').style.display = 'block';
-  setActiveNav('nav-dash');
+  setActiveNav('nav-jd-hub');
   renderJaedaengList();
 }
 
