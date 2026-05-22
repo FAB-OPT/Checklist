@@ -3402,21 +3402,6 @@ input[type="time"].jd-form-input {
   .pin-row { gap: 6px; }
   .pin-cell { width: 40px; height: 48px; font-size: 18px; }
 }
-/* Mobile: allow the brand title to wrap so long titles don't overflow */
-@media (max-width: 480px) {
-  .login-box {
-    padding: 12px 18px 18px;
-  }
-  .brand-title {
-    white-space: normal;
-    text-wrap: balance;
-    font-size: clamp(15px, 4.6vw, 18px);
-    letter-spacing: -0.3px;
-    line-height: 1.2;
-    margin: 0 0 4px;
-    padding: 0;
-  }
-}
 
 html:has(#login-screen.active),
 body:has(#login-screen.active) {
@@ -4986,7 +4971,7 @@ function showWelcomeModal() {
     sub.innerHTML = `<b>${escapeHtml(branchLabel(currentUser.branchCode, currentUser.branchName))}</b>`;
   } else {
     const roleLabel = roleLabels[currentUser.role] || currentUser.role;
-    const nameLabel = currentUser.nick || currentUser.name || '-';
+    const nameLabel = currentUser.name || currentUser.nick || '-';
     sub.innerHTML = `<b>${escapeHtml(nameLabel)}</b> (${escapeHtml(roleLabel)})`;
   }
   document.getElementById('welcome-modal').classList.add('show');
