@@ -935,30 +935,45 @@ body.test-mode-on { box-shadow: inset 0 0 0 3px #F59E0B; }
 .nav-test-mode { margin: 10px 12px 0; justify-content: center; }
 
 /* Jae Daeng audit form */
+.jd-form-head { padding: 14px 16px; }
 .jd-form-head .jd-form-head-row {
   display: grid;
-  grid-template-columns: 120px 1fr;
-  gap: 10px;
+  grid-template-columns: 90px 1fr;
+  gap: 8px;
   align-items: center;
-  padding: 8px 0;
-  border-bottom: 1px dashed var(--border);
+  padding: 5px 0;
 }
-.jd-form-head .jd-form-head-row:last-child { border-bottom: none; }
+.jd-form-head .jd-form-head-row + .jd-form-head-row {
+  border-top: 1px dashed var(--border);
+}
 .jd-form-label {
-  font-size: 12px; font-weight: 800;
+  font-size: 11px; font-weight: 800;
   color: var(--text-secondary);
   letter-spacing: 0.2px;
-  text-transform: uppercase;
 }
 .jd-form-input {
   width: 100%;
-  padding: 10px 12px;
+  padding: 8px 10px;
   font-size: 14px; font-weight: 600;
   color: var(--text);
   background: var(--surface-2);
   border: 1px solid var(--border);
   border-radius: var(--r-sm);
   font-family: inherit;
+}
+/* Make zone optgroup labels stand out — works on browsers that respect optgroup styling */
+.jd-form-input optgroup {
+  font-weight: 900;
+  color: var(--primary-dark);
+  background: var(--primary-50);
+  font-style: normal;
+  padding: 4px 0;
+}
+.jd-form-input optgroup option {
+  font-weight: 600;
+  color: var(--text);
+  background: var(--surface);
+  padding-left: 12px;
 }
 .jd-form-input:focus {
   outline: none; border-color: var(--primary);
@@ -1099,49 +1114,39 @@ input[type="time"].jd-form-input {
   color: var(--text);
   font-family: inherit;
 }
-.jd-item.is-required-photo {
-  background: rgba(245,158,11,0.06);
-}
-.jd-item.is-required-photo .jd-item-text { color: #7A5818; }
+.jd-item.is-required-photo { background: transparent; }
 .jd-item-photo-badge {
   display: inline-block; margin-left: 6px;
-  padding: 2px 8px; background: var(--warning); color: white;
+  padding: 2px 8px; background: var(--danger-bg); color: var(--danger);
   font-size: 10px; font-weight: 800; letter-spacing: 0.2px;
   border-radius: var(--r-pill); white-space: nowrap;
 }
 .jd-photo-section {
   margin-top: 10px;
-  padding: 10px;
-  background: var(--surface-2);
-  border: 1px dashed var(--border-strong);
-  border-radius: var(--r-sm);
+  background: transparent;
+  border: none;
+  padding: 0;
 }
-.jd-photo-section.is-missing {
-  background: var(--warning-bg);
-  border: 1px solid var(--warning);
-}
-.jd-photo-required-label {
-  display: inline-flex; align-items: center; gap: 4px;
-  margin-bottom: 8px;
-  padding: 3px 10px;
-  background: var(--warning); color: white;
-  font-size: 11px; font-weight: 800; letter-spacing: 0.2px;
-  border-radius: var(--r-pill);
-}
-.jd-photo-required-label .material-symbols-rounded { font-size: 14px; }
 .jd-photo-upload-btn {
   display: inline-flex; align-items: center; gap: 6px;
   padding: 8px 14px;
-  background: var(--surface);
-  border: 1.5px dashed var(--border-strong);
-  border-radius: var(--r-sm);
-  font-size: 12px; font-weight: 800;
+  background: transparent;
+  border: 1.5px solid var(--border-strong);
+  border-radius: var(--r-pill);
+  font-size: 13px; font-weight: 800;
   color: var(--text-secondary);
   cursor: pointer;
   font-family: inherit;
+  letter-spacing: 0.1px;
 }
 .jd-photo-upload-btn:hover { border-color: var(--primary); color: var(--primary); }
 .jd-photo-upload-btn .material-symbols-rounded { font-size: 16px; }
+.jd-photo-upload-btn.is-required {
+  border-color: var(--danger);
+  color: var(--danger);
+  border-style: dashed;
+}
+.jd-photo-upload-btn.is-required:hover { background: var(--danger-bg); }
 .jd-photo-preview {
   display: flex; flex-wrap: wrap; gap: 8px;
   margin-top: 10px;
@@ -7425,9 +7430,11 @@ function _startJaedaengAuditWithGps(gps) {
   });
   let opts = '<option value="">— เลือกสาขา —</option>';
   zoneOrder.forEach(z => {
-    opts += `<optgroup label="โซน ${escapeHtml(z)}">`;
+    opts += `<optgroup label="◆ โซน ${escapeHtml(z)}">`;
     zones[z].forEach(b => {
-      opts += `<option value="${escapeAttr(b.name)}">${escapeHtml(b.name)}</option>`;
+      // Drop the "ร้านส้มตำเจ๊แดง" prefix so the dropdown is easier to scan.
+      const trimmed = b.name.replace(/^ร้านส้มตำเจ๊แดง\s*/, '');
+      opts += `<option value="${escapeAttr(b.name)}">${escapeHtml(trimmed)}</option>`;
     });
     opts += '</optgroup>';
   });
@@ -7477,11 +7484,10 @@ function setJDStore(field, value) {
     if (value && g && Array.isArray(g.nearby500)) {
       const within = g.nearby500.some(b => jdBranchMatchesLocation(value, b.name));
       if (!within) {
-        const nearestTxt = g.nearestBranch
-          ? `ตำแหน่ง GPS ห่างจากสาขา <b>${escapeHtml(g.nearestBranch)}</b> ${(g.nearestDistance || 0).toLocaleString()} ม.`
-          : 'GPS ของคุณอยู่ห่างจากสาขาเจ๊แดงทุกแห่งเกิน 500 ม.';
-        const html = `${nearestTxt}<br>คุณเลือกตรวจสาขา <b>${escapeHtml(value)}</b><br><br>ระบบจะให้ตรวจต่อได้ แต่ขอให้ยืนยันว่าตรวจจริงที่สาขานี้`;
-        showModalHtml('คำเตือน: ตำแหน่งไม่ตรงกับสาขา', html);
+        const distTxt = g.nearestBranch
+          ? `GPS ห่าง ${(g.nearestDistance || 0).toLocaleString()} ม.`
+          : 'GPS อยู่นอกรัศมีสาขา';
+        showModalHtml('⚠️ ตำแหน่งไม่ตรงกับสาขา', `${distTxt} — ตรวจต่อได้`);
       }
     }
   }
@@ -7522,17 +7528,19 @@ function renderJaedaengForm() {
       let photosHtml = '';
       if (showPhotos) {
         const missing = isRequired && photos.length === 0;
-        photosHtml = '<div class="jd-photo-section ' + (missing ? 'is-missing' : '') + '">' +
-          (isRequired ? '<div class="jd-photo-required-label"><span class="material-symbols-rounded">photo_camera</span> ต้องถ่ายรูปหลักฐาน (จากกล้องเท่านั้น)</div>' : '') +
-          '<button type="button" class="jd-photo-upload-btn" onclick="openJDCamera(' + idx + ')"><span class="material-symbols-rounded">photo_camera</span> ถ่ายรูป</button>' +
-          '<div class="jd-photo-preview">' +
-          photos.map((p, pi) => '<div class="jd-photo-thumb"><img src="' + p + '"><button class="jd-photo-remove" type="button" onclick="removeJDPhoto(' + idx + ',' + pi + ')"><span class="material-symbols-rounded">close</span></button></div>').join('') +
-          '</div></div>';
+        const btnCls = missing ? 'jd-photo-upload-btn is-required' : 'jd-photo-upload-btn';
+        const btnLabel = missing ? 'ต้องถ่ายรูปหลักฐาน' : (isRequired || photos.length > 0 ? 'ถ่ายรูปเพิ่ม' : 'ถ่ายรูป');
+        photosHtml = '<div class="jd-photo-section">' +
+          '<button type="button" class="' + btnCls + '" onclick="openJDCamera(' + idx + ')"><span class="material-symbols-rounded">photo_camera</span> ' + btnLabel + '</button>' +
+          (photos.length ? '<div class="jd-photo-preview">' +
+            photos.map((p, pi) => '<div class="jd-photo-thumb"><img src="' + p + '"><button class="jd-photo-remove" type="button" onclick="removeJDPhoto(' + idx + ',' + pi + ')"><span class="material-symbols-rounded">close</span></button></div>').join('') +
+          '</div>' : '') +
+          '</div>';
       }
       html += `<div class="jd-item ${isPass ? 'is-pass' : ''} ${isFail ? 'is-fail' : ''} ${isNA ? 'is-na' : ''} ${isRequired ? 'is-required-photo' : ''}">
         <div class="jd-item-q">
           <span class="jd-item-num">${j + 1}</span>
-          <span class="jd-item-text">${escapeHtml(it.text)}${isRequired ? '<span class="jd-item-photo-badge">📷 ต้องแนบรูป</span>' : ''}</span>
+          <span class="jd-item-text">${escapeHtml(it.text)}${isRequired ? '<span class="jd-item-photo-badge">📷</span>' : ''}</span>
         </div>
         <div class="jd-item-actions">
           <button type="button" class="jd-choice pass ${isPass ? 'active' : ''}" onclick="setJDAnswer(${idx},'pass')">
