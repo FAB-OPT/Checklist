@@ -5233,19 +5233,28 @@ async function pruneOldJaedaengPhotos() {
 }
 
 async function loadJaedaengAudits() {
+  const local = loadLocalJaedaeng();
   if (firebaseDb) {
     try {
       const snap = await firebaseDb.collection(JAEDAENG_COLLECTION).get();
-      allJaedaengAudits = snap.docs.map(d => d.data());
+      const remote = snap.docs.map(d => d.data());
+      // Safety: if Firestore returns empty but localStorage has records, keep
+      // the local copy. Otherwise a Firestore rules block (or transient
+      // permission failure) would silently wipe the user's records.
+      if (remote.length === 0 && local.length > 0) {
+        console.warn('Firestore returned empty for jaedaengAudits; keeping local cache');
+        allJaedaengAudits = local;
+        return;
+      }
+      allJaedaengAudits = remote;
       saveJaedaengLocal();
-      // Background cleanup — doesn't block the UI
       pruneOldJaedaengPhotos();
       return;
     } catch (e) {
       console.warn('Jae Daeng load failed, using local cache', e);
     }
   }
-  allJaedaengAudits = loadLocalJaedaeng();
+  allJaedaengAudits = local;
   pruneOldJaedaengPhotos();
 }
 async function saveJaedaengToBackend(audit) {
@@ -5255,6 +5264,7 @@ async function saveJaedaengToBackend(audit) {
     await firebaseDb.collection(JAEDAENG_COLLECTION).doc(String(audit.id)).set(audit);
   } catch (e) {
     console.warn('Jae Daeng Firestore save failed', e);
+    showModal('บันทึก cloud ไม่สำเร็จ', 'ข้อมูลถูกเก็บไว้ในเครื่องนี้แล้ว แต่ส่งขึ้น Firestore ไม่ได้ (อาจเป็นเพราะ Security Rules) — กรุณาแจ้ง Admin: ' + (e && e.message || e));
   }
 }
 
