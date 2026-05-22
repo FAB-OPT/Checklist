@@ -413,6 +413,7 @@ body {
 .summary-meta-row[data-icon="groups"] > .material-symbols-rounded { color: #0E7490; }
 .summary-meta-row[data-icon="badge"] > .material-symbols-rounded { color: #38A063; }
 .summary-meta-row[data-icon="fact_check"] > .material-symbols-rounded { color: #4A7BD8; }
+.summary-meta-row[data-icon="my_location"] > .material-symbols-rounded { color: #16A34A; }
 
 /* Daily detail hero — kicker above the big percentage */
 .daily-detail-hero .daily-shift-kicker {
@@ -7078,6 +7079,33 @@ function renderJaedaengList() {
 }
 
 function startJaedaengAudit() {
+  if (!navigator.geolocation) {
+    showModal('อุปกรณ์ไม่รองรับ GPS', 'เบราว์เซอร์นี้ไม่รองรับการระบุตำแหน่ง ไม่สามารถเริ่มตรวจได้');
+    return;
+  }
+  showModal('กำลังขอตำแหน่ง GPS', 'กรุณากดอนุญาตการเข้าถึงตำแหน่งบนเบราว์เซอร์เพื่อเริ่มตรวจ');
+  navigator.geolocation.getCurrentPosition(
+    pos => {
+      closeModal();
+      _startJaedaengAuditWithGps({
+        lat: pos.coords.latitude,
+        lng: pos.coords.longitude,
+        accuracy: pos.coords.accuracy,
+        capturedAt: new Date().toISOString()
+      });
+    },
+    err => {
+      closeModal();
+      const msg = err && err.code === 1
+        ? 'คุณปฏิเสธการเข้าถึงตำแหน่ง กรุณาเปิดสิทธิ์ GPS ในเบราว์เซอร์แล้วลองใหม่'
+        : 'ไม่สามารถระบุตำแหน่งได้ (อาจเปิด GPS ไม่ทัน หรือสัญญาณอ่อน)';
+      showModal('ต้องอนุญาตตำแหน่ง GPS', msg);
+    },
+    { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 }
+  );
+}
+
+function _startJaedaengAuditWithGps(gps) {
   const today = todayDateStr();
   const now = new Date();
   const hhmm = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
@@ -7089,6 +7117,7 @@ function startJaedaengAudit() {
     auditorCode: currentUser.code || '',
     date: today,
     time: hhmm,
+    gps,
     items: [],
   };
   JAEDAENG_CHECKLIST.forEach((sec, sIdx) => {
@@ -7371,6 +7400,7 @@ async function submitJaedaengAudit() {
     auditorCode: currentJDAudit.auditorCode || currentUser.code || '',
     date: currentJDAudit.date || todayDateStr(),
     time: currentJDAudit.time || '',
+    gps: currentJDAudit.gps || null,
     items: items,
     requiredPhotos: currentJDAudit.requiredPhotos || [],
     passCount, failCount, naCount, totalCount,
@@ -7422,6 +7452,16 @@ function showJaedaengDetail(id) {
         <div class="summary-meta-row-value">${escapeHtml(r.auditor)}</div>
       </div>
     </div>
+    ${r.gps ? `<div class="summary-meta-row" data-icon="my_location">
+      <span class="material-symbols-rounded">my_location</span>
+      <div class="summary-meta-row-body">
+        <div class="summary-meta-row-label">ตำแหน่ง GPS</div>
+        <div class="summary-meta-row-value">
+          <a href="https://www.google.com/maps?q=${r.gps.lat},${r.gps.lng}" target="_blank" rel="noopener" style="color:var(--primary-dark);text-decoration:underline;">เปิดบน Google Maps</a>
+          <span style="font-size:11px;color:var(--text-tertiary);margin-left:6px;">±${Math.round(r.gps.accuracy || 0)} m</span>
+        </div>
+      </div>
+    </div>` : ''}
     ${r.bzm ? `<div class="summary-meta-row" data-icon="supervisor_account">
       <span class="material-symbols-rounded">supervisor_account</span>
       <div class="summary-meta-row-body">
