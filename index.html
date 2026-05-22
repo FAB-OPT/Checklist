@@ -5028,7 +5028,22 @@ async function doLogin() {
     currentUser = { code: id, brand: currentBrand, ...user };
   }
 
-  await Promise.all([loadAudits(), loadDailyChecklists(), loadJaedaengAudits()]);
+  // Show the app instantly using locally-cached data, then refresh from
+  // Firestore in the background so login doesn't block on the network.
+  const cachedAudits = loadLocalAudits();
+  const cachedDaily = loadLocalDaily();
+  const cachedJaedaeng = loadLocalJaedaeng();
+  const hasCache = cachedAudits.length || cachedDaily.length || cachedJaedaeng.length;
+  if (hasCache) {
+    allAudits = cachedAudits;
+    allDailyChecklists = cachedDaily;
+    allJaedaengAudits = cachedJaedaeng;
+    Promise.all([loadAudits(), loadDailyChecklists(), loadJaedaengAudits()])
+      .then(() => { if (currentUser) routeByRole(); })
+      .catch(() => {});
+  } else {
+    await Promise.all([loadAudits(), loadDailyChecklists(), loadJaedaengAudits()]);
+  }
   document.getElementById('login-screen').classList.remove('active');
   document.getElementById('app-screen').classList.add('active');
 
