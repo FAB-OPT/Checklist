@@ -3346,14 +3346,46 @@ input[type="time"].jd-form-input {
   box-shadow: 0 24px 60px rgba(0,0,0,0.10), 0 0 0 1px rgba(255,255,255,0.6);
   overflow: hidden;
 }
+/* Brand pick / login swap animations */
+@keyframes brandEnter {
+  0%   { opacity: 0; transform: translateY(12px) scale(0.96); }
+  100% { opacity: 1; transform: translateY(0)    scale(1); }
+}
+@keyframes brandLeave {
+  0%   { opacity: 1; transform: translateY(0)     scale(1); }
+  100% { opacity: 0; transform: translateY(-10px) scale(0.97); }
+}
+#brand-stage.is-entering, #login-stage.is-entering {
+  animation: brandEnter 0.34s cubic-bezier(.34,1.56,.64,1) both;
+}
+#brand-stage.is-leaving, #login-stage.is-leaving {
+  animation: brandLeave 0.18s ease both;
+}
+.brand-pick-card {
+  transition: transform 0.22s ease, filter 0.22s ease, opacity 0.22s ease;
+}
+#brand-stage.is-leaving .brand-pick-card:not(.is-selected) {
+  opacity: 0.25;
+}
+#brand-stage.is-leaving .brand-pick-card.is-selected {
+  transform: scale(1.08);
+  filter: drop-shadow(0 16px 28px rgba(80,40,20,0.28));
+}
 .brand-logo {
-  width: 175px; height: 175px;
+  width: 120px; height: 120px;
   display: flex; align-items: center; justify-content: center;
-  margin: 0 auto -22px;
+  margin: 0 auto 8px;
+  border-radius: 20px;
+  overflow: hidden;
 }
 .brand-logo img {
   width: 100%; height: 100%;
   object-fit: contain; display: block;
+}
+/* Brand-specific logos use cover so the brand artwork fills the rounded tile */
+.login-box.brand-santafe .brand-logo img,
+.login-box.brand-jaedaeng .brand-logo img {
+  object-fit: cover;
 }
 .brand-logo .material-symbols-rounded { font-size: 42px; color: white; }
 .brand-title {
@@ -4833,35 +4865,60 @@ function saveCurrentAudit() {
 // ============ AUTH ============
 function selectBrand(brand) {
   currentBrand = brand;
-  document.getElementById('brand-stage').style.display = 'none';
-  document.getElementById('login-stage').style.display = '';
+  const brandStage = document.getElementById('brand-stage');
+  const loginStage = document.getElementById('login-stage');
+  brandStage.querySelectorAll('.brand-pick-card').forEach(c => c.classList.remove('is-selected'));
+  const card = brandStage.querySelector('.brand-pick-' + brand);
+  if (card) card.classList.add('is-selected');
   const title = document.getElementById('login-title');
   const subtitle = document.getElementById('login-subtitle');
   const toggle = document.getElementById('role-toggle');
   const logo = document.getElementById('login-brand-logo');
-  if (brand === 'santafe') {
-    title.textContent = 'Operations Standard Skill & Operations Checklist';
-    subtitle.textContent = 'Santa Fe Happy Steak';
-    if (logo) { logo.src = 'logo santafe.jpg'; logo.alt = 'Santa Fe'; }
-    toggle.style.display = '';
-    selectRole('branch');
-  } else {
-    title.textContent = 'Quality Service Cleanliness & Operations Checklist';
-    subtitle.textContent = 'เจ๊แดงสามย่าน';
-    if (logo) { logo.src = 'Logo-Jaedang_samyan.png'; logo.alt = 'เจ๊แดงสามย่าน'; }
-    toggle.style.display = 'none';
-    selectRole('staff');
-  }
+  brandStage.classList.add('is-leaving');
+  setTimeout(() => {
+    brandStage.style.display = 'none';
+    brandStage.classList.remove('is-leaving');
+    loginStage.style.display = '';
+    loginStage.classList.remove('brand-santafe', 'brand-jaedaeng', 'is-entering', 'is-leaving');
+    loginStage.classList.add('brand-' + brand);
+    void loginStage.offsetWidth; // force reflow so the animation replays
+    loginStage.classList.add('is-entering');
+    if (brand === 'santafe') {
+      title.textContent = 'Operations Standard Skill & Operations Checklist';
+      subtitle.textContent = '';
+      subtitle.style.display = 'none';
+      if (logo) { logo.src = 'logo santafe.jpg'; logo.alt = 'Santa Fe'; }
+      toggle.style.display = '';
+      selectRole('branch');
+    } else {
+      title.textContent = 'Quality Service Cleanliness & Operations Checklist';
+      subtitle.textContent = '';
+      subtitle.style.display = 'none';
+      if (logo) { logo.src = 'Logo-Jaedang_samyan.png'; logo.alt = 'เจ๊แดงสามย่าน'; }
+      toggle.style.display = 'none';
+      selectRole('staff');
+    }
+  }, 180);
 }
 
 function backToBrand() {
   currentBrand = null;
   const input = document.getElementById('login-id');
   if (input) input.value = '';
-  document.getElementById('login-stage').style.display = 'none';
-  document.getElementById('brand-stage').style.display = '';
-  const logo = document.getElementById('login-brand-logo');
-  if (logo) { logo.src = 'Screenshot 2026-05-18 092954.png'; logo.alt = 'Fab'; }
+  const loginStage = document.getElementById('login-stage');
+  loginStage.classList.add('is-leaving');
+  setTimeout(() => {
+    loginStage.style.display = 'none';
+    loginStage.classList.remove('is-leaving', 'is-entering', 'brand-santafe', 'brand-jaedaeng');
+    const brandStage = document.getElementById('brand-stage');
+    brandStage.style.display = '';
+    brandStage.classList.remove('is-leaving');
+    void brandStage.offsetWidth;
+    brandStage.classList.add('is-entering');
+    const logo = document.getElementById('login-brand-logo');
+    if (logo) { logo.src = 'Screenshot 2026-05-18 092954.png'; logo.alt = 'Fab'; }
+    document.getElementById('login-subtitle').style.display = '';
+  }, 180);
 }
 
 function selectRole(role) {
