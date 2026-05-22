@@ -7572,23 +7572,39 @@ let jdCameraFacing = 'environment';
 
 async function openJDCamera(idx) {
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-    showModal('อุปกรณ์ไม่รองรับกล้อง', 'เบราว์เซอร์นี้ไม่รองรับการเข้าถึงกล้อง');
+    showModal('อุปกรณ์ไม่รองรับกล้อง', 'เบราว์เซอร์นี้ไม่รองรับการเข้าถึงกล้อง (iOS Safari ต้องเป็น HTTPS และเปิดผ่าน Safari หลัก ไม่ใช่ Line/Facebook in-app browser)');
     return;
   }
   jdCameraItemIdx = idx;
+  // Show the overlay first so the <video> is mounted before we attach the stream;
+  // iOS Safari refuses to play() on a hidden / detached video element.
+  const overlay = document.getElementById('jd-camera-overlay');
+  const video = document.getElementById('jd-camera-video');
+  video.setAttribute('playsinline', '');
+  video.setAttribute('webkit-playsinline', '');
+  video.muted = true;
+  overlay.classList.add('show');
+
+  const tryGet = async constraints => navigator.mediaDevices.getUserMedia(constraints);
   try {
-    jdCameraStream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: { ideal: jdCameraFacing } },
-      audio: false,
-    });
-    const video = document.getElementById('jd-camera-video');
+    try {
+      jdCameraStream = await tryGet({ video: { facingMode: { ideal: jdCameraFacing } }, audio: false });
+    } catch (e1) {
+      // Retry without the facingMode constraint — some laptops/desktops only have a front cam
+      jdCameraStream = await tryGet({ video: true, audio: false });
+    }
     video.srcObject = jdCameraStream;
-    await video.play().catch(() => {});
-    document.getElementById('jd-camera-overlay').classList.add('show');
+    try { await video.play(); } catch (_) { /* iOS sometimes resolves later */ }
   } catch (err) {
-    const msg = err && err.name === 'NotAllowedError'
-      ? 'คุณปฏิเสธการเข้าถึงกล้อง กรุณาเปิดสิทธิ์กล้องในเบราว์เซอร์'
-      : 'ไม่สามารถเปิดกล้องได้';
+    overlay.classList.remove('show');
+    const n = err && err.name;
+    let msg = 'ไม่สามารถเปิดกล้องได้';
+    if (n === 'NotAllowedError' || n === 'SecurityError')
+      msg = 'คุณปฏิเสธสิทธิ์กล้อง — เปิด Settings > Safari > Camera แล้วอนุญาต';
+    else if (n === 'NotFoundError') msg = 'ไม่พบกล้องบนอุปกรณ์';
+    else if (n === 'NotReadableError') msg = 'กล้องถูกใช้งานโดยแอปอื่น กรุณาปิดแอปอื่นก่อน';
+    else if (n === 'OverconstrainedError') msg = 'อุปกรณ์ไม่รองรับกล้องที่ระบุ';
+    else if (err && err.message) msg += ': ' + err.message;
     showModal('ไม่สามารถเปิดกล้อง', msg);
     jdCameraItemIdx = null;
   }
