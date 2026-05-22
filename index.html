@@ -4582,6 +4582,15 @@ const DAILY_CLOSE = [
 ];
 
 // ============ JAE DAENG CHECKLIST ============
+// Items in this set are never picked for the random photo-required selection.
+const JAEDAENG_PHOTO_EXEMPT = new Set([
+  "พนักงานต้องมีความรู้เรื่องการใช้ถังดับเพลิง",
+  "เปิดเพลงและโทรทัศน์โฆษณาตลอดเวลาทำการขาย ตามที่บริษัทฯ กำหนด",
+  "จัดเก็บของที่มาส่งภายใน 30 นาที",
+  "เครื่องล้างจานหรือจุดล้างภาชนะ ประกอบอุปกรณ์ข้างในครบ ทดสอบแรงดันน้ำพร้อมใช้งาน",
+  "พนักงานที่มาทำงานต้องไม่มีอาการป่วย",
+]);
+
 // Imported from Checklist_ส้มตำแจ่แดง_ฉบับสมบูรณ์.xlsx — 7 sections, flat pass/fail items.
 const JAEDAENG_CHECKLIST = [
   { name: "บริเวณภายในร้าน", items: [
@@ -6641,23 +6650,26 @@ function startJaedaengAudit() {
       });
     });
   });
-  // Pick photo-required items: at least one from EVERY section,
-  // then fill the rest with random picks from any section, capped at 10 total.
+  // Pick photo-required items: at least one from EVERY section, then fill
+  // the rest with random picks from any section, capped at 10 total.
+  // Items in JAEDAENG_PHOTO_EXEMPT are never eligible.
   const MAX_REQUIRED = 10;
+  const isEligible = idx => !JAEDAENG_PHOTO_EXEMPT.has(currentJDAudit.items[idx].text);
   const bySection = {};
   currentJDAudit.items.forEach((it, idx) => {
+    if (!isEligible(idx)) return;
     if (!bySection[it.sectionIdx]) bySection[it.sectionIdx] = [];
     bySection[it.sectionIdx].push(idx);
   });
   const required = new Set();
   Object.values(bySection).forEach(sectionItems => {
-    if (required.size >= MAX_REQUIRED) return;
+    if (required.size >= MAX_REQUIRED || sectionItems.length === 0) return;
     const pick = sectionItems[Math.floor(Math.random() * sectionItems.length)];
     required.add(pick);
   });
   const remaining = currentJDAudit.items
     .map((_, i) => i)
-    .filter(i => !required.has(i));
+    .filter(i => !required.has(i) && isEligible(i));
   for (let i = remaining.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [remaining[i], remaining[j]] = [remaining[j], remaining[i]];
