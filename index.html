@@ -1166,13 +1166,15 @@ input[type="time"].jd-form-input {
 
 /* Camera-only capture overlay */
 .jd-camera-overlay {
-  position: fixed; inset: 0;
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
   background: #000;
-  z-index: 500;
-  display: none; flex-direction: column;
+  z-index: 1000;
+  display: none;
+  flex-direction: column;
   align-items: center; justify-content: center;
 }
-.jd-camera-overlay.show { display: flex; }
+.jd-camera-overlay.show { display: flex !important; }
 .jd-camera-overlay video {
   width: 100%; height: 100%;
   object-fit: cover;
@@ -4555,7 +4557,7 @@ body:has(#login-screen.active) {
 </div>
 
 <!-- Jae Daeng camera capture (audit photos must be from live camera, no gallery) -->
-<div class="jd-camera-overlay" id="jd-camera-overlay" style="display:none;">
+<div class="jd-camera-overlay" id="jd-camera-overlay">
   <video id="jd-camera-video" autoplay playsinline muted></video>
   <div class="jd-camera-bar">
     <button type="button" class="jd-camera-btn close" onclick="closeJDCamera()" aria-label="ปิด">
