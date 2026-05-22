@@ -1163,6 +1163,52 @@ input[type="time"].jd-form-input {
   display: flex; align-items: center; justify-content: center;
 }
 .jd-photo-remove .material-symbols-rounded { font-size: 14px; color: white; }
+
+/* Camera-only capture overlay */
+.jd-camera-overlay {
+  position: fixed; inset: 0;
+  background: #000;
+  z-index: 500;
+  display: none; flex-direction: column;
+  align-items: center; justify-content: center;
+}
+.jd-camera-overlay.show { display: flex; }
+.jd-camera-overlay video {
+  width: 100%; height: 100%;
+  object-fit: cover;
+  background: #000;
+}
+.jd-camera-bar {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  padding: 18px 24px env(safe-area-inset-bottom, 18px);
+  display: flex; align-items: center; justify-content: space-around;
+  background: linear-gradient(transparent, rgba(0,0,0,0.55));
+}
+.jd-camera-btn {
+  width: 48px; height: 48px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.18);
+  border: none;
+  display: inline-flex; align-items: center; justify-content: center;
+  color: white;
+  cursor: pointer;
+  font-family: inherit;
+}
+.jd-camera-btn:active { background: rgba(255,255,255,0.32); }
+.jd-camera-btn .material-symbols-rounded { font-size: 26px; color: white; }
+.jd-camera-shutter {
+  width: 72px; height: 72px;
+  border-radius: 50%;
+  background: white;
+  border: 4px solid rgba(255,255,255,0.6);
+  outline: 3px solid white;
+  outline-offset: 4px;
+  cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-family: inherit;
+}
+.jd-camera-shutter:active { transform: scale(0.95); }
+.jd-camera-shutter .material-symbols-rounded { font-size: 32px; color: #111; }
 .jd-hub-actions { padding: 16px 18px; }
 .jd-dash-kpis {
   display: grid;
@@ -4497,6 +4543,23 @@ body:has(#login-screen.active) {
   </div>
 </div>
 
+<!-- Jae Daeng camera capture (audit photos must be from live camera, no gallery) -->
+<div class="jd-camera-overlay" id="jd-camera-overlay" style="display:none;">
+  <video id="jd-camera-video" autoplay playsinline muted></video>
+  <div class="jd-camera-bar">
+    <button type="button" class="jd-camera-btn close" onclick="closeJDCamera()" aria-label="ปิด">
+      <span class="material-symbols-rounded">close</span>
+    </button>
+    <button type="button" class="jd-camera-shutter" onclick="captureJDPhoto()" aria-label="ถ่ายภาพ">
+      <span class="material-symbols-rounded">photo_camera</span>
+    </button>
+    <button type="button" class="jd-camera-btn switch" onclick="switchJDCamera()" aria-label="สลับกล้อง">
+      <span class="material-symbols-rounded">flip_camera_ios</span>
+    </button>
+  </div>
+  <canvas id="jd-camera-canvas" style="display:none;"></canvas>
+</div>
+
 <div class="modal-overlay welcome-overlay" id="welcome-modal">
   <div class="welcome-modal">
     <div class="welcome-emoji">👋</div>
@@ -4849,6 +4912,34 @@ function findNearestJaedaengBranch(lat, lng) {
     if (!best || m < best.distance) best = { name: b.name, lat: b.lat, lng: b.lng, distance: m };
   }
   return best;
+}
+
+// All branches within the given radius (in meters), sorted nearest first.
+function findJaedaengBranchesWithinRadius(lat, lng, radiusM) {
+  if (lat == null || lng == null) return [];
+  const out = [];
+  for (const b of JAEDAENG_LOCATIONS) {
+    const m = jdHaversineMeters(lat, lng, b.lat, b.lng);
+    if (m <= radiusM) out.push({ name: b.name, distance: m });
+  }
+  return out.sort((a, b) => a.distance - b.distance);
+}
+
+// Extract a short key from a JAEDAENG_BRANCHES name, e.g.
+// "ร้านส้มตำเจ๊แดง (ธนิยะ)" -> "ธนิยะ", "4001 แฟชั่น ไอส์แลนด์ ..." -> as-is
+function jdBranchShortKey(fullName) {
+  if (!fullName) return '';
+  const m = fullName.match(/\(([^)]+)\)/);
+  return (m ? m[1] : fullName).replace(/เจ๊แดง.*$/, '').trim();
+}
+
+// Fuzzy match: returns true if the selected branch name shares its short key
+// with a nearby location name (case-insensitive substring either direction).
+function jdBranchMatchesLocation(selectedName, locationName) {
+  const key = jdBranchShortKey(selectedName).toLowerCase();
+  const loc = (locationName || '').toLowerCase();
+  if (!key || !loc) return false;
+  return loc.includes(key) || key.includes(loc);
 }
 
 // ============ JAE DAENG CHECKLIST ============
@@ -7178,6 +7269,8 @@ function startJaedaengAudit() {
         gps.nearestBranch = nearest.name;
         gps.nearestDistance = Math.round(nearest.distance);
       }
+      gps.nearby500 = findJaedaengBranchesWithinRadius(gps.lat, gps.lng, 500)
+        .map(b => ({ name: b.name, distance: Math.round(b.distance) }));
       _startJaedaengAuditWithGps(gps);
     },
     err => {
@@ -7278,8 +7371,14 @@ function _startJaedaengAuditWithGps(gps) {
   const gpsDisp = document.getElementById('jd-gps-display');
   if (gpsRow && gpsDisp && currentJDAudit.gps) {
     const g = currentJDAudit.gps;
-    const near = g.nearestBranch ? `ใกล้ <b>${escapeHtml(g.nearestBranch)}</b> · ${g.nearestDistance.toLocaleString()} ม.` : '—';
-    gpsDisp.innerHTML = `<a href="https://www.google.com/maps?q=${g.lat},${g.lng}" target="_blank" rel="noopener" style="color:var(--primary-dark);text-decoration:underline;">เปิด Google Maps</a> <span style="font-size:11px;color:var(--text-tertiary);">±${Math.round(g.accuracy || 0)} m</span><div style="font-size:12px;margin-top:4px;color:var(--text-secondary);">${near}</div>`;
+    let nearbyHtml = '';
+    if (g.nearby500 && g.nearby500.length > 0) {
+      nearbyHtml = '<div style="font-size:12px;margin-top:6px;color:var(--text-secondary);">สาขาในระยะ 500 ม.: ' +
+        g.nearby500.map(b => `<b>${escapeHtml(b.name)}</b> · ${b.distance.toLocaleString()} ม.`).join(' · ') + '</div>';
+    } else if (g.nearestBranch) {
+      nearbyHtml = `<div style="font-size:12px;margin-top:6px;color:var(--text-secondary);">ใกล้สุด <b>${escapeHtml(g.nearestBranch)}</b> · ${g.nearestDistance.toLocaleString()} ม. <span style="color:var(--warning);">(เกินรัศมี 500 ม.)</span></div>`;
+    }
+    gpsDisp.innerHTML = `<a href="https://www.google.com/maps?q=${g.lat},${g.lng}" target="_blank" rel="noopener" style="color:var(--primary-dark);text-decoration:underline;">เปิด Google Maps</a> <span style="font-size:11px;color:var(--text-tertiary);">±${Math.round(g.accuracy || 0)} m</span>${nearbyHtml}`;
     gpsRow.style.display = '';
   }
   renderJaedaengForm();
@@ -7303,9 +7402,28 @@ function setJDStore(field, value) {
       currentJDAudit.bzmNick = '';
       row.style.display = 'none';
     }
+    // Warn if the selected branch is not within 500m of the captured GPS.
+    const g = currentJDAudit.gps;
+    if (value && g && Array.isArray(g.nearby500)) {
+      const within = g.nearby500.some(b => jdBranchMatchesLocation(value, b.name));
+      if (!within) {
+        const nearestTxt = g.nearestBranch
+          ? `ตำแหน่ง GPS ห่างจากสาขา <b>${escapeHtml(g.nearestBranch)}</b> ${(g.nearestDistance || 0).toLocaleString()} ม.`
+          : 'GPS ของคุณอยู่ห่างจากสาขาเจ๊แดงทุกแห่งเกิน 500 ม.';
+        const html = `${nearestTxt}<br>คุณเลือกตรวจสาขา <b>${escapeHtml(value)}</b><br><br>ระบบจะให้ตรวจต่อได้ แต่ขอให้ยืนยันว่าตรวจจริงที่สาขานี้`;
+        showModalHtml('คำเตือน: ตำแหน่งไม่ตรงกับสาขา', html);
+      }
+    }
   }
   else if (field === 'date') currentJDAudit.date = value;
   else if (field === 'time') currentJDAudit.time = value;
+}
+
+// Variant of showModal that allows HTML content in the body.
+function showModalHtml(title, bodyHtml) {
+  document.getElementById('modal-title').textContent = title;
+  document.getElementById('modal-body').innerHTML = bodyHtml;
+  document.getElementById('modal').classList.add('show');
 }
 
 function renderJaedaengForm() {
@@ -7335,8 +7453,8 @@ function renderJaedaengForm() {
       if (showPhotos) {
         const missing = isRequired && photos.length === 0;
         photosHtml = '<div class="jd-photo-section ' + (missing ? 'is-missing' : '') + '">' +
-          (isRequired ? '<div class="jd-photo-required-label"><span class="material-symbols-rounded">photo_camera</span> ต้องแนบรูปหลักฐาน</div>' : '') +
-          '<label class="jd-photo-upload-btn"><span class="material-symbols-rounded">add_a_photo</span> แนบรูป<input type="file" accept="image/*" capture="environment" multiple style="display:none;" onchange="addJDPhotos(' + idx + ', this.files)"></label>' +
+          (isRequired ? '<div class="jd-photo-required-label"><span class="material-symbols-rounded">photo_camera</span> ต้องถ่ายรูปหลักฐาน (จากกล้องเท่านั้น)</div>' : '') +
+          '<button type="button" class="jd-photo-upload-btn" onclick="openJDCamera(' + idx + ')"><span class="material-symbols-rounded">photo_camera</span> ถ่ายรูป</button>' +
           '<div class="jd-photo-preview">' +
           photos.map((p, pi) => '<div class="jd-photo-thumb"><img src="' + p + '"><button class="jd-photo-remove" type="button" onclick="removeJDPhoto(' + idx + ',' + pi + ')"><span class="material-symbols-rounded">close</span></button></div>').join('') +
           '</div></div>';
@@ -7410,29 +7528,79 @@ function setJDNote(idx, value) {
   currentJDAudit.items[idx].note = value;
 }
 
-function addJDPhotos(idx, files) {
-  if (!currentJDAudit || !files || !files.length) return;
-  const item = currentJDAudit.items[idx];
-  if (!item.photos) item.photos = [];
-  for (const f of files) {
-    const reader = new FileReader();
-    reader.onload = e => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const maxDim = 800;
-        let w = img.width, h = img.height;
-        if (w > h && w > maxDim) { h = h * maxDim / w; w = maxDim; }
-        else if (h > maxDim) { w = w * maxDim / h; h = maxDim; }
-        canvas.width = w; canvas.height = h;
-        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-        item.photos.push(canvas.toDataURL('image/jpeg', 0.7));
-        renderJaedaengForm();
-      };
-      img.src = e.target.result;
-    };
-    reader.readAsDataURL(f);
+// Camera capture — Jae Daeng photos must come from a live camera feed,
+// so we use getUserMedia + a canvas snapshot instead of a file input.
+let jdCameraStream = null;
+let jdCameraItemIdx = null;
+let jdCameraFacing = 'environment';
+
+async function openJDCamera(idx) {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    showModal('อุปกรณ์ไม่รองรับกล้อง', 'เบราว์เซอร์นี้ไม่รองรับการเข้าถึงกล้อง');
+    return;
   }
+  jdCameraItemIdx = idx;
+  try {
+    jdCameraStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: jdCameraFacing } },
+      audio: false,
+    });
+    const video = document.getElementById('jd-camera-video');
+    video.srcObject = jdCameraStream;
+    await video.play().catch(() => {});
+    document.getElementById('jd-camera-overlay').classList.add('show');
+  } catch (err) {
+    const msg = err && err.name === 'NotAllowedError'
+      ? 'คุณปฏิเสธการเข้าถึงกล้อง กรุณาเปิดสิทธิ์กล้องในเบราว์เซอร์'
+      : 'ไม่สามารถเปิดกล้องได้';
+    showModal('ไม่สามารถเปิดกล้อง', msg);
+    jdCameraItemIdx = null;
+  }
+}
+
+async function switchJDCamera() {
+  jdCameraFacing = jdCameraFacing === 'environment' ? 'user' : 'environment';
+  if (jdCameraStream) jdCameraStream.getTracks().forEach(t => t.stop());
+  try {
+    jdCameraStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: jdCameraFacing } },
+      audio: false,
+    });
+    const video = document.getElementById('jd-camera-video');
+    video.srcObject = jdCameraStream;
+    await video.play().catch(() => {});
+  } catch (_) {
+    // revert if the other camera isn't available
+    jdCameraFacing = jdCameraFacing === 'environment' ? 'user' : 'environment';
+  }
+}
+
+function captureJDPhoto() {
+  if (!currentJDAudit || jdCameraItemIdx == null) return;
+  const video = document.getElementById('jd-camera-video');
+  const canvas = document.getElementById('jd-camera-canvas');
+  const maxDim = 1000;
+  let w = video.videoWidth || 800;
+  let h = video.videoHeight || 600;
+  if (w > h && w > maxDim) { h = h * maxDim / w; w = maxDim; }
+  else if (h > maxDim) { w = w * maxDim / h; h = maxDim; }
+  canvas.width = w; canvas.height = h;
+  canvas.getContext('2d').drawImage(video, 0, 0, w, h);
+  const dataUrl = canvas.toDataURL('image/jpeg', 0.72);
+  const item = currentJDAudit.items[jdCameraItemIdx];
+  if (!item.photos) item.photos = [];
+  item.photos.push(dataUrl);
+  closeJDCamera();
+  renderJaedaengForm();
+}
+
+function closeJDCamera() {
+  if (jdCameraStream) {
+    jdCameraStream.getTracks().forEach(t => t.stop());
+    jdCameraStream = null;
+  }
+  document.getElementById('jd-camera-overlay').classList.remove('show');
+  jdCameraItemIdx = null;
 }
 
 function removeJDPhoto(idx, photoIdx) {
