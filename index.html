@@ -1234,6 +1234,27 @@ input[type="time"].jd-form-input {
   text-align: center; padding: 24px;
   color: var(--text-tertiary); font-size: 13px;
 }
+.jd-dash-filter {
+  display: grid;
+  grid-template-columns: auto 1fr 1fr;
+  gap: 10px;
+  align-items: center;
+  padding: 12px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  margin-bottom: 14px;
+}
+@media (max-width: 600px) {
+  .jd-dash-filter { grid-template-columns: 1fr; }
+}
+.jd-dash-scope {
+  font-size: 12px; font-weight: 700;
+  color: var(--text-secondary);
+  margin: -6px 0 10px;
+  padding: 0 4px;
+}
+.jd-dash-scope b { color: var(--primary); font-weight: 900; }
 .jd-history-card {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -4313,6 +4334,16 @@ body:has(#login-screen.active) {
           แดชบอร์ด <span class="page-eyebrow-inline">เจ๊แดงสามย่าน</span>
         </h2>
       </div>
+      <div class="jd-dash-scope" id="jd-dash-scope"></div>
+      <div class="jd-dash-filter" id="jd-dash-filter" style="display:none;">
+        <label class="jd-form-label">ดูข้อมูล</label>
+        <select id="jd-dash-zone-select" class="jd-form-input" onchange="setJaedaengDashZone(this.value)">
+          <option value="all">ทุกโซน · ทุกสาขา</option>
+        </select>
+        <select id="jd-dash-branch-select" class="jd-form-input" onchange="setJaedaengDashBranch(this.value)">
+          <option value="all">ทุกสาขาในโซนนี้</option>
+        </select>
+      </div>
       <div class="jd-dash-kpis" id="jd-dash-kpis"></div>
       <div class="card">
         <div class="card-header">
@@ -4600,6 +4631,7 @@ let currentJDAudit = null; // Jae Daeng audit being filled
 let allJaedaengAudits = []; // loaded from storage
 let currentView = null; // 'santafe' | 'jaedaeng' — defaults to user's brand; cross-brand users can toggle
 let testMode = false; // when true, all writes are in-memory only — exiting reloads real data
+let jdDashFilter = { zone: 'all', branch: 'all' };
 
 // ============ DAILY CHECKLIST DATA ============
 const DAILY_OPEN = [
@@ -5215,8 +5247,7 @@ function showWelcomeModal() {
   } else {
     const roleLabel = roleLabels[currentUser.role] || currentUser.role;
     const baseName = currentUser.name || currentUser.nick || '-';
-    const fullName = currentUser.title ? `${currentUser.title} ${baseName}` : baseName;
-    sub.innerHTML = `<b>${escapeHtml(fullName)}</b> (${escapeHtml(roleLabel)})`;
+    sub.innerHTML = `<b>${escapeHtml('คุณ ' + baseName)}</b> (${escapeHtml(roleLabel)})`;
   }
   document.getElementById('welcome-modal').classList.add('show');
 }
@@ -6799,11 +6830,106 @@ function showJaedaengDashboard() {
   hideAllScreens();
   document.getElementById('jaedaeng-dashboard-screen').style.display = 'block';
   setActiveNav('nav-dash');
+  setupJaedaengDashFilter();
+  renderJaedaengDashboard();
+}
+
+// BZM only sees the stores they manage; higher roles see everything.
+function getVisibleJaedaengAudits() {
+  const all = (allJaedaengAudits || []).slice();
+  if (!currentUser) return all;
+  if (currentUser.role === 'bzm') {
+    return all.filter(r => r.bzm === currentUser.name || r.bzmNick === currentUser.nick);
+  }
+  return all;
+}
+
+function getJaedaengBranchesForUser() {
+  if (currentUser && currentUser.role === 'bzm') {
+    return JAEDAENG_BRANCHES.filter(b =>
+      b.manager === currentUser.name || b.managerNick === currentUser.nick
+    );
+  }
+  return JAEDAENG_BRANCHES;
+}
+
+function setupJaedaengDashFilter() {
+  const filterRow = document.getElementById('jd-dash-filter');
+  if (!filterRow) return;
+  // Only higher roles get the drill-down filter
+  const showFilter = currentUser && currentUser.role !== 'bzm';
+  filterRow.style.display = showFilter ? '' : 'none';
+  if (!showFilter) return;
+
+  const zoneSelect = document.getElementById('jd-dash-zone-select');
+  const branchSelect = document.getElementById('jd-dash-branch-select');
+
+  // Build zone options from JAEDAENG_BRANCHES
+  const zones = [];
+  const seen = new Set();
+  JAEDAENG_BRANCHES.forEach(b => {
+    const key = b.managerNick || b.manager;
+    if (!seen.has(key)) {
+      seen.add(key);
+      zones.push({ key, label: `โซน ${b.managerNick || b.manager}` });
+    }
+  });
+  zoneSelect.innerHTML = '<option value="all">ทุกโซน · ทุกสาขา</option>' +
+    zones.map(z => `<option value="${escapeAttr(z.key)}">${escapeHtml(z.label)}</option>`).join('');
+  zoneSelect.value = jdDashFilter.zone;
+  populateJaedaengDashBranchSelect();
+}
+
+function populateJaedaengDashBranchSelect() {
+  const branchSelect = document.getElementById('jd-dash-branch-select');
+  if (!branchSelect) return;
+  if (jdDashFilter.zone === 'all') {
+    branchSelect.innerHTML = '<option value="all">ทุกสาขา</option>';
+    branchSelect.disabled = true;
+    branchSelect.value = 'all';
+    return;
+  }
+  const branches = JAEDAENG_BRANCHES.filter(b => (b.managerNick || b.manager) === jdDashFilter.zone);
+  branchSelect.innerHTML = '<option value="all">ทุกสาขาในโซนนี้</option>' +
+    branches.map(b => `<option value="${escapeAttr(b.name)}">${escapeHtml(b.name)}</option>`).join('');
+  branchSelect.disabled = false;
+  branchSelect.value = branches.find(b => b.name === jdDashFilter.branch) ? jdDashFilter.branch : 'all';
+}
+
+function setJaedaengDashZone(zone) {
+  jdDashFilter.zone = zone;
+  jdDashFilter.branch = 'all';
+  populateJaedaengDashBranchSelect();
+  renderJaedaengDashboard();
+}
+
+function setJaedaengDashBranch(branch) {
+  jdDashFilter.branch = branch;
   renderJaedaengDashboard();
 }
 
 function renderJaedaengDashboard() {
-  const records = (allJaedaengAudits || []).slice();
+  let records = getVisibleJaedaengAudits();
+  // Apply drill-down filter for higher roles
+  let scopeText = '';
+  if (currentUser && currentUser.role === 'bzm') {
+    scopeText = `กำลังดูข้อมูลของโซน <b>${escapeHtml(currentUser.nick || currentUser.name)}</b>`;
+  } else if (currentUser && currentUser.role !== 'bzm') {
+    if (jdDashFilter.zone !== 'all') {
+      records = records.filter(r => (r.bzmNick || r.bzm) === jdDashFilter.zone);
+      scopeText = `กำลังดูข้อมูลของโซน <b>${escapeHtml(jdDashFilter.zone)}</b>`;
+    }
+    if (jdDashFilter.branch !== 'all') {
+      records = records.filter(r => r.storeName === jdDashFilter.branch);
+      scopeText = `กำลังดูข้อมูลของสาขา <b>${escapeHtml(jdDashFilter.branch)}</b>`;
+    }
+  }
+  const scopeEl = document.getElementById('jd-dash-scope');
+  if (scopeEl) {
+    scopeEl.innerHTML = scopeText;
+    scopeEl.style.display = scopeText ? '' : 'none';
+  }
+  records = records.slice();
   const kpis = document.getElementById('jd-dash-kpis');
   const branchesEl = document.getElementById('jd-dash-branches');
   const topFailsEl = document.getElementById('jd-dash-top-fails');
@@ -6833,7 +6959,7 @@ function renderJaedaengDashboard() {
     <div class="jd-kpi"><div class="jd-kpi-label">การตรวจทั้งหมด</div><div class="jd-kpi-value">${totalAudits}</div><div class="jd-kpi-sub">เดือนนี้ ${thisMonth} ครั้ง</div></div>
     <div class="jd-kpi ${avgPct >= 90 ? 'is-success' : avgPct < 70 ? 'is-danger' : 'is-warn'}"><div class="jd-kpi-label">คะแนนเฉลี่ย</div><div class="jd-kpi-value">${avgPct.toFixed(1)}<span style="font-size:14px;">%</span></div><div class="jd-kpi-sub">ผ่านเกณฑ์</div></div>
     <div class="jd-kpi is-danger"><div class="jd-kpi-label">รวมข้อไม่ผ่าน</div><div class="jd-kpi-value">${totalFails}</div><div class="jd-kpi-sub">NCRs</div></div>
-    <div class="jd-kpi"><div class="jd-kpi-label">สาขาที่ตรวจแล้ว</div><div class="jd-kpi-value">${distinctBranches}</div><div class="jd-kpi-sub">จาก ${JAEDAENG_BRANCHES.length} สาขา</div></div>
+    <div class="jd-kpi"><div class="jd-kpi-label">สาขาที่ตรวจแล้ว</div><div class="jd-kpi-value">${distinctBranches}</div><div class="jd-kpi-sub">จาก ${getJaedaengBranchesForUser().length} สาขา</div></div>
   `;
 
   // Branch leaderboard — sort by avg pass%
@@ -6929,7 +7055,7 @@ function showJaedaengHub() {
 
 function renderJaedaengList() {
   const list = document.getElementById('jaedaeng-list');
-  const records = (allJaedaengAudits || []).slice().sort((a, b) => (b.submittedAt || b.date || '').localeCompare(a.submittedAt || a.date || ''));
+  const records = getVisibleJaedaengAudits().sort((a, b) => (b.submittedAt || b.date || '').localeCompare(a.submittedAt || a.date || ''));
   if (records.length === 0) {
     list.innerHTML = `<div class="jd-history-empty">
       <span class="material-symbols-rounded" style="font-size:40px;opacity:0.5;display:block;margin-bottom:8px;">history</span>
