@@ -7598,9 +7598,25 @@ function setJDNote(idx, value) {
 
 // Camera capture — Jae Daeng photos must come from a live camera feed,
 // so we use getUserMedia + a canvas snapshot instead of a file input.
+// Captured frames upload to Cloudflare R2 via a Worker; the record only
+// keeps the resulting HTTPS URL, falling back to a base64 inline copy if
+// the upload fails so the user never loses their evidence.
+const R2_UPLOAD_URL = 'https://qa-upload.project03.workers.dev';
 let jdCameraStream = null;
 let jdCameraItemIdx = null;
 let jdCameraFacing = 'environment';
+
+async function uploadJDPhotoToR2(blob) {
+  const r = await fetch(R2_UPLOAD_URL, {
+    method: 'POST',
+    body: blob,
+    headers: { 'Content-Type': blob.type || 'image/jpeg' },
+  });
+  if (!r.ok) throw new Error('R2 upload failed: ' + r.status);
+  const j = await r.json();
+  if (!j.url) throw new Error('R2 worker returned no URL');
+  return j.url;
+}
 
 async function openJDCamera(idx) {
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -7659,26 +7675,45 @@ async function switchJDCamera() {
   }
 }
 
-function captureJDPhoto() {
+async function captureJDPhoto() {
   if (!currentJDAudit || jdCameraItemIdx == null) return;
   const video = document.getElementById('jd-camera-video');
   const canvas = document.getElementById('jd-camera-canvas');
-  // 600 px max + JPEG 0.5 keeps each shot around 40-60 KB so even
-  // a 10-photo audit fits well under the 1 MiB Firestore document
-  // limit and the photos auto-expire after 45 days.
-  const maxDim = 600;
+  // 800 px max + JPEG 0.6 — slightly bigger than the previous local-only
+  // 600/0.5 since photos now live in R2 (not Firestore) and we want
+  // legible evidence shots.
+  const maxDim = 800;
   let w = video.videoWidth || 800;
   let h = video.videoHeight || 600;
   if (w > h && w > maxDim) { h = h * maxDim / w; w = maxDim; }
   else if (h > maxDim) { w = w * maxDim / h; h = maxDim; }
   canvas.width = w; canvas.height = h;
   canvas.getContext('2d').drawImage(video, 0, 0, w, h);
-  const dataUrl = canvas.toDataURL('image/jpeg', 0.5);
-  const item = currentJDAudit.items[jdCameraItemIdx];
+
+  const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.6));
+  const dataUrl = canvas.toDataURL('image/jpeg', 0.6); // immediate preview
+  const itemIdx = jdCameraItemIdx;
+  const item = currentJDAudit.items[itemIdx];
   if (!item.photos) item.photos = [];
+  const localSlot = item.photos.length;
   item.photos.push(dataUrl);
   closeJDCamera();
   renderJaedaengForm();
+
+  // Skip cloud upload while Test Mode is on so test runs leave no R2 objects.
+  if (testMode || !blob) return;
+
+  try {
+    const url = await uploadJDPhotoToR2(blob);
+    // Replace the inline preview with the R2 URL once the upload lands.
+    if (item.photos[localSlot] === dataUrl) {
+      item.photos[localSlot] = url;
+      renderJaedaengForm();
+    }
+  } catch (e) {
+    console.warn('R2 upload failed, keeping inline copy', e);
+    // Leave the base64 in place — record still saves, photo is preserved.
+  }
 }
 
 function closeJDCamera() {
