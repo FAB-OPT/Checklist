@@ -983,6 +983,37 @@ input[type="time"].jd-form-input {
   min-height: 42px;
   appearance: none; -webkit-appearance: none;
 }
+.jd-section-tabs {
+  display: flex; gap: 8px;
+  overflow-x: auto;
+  padding: 10px 4px 12px;
+  margin-bottom: 8px;
+  position: sticky; top: 0; z-index: 40;
+  background: var(--bg);
+  scrollbar-width: thin;
+}
+.jd-section-tab {
+  flex-shrink: 0;
+  display: inline-flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 8px 14px;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-pill);
+  font-size: 12px; font-weight: 800;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+  transition: all 0.15s;
+}
+.jd-section-tab:hover { border-color: var(--border-strong); color: var(--text); }
+.jd-section-tab.is-done { background: var(--success-bg); border-color: var(--success); color: #1E6B36; }
+.jd-section-tab.has-fail { background: var(--danger-bg); border-color: var(--danger); color: #7A1F10; }
+.jd-section-tab-progress {
+  font-size: 10px; font-weight: 700;
+  letter-spacing: 0.3px;
+  opacity: 0.85;
+}
 .jd-section-card {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -4200,6 +4231,7 @@ body:has(#login-screen.active) {
           <input type="time" id="jd-time" class="jd-form-input" onchange="setJDStore('time', this.value)">
         </div>
       </div>
+      <div class="jd-section-tabs" id="jd-section-tabs"></div>
       <div id="jaedaeng-sections-container"></div>
       <div class="card no-print">
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
@@ -4589,7 +4621,7 @@ const JAEDAENG_CHECKLIST = [
     "ตู้แช่แข็ง ภายใน-ภายนอก สะอาด ขอบยางไม่มีเชื้อรา/คราบดำ มีตะแกรงครอบใบพัด, Compressor สะอาด ไม่มีน้ำแข็งเกาะ",
     "อุณหภูมิตู้แช่แข็งถูกต้อง (-18) ถึง (-13) องศา",
     "Frame Card, กล่องรองน้ำมัน, แผงเป่าลม และเครื่องดูดควัน สะอาด อยู่ในสภาพดี",
-    "เครื่องล้างจาน ประกอบอุปกรณ์ข้างในครบ ทดสอบแรงดันน้ำพร้อมใช้งาน",
+    "เครื่องล้างจานหรือจุดล้างภาชนะ ประกอบอุปกรณ์ข้างในครบ ทดสอบแรงดันน้ำพร้อมใช้งาน",
     "ภาชนะใส่อาหาร/วัตถุดิบ ไม่แตกชำรุด ทุก Station ในครัว",
     "น้ำยาทำความสะอาดฆ่าเชื้อทุกชนิด ใช้ที่บริษัทกำหนดเท่านั้น",
     "ไม่มีวัตถุดิบ อาหาร อุปกรณ์ วางบนพื้น (วางสูงจากพื้น 6 นิ้ว)",
@@ -6687,6 +6719,7 @@ function setJDStore(field, value) {
 }
 
 function renderJaedaengForm() {
+  renderJaedaengSectionTabs();
   const container = document.getElementById('jaedaeng-sections-container');
   let html = '';
   JAEDAENG_CHECKLIST.forEach((sec, sIdx) => {
@@ -6695,7 +6728,7 @@ function renderJaedaengForm() {
     const failCount = sectionItems.filter(i => i.status === 'fail').length;
     const naCount = sectionItems.filter(i => i.status === 'na').length;
     const doneCount = passCount + failCount + naCount;
-    html += `<div class="jd-section-card">
+    html += `<div class="jd-section-card" id="jd-section-${sIdx}">
       <div class="jd-section-header">
         <div class="jd-section-name">${escapeHtml(sec.name)}</div>
         <div class="jd-section-progress">${doneCount}/${sec.items.length}${failCount ? ` · ✗${failCount}` : ''}</div>
@@ -6741,6 +6774,33 @@ function renderJaedaengForm() {
     html += `</div>`;
   });
   container.innerHTML = html;
+}
+
+function renderJaedaengSectionTabs() {
+  const tabs = document.getElementById('jd-section-tabs');
+  if (!tabs || !currentJDAudit) return;
+  tabs.innerHTML = JAEDAENG_CHECKLIST.map((sec, sIdx) => {
+    const items = currentJDAudit.items.filter(i => i.sectionIdx === sIdx);
+    const pass = items.filter(i => i.status === 'pass').length;
+    const fail = items.filter(i => i.status === 'fail').length;
+    const na = items.filter(i => i.status === 'na').length;
+    const done = pass + fail + na;
+    let cls = '';
+    if (fail > 0) cls = 'has-fail';
+    else if (done === sec.items.length) cls = 'is-done';
+    return `<button type="button" class="jd-section-tab ${cls}" onclick="scrollToJDSection(${sIdx})">
+      <span>${escapeHtml(sec.name.replace(/\s*\(.*\)$/, ''))}</span>
+      <span class="jd-section-tab-progress">${done}/${sec.items.length}${fail ? ' · ✗' + fail : ''}</span>
+    </button>`;
+  }).join('');
+}
+
+function scrollToJDSection(sIdx) {
+  const el = document.getElementById(`jd-section-${sIdx}`);
+  if (!el) return;
+  const headerOffset = 80;
+  const top = el.getBoundingClientRect().top + window.scrollY - headerOffset;
+  window.scrollTo({ top, behavior: 'smooth' });
 }
 
 function setJDAnswer(idx, value) {
