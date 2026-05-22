@@ -7619,43 +7619,126 @@ async function uploadJDPhotoToR2(blob) {
 }
 
 async function openJDCamera(idx) {
+  jdCameraItemIdx = idx;
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-    showModal('อุปกรณ์ไม่รองรับกล้อง', 'เบราว์เซอร์นี้ไม่รองรับการเข้าถึงกล้อง (iOS Safari ต้องเป็น HTTPS และเปิดผ่าน Safari หลัก ไม่ใช่ Line/Facebook in-app browser)');
+    // No camera API at all — fall back to the native file picker with the
+    // capture hint, which on iOS Safari opens the system camera UI.
+    openJDNativeCapture(idx);
     return;
   }
-  jdCameraItemIdx = idx;
-  // Show the overlay first so the <video> is mounted before we attach the stream;
-  // iOS Safari refuses to play() on a hidden / detached video element.
+
   const overlay = document.getElementById('jd-camera-overlay');
   const video = document.getElementById('jd-camera-video');
+  // Apply every iOS hint BEFORE we touch the stream — iOS Safari rejects
+  // play() on hidden, unmuted, or non-playsinline videos.
   video.setAttribute('playsinline', '');
   video.setAttribute('webkit-playsinline', '');
+  video.setAttribute('autoplay', '');
+  video.setAttribute('muted', '');
   video.muted = true;
+  video.playsInline = true;
   overlay.classList.add('show');
 
-  const tryGet = async constraints => navigator.mediaDevices.getUserMedia(constraints);
   try {
+    let stream;
     try {
-      jdCameraStream = await tryGet({ video: { facingMode: { ideal: jdCameraFacing } }, audio: false });
-    } catch (e1) {
-      // Retry without the facingMode constraint — some laptops/desktops only have a front cam
-      jdCameraStream = await tryGet({ video: true, audio: false });
+      stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: jdCameraFacing } },
+        audio: false,
+      });
+    } catch (eFacing) {
+      // Some devices only have one camera; retry without the facingMode hint.
+      stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
     }
-    video.srcObject = jdCameraStream;
-    try { await video.play(); } catch (_) { /* iOS sometimes resolves later */ }
+    jdCameraStream = stream;
+    try {
+      video.srcObject = stream;
+    } catch (eSrc) {
+      // Very old iOS doesn't support srcObject; use the legacy URL form.
+      video.src = URL.createObjectURL(stream);
+    }
+    // Wait for metadata so play() has dimensions to render against. Bail out
+    // after 2.5s as a safety net.
+    await new Promise(resolve => {
+      let done = false;
+      const cleanup = () => { done = true; video.removeEventListener('loadedmetadata', once); };
+      const once = () => { if (!done) { cleanup(); resolve(); } };
+      video.addEventListener('loadedmetadata', once);
+      setTimeout(() => { if (!done) { cleanup(); resolve(); } }, 2500);
+    });
+    try { await video.play(); } catch (ePlay) { console.warn('video.play() rejected:', ePlay); }
   } catch (err) {
+    console.error('openJDCamera error:', err);
     overlay.classList.remove('show');
     const n = err && err.name;
-    let msg = 'ไม่สามารถเปิดกล้องได้';
-    if (n === 'NotAllowedError' || n === 'SecurityError')
-      msg = 'คุณปฏิเสธสิทธิ์กล้อง — เปิด Settings > Safari > Camera แล้วอนุญาต';
-    else if (n === 'NotFoundError') msg = 'ไม่พบกล้องบนอุปกรณ์';
-    else if (n === 'NotReadableError') msg = 'กล้องถูกใช้งานโดยแอปอื่น กรุณาปิดแอปอื่นก่อน';
-    else if (n === 'OverconstrainedError') msg = 'อุปกรณ์ไม่รองรับกล้องที่ระบุ';
-    else if (err && err.message) msg += ': ' + err.message;
-    showModal('ไม่สามารถเปิดกล้อง', msg);
-    jdCameraItemIdx = null;
+    if (n === 'NotAllowedError' || n === 'SecurityError') {
+      showModal('คุณปฏิเสธสิทธิ์กล้อง', 'iOS: Settings > Safari > Camera > Allow\nAndroid: แตะไอคอน 🔒 ตรง URL > Camera > Allow แล้วลองอีกครั้ง');
+      jdCameraItemIdx = null;
+      return;
+    }
+    if (n === 'NotReadableError') {
+      showModal('กล้องถูกใช้งานโดยแอปอื่น', 'ปิดแอปกล้องอื่น (Line/IG/Camera) แล้วลองใหม่');
+      jdCameraItemIdx = null;
+      return;
+    }
+    // Any other failure (NotFoundError / Overconstrained / generic) — fall back
+    // to the native file picker so the user can still capture a photo.
+    openJDNativeCapture(idx);
   }
+}
+
+// Native fallback: hidden <input type="file" capture="environment"> opens the
+// iOS / Android camera UI when getUserMedia isn't available (e.g. inside Line
+// or Facebook in-app browsers, or older iOS builds).
+function openJDNativeCapture(idx) {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'image/*';
+  input.capture = 'environment';
+  input.setAttribute('capture', 'environment');
+  input.style.display = 'none';
+  document.body.appendChild(input);
+  input.onchange = async () => {
+    const file = input.files && input.files[0];
+    document.body.removeChild(input);
+    if (!file) { jdCameraItemIdx = null; return; }
+    await handleJDPhotoFile(idx, file);
+  };
+  input.click();
+}
+
+async function handleJDPhotoFile(idx, file) {
+  const reader = new FileReader();
+  reader.onload = async ev => {
+    const img = new Image();
+    img.onload = async () => {
+      const canvas = document.createElement('canvas');
+      const maxDim = 800;
+      let w = img.naturalWidth || img.width, h = img.naturalHeight || img.height;
+      if (w > h && w > maxDim) { h = h * maxDim / w; w = maxDim; }
+      else if (h > maxDim) { w = w * maxDim / h; h = maxDim; }
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.6));
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.6);
+      const item = currentJDAudit.items[idx];
+      if (!item.photos) item.photos = [];
+      const localSlot = item.photos.length;
+      item.photos.push(dataUrl);
+      jdCameraItemIdx = null;
+      renderJaedaengForm();
+      if (testMode || !blob) return;
+      try {
+        const url = await uploadJDPhotoToR2(blob);
+        if (item.photos[localSlot] === dataUrl) {
+          item.photos[localSlot] = url;
+          renderJaedaengForm();
+        }
+      } catch (e) { console.warn('R2 upload (native capture) failed:', e); }
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
 }
 
 async function switchJDCamera() {
