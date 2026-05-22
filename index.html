@@ -3814,7 +3814,7 @@ body:has(#login-screen.active) {
 
     <div class="login-box" id="login-stage" style="display:none;">
       <div class="brand-logo">
-        <img src="Screenshot 2026-05-18 092954.png" alt="Fab" />
+        <img src="Screenshot 2026-05-18 092954.png" alt="Fab" id="login-brand-logo" />
       </div>
       <h1 class="brand-title" id="login-title">Quality Service Cleanliness &amp; Operations Checklist</h1>
       <p class="brand-subtitle" id="login-subtitle">ระบบตรวจสอบมาตรฐานการทำงาน</p>
@@ -4838,14 +4838,17 @@ function selectBrand(brand) {
   const title = document.getElementById('login-title');
   const subtitle = document.getElementById('login-subtitle');
   const toggle = document.getElementById('role-toggle');
+  const logo = document.getElementById('login-brand-logo');
   if (brand === 'santafe') {
     title.textContent = 'Operations Standard Skill & Operations Checklist';
     subtitle.textContent = 'Santa Fe Happy Steak';
+    if (logo) { logo.src = 'logo santafe.jpg'; logo.alt = 'Santa Fe'; }
     toggle.style.display = '';
     selectRole('branch');
   } else {
     title.textContent = 'Quality Service Cleanliness & Operations Checklist';
     subtitle.textContent = 'เจ๊แดงสามย่าน';
+    if (logo) { logo.src = 'Logo-Jaedang_samyan.png'; logo.alt = 'เจ๊แดงสามย่าน'; }
     toggle.style.display = 'none';
     selectRole('staff');
   }
@@ -4857,6 +4860,8 @@ function backToBrand() {
   if (input) input.value = '';
   document.getElementById('login-stage').style.display = 'none';
   document.getElementById('brand-stage').style.display = '';
+  const logo = document.getElementById('login-brand-logo');
+  if (logo) { logo.src = 'Screenshot 2026-05-18 092954.png'; logo.alt = 'Fab'; }
 }
 
 function selectRole(role) {
