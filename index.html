@@ -1342,6 +1342,17 @@ input[type="time"].jd-form-input {
 .jd-history-card.tier-good  { border-left-color: var(--success); }
 .jd-history-card.tier-warn  { border-left-color: var(--warning); }
 .jd-history-card.tier-bad   { border-left-color: var(--danger); }
+.jd-history-gps {
+  font-size: 11px; font-weight: 700;
+  margin-top: 4px;
+  padding: 3px 8px;
+  border-radius: var(--r-pill);
+  display: inline-block;
+  letter-spacing: 0.1px;
+}
+.jd-history-gps.is-good { background: var(--success-bg); color: #1E6B36; }
+.jd-history-gps.is-warn { background: var(--warning-bg); color: #7A5818; }
+.jd-history-gps.is-bad  { background: var(--danger-bg);  color: #7A1F10; }
 .jd-history-empty {
   text-align: center; padding: 36px 20px;
   color: var(--text-tertiary);
@@ -4891,6 +4902,10 @@ const JAEDAENG_LOCATIONS = [
   { name: "เดอะมอลล์ ท่าพระ",                      lat: 13.7139355, lng: 100.477666  },
   { name: "เทอร์มินอล 21 พระราม3",                  lat: 13.6881731, lng: 100.5002317 },
   { name: "อเกณฑ์ พัทยา",                          lat: 12.9510719, lng: 100.8857879 },
+  { name: "สยามพารากอน",                          lat: 13.7463,    lng: 100.5346    },
+  { name: "ปั๊มปตท.พรานนก",                       lat: 13.7535468, lng: 100.4455994 },
+  { name: "เซ็นทรัลอีสวิลล์",                       lat: 13.8029718, lng: 100.6143198 },
+  { name: "ปตท.พระราม 4",                          lat: 13.7131324, lng: 100.5818959 },
 ];
 
 function jdHaversineMeters(lat1, lng1, lat2, lng2) {
@@ -7208,10 +7223,18 @@ function renderJaedaengDashboard() {
   const recent = records.slice().sort((a, b) => (b.submittedAt || b.date || '').localeCompare(a.submittedAt || a.date || '')).slice(0, 5);
   recentEl.innerHTML = recent.map(r => {
     const tier = r.passPct >= 90 ? 'is-good' : r.passPct < 70 ? 'is-bad' : 'is-warn';
+    let gpsTag = '';
+    if (r.gps) {
+      const matched = r.gps.nearestBranch && jdBranchMatchesLocation(r.storeName || '', r.gps.nearestBranch);
+      const cls = matched ? 'is-good' : 'is-bad';
+      gpsTag = ` · <span style="font-weight:800;color:${matched ? 'var(--success)' : 'var(--danger)'};">📍 ${(r.gps.nearestDistance || 0).toLocaleString()}ม. ${matched ? '(ตรง)' : '(ไม่ตรง)'}</span>`;
+    } else {
+      gpsTag = ' · <span style="font-weight:800;color:var(--text-tertiary);">📍 —</span>';
+    }
     return `<div class="jd-dash-row" onclick="showJaedaengDetail('${escapeAttr(r.id)}')" style="cursor:pointer;">
       <div>
         <div class="jd-dash-row-name">${escapeHtml(r.storeName)}</div>
-        <div class="jd-dash-row-meta">${escapeHtml(fmtDateDMY(r.date))}${r.time ? ' · ' + escapeHtml(r.time) : ''} · ${escapeHtml(r.auditor || '-')}</div>
+        <div class="jd-dash-row-meta">${escapeHtml(fmtDateDMY(r.date))}${r.time ? ' · ' + escapeHtml(r.time) : ''} · ${escapeHtml(r.auditor || '-')}${gpsTag}</div>
       </div>
       <div class="jd-dash-row-value ${tier}">${r.passPct.toFixed(1)}%</div>
     </div>`;
@@ -7237,10 +7260,23 @@ function renderJaedaengList() {
   }
   list.innerHTML = records.map(r => {
     const tier = r.passPct >= 90 ? 'tier-good' : r.passPct >= 70 ? 'tier-warn' : 'tier-bad';
+    let gpsLine = '';
+    if (r.gps) {
+      const inside500 = (r.gps.nearestDistance != null && r.gps.nearestDistance <= 500);
+      const matched = r.gps.nearestBranch && jdBranchMatchesLocation(r.storeName || '', r.gps.nearestBranch);
+      const cls = matched ? 'is-good' : (inside500 ? 'is-warn' : 'is-bad');
+      const txt = matched
+        ? `📍 ใกล้สาขา ${escapeHtml(r.gps.nearestBranch)} · ${(r.gps.nearestDistance || 0).toLocaleString()} ม. (ตรงสาขา)`
+        : `📍 GPS ห่างจาก ${escapeHtml(r.gps.nearestBranch || '—')} ${(r.gps.nearestDistance || 0).toLocaleString()} ม. (${matched ? 'ตรง' : 'ไม่ตรง'}สาขา)`;
+      gpsLine = `<div class="jd-history-gps ${cls}">${txt}</div>`;
+    } else {
+      gpsLine = `<div class="jd-history-gps is-warn">📍 ไม่มีข้อมูล GPS</div>`;
+    }
     return `<div class="jd-history-card ${tier}" onclick="showJaedaengDetail('${escapeAttr(r.id)}')">
       <div>
         <div class="jd-history-name">${escapeHtml(r.storeName || '-')}</div>
         <div class="jd-history-meta">${escapeHtml(fmtDateDMY(r.date))}${r.time ? ' · ' + escapeHtml(r.time) : ''} · ผู้ตรวจ ${escapeHtml(r.auditor || '-')} · ผ่าน ${r.passCount}/${r.totalCount - r.naCount} ข้อ</div>
+        ${gpsLine}
       </div>
       <div>
         <div class="jd-history-score">${r.passPct.toFixed(1)}<span class="jd-history-score-unit"> %</span></div>
