@@ -418,6 +418,9 @@ body {
   gap: 22px;
   padding: 26px 28px;
 }
+@media (max-width: 600px) {
+  .summary-hero { padding: 20px 16px; gap: 16px; }
+}
 @media (min-width: 720px) {
   .summary-hero {
     grid-template-columns: minmax(220px, 280px) 1fr;
@@ -450,6 +453,10 @@ body {
   border: none;
   border-bottom: 1px solid var(--border);
 }
+@media (max-width: 600px) {
+  .summary-meta-row { padding: 10px 4px; gap: 10px; }
+  .summary-meta-row-label { letter-spacing: 0.2px; }
+}
 /* Drop bottom border for the very last row(s) so the block ends clean */
 .summary-meta-list .summary-meta-row:last-child,
 .summary-meta-list .summary-meta-row:nth-last-child(2):not(.span-all) {
@@ -470,6 +477,46 @@ body {
 .summary-meta-row[data-icon="badge"] > .material-symbols-rounded { color: #38A063; }
 .summary-meta-row[data-icon="fact_check"] > .material-symbols-rounded { color: #4A7BD8; }
 .summary-meta-row[data-icon="my_location"] > .material-symbols-rounded { color: #16A34A; }
+
+/* 4-up status grid under "สถานะรายการ" — icons + counts + labels */
+.jd-status-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-top: 6px;
+}
+.jd-status-chip {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 10px 6px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  text-align: center;
+}
+.jd-status-chip .material-symbols-rounded { font-size: 20px; margin-bottom: 2px; }
+.jd-status-num {
+  font-size: 18px; font-weight: 900;
+  letter-spacing: -0.3px;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+.jd-status-label {
+  font-size: 11px; font-weight: 700;
+  color: var(--text-tertiary);
+  margin-top: 2px;
+}
+.jd-status-chip.is-pass  { background: var(--success-bg); border-color: rgba(45,122,74,0.25); }
+.jd-status-chip.is-pass  .material-symbols-rounded { color: var(--success); }
+.jd-status-chip.is-pass  .jd-status-num { color: var(--success); }
+.jd-status-chip.is-fail  { background: var(--danger-bg); border-color: rgba(199,50,35,0.25); }
+.jd-status-chip.is-fail  .material-symbols-rounded { color: var(--danger); }
+.jd-status-chip.is-fail  .jd-status-num { color: var(--danger); }
+.jd-status-chip.is-na    { background: var(--bg-strong); }
+.jd-status-chip.is-na    .material-symbols-rounded { color: var(--text-secondary); }
+.jd-status-chip.is-na    .jd-status-num { color: var(--text-secondary); }
+.jd-status-chip.is-total { background: var(--surface); }
+.jd-status-chip.is-total .material-symbols-rounded { color: var(--primary); }
 
 /* Daily detail hero — kicker above the big percentage */
 .daily-detail-hero .daily-shift-kicker {
@@ -8197,7 +8244,7 @@ function showJaedaengDetail(id) {
   (r.items || []).forEach(it => (it.photos || []).forEach(p => lightboxImages.push(p)));
 
   const tierClass = r.passPct >= 90 ? 'tier-excellent' : r.passPct >= 70 ? 'tier-improve' : 'tier-breakdown';
-  const badgeText = r.passPct >= 90 ? 'ครบ Complete · ดีเยี่ยม' : r.passPct >= 70 ? 'ผ่านเกณฑ์ Pass' : `เร่งด่วน Critical · ${r.failCount} ไม่ผ่าน`;
+  const badgeText = r.passPct >= 90 ? 'ดีเยี่ยม Excellent' : r.passPct >= 70 ? 'ผ่านเกณฑ์ Pass' : `เร่งด่วน Critical · ${r.failCount} ข้อ`;
   document.getElementById('jd-detail-head').className = 'card summary-hero combined-card ' + tierClass;
   document.getElementById('jd-detail-pct').textContent = r.passPct.toFixed(1);
   document.getElementById('jd-detail-badge').textContent = badgeText;
@@ -8241,11 +8288,32 @@ function showJaedaengDetail(id) {
         <div class="summary-meta-row-value">${escapeHtml(r.bzm)}${r.bzmNick ? ` (${escapeHtml(r.bzmNick)})` : ''}</div>
       </div>
     </div>` : ''}
-    <div class="summary-meta-row" data-icon="fact_check">
+    <div class="summary-meta-row span-all" data-icon="fact_check">
       <span class="material-symbols-rounded">fact_check</span>
       <div class="summary-meta-row-body">
         <div class="summary-meta-row-label">สถานะรายการ</div>
-        <div class="summary-meta-row-value">ผ่าน ${r.passCount} · ไม่ผ่าน ${r.failCount} · N/A ${r.naCount} · ทั้งหมด ${r.totalCount}</div>
+        <div class="jd-status-grid">
+          <div class="jd-status-chip is-pass">
+            <span class="material-symbols-rounded">check_circle</span>
+            <div class="jd-status-num">${r.passCount}</div>
+            <div class="jd-status-label">ผ่าน</div>
+          </div>
+          <div class="jd-status-chip is-fail">
+            <span class="material-symbols-rounded">cancel</span>
+            <div class="jd-status-num">${r.failCount}</div>
+            <div class="jd-status-label">ไม่ผ่าน</div>
+          </div>
+          <div class="jd-status-chip is-na">
+            <span class="material-symbols-rounded">remove_circle</span>
+            <div class="jd-status-num">${r.naCount}</div>
+            <div class="jd-status-label">N/A</div>
+          </div>
+          <div class="jd-status-chip is-total">
+            <span class="material-symbols-rounded">summarize</span>
+            <div class="jd-status-num">${r.totalCount}</div>
+            <div class="jd-status-label">ทั้งหมด</div>
+          </div>
+        </div>
       </div>
     </div>
   `;
@@ -8264,9 +8332,8 @@ function showJaedaengDetail(id) {
       <div class="detail-section-head">
         <div class="detail-section-name">${escapeHtml(secName)}</div>
         <div class="detail-section-stat">
-          <span class="ds-chip ds-chip-pass">${secPass}</span>
-          ${secFail ? `<span class="ds-chip ds-chip-fail">${secFail}</span>` : ''}
-          <span class="ds-chip ds-chip-total">${items.length}</span>
+          <span class="ds-chip ds-chip-pass" title="ผ่าน / ทั้งหมด">${secPass}/${items.length}</span>
+          ${secFail ? `<span class="ds-chip ds-chip-fail" title="ไม่ผ่าน">✗${secFail}</span>` : ''}
         </div>
       </div>`;
     items.forEach((it, j) => {
