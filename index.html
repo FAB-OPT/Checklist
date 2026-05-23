@@ -7398,25 +7398,16 @@ function setJaedaengDashScope(value) {
 
 function renderJaedaengDashboard() {
   let records = getVisibleJaedaengAudits();
-  // Apply drill-down filter for higher roles
-  let scopeText = '';
-  if (currentUser && currentUser.role === 'bzm') {
-    scopeText = `กำลังดูข้อมูลของโซน <b>${escapeHtml(currentUser.nick || currentUser.name)}</b>`;
-  } else if (currentUser && currentUser.role !== 'bzm') {
+  if (currentUser && currentUser.role !== 'bzm') {
     if (jdDashFilter.zone !== 'all') {
       records = records.filter(r => (r.bzmNick || r.bzm) === jdDashFilter.zone);
-      scopeText = `กำลังดูข้อมูลของโซน <b>${escapeHtml(jdDashFilter.zone)}</b>`;
     }
     if (jdDashFilter.branch !== 'all') {
       records = records.filter(r => r.storeName === jdDashFilter.branch);
-      scopeText = `กำลังดูข้อมูลของสาขา <b>${escapeHtml(jdDashFilter.branch)}</b>`;
     }
   }
   const scopeEl = document.getElementById('jd-dash-scope');
-  if (scopeEl) {
-    scopeEl.innerHTML = scopeText;
-    scopeEl.style.display = scopeText ? '' : 'none';
-  }
+  if (scopeEl) { scopeEl.innerHTML = ''; scopeEl.style.display = 'none'; }
   records = records.slice();
   const kpis = document.getElementById('jd-dash-kpis');
   const branchesEl = document.getElementById('jd-dash-branches');
