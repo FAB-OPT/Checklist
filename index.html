@@ -105,6 +105,57 @@ body {
   margin-top: 6px;
   letter-spacing: 0.1px;
 }
+.header-tools {
+  display: flex; align-items: center; gap: 8px;
+  flex-shrink: 0;
+}
+.header-tools:empty { display: none; }
+.header-view-toggle {
+  display: inline-flex; gap: 2px;
+  padding: 3px;
+  background: rgba(0,0,0,0.18);
+  border-radius: var(--r-pill);
+}
+.header-view-pill {
+  padding: 5px 10px;
+  border: none; background: transparent;
+  font-size: 11px; font-weight: 800;
+  color: rgba(255,255,255,0.7);
+  cursor: pointer;
+  border-radius: var(--r-pill);
+  font-family: inherit;
+  white-space: nowrap;
+  letter-spacing: 0.1px;
+}
+.header-view-pill.active {
+  background: white;
+  color: var(--primary);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+}
+.header-tool-btn {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 6px 10px;
+  background: rgba(0,0,0,0.18);
+  border: none;
+  border-radius: var(--r-pill);
+  font-size: 11px; font-weight: 800;
+  color: white;
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+}
+.header-tool-btn:hover { background: rgba(0,0,0,0.28); }
+.header-tool-btn.is-on {
+  background: var(--warning);
+  color: white;
+}
+.header-tool-btn .material-symbols-rounded { font-size: 16px; }
+@media (max-width: 480px) {
+  /* Hide the test mode text label on phones — keep just the flask icon */
+  .header-tool-btn .header-tool-label { display: none; }
+  .header-tool-btn { padding: 8px; }
+  .header-view-pill { padding: 5px 8px; font-size: 10px; }
+}
 .app-header .subtitle { font-size: 12px; opacity: 0.92; margin-top: 4px; }
 .user-chip {
   display: flex; align-items: center; gap: 10px;
@@ -4172,6 +4223,9 @@ body:has(#login-screen.active) {
         <div class="app-user-line" id="app-user-line">—</div>
         <div class="subtitle" id="header-subtitle" style="display:none;">ระบบตรวจสอบมาตรฐานการทำงาน</div>
       </div>
+      <div class="header-tools" id="header-tools">
+        <!-- Cross-brand pill toggle + test-mode button get rendered here -->
+      </div>
       <div class="user-chip" style="display:none;">
         <div>
           <div id="user-name">-</div>
@@ -5747,24 +5801,31 @@ function renderBottomNav() {
     }
   }
   html += '</div>';
-  // Settings strip — brand toggle + test mode, grouped at the bottom so they
-  // don't crowd the main action tabs.
-  let extras = '';
+
+  // Render the secondary tools (brand toggle + test mode) up in the header
+  // instead of crowding the bottom nav.
+  renderHeaderTools(view);
+  html += '<button class="bottom-nav-item nav-logout-btn" id="nav-logout" onclick="logout()"><span class="material-symbols-rounded">logout</span><span>ออกระบบ</span></button>';
+  nav.innerHTML = html;
+}
+
+function renderHeaderTools(view) {
+  const host = document.getElementById('header-tools');
+  if (!host) return;
+  let html = '';
   if (currentUser.crossBrand) {
-    extras += '<div class="nav-view-toggle">' +
-      `<button type="button" class="nav-view-pill ${view === 'santafe' ? 'active' : ''}" onclick="switchViewBrand('santafe')">Santa Fe</button>` +
-      `<button type="button" class="nav-view-pill ${view === 'jaedaeng' ? 'active' : ''}" onclick="switchViewBrand('jaedaeng')">เจ๊แดง</button>` +
+    html += '<div class="header-view-toggle">' +
+      `<button type="button" class="header-view-pill ${view === 'santafe' ? 'active' : ''}" onclick="switchViewBrand('santafe')">Santa Fe</button>` +
+      `<button type="button" class="header-view-pill ${view === 'jaedaeng' ? 'active' : ''}" onclick="switchViewBrand('jaedaeng')">เจ๊แดง</button>` +
     '</div>';
   }
   if (currentUser.role === 'admin') {
-    extras += `<button type="button" class="test-mode-toggle nav-test-mode ${testMode ? 'is-on' : ''}" id="test-mode-toggle" onclick="toggleTestMode()">` +
+    html += `<button type="button" class="header-tool-btn ${testMode ? 'is-on' : ''}" id="test-mode-toggle" onclick="toggleTestMode()" title="โหมดทดสอบ" aria-label="โหมดทดสอบ">` +
       '<span class="material-symbols-rounded">science</span>' +
-      `<span id="test-mode-toggle-label">${testMode ? 'ปิดโหมดทดสอบ' : 'เปิดโหมดทดสอบ'}</span>` +
+      `<span class="header-tool-label" id="test-mode-toggle-label">${testMode ? 'ปิดทดสอบ' : 'ทดสอบ'}</span>` +
     '</button>';
   }
-  if (extras) html += '<div class="nav-extras">' + extras + '</div>';
-  html += '<button class="bottom-nav-item nav-logout-btn" id="nav-logout" onclick="logout()"><span class="material-symbols-rounded">logout</span><span>ออกระบบ</span></button>';
-  nav.innerHTML = html;
+  host.innerHTML = html;
 }
 
 function setActiveNav(id) {
