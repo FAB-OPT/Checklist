@@ -1350,6 +1350,23 @@ input[type="time"].jd-form-input {
 .jd-camera-shutter:active { transform: scale(0.95); }
 .jd-camera-shutter .material-symbols-rounded { font-size: 32px; color: #111; }
 .jd-hub-actions { padding: 16px 18px; }
+.jd-refresh-btn {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 6px 12px;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-pill);
+  font-size: 12px; font-weight: 800;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+  transition: all 0.15s;
+}
+.jd-refresh-btn:hover { border-color: var(--primary); color: var(--primary); }
+.jd-refresh-btn .material-symbols-rounded { font-size: 16px; transition: transform 0.4s; }
+.jd-refresh-btn.is-loading .material-symbols-rounded { animation: spin 0.8s linear infinite; }
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
 /* === Mobile polish for the Jae Daeng audit flow ============================ */
 @media (max-width: 600px) {
@@ -4656,10 +4673,14 @@ body:has(#login-screen.active) {
 
     <!-- JAE DAENG DASHBOARD -->
     <div id="jaedaeng-dashboard-screen" style="display:none;">
-      <div class="page-eyebrow">
+      <div class="page-eyebrow" style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
         <h2 class="page-eyebrow-title">
           แดชบอร์ด <span class="page-eyebrow-inline">เจ๊แดงสามย่าน</span>
         </h2>
+        <button type="button" class="jd-refresh-btn" onclick="refreshJaedaengData()" title="ดึงข้อมูลใหม่จาก cloud">
+          <span class="material-symbols-rounded">refresh</span>
+          <span>รีเฟรช</span>
+        </button>
       </div>
       <div class="jd-dash-scope" id="jd-dash-scope"></div>
       <div class="jd-dash-filter" id="jd-dash-filter" style="display:none;">
@@ -7367,6 +7388,29 @@ function showJaedaengDashboard() {
   setupJaedaengDashFilter();
   setupJaedaengDashDateChips();
   renderJaedaengDashboard();
+}
+
+async function refreshJaedaengData() {
+  const btn = document.querySelector('.jd-refresh-btn');
+  if (btn) btn.classList.add('is-loading');
+  try {
+    // Bypass cache-first guard: directly re-fetch from Firestore.
+    if (firebaseDb) {
+      const snap = await firebaseDb.collection(JAEDAENG_COLLECTION).get();
+      const remote = snap.docs.map(d => d.data());
+      allJaedaengAudits = remote;
+      saveJaedaengLocal();
+    }
+  } catch (e) {
+    console.warn('Refresh failed', e);
+    showModal('รีเฟรชไม่สำเร็จ', 'โหลดข้อมูลจาก cloud ไม่ได้ — เช็คอินเทอร์เน็ตและลองอีกครั้ง');
+  } finally {
+    if (btn) btn.classList.remove('is-loading');
+  }
+  // Re-render whichever Jae Daeng screen is open
+  const dashShown = document.getElementById('jaedaeng-dashboard-screen').style.display !== 'none';
+  if (dashShown) renderJaedaengDashboard();
+  else renderJaedaengList();
 }
 
 function setupJaedaengDashDateChips() {
