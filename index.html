@@ -5180,6 +5180,13 @@ const JAEDAENG_LOCATIONS = [
   { name: "ปตท.พระราม 4",                          lat: 13.7131324, lng: 100.5818959 },
 ];
 
+// Show distances as "N ม." under 1 km, otherwise as "X.XXX กิโลเมตร".
+function fmtDistance(meters) {
+  const m = Number(meters) || 0;
+  if (m < 1000) return `${m.toLocaleString()} ม.`;
+  return `${(m / 1000).toFixed(3)} กิโลเมตร`;
+}
+
 function jdHaversineMeters(lat1, lng1, lat2, lng2) {
   const R = 6371000;
   const toRad = d => d * Math.PI / 180;
@@ -7664,8 +7671,8 @@ function renderJaedaengList() {
       const matched = r.gps.nearestBranch && jdBranchMatchesLocation(r.storeName || '', r.gps.nearestBranch);
       const cls = matched ? 'is-good' : (inside500 ? 'is-warn' : 'is-bad');
       const txt = matched
-        ? `📍 ใกล้สาขา ${escapeHtml(r.gps.nearestBranch)} · ${(r.gps.nearestDistance || 0).toLocaleString()} ม. (ตรงสาขา)`
-        : `📍 GPS ห่างจาก ${escapeHtml(r.gps.nearestBranch || '—')} ${(r.gps.nearestDistance || 0).toLocaleString()} ม. (${matched ? 'ตรง' : 'ไม่ตรง'}สาขา)`;
+        ? `📍 ใกล้สาขา ${escapeHtml(r.gps.nearestBranch)} · ${fmtDistance(r.gps.nearestDistance)} (ตรงสาขา)`
+        : `📍 GPS ห่างจาก ${escapeHtml(r.gps.nearestBranch || '—')} ${fmtDistance(r.gps.nearestDistance)} (${matched ? 'ตรง' : 'ไม่ตรง'}สาขา)`;
       gpsLine = `<div class="jd-history-gps ${cls}">${txt}</div>`;
     } else {
       gpsLine = `<div class="jd-history-gps is-warn">📍 ไม่มีข้อมูล GPS</div>`;
@@ -7802,9 +7809,9 @@ function _startJaedaengAuditWithGps(gps) {
     let nearbyHtml = '';
     if (g.nearby500 && g.nearby500.length > 0) {
       nearbyHtml = '<div style="font-size:12px;margin-top:6px;color:var(--text-secondary);">สาขาในระยะ 500 ม.: ' +
-        g.nearby500.map(b => `<b>${escapeHtml(b.name)}</b> · ${b.distance.toLocaleString()} ม.`).join(' · ') + '</div>';
+        g.nearby500.map(b => `<b>${escapeHtml(b.name)}</b> · ${fmtDistance(b.distance)}`).join(' · ') + '</div>';
     } else if (g.nearestBranch) {
-      nearbyHtml = `<div style="font-size:12px;margin-top:6px;color:var(--text-secondary);">ใกล้สุด <b>${escapeHtml(g.nearestBranch)}</b> · ${g.nearestDistance.toLocaleString()} ม. <span style="color:var(--warning);">(เกินรัศมี 500 ม.)</span></div>`;
+      nearbyHtml = `<div style="font-size:12px;margin-top:6px;color:var(--text-secondary);">ใกล้สุด <b>${escapeHtml(g.nearestBranch)}</b> · ${fmtDistance(g.nearestDistance)} <span style="color:var(--warning);">(เกินรัศมี 500 ม.)</span></div>`;
     }
     gpsDisp.innerHTML = `<a href="https://www.google.com/maps?q=${g.lat},${g.lng}" target="_blank" rel="noopener" style="color:var(--primary-dark);text-decoration:underline;">เปิด Google Maps</a> <span style="font-size:11px;color:var(--text-tertiary);">±${Math.round(g.accuracy || 0)} m</span>${nearbyHtml}`;
     gpsRow.style.display = '';
@@ -7836,7 +7843,7 @@ function setJDStore(field, value) {
       const within = g.nearby500.some(b => jdBranchMatchesLocation(value, b.name));
       if (!within) {
         const distTxt = g.nearestBranch
-          ? `GPS ห่าง <b>${(g.nearestDistance || 0).toLocaleString()}</b> ม.`
+          ? `GPS ห่าง <b>${fmtDistance(g.nearestDistance)}</b>`
           : 'GPS อยู่นอกรัศมีสาขา';
         showModalHtml('ตำแหน่งไม่ตรงกับสาขา', `<div class="modal-warn-body">
           <div class="modal-warn-icon"><span class="material-symbols-rounded">wrong_location</span></div>
@@ -8380,7 +8387,7 @@ function showJaedaengDetail(id) {
         <div class="summary-meta-row-value">
           <a href="https://www.google.com/maps?q=${r.gps.lat},${r.gps.lng}" target="_blank" rel="noopener" style="color:var(--primary-dark);text-decoration:underline;">เปิดบน Google Maps</a>
           <span style="font-size:11px;color:var(--text-tertiary);margin-left:6px;">±${Math.round(r.gps.accuracy || 0)} m</span>
-          ${r.gps.nearestBranch ? `<div style="font-size:12px;margin-top:4px;color:var(--text-secondary);">ใกล้ <b>${escapeHtml(r.gps.nearestBranch)}</b> · ${(r.gps.nearestDistance || 0).toLocaleString()} ม.</div>` : ''}
+          ${r.gps.nearestBranch ? `<div style="font-size:12px;margin-top:4px;color:var(--text-secondary);">ใกล้ <b>${escapeHtml(r.gps.nearestBranch)}</b> · ${fmtDistance(r.gps.nearestDistance)}</div>` : ''}
         </div>
       </div>
     </div>` : ''}
