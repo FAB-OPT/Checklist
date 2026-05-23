@@ -1496,6 +1496,36 @@ input[type="time"].jd-form-input {
   margin-bottom: 14px;
 }
 .jd-dash-filter select { width: 100%; }
+.jd-dash-date-filter {
+  margin-bottom: 14px;
+}
+.jd-dash-date-chips {
+  display: flex; flex-wrap: wrap; gap: 6px;
+}
+.jd-dash-date-chip {
+  display: inline-flex; align-items: center;
+  padding: 8px 14px;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-pill);
+  font-size: 12px; font-weight: 800;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-family: inherit;
+  letter-spacing: 0.1px;
+}
+.jd-dash-date-chip:hover { border-color: var(--border-strong); color: var(--text); }
+.jd-dash-date-chip.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: white;
+}
+.jd-dash-date-custom {
+  display: flex; align-items: center; gap: 8px;
+  margin-top: 8px;
+}
+.jd-dash-date-custom .jd-form-input { flex: 1; min-width: 0; }
+.jd-dash-date-sep { color: var(--text-tertiary); font-weight: 800; }
 .jd-dash-scope {
   font-size: 12px; font-weight: 700;
   color: var(--text-secondary);
@@ -4623,6 +4653,14 @@ body:has(#login-screen.active) {
           <option value="all">ดูทุกโซน · ทุกสาขา</option>
         </select>
       </div>
+      <div class="jd-dash-date-filter">
+        <div class="jd-dash-date-chips" id="jd-dash-date-chips"></div>
+        <div class="jd-dash-date-custom" id="jd-dash-date-custom" style="display:none;">
+          <input type="date" id="jd-dash-date-from" class="jd-form-input" onchange="setJaedaengDashDateRange()">
+          <span class="jd-dash-date-sep">—</span>
+          <input type="date" id="jd-dash-date-to" class="jd-form-input" onchange="setJaedaengDashDateRange()">
+        </div>
+      </div>
       <div class="jd-dash-kpis" id="jd-dash-kpis"></div>
       <div class="card">
         <div class="card-header">
@@ -4937,6 +4975,7 @@ let allJaedaengAudits = []; // loaded from storage
 let currentView = null; // 'santafe' | 'jaedaeng' — defaults to user's brand; cross-brand users can toggle
 let testMode = false; // when true, all writes are in-memory only — exiting reloads real data
 let jdDashFilter = { zone: 'all', branch: 'all' };
+let jdDashDate = { type: 'all', from: '', to: '' };
 
 // ============ DAILY CHECKLIST DATA ============
 const DAILY_OPEN = [
@@ -7312,7 +7351,65 @@ function showJaedaengDashboard() {
   document.getElementById('jaedaeng-dashboard-screen').style.display = 'block';
   setActiveNav('nav-dash');
   setupJaedaengDashFilter();
+  setupJaedaengDashDateChips();
   renderJaedaengDashboard();
+}
+
+function setupJaedaengDashDateChips() {
+  const host = document.getElementById('jd-dash-date-chips');
+  if (!host) return;
+  const opts = [
+    { key: 'all',    label: 'ทั้งหมด' },
+    { key: '7',      label: '7 วัน' },
+    { key: '30',     label: '30 วัน' },
+    { key: '90',     label: '90 วัน' },
+    { key: 'month',  label: 'เดือนนี้' },
+    { key: 'custom', label: 'กำหนดเอง' },
+  ];
+  host.innerHTML = opts.map(o =>
+    `<button type="button" class="jd-dash-date-chip ${jdDashDate.type === o.key ? 'active' : ''}" onclick="setJaedaengDashDate('${o.key}')">${escapeHtml(o.label)}</button>`
+  ).join('');
+  document.getElementById('jd-dash-date-custom').style.display = jdDashDate.type === 'custom' ? '' : 'none';
+}
+
+function setJaedaengDashDate(type) {
+  jdDashDate.type = type;
+  if (type !== 'custom') {
+    jdDashDate.from = '';
+    jdDashDate.to = '';
+  }
+  setupJaedaengDashDateChips();
+  renderJaedaengDashboard();
+}
+
+function setJaedaengDashDateRange() {
+  jdDashDate.from = document.getElementById('jd-dash-date-from').value;
+  jdDashDate.to = document.getElementById('jd-dash-date-to').value;
+  renderJaedaengDashboard();
+}
+
+function applyJaedaengDateFilter(records) {
+  if (jdDashDate.type === 'all') return records;
+  const today = new Date();
+  today.setHours(23, 59, 59, 999);
+  let fromDate, toDate = today;
+  if (jdDashDate.type === '7' || jdDashDate.type === '30' || jdDashDate.type === '90') {
+    fromDate = new Date(today);
+    fromDate.setDate(fromDate.getDate() - parseInt(jdDashDate.type, 10) + 1);
+    fromDate.setHours(0, 0, 0, 0);
+  } else if (jdDashDate.type === 'month') {
+    fromDate = new Date(today.getFullYear(), today.getMonth(), 1);
+  } else if (jdDashDate.type === 'custom') {
+    if (jdDashDate.from) { fromDate = new Date(jdDashDate.from); fromDate.setHours(0,0,0,0); }
+    if (jdDashDate.to)   { toDate   = new Date(jdDashDate.to);   toDate.setHours(23,59,59,999); }
+  }
+  return records.filter(r => {
+    const ts = new Date(r.date || r.submittedAt).getTime();
+    if (!Number.isFinite(ts)) return true;
+    if (fromDate && ts < fromDate.getTime()) return false;
+    if (toDate && ts > toDate.getTime()) return false;
+    return true;
+  });
 }
 
 // BZM sees the stores they manage AND any audit they personally conducted;
@@ -7406,6 +7503,7 @@ function renderJaedaengDashboard() {
       records = records.filter(r => r.storeName === jdDashFilter.branch);
     }
   }
+  records = applyJaedaengDateFilter(records);
   const scopeEl = document.getElementById('jd-dash-scope');
   if (scopeEl) { scopeEl.innerHTML = ''; scopeEl.style.display = 'none'; }
   records = records.slice();
