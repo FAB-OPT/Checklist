@@ -1143,12 +1143,13 @@ input[type="time"].jd-form-input {
   color: var(--text);
   font-family: inherit;
 }
-.jd-item.is-required-photo { background: transparent; }
-.jd-item-photo-badge {
-  display: inline-block; margin-left: 6px;
-  padding: 2px 8px; background: var(--danger-bg); color: var(--danger);
-  font-size: 10px; font-weight: 800; letter-spacing: 0.2px;
-  border-radius: var(--r-pill); white-space: nowrap;
+.jd-item.is-required-photo {
+  background: rgba(217,119,6,0.04);
+  border-left: 4px solid var(--warning);
+  padding-left: 12px;
+}
+.jd-item.is-required-photo .jd-item-num {
+  background: var(--warning); color: white;
 }
 .jd-photo-section {
   margin-top: 10px;
@@ -5526,7 +5527,8 @@ function closeWelcomeModal() {
 }
 
 function showUserMenu() {
-  if (confirm('ออกจากระบบ?')) logout();
+  showConfirm('ออกจากระบบ?', 'คุณต้องการออกจากระบบหรือไม่?', { okLabel: 'ออกระบบ', cancelLabel: 'อยู่ต่อ' })
+    .then(ok => { if (ok) logout(); });
 }
 
 function logout() {
@@ -5558,14 +5560,16 @@ function routeByRole() {
 async function toggleTestMode() {
   if (!testMode) {
     // Enter test mode — confirm with user
-    if (!confirm('เปิดโหมดทดสอบ?\n\nข้อมูลที่บันทึกระหว่างทดสอบจะไม่ถูกเก็บ และจะหายไปทันทีที่ปิดโหมด')) return;
+    const ok = await showConfirm('เปิดโหมดทดสอบ?', 'ข้อมูลที่บันทึกระหว่างทดสอบจะไม่ถูกเก็บ<br>และจะหายไปทันทีที่ปิดโหมด', { okLabel: 'เปิดโหมดทดสอบ', cancelLabel: 'ยกเลิก' });
+    if (!ok) return;
     testMode = true;
     document.body.classList.add('test-mode-on');
     document.getElementById('test-mode-banner').style.display = 'flex';
     updateTestModeToggle();
   } else {
     // Exit test mode — wipe in-memory test data by reloading from real storage
-    if (!confirm('ปิดโหมดทดสอบ?\n\nข้อมูลที่กรอกตอนทดสอบจะถูกลบทั้งหมด')) return;
+    const ok = await showConfirm('ปิดโหมดทดสอบ?', 'ข้อมูลที่กรอกตอนทดสอบจะถูกลบทั้งหมด', { okLabel: 'ปิดโหมดทดสอบ', cancelLabel: 'ยกเลิก', danger: true });
+    if (!ok) return;
     testMode = false;
     document.body.classList.remove('test-mode-on');
     document.getElementById('test-mode-banner').style.display = 'none';
@@ -7551,6 +7555,45 @@ function showModalHtml(title, bodyHtml) {
   document.getElementById('modal').classList.add('show');
 }
 
+// In-app confirm — returns a Promise that resolves true on OK / false on Cancel
+// or backdrop tap. Uses the shared modal so it inherits the app theme instead of
+// the browser-native confirm dialog.
+function showConfirm(title, bodyHtml, opts) {
+  opts = opts || {};
+  const okLabel = opts.okLabel || 'ตกลง';
+  const cancelLabel = opts.cancelLabel || 'ยกเลิก';
+  const danger = !!opts.danger;
+  const titleEl = document.getElementById('modal-title');
+  const bodyEl = document.getElementById('modal-body');
+  const okBtn = document.getElementById('modal-ok');
+  const cancelBtn = document.getElementById('modal-cancel');
+  const modal = document.getElementById('modal');
+  titleEl.textContent = title;
+  bodyEl.innerHTML = bodyHtml;
+  const okOrig = okBtn.textContent;
+  const cancelOrig = cancelBtn.textContent;
+  const okClsOrig = okBtn.className;
+  okBtn.textContent = okLabel;
+  cancelBtn.textContent = cancelLabel;
+  cancelBtn.style.display = '';
+  if (danger) okBtn.className = okClsOrig.replace('btn-primary', 'btn-danger');
+  modal.classList.add('show');
+  return new Promise(resolve => {
+    const restore = () => {
+      okBtn.textContent = okOrig;
+      cancelBtn.textContent = cancelOrig;
+      cancelBtn.style.display = 'none';
+      okBtn.className = okClsOrig;
+      okBtn.removeEventListener('click', onOk);
+      cancelBtn.removeEventListener('click', onCancel);
+    };
+    const onOk = () => { restore(); resolve(true); };
+    const onCancel = () => { restore(); resolve(false); };
+    okBtn.addEventListener('click', onOk, { once: true });
+    cancelBtn.addEventListener('click', onCancel, { once: true });
+  });
+}
+
 function renderJaedaengForm() {
   renderJaedaengSectionTabs();
   const container = document.getElementById('jaedaeng-sections-container');
@@ -7589,7 +7632,7 @@ function renderJaedaengForm() {
       html += `<div class="jd-item ${isPass ? 'is-pass' : ''} ${isFail ? 'is-fail' : ''} ${isNA ? 'is-na' : ''} ${isRequired ? 'is-required-photo' : ''}">
         <div class="jd-item-q">
           <span class="jd-item-num">${j + 1}</span>
-          <span class="jd-item-text">${escapeHtml(it.text)}${isRequired ? '<span class="jd-item-photo-badge">📷</span>' : ''}</span>
+          <span class="jd-item-text">${escapeHtml(it.text)}</span>
         </div>
         <div class="jd-item-actions">
           <button type="button" class="jd-choice pass ${isPass ? 'active' : ''}" onclick="setJDAnswer(${idx},'pass')">
@@ -7875,8 +7918,9 @@ function removeJDPhoto(idx, photoIdx) {
   renderJaedaengForm();
 }
 
-function cancelJaedaengAudit() {
-  if (!confirm('ยกเลิกการตรวจ? ข้อมูลที่กรอกจะไม่ถูกบันทึก')) return;
+async function cancelJaedaengAudit() {
+  const ok = await showConfirm('ยกเลิกการตรวจ?', 'ข้อมูลที่กรอกจะไม่ถูกบันทึก', { okLabel: 'ยกเลิกการตรวจ', cancelLabel: 'กลับไปกรอก', danger: true });
+  if (!ok) return;
   currentJDAudit = null;
   showJaedaengHub();
 }
@@ -7920,7 +7964,8 @@ async function submitJaedaengAudit() {
   const naCount = items.filter(i => i.status === 'na').length;
   const pending = totalCount - passCount - failCount - naCount;
   if (pending > 0) {
-    if (!confirm(`ยังมี ${pending} ข้อที่ยังไม่ตอบ ต้องการบันทึกเลยหรือไม่?`)) return;
+    const ok = await showConfirm('ยังตอบไม่ครบ', `มี <b>${pending}</b> ข้อที่ยังไม่ตอบ — ต้องการบันทึกเลยหรือไม่?`, { okLabel: 'บันทึกเลย', cancelLabel: 'กลับไปตอบ' });
+    if (!ok) return;
   }
   const denom = totalCount - naCount;
   const passPct = denom > 0 ? (passCount / denom) * 100 : 0;
@@ -7961,7 +8006,8 @@ async function deleteJaedaengAudit() {
     showModal('ไม่มีสิทธิ์ลบ', 'เฉพาะ Admin เท่านั้นที่ลบผลตรวจได้');
     return;
   }
-  if (!confirm('ลบผลตรวจนี้? การดำเนินการนี้ไม่สามารถย้อนกลับได้')) return;
+  const ok = await showConfirm('ลบผลตรวจ?', 'การดำเนินการนี้ไม่สามารถย้อนกลับได้', { okLabel: 'ลบ', cancelLabel: 'ยกเลิก', danger: true });
+  if (!ok) return;
   const id = currentJDDetailId;
   allJaedaengAudits = allJaedaengAudits.filter(r => r.id !== id);
   saveJaedaengLocal();
