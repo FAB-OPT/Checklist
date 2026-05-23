@@ -1247,6 +1247,73 @@ input[type="time"].jd-form-input {
 .jd-camera-shutter:active { transform: scale(0.95); }
 .jd-camera-shutter .material-symbols-rounded { font-size: 32px; color: #111; }
 .jd-hub-actions { padding: 16px 18px; }
+
+/* === Mobile polish for the Jae Daeng audit flow ============================ */
+@media (max-width: 600px) {
+  /* Bigger, easier-to-tap pass/fail/na buttons */
+  .jd-choice {
+    padding: 12px 6px;
+    font-size: 13px;
+    border-radius: var(--r-md);
+    min-height: 48px;
+  }
+  .jd-choice .material-symbols-rounded { font-size: 20px; }
+  .jd-item-actions { gap: 8px; }
+
+  /* More breathing room around each item */
+  .jd-item { padding: 14px 14px; }
+  .jd-item-q { gap: 12px; margin-bottom: 12px; }
+  .jd-item-num {
+    min-width: 26px; height: 26px;
+    font-size: 12px;
+  }
+  .jd-item-text { font-size: 15px; line-height: 1.5; }
+
+  /* Photo button — taller + wider tap target */
+  .jd-photo-upload-btn {
+    padding: 12px 18px;
+    font-size: 14px;
+    min-height: 44px;
+  }
+  .jd-photo-upload-btn .material-symbols-rounded { font-size: 18px; }
+
+  /* Section header — keep it readable but compact */
+  .jd-section-header { padding: 12px 16px; }
+  .jd-section-name { font-size: 15px; }
+
+  /* Section tab pills slightly larger */
+  .jd-section-tab {
+    padding: 10px 14px;
+    font-size: 13px;
+    min-height: 44px;
+  }
+  .jd-section-tab-progress { font-size: 11px; }
+
+  /* Sticky bottom action bar (ยกเลิก / บันทึก) on the audit form */
+  #jaedaeng-audit-screen > .card:last-child {
+    position: sticky;
+    bottom: 0;
+    margin: 16px -16px -16px;
+    border-radius: 0;
+    border-top: 1px solid var(--border);
+    box-shadow: 0 -6px 20px rgba(0,0,0,0.06);
+    z-index: 30;
+  }
+
+  /* Bigger touch target on history cards */
+  .jd-history-card { padding: 14px 16px; }
+  .jd-history-name { font-size: 15px; }
+
+  /* Dashboard rows — make scores legible on tiny screens */
+  .jd-dash-row { padding: 12px 4px; gap: 14px; }
+  .jd-dash-row-name { font-size: 14px; }
+  .jd-dash-row-meta { font-size: 12px; }
+  .jd-dash-row-value { font-size: 16px; min-width: 60px; }
+
+  /* KPI cards — 2-up on mobile already, but tighten + bigger numbers */
+  .jd-kpi { padding: 14px 16px; }
+  .jd-kpi-value { font-size: 24px; }
+}
 .jd-dash-kpis {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
