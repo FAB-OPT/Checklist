@@ -5504,16 +5504,19 @@ async function loadJaedaengAudits() {
     try {
       const snap = await firebaseDb.collection(JAEDAENG_COLLECTION).get();
       const remote = snap.docs.map(d => d.data());
-      // Safety: if Firestore returns empty but localStorage has records, keep
-      // the local copy. Otherwise a Firestore rules block (or transient
-      // permission failure) would silently wipe the user's records.
-      if (remote.length === 0 && local.length > 0) {
-        console.warn('Firestore returned empty for jaedaengAudits; keeping local cache');
-        allJaedaengAudits = local;
-        return;
-      }
-      allJaedaengAudits = remote;
+      // Smart merge: prefer Firestore (authoritative) but keep any local-only
+      // records that never made it to the cloud (e.g. previous write failed).
+      // After merge, retry uploading the local-only records.
+      const remoteIds = new Set(remote.map(r => r.id));
+      const localOnly = local.filter(r => r && r.id && !remoteIds.has(r.id));
+      const merged = remote.concat(localOnly);
+      allJaedaengAudits = merged;
       saveJaedaengLocal();
+      // Try to re-upload local-only records in the background
+      if (localOnly.length > 0) {
+        console.warn(`Found ${localOnly.length} local-only Jae Daeng audits — re-syncing to Firestore`);
+        localOnly.forEach(r => saveJaedaengToBackend(r));
+      }
       pruneOldJaedaengPhotos();
       return;
     } catch (e) {
@@ -7393,13 +7396,21 @@ function showJaedaengDashboard() {
 async function refreshJaedaengData() {
   const btn = document.querySelector('.jd-refresh-btn');
   if (btn) btn.classList.add('is-loading');
+  let resyncedCount = 0;
   try {
-    // Bypass cache-first guard: directly re-fetch from Firestore.
     if (firebaseDb) {
       const snap = await firebaseDb.collection(JAEDAENG_COLLECTION).get();
       const remote = snap.docs.map(d => d.data());
-      allJaedaengAudits = remote;
+      const local = loadLocalJaedaeng();
+      const remoteIds = new Set(remote.map(r => r.id));
+      const localOnly = local.filter(r => r && r.id && !remoteIds.has(r.id));
+      allJaedaengAudits = remote.concat(localOnly);
       saveJaedaengLocal();
+      if (localOnly.length > 0) {
+        resyncedCount = localOnly.length;
+        // Push local-only records back to Firestore
+        await Promise.all(localOnly.map(r => saveJaedaengToBackend(r)));
+      }
     }
   } catch (e) {
     console.warn('Refresh failed', e);
@@ -7407,10 +7418,12 @@ async function refreshJaedaengData() {
   } finally {
     if (btn) btn.classList.remove('is-loading');
   }
-  // Re-render whichever Jae Daeng screen is open
   const dashShown = document.getElementById('jaedaeng-dashboard-screen').style.display !== 'none';
   if (dashShown) renderJaedaengDashboard();
   else renderJaedaengList();
+  if (resyncedCount > 0) {
+    showModal('ซิงค์ข้อมูลกลับ Cloud', `พบ ${resyncedCount} รายการที่ยังไม่ขึ้น cloud — อัปโหลดเรียบร้อย`);
+  }
 }
 
 function setupJaedaengDashDateChips() {
