@@ -95,11 +95,16 @@ body {
 .app-header h1 {
   font-size: 16px;
   font-weight: 800;
-  display: flex; align-items: center; gap: 10px;
   letter-spacing: -0.2px; line-height: 1.3;
+  margin: 0;
 }
-.app-header h1 .material-symbols-rounded { flex-shrink: 0; font-size: 24px; }
-.app-header h1 .app-title-text { min-width: 0; }
+.app-header h1 .app-title-text { display: block; }
+.app-header .app-user-line {
+  font-size: 13px; font-weight: 700;
+  color: rgba(255,255,255,0.95);
+  margin-top: 6px;
+  letter-spacing: 0.1px;
+}
 .app-header .subtitle { font-size: 12px; opacity: 0.92; margin-top: 4px; }
 .user-chip {
   display: flex; align-items: center; gap: 10px;
@@ -1386,19 +1391,13 @@ input[type="time"].jd-form-input {
   color: var(--text-tertiary); font-size: 13px;
 }
 .jd-dash-filter {
-  display: grid;
-  grid-template-columns: auto 1fr 1fr;
-  gap: 10px;
-  align-items: center;
   padding: 12px 16px;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--r-md);
   margin-bottom: 14px;
 }
-@media (max-width: 600px) {
-  .jd-dash-filter { grid-template-columns: 1fr; }
-}
+.jd-dash-filter select { width: 100%; }
 .jd-dash-scope {
   font-size: 12px; font-weight: 700;
   color: var(--text-secondary);
@@ -3827,6 +3826,27 @@ body:has(#login-screen.active) {
 /* ============ SIDEBAR BRAND & LOGOUT ============ */
 .nav-brand { display: none; }
 .nav-items { display: contents; }
+.nav-extras {
+  display: flex; flex-direction: column; gap: 8px;
+  margin: 12px 12px 0;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255,255,255,0.15);
+}
+@media (max-width: 1023px) {
+  /* Mobile bottom-nav rebuild — show only the action tabs on the main bar,
+     and turn the brand toggle / test mode strip into a horizontal row above
+     the bottom action bar so the tabs themselves stay clean. */
+  .nav-extras {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin: 0 8px 4px;
+    padding: 6px 0 0;
+    border-top: none;
+  }
+  .nav-extras .nav-view-toggle { margin: 0; }
+  .nav-test-mode { margin: 0; }
+}
 .nav-view-toggle {
   display: inline-flex; gap: 4px;
   margin: 12px 12px 0;
@@ -4147,12 +4167,12 @@ body:has(#login-screen.active) {
 <div id="app-screen" class="screen">
   <div class="app-header">
     <div class="app-header-inner">
-      <div>
-        <h1><span class="material-symbols-rounded">restaurant</span><span class="app-title-text" id="app-title-text">Quality Service Cleanliness &amp; Operations Checklist</span></h1>
-        <div class="subtitle" id="header-subtitle">ระบบตรวจสอบมาตรฐานการทำงาน</div>
+      <div class="app-header-stack">
+        <h1><span class="app-title-text" id="app-title-text">Quality Service Cleanliness &amp; Operations Checklist</span></h1>
+        <div class="app-user-line" id="app-user-line">—</div>
+        <div class="subtitle" id="header-subtitle" style="display:none;">ระบบตรวจสอบมาตรฐานการทำงาน</div>
       </div>
-      <div class="user-chip">
-        <span class="material-symbols-rounded" style="font-size:18px;">account_circle</span>
+      <div class="user-chip" style="display:none;">
         <div>
           <div id="user-name">-</div>
           <div class="role-badge" id="user-role">-</div>
@@ -4498,12 +4518,8 @@ body:has(#login-screen.active) {
       </div>
       <div class="jd-dash-scope" id="jd-dash-scope"></div>
       <div class="jd-dash-filter" id="jd-dash-filter" style="display:none;">
-        <label class="jd-form-label">ดูข้อมูล</label>
-        <select id="jd-dash-zone-select" class="jd-form-input" onchange="setJaedaengDashZone(this.value)">
-          <option value="all">ทุกโซน · ทุกสาขา</option>
-        </select>
-        <select id="jd-dash-branch-select" class="jd-form-input" onchange="setJaedaengDashBranch(this.value)">
-          <option value="all">ทุกสาขาในโซนนี้</option>
+        <select id="jd-dash-scope-select" class="jd-form-input" onchange="setJaedaengDashScope(this.value)">
+          <option value="all">ดูทุกโซน · ทุกสาขา</option>
         </select>
       </div>
       <div class="jd-dash-kpis" id="jd-dash-kpis"></div>
@@ -5575,6 +5591,20 @@ function applyBrandHeader() {
   document.querySelectorAll('.brand-eyebrow-label').forEach(el => {
     el.textContent = eyebrow;
   });
+  // Populate "คุณ <ชื่อ> (<ตำแหน่ง>)" on row 2 of the header
+  const userLineEl = document.getElementById('app-user-line');
+  if (userLineEl && currentUser) {
+    const roleLabels = { branch: 'สาขา', bzm: 'BZM', admin: 'Admin', coo: 'COO', vp: 'VP' };
+    const roleLabel = roleLabels[currentUser.role] || currentUser.role;
+    let nameLabel;
+    if (currentUser.role === 'branch') {
+      nameLabel = branchLabel(currentUser.branchCode, currentUser.branchName);
+      userLineEl.textContent = nameLabel;
+    } else {
+      nameLabel = currentUser.name || currentUser.nick || '-';
+      userLineEl.textContent = `คุณ ${nameLabel} (${roleLabel})`;
+    }
+  }
 }
 
 function showWelcomeModal() {
@@ -5716,21 +5746,23 @@ function renderBottomNav() {
       html += '<button class="bottom-nav-item" id="nav-daily" onclick="showDailyHub()"><span class="material-symbols-rounded">checklist</span><span>Open-Close</span></button>';
     }
   }
-  // Cross-brand users get a small brand toggle to flip between Santa Fe / Jae Daeng views.
+  html += '</div>';
+  // Settings strip — brand toggle + test mode, grouped at the bottom so they
+  // don't crowd the main action tabs.
+  let extras = '';
   if (currentUser.crossBrand) {
-    html += '<div class="nav-view-toggle">' +
+    extras += '<div class="nav-view-toggle">' +
       `<button type="button" class="nav-view-pill ${view === 'santafe' ? 'active' : ''}" onclick="switchViewBrand('santafe')">Santa Fe</button>` +
       `<button type="button" class="nav-view-pill ${view === 'jaedaeng' ? 'active' : ''}" onclick="switchViewBrand('jaedaeng')">เจ๊แดง</button>` +
     '</div>';
   }
-  // Test mode toggle — admin only.
   if (currentUser.role === 'admin') {
-    html += `<button type="button" class="test-mode-toggle nav-test-mode ${testMode ? 'is-on' : ''}" id="test-mode-toggle" onclick="toggleTestMode()">` +
+    extras += `<button type="button" class="test-mode-toggle nav-test-mode ${testMode ? 'is-on' : ''}" id="test-mode-toggle" onclick="toggleTestMode()">` +
       '<span class="material-symbols-rounded">science</span>' +
       `<span id="test-mode-toggle-label">${testMode ? 'ปิดโหมดทดสอบ' : 'เปิดโหมดทดสอบ'}</span>` +
     '</button>';
   }
-  html += '</div>';
+  if (extras) html += '<div class="nav-extras">' + extras + '</div>';
   html += '<button class="bottom-nav-item nav-logout-btn" id="nav-logout" onclick="logout()"><span class="material-symbols-rounded">logout</span><span>ออกระบบ</span></button>';
   nav.innerHTML = html;
 }
@@ -7203,55 +7235,56 @@ function getJaedaengBranchesForUser() {
 function setupJaedaengDashFilter() {
   const filterRow = document.getElementById('jd-dash-filter');
   if (!filterRow) return;
-  // Only higher roles get the drill-down filter
   const showFilter = currentUser && currentUser.role !== 'bzm';
   filterRow.style.display = showFilter ? '' : 'none';
   if (!showFilter) return;
 
-  const zoneSelect = document.getElementById('jd-dash-zone-select');
-  const branchSelect = document.getElementById('jd-dash-branch-select');
+  const select = document.getElementById('jd-dash-scope-select');
 
-  // Build zone options from JAEDAENG_BRANCHES
+  // Collect unique zones (use full name + nick) and the full branch list
   const zones = [];
-  const seen = new Set();
+  const seenZone = new Set();
   JAEDAENG_BRANCHES.forEach(b => {
     const key = b.managerNick || b.manager;
-    if (!seen.has(key)) {
-      seen.add(key);
-      zones.push({ key, label: `โซน ${b.managerNick || b.manager}` });
-    }
+    if (seenZone.has(key)) return;
+    seenZone.add(key);
+    const full = b.manager || '';
+    const nick = b.managerNick || '';
+    const label = full && nick ? `โซน คุณ ${full} (${nick})` : `โซน ${full || nick}`;
+    zones.push({ key, label });
   });
-  zoneSelect.innerHTML = '<option value="all">ทุกโซน · ทุกสาขา</option>' +
-    zones.map(z => `<option value="${escapeAttr(z.key)}">${escapeHtml(z.label)}</option>`).join('');
-  zoneSelect.value = jdDashFilter.zone;
-  populateJaedaengDashBranchSelect();
+
+  let opts = '<option value="all">ดูทุกโซน · ทุกสาขา</option>';
+  opts += '<optgroup label="แยกตามโซน">';
+  zones.forEach(z => {
+    opts += `<option value="zone:${escapeAttr(z.key)}">${escapeHtml(z.label)}</option>`;
+  });
+  opts += '</optgroup>';
+  opts += '<optgroup label="แยกตามสาขา">';
+  JAEDAENG_BRANCHES.forEach(b => {
+    opts += `<option value="branch:${escapeAttr(b.name)}">${escapeHtml(b.name)}</option>`;
+  });
+  opts += '</optgroup>';
+  select.innerHTML = opts;
+  // Restore selection
+  if (jdDashFilter.branch !== 'all') select.value = 'branch:' + jdDashFilter.branch;
+  else if (jdDashFilter.zone !== 'all') select.value = 'zone:' + jdDashFilter.zone;
+  else select.value = 'all';
 }
 
-function populateJaedaengDashBranchSelect() {
-  const branchSelect = document.getElementById('jd-dash-branch-select');
-  if (!branchSelect) return;
-  if (jdDashFilter.zone === 'all') {
-    branchSelect.innerHTML = '<option value="all">ทุกสาขา</option>';
-    branchSelect.disabled = true;
-    branchSelect.value = 'all';
-    return;
+function setJaedaengDashScope(value) {
+  if (value === 'all') {
+    jdDashFilter.zone = 'all';
+    jdDashFilter.branch = 'all';
+  } else if (value.startsWith('zone:')) {
+    jdDashFilter.zone = value.slice(5);
+    jdDashFilter.branch = 'all';
+  } else if (value.startsWith('branch:')) {
+    const branchName = value.slice(7);
+    const match = JAEDAENG_BRANCHES.find(b => b.name === branchName);
+    jdDashFilter.zone = match ? (match.managerNick || match.manager) : 'all';
+    jdDashFilter.branch = branchName;
   }
-  const branches = JAEDAENG_BRANCHES.filter(b => (b.managerNick || b.manager) === jdDashFilter.zone);
-  branchSelect.innerHTML = '<option value="all">ทุกสาขาในโซนนี้</option>' +
-    branches.map(b => `<option value="${escapeAttr(b.name)}">${escapeHtml(b.name)}</option>`).join('');
-  branchSelect.disabled = false;
-  branchSelect.value = branches.find(b => b.name === jdDashFilter.branch) ? jdDashFilter.branch : 'all';
-}
-
-function setJaedaengDashZone(zone) {
-  jdDashFilter.zone = zone;
-  jdDashFilter.branch = 'all';
-  populateJaedaengDashBranchSelect();
-  renderJaedaengDashboard();
-}
-
-function setJaedaengDashBranch(branch) {
-  jdDashFilter.branch = branch;
   renderJaedaengDashboard();
 }
 
