@@ -1497,10 +1497,8 @@ input[type="time"].jd-form-input {
 }
 .jd-dash-filter select { width: 100%; }
 .jd-dash-date-filter {
+  display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
   margin-bottom: 14px;
-}
-.jd-dash-date-chips {
-  display: flex; flex-wrap: wrap; gap: 6px;
 }
 .jd-dash-date-chip {
   display: inline-flex; align-items: center;
@@ -1520,12 +1518,28 @@ input[type="time"].jd-form-input {
   border-color: var(--primary);
   color: white;
 }
-.jd-dash-date-custom {
-  display: flex; align-items: center; gap: 8px;
-  margin-top: 8px;
+.jd-dash-date-range {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 10px;
+  background: var(--surface);
+  border: 1.5px solid var(--primary);
+  border-radius: var(--r-pill);
 }
-.jd-dash-date-custom .jd-form-input { flex: 1; min-width: 0; }
+.jd-dash-date-range input[type="date"] {
+  border: none;
+  background: transparent;
+  font-family: inherit;
+  font-size: 12px; font-weight: 700;
+  color: var(--text);
+  padding: 4px 0;
+  min-width: 0;
+  width: 110px;
+}
+.jd-dash-date-range input[type="date"]:focus { outline: none; }
 .jd-dash-date-sep { color: var(--text-tertiary); font-weight: 800; }
+@media (max-width: 480px) {
+  .jd-dash-date-range input[type="date"] { width: 95px; font-size: 11px; }
+}
 .jd-dash-scope {
   font-size: 12px; font-weight: 700;
   color: var(--text-secondary);
@@ -4653,14 +4667,7 @@ body:has(#login-screen.active) {
           <option value="all">ดูทุกโซน · ทุกสาขา</option>
         </select>
       </div>
-      <div class="jd-dash-date-filter">
-        <div class="jd-dash-date-chips" id="jd-dash-date-chips"></div>
-        <div class="jd-dash-date-custom" id="jd-dash-date-custom" style="display:none;">
-          <input type="date" id="jd-dash-date-from" class="jd-form-input" onchange="setJaedaengDashDateRange()">
-          <span class="jd-dash-date-sep">—</span>
-          <input type="date" id="jd-dash-date-to" class="jd-form-input" onchange="setJaedaengDashDateRange()">
-        </div>
-      </div>
+      <div class="jd-dash-date-filter" id="jd-dash-date-chips"></div>
       <div class="jd-dash-kpis" id="jd-dash-kpis"></div>
       <div class="card">
         <div class="card-header">
@@ -7366,10 +7373,17 @@ function setupJaedaengDashDateChips() {
     { key: 'month',  label: 'เดือนนี้' },
     { key: 'custom', label: 'กำหนดเอง' },
   ];
-  host.innerHTML = opts.map(o =>
+  let html = opts.map(o =>
     `<button type="button" class="jd-dash-date-chip ${jdDashDate.type === o.key ? 'active' : ''}" onclick="setJaedaengDashDate('${o.key}')">${escapeHtml(o.label)}</button>`
   ).join('');
-  document.getElementById('jd-dash-date-custom').style.display = jdDashDate.type === 'custom' ? '' : 'none';
+  if (jdDashDate.type === 'custom') {
+    html += `<div class="jd-dash-date-range">
+      <input type="date" id="jd-dash-date-from" value="${escapeAttr(jdDashDate.from || '')}" onchange="setJaedaengDashDateRange()">
+      <span class="jd-dash-date-sep">—</span>
+      <input type="date" id="jd-dash-date-to" value="${escapeAttr(jdDashDate.to || '')}" onchange="setJaedaengDashDateRange()">
+    </div>`;
+  }
+  host.innerHTML = html;
 }
 
 function setJaedaengDashDate(type) {
