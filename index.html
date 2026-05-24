@@ -5740,6 +5740,7 @@ async function doLogin() {
   roleEl.style.display = roleLabel ? '' : 'none';
 
   currentView = currentUser.brand || 'santafe';
+  saveFabSession();
   applyBrandHeader();
   renderBottomNav();
   routeByRole();
@@ -5807,6 +5808,7 @@ function showUserMenu() {
 }
 
 function logout() {
+  clearFabSession();
   currentUser = null;
   currentAudit = null;
   document.getElementById('app-screen').classList.remove('active');
@@ -8527,11 +8529,72 @@ function showJaedaengDetail(id) {
   document.getElementById('jd-detail-content').innerHTML = html;
 }
 
+// ============ SHARED SESSION (SSO across FAB Operations Hub) ==============
+// Both this Checklist app and fab-operations-hub live under the same
+// fab-opt.github.io origin, so they share localStorage. Save the logged-in
+// user under the common key "fab_session" — any sibling app can read it
+// to auto-login and skip the PIN screen.
+const FAB_SESSION_KEY = 'fab_session';
+const FAB_SESSION_TTL_MS = 8 * 60 * 60 * 1000; // 8 hours
+
+function saveFabSession() {
+  if (!currentUser) return;
+  try {
+    const session = {
+      ...currentUser,
+      loggedInAt: new Date().toISOString(),
+    };
+    localStorage.setItem(FAB_SESSION_KEY, JSON.stringify(session));
+  } catch (_) {}
+}
+
+function loadFabSession() {
+  try {
+    const raw = localStorage.getItem(FAB_SESSION_KEY);
+    if (!raw) return null;
+    const s = JSON.parse(raw);
+    if (!s || !s.code || !s.role) return null;
+    const ts = s.loggedInAt ? new Date(s.loggedInAt).getTime() : 0;
+    if (Date.now() - ts > FAB_SESSION_TTL_MS) {
+      localStorage.removeItem(FAB_SESSION_KEY);
+      return null;
+    }
+    return s;
+  } catch (_) { return null; }
+}
+
+function clearFabSession() {
+  try { localStorage.removeItem(FAB_SESSION_KEY); } catch (_) {}
+}
+
+async function autoLoginFromSession() {
+  const s = loadFabSession();
+  if (!s) return false;
+  currentUser = s;
+  currentBrand = s.brand || null;
+  // Hydrate from local cache then refresh from Firestore in background
+  allAudits = loadLocalAudits();
+  allDailyChecklists = loadLocalDaily();
+  allJaedaengAudits = loadLocalJaedaeng();
+  Promise.all([loadAudits(), loadDailyChecklists(), loadJaedaengAudits()])
+    .then(() => { if (currentUser) routeByRole(); })
+    .catch(() => {});
+  document.getElementById('login-screen').classList.remove('active');
+  document.getElementById('app-screen').classList.add('active');
+  currentView = currentUser.brand || 'santafe';
+  applyBrandHeader();
+  renderBottomNav();
+  routeByRole();
+  return true;
+}
+
 // Init
 selectRole('branch');
 renderPinCells();
 // Auto-focus the hidden PIN input so users can type immediately
 setTimeout(() => { const el = document.getElementById('login-id'); if (el) el.focus(); }, 50);
+// If a sibling FAB app already logged the user in, skip the PIN screen.
+autoLoginFromSession();
 
 </script>
 </body>
