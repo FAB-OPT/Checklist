@@ -8588,13 +8588,34 @@ async function autoLoginFromSession() {
   return true;
 }
 
+// URL where the FAB Operations Hub handles login. Keep this in one place so
+// it's easy to change if the Hub ever moves.
+const FAB_HUB_URL = 'https://fab-opt.github.io/fab-operations-hub/';
+
+function redirectToHubLogin() {
+  // Pass the current page back so Hub can bounce the user here after login.
+  const back = encodeURIComponent(window.location.href);
+  window.location.href = `${FAB_HUB_URL}?return=${back}`;
+}
+
 // Init
 selectRole('branch');
 renderPinCells();
 // Auto-focus the hidden PIN input so users can type immediately
 setTimeout(() => { const el = document.getElementById('login-id'); if (el) el.focus(); }, 50);
-// If a sibling FAB app already logged the user in, skip the PIN screen.
-autoLoginFromSession();
+
+(async function bootstrapLogin() {
+  // If a sibling FAB app already logged the user in, skip the PIN screen.
+  const ok = await autoLoginFromSession();
+  if (ok) return;
+  // Otherwise default to bouncing the user to the Hub login so they only
+  // need to enter their PIN once across all FAB apps.  Allow a ?pin=1
+  // query string to opt out and use the local PIN entry as a fallback
+  // (useful for testing or if the Hub is unreachable).
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('pin') === '1') return;
+  redirectToHubLogin();
+})();
 
 </script>
 </body>
