@@ -8585,17 +8585,11 @@ let pendingSessionUser = null; // set when SSO is waiting for brand selection
 async function autoLoginFromSession() {
   const s = loadFabSession();
   if (!s) return false;
-  // Cross-brand session (e.g. Hub admin) with no brand chosen — show the
-  // brand picker inside Checklist instead of redirecting back to the Hub.
-  if (!s.brand && s.crossBrand) {
-    pendingSessionUser = s;
-    document.getElementById('login-screen').classList.add('active');
-    document.getElementById('app-screen').classList.remove('active');
-    const brandStage = document.getElementById('brand-stage');
-    const loginStage = document.getElementById('login-stage');
-    if (brandStage) brandStage.style.display = '';
-    if (loginStage) loginStage.style.display = 'none';
-    return true;
+  // No brand on the session (e.g. Hub admin) → default to Santa Fe and
+  // skip the picker. Cross-brand users can flip via the header toggle.
+  if (!s.brand) {
+    s.brand = 'santafe';
+    try { localStorage.setItem(FAB_SESSION_KEY, JSON.stringify(s)); } catch (_) {}
   }
   currentUser = s;
   currentBrand = s.brand || null;
