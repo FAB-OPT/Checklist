@@ -5553,6 +5553,19 @@ function saveCurrentAudit() {
 
 // ============ AUTH ============
 function selectBrand(brand) {
+  // SSO admin who's just here to pick a brand — skip PIN and go to the app.
+  if (pendingSessionUser) {
+    const brandStage = document.getElementById('brand-stage');
+    brandStage.querySelectorAll('.brand-pick-card').forEach(c => c.classList.remove('is-selected'));
+    const card = brandStage.querySelector('.brand-pick-' + brand);
+    if (card) card.classList.add('is-selected');
+    brandStage.classList.add('is-leaving');
+    setTimeout(() => {
+      brandStage.classList.remove('is-leaving');
+      finalizeBrandFromSession(brand);
+    }, 360);
+    return;
+  }
   currentBrand = brand;
   const brandStage = document.getElementById('brand-stage');
   const loginStage = document.getElementById('login-stage');
@@ -8567,12 +8580,25 @@ function clearFabSession() {
   try { localStorage.removeItem(FAB_SESSION_KEY); } catch (_) {}
 }
 
+let pendingSessionUser = null; // set when SSO is waiting for brand selection
+
 async function autoLoginFromSession() {
   const s = loadFabSession();
   if (!s) return false;
+  // Cross-brand session (e.g. Hub admin) with no brand chosen — show the
+  // brand picker inside Checklist instead of redirecting back to the Hub.
+  if (!s.brand && s.crossBrand) {
+    pendingSessionUser = s;
+    document.getElementById('login-screen').classList.add('active');
+    document.getElementById('app-screen').classList.remove('active');
+    const brandStage = document.getElementById('brand-stage');
+    const loginStage = document.getElementById('login-stage');
+    if (brandStage) brandStage.style.display = '';
+    if (loginStage) loginStage.style.display = 'none';
+    return true;
+  }
   currentUser = s;
   currentBrand = s.brand || null;
-  // Hydrate from local cache then refresh from Firestore in background
   allAudits = loadLocalAudits();
   allDailyChecklists = loadLocalDaily();
   allJaedaengAudits = loadLocalJaedaeng();
@@ -8586,6 +8612,30 @@ async function autoLoginFromSession() {
   renderBottomNav();
   routeByRole();
   return true;
+}
+
+// Finalize sign-in for an SSO admin who just picked their brand inside
+// Checklist. Updates the shared fab_session, hydrates data, and routes
+// straight into the app — no PIN required.
+function finalizeBrandFromSession(brand) {
+  if (!pendingSessionUser) return;
+  pendingSessionUser.brand = brand;
+  currentUser = pendingSessionUser;
+  currentBrand = brand;
+  pendingSessionUser = null;
+  saveFabSession();
+  allAudits = loadLocalAudits();
+  allDailyChecklists = loadLocalDaily();
+  allJaedaengAudits = loadLocalJaedaeng();
+  Promise.all([loadAudits(), loadDailyChecklists(), loadJaedaengAudits()])
+    .then(() => { if (currentUser) routeByRole(); })
+    .catch(() => {});
+  document.getElementById('login-screen').classList.remove('active');
+  document.getElementById('app-screen').classList.add('active');
+  currentView = brand;
+  applyBrandHeader();
+  renderBottomNav();
+  routeByRole();
 }
 
 // URL where the FAB Operations Hub handles login. Keep this in one place so
