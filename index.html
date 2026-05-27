@@ -5824,12 +5824,12 @@ function logout() {
   clearFabSession();
   currentUser = null;
   currentAudit = null;
-  document.getElementById('app-screen').classList.remove('active');
-  document.getElementById('login-screen').classList.add('active');
-  const loginInput = document.getElementById('login-id');
-  loginInput.value = '';
-  renderPinCells();
-  backToBrand();
+  // Redirect back to Hub (login screen) — single login point
+  // file:// → ../fab-operations-hub/index.html · http(s) → /fab-operations-hub/
+  var hubUrl = (location.protocol === 'file:')
+    ? '../fab-operations-hub/index.html'
+    : '/fab-operations-hub/';
+  window.location.href = hubUrl;
 }
 
 // ============ NAV ============
