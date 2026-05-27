@@ -4398,10 +4398,20 @@ html.fab-sso-pending #login-screen { display: none !important; }
         <div class="stripe-card-head">
           <div>
             <div class="stripe-card-title">สรุปรายโซน</div>
-            <div class="stripe-card-sub">คะแนนเฉลี่ยตามผู้รับผิดชอบ</div>
+            <div class="stripe-card-sub">คะแนนเฉลี่ยตามผู้รับผิดชอบ (เฉพาะ VP)</div>
           </div>
         </div>
         <div id="zone-list-content"></div>
+      </div>
+
+      <div id="top-fails-card" style="display:none;" class="stripe-card">
+        <div class="stripe-card-head">
+          <div>
+            <div class="stripe-card-title">หัวข้อที่ตกบ่อย <span style="font-weight:500;font-size:13px;color:var(--text-secondary);">Top failed items</span></div>
+            <div class="stripe-card-sub">เรียงตามจำนวนครั้งที่ "ไม่ผ่าน" · แสดง % ที่ตก = fail ÷ (pass+fail)</div>
+          </div>
+        </div>
+        <div id="top-fails-content"></div>
       </div>
 
       <!-- Hidden KPI grid kept for compatibility but not rendered -->
@@ -5853,6 +5863,14 @@ function logout() {
   window.location.href = hubUrl;
 }
 
+/* กลับเมนูหลัก: ไม่เคลียร์ session — SSO Hub จะเด้งเข้าเมนูทันที (เลือกระบบอื่นต่อได้) */
+function backToHub() {
+  var hubUrl = (location.protocol === 'file:')
+    ? '../fab-operations-hub/index.html'
+    : '/fab-operations-hub/';
+  window.location.href = hubUrl;
+}
+
 // ============ NAV ============
 function routeByRole() {
   if (currentView === 'jaedaeng') {
@@ -5965,6 +5983,7 @@ function renderBottomNav() {
   // Render the secondary tools (brand toggle + test mode) up in the header
   // instead of crowding the bottom nav.
   renderHeaderTools(view);
+  html += '<button class="bottom-nav-item" id="nav-back-hub" onclick="backToHub()"><span class="material-symbols-rounded">apps</span><span>เมนูหลัก</span></button>';
   html += '<button class="bottom-nav-item nav-logout-btn" id="nav-logout" onclick="logout()"><span class="material-symbols-rounded">logout</span><span>ออกระบบ</span></button>';
   nav.innerHTML = html;
 }
@@ -6053,12 +6072,20 @@ function showDashboard() {
   if (srcCount) srcCount.textContent = completed.length;
   renderTierChart(completed);
 
-  // Zone breakdown (admin/coo/vp only)
-  if (['admin','coo','vp'].includes(currentUser.role)) {
+  // Zone breakdown — เฉพาะ VP เท่านั้น
+  if (currentUser.role === 'vp') {
     document.getElementById('zone-list').style.display = 'block';
     renderZoneList(completed);
   } else {
     document.getElementById('zone-list').style.display = 'none';
+  }
+
+  // Top fail items — แสดงให้ทุก role ที่เห็น summary (admin/coo/vp/bzm) เพื่อรู้ปัญหาบ่อย
+  if (['admin','coo','vp','bzm'].includes(currentUser.role)) {
+    document.getElementById('top-fails-card').style.display = 'block';
+    renderTopFailItems(completed);
+  } else {
+    document.getElementById('top-fails-card').style.display = 'none';
   }
 
   // Populate BZM filter
@@ -6095,6 +6122,60 @@ function renderZoneList(completed) {
     </div>`;
   }
   document.getElementById('zone-list-content').innerHTML = html;
+}
+
+/* หัวข้อที่ตกบ่อย — รวม fail จากทุก audit · group ตาม item · คิด % ตก (fail / (pass+fail)) */
+function renderTopFailItems(completed) {
+  const host = document.getElementById('top-fails-content');
+  if (!host) return;
+  if (!completed.length) {
+    host.innerHTML = '<div style="text-align:center;padding:22px 14px;color:var(--text-secondary);font-size:13px;">ยังไม่มีข้อมูลการตรวจ</div>';
+    return;
+  }
+  const stats = {};
+  completed.forEach(a => {
+    const ans = a.answers || {};
+    for (const sec of SECTIONS) {
+      if (!['A','B','C','D','E','F','G','H','I','J','K','L','M'].includes(sec.letter)) continue;
+      sec.subsections.forEach((sub, subIdx) => {
+        sub.items.forEach(item => {
+          const key = sec.letter + '|' + subIdx + '|' + item.num;
+          const v = ans[key];
+          if (!v || v.value == null || v.value === 'na') return;
+          if (!stats[key]) stats[key] = {
+            letter: sec.letter,
+            section: sec.title || '',
+            num: item.num,
+            text: item.text || '-',
+            fail: 0,
+            total: 0
+          };
+          stats[key].total++;
+          if (v.value === 'fail') stats[key].fail++;
+        });
+      });
+    }
+  });
+  const top = Object.values(stats)
+    .filter(s => s.fail > 0)
+    .sort((a, b) => (b.fail - a.fail) || ((b.fail/b.total) - (a.fail/a.total)))
+    .slice(0, 10);
+  if (!top.length) {
+    host.innerHTML = '<div style="text-align:center;padding:22px 14px;color:var(--success);font-size:13px;">ไม่มีหัวข้อที่ตกในข้อมูลที่เห็น</div>';
+    return;
+  }
+  host.innerHTML = top.map((f, i) => {
+    const pct = f.total > 0 ? (f.fail / f.total * 100) : 0;
+    const cls = pct >= 50 ? 'bad' : (pct >= 25 ? 'warn' : '');
+    return `<div class="jd-dash-row">
+      <div>
+        <div class="jd-dash-row-name">${i+1}. ${escapeHtml(f.text)}</div>
+        <div class="jd-dash-row-meta">หมวด ${escapeHtml(f.letter)} · ${escapeHtml(f.section)} · ตก ${f.fail} / ${f.total} ครั้ง</div>
+        <div class="jd-dash-bar"><div class="jd-dash-bar-fill ${cls}" style="width:${Math.min(100, pct)}%"></div></div>
+      </div>
+      <div class="jd-dash-row-value is-bad">${pct.toFixed(1)}%</div>
+    </div>`;
+  }).join('');
 }
 
 function renderAuditList() {
@@ -7677,29 +7758,37 @@ function renderJaedaengDashboard() {
     </div>`;
   }).join('');
 
-  // Top failed items — count failed items by text
-  const failCounts = {};
+  // Top failed items — count fail + total per item (text) → % ตก
+  const failStats = {};
   records.forEach(r => {
     (r.items || []).forEach(it => {
-      if (it.status === 'fail') {
-        if (!failCounts[it.text]) failCounts[it.text] = { count: 0, section: it.section };
-        failCounts[it.text].count++;
+      if (!it || !it.text) return;
+      const key = (it.section || '') + '||' + it.text;
+      if (!failStats[key]) failStats[key] = { text: it.text, section: it.section || '', fail: 0, total: 0 };
+      if (it.status === 'fail' || it.status === 'pass') {
+        failStats[key].total++;
+        if (it.status === 'fail') failStats[key].fail++;
       }
     });
   });
-  const topFails = Object.entries(failCounts)
-    .map(([text, s]) => ({ text, count: s.count, section: s.section }))
-    .sort((a, b) => b.count - a.count)
+  const topFails = Object.values(failStats)
+    .filter(s => s.fail > 0)
+    .sort((a, b) => (b.fail - a.fail) || ((b.fail/b.total) - (a.fail/a.total)))
     .slice(0, 10);
   topFailsEl.innerHTML = topFails.length === 0
     ? '<div class="jd-dash-empty">ยังไม่มีข้อไม่ผ่าน</div>'
-    : topFails.map(f => `<div class="jd-dash-row">
-        <div>
-          <div class="jd-dash-row-name">${escapeHtml(f.text)}</div>
-          <div class="jd-dash-row-meta">${escapeHtml(f.section)}</div>
-        </div>
-        <div class="jd-dash-row-value is-bad">${f.count} ครั้ง</div>
-      </div>`).join('');
+    : topFails.map((f, i) => {
+        const pct = f.total > 0 ? (f.fail / f.total * 100) : 0;
+        const cls = pct >= 50 ? 'bad' : (pct >= 25 ? 'warn' : '');
+        return `<div class="jd-dash-row">
+          <div>
+            <div class="jd-dash-row-name">${i+1}. ${escapeHtml(f.text)}</div>
+            <div class="jd-dash-row-meta">หมวด ${escapeHtml(f.section || '-')} · ตก ${f.fail} / ${f.total} ครั้ง</div>
+            <div class="jd-dash-bar"><div class="jd-dash-bar-fill ${cls}" style="width:${Math.min(100, pct)}%"></div></div>
+          </div>
+          <div class="jd-dash-row-value is-bad">${pct.toFixed(1)}%</div>
+        </div>`;
+      }).join('');
 
   // By BZM
   const byBzm = {};
