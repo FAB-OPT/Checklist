@@ -8642,20 +8642,50 @@ function redirectToHubLogin() {
   window.location.href = `${FAB_HUB_URL}?return=${back}`;
 }
 
-// Init
-selectRole('branch');
-renderPinCells();
-// Auto-focus the hidden PIN input so users can type immediately
-setTimeout(() => { const el = document.getElementById('login-id'); if (el) el.focus(); }, 50);
+// Init — synchronously hide the login screen if a valid SSO session
+// already exists, so the brand picker never flashes before
+// autoLoginFromSession() finishes routing the user into the app.
+function _hasValidSessionSync() {
+  try {
+    const raw = localStorage.getItem(FAB_SESSION_KEY);
+    if (!raw) return false;
+    const s = JSON.parse(raw);
+    if (!s || !s.code || !s.role) return false;
+    const ts = s.loggedInAt ? new Date(s.loggedInAt).getTime() : 0;
+    return (Date.now() - ts) <= FAB_SESSION_TTL_MS;
+  } catch (_) { return false; }
+}
+
+function _setupLoginUI() {
+  selectRole('branch');
+  renderPinCells();
+  setTimeout(() => { const el = document.getElementById('login-id'); if (el) el.focus(); }, 50);
+}
+
+const _ssoLikely = _hasValidSessionSync();
+if (_ssoLikely) {
+  // Hide login-screen immediately — autoLoginFromSession() will reveal
+  // app-screen once data hydrates.
+  const _ls = document.getElementById('login-screen');
+  if (_ls) _ls.classList.remove('active');
+} else {
+  _setupLoginUI();
+}
 
 (async function bootstrapLogin() {
   // If a sibling FAB app already logged the user in, skip the PIN screen.
   const ok = await autoLoginFromSession();
   if (ok) return;
-  // Otherwise default to bouncing the user to the Hub login so they only
-  // need to enter their PIN once across all FAB apps.  Allow a ?pin=1
-  // query string to opt out and use the local PIN entry as a fallback
-  // (useful for testing or if the Hub is unreachable).
+  // SSO failed — make sure the login UI is actually set up before
+  // redirecting (covers the case where we optimistically hid it above).
+  const _ls = document.getElementById('login-screen');
+  if (_ls && !_ls.classList.contains('active')) {
+    _ls.classList.add('active');
+    _setupLoginUI();
+  }
+  // Default to bouncing the user to the Hub login so they only need to
+  // enter their PIN once across all FAB apps. Allow a ?pin=1 query string
+  // to opt out and use the local PIN entry as a fallback.
   const params = new URLSearchParams(window.location.search);
   if (params.get('pin') === '1') return;
   redirectToHubLogin();
