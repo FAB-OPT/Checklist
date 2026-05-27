@@ -8606,6 +8606,16 @@ let pendingSessionUser = null; // set when SSO is waiting for brand selection
 async function autoLoginFromSession() {
   const s = loadFabSession();
   if (!s) return false;
+  // Hub แยกปุ่มเป็น 2 แบรนด์ (santafe / jaedaeng) → ส่งผ่าน ?brand=
+  // ถ้ามี → override brand บน session (สำหรับ admin/coo cross-brand
+  // หรือ branch ที่อยากเปิดอีกแบรนด์)
+  try {
+    const qp = new URLSearchParams(window.location.search).get('brand');
+    if (qp === 'santafe' || qp === 'jaedaeng') {
+      s.brand = qp;
+      try { localStorage.setItem(FAB_SESSION_KEY, JSON.stringify(s)); } catch (_) {}
+    }
+  } catch (_) {}
   // No brand on the session (e.g. Hub admin) → default to Santa Fe and
   // skip the picker. Cross-brand users can flip via the header toggle.
   if (!s.brand) {
