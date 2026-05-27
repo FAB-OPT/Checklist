@@ -4263,7 +4263,28 @@ body:has(#login-screen.active) {
   .app-header { padding: 20px 40px; }
 }
 
+/* Hide login-screen synchronously when SSO session is detected (set by
+   the inline script below) — prevents the brand picker from flashing
+   before the late bootstrap script runs. */
+html.fab-sso-pending #login-screen { display: none !important; }
 </style>
+<script>
+/* Runs in <head> before #login-screen paints. If a valid fab_session
+   exists in localStorage, mark <html> so CSS hides the login screen
+   immediately. autoLoginFromSession() later removes this class on
+   failure (or it becomes irrelevant once #app-screen is activated). */
+(function () {
+  try {
+    var raw = localStorage.getItem('fab_session');
+    if (!raw) return;
+    var s = JSON.parse(raw);
+    if (!s || !s.code || !s.role) return;
+    var ts = s.loggedInAt ? new Date(s.loggedInAt).getTime() : 0;
+    if (Date.now() - ts > 8 * 60 * 60 * 1000) return;
+    document.documentElement.classList.add('fab-sso-pending');
+  } catch (_) {}
+})();
+</script>
 </head>
 <body>
 
@@ -8676,8 +8697,9 @@ if (_ssoLikely) {
   // If a sibling FAB app already logged the user in, skip the PIN screen.
   const ok = await autoLoginFromSession();
   if (ok) return;
-  // SSO failed — make sure the login UI is actually set up before
-  // redirecting (covers the case where we optimistically hid it above).
+  // SSO failed — reveal the login UI (the fab-sso-pending class on <html>
+  // was hiding it via CSS) and set it up before redirecting.
+  document.documentElement.classList.remove('fab-sso-pending');
   const _ls = document.getElementById('login-screen');
   if (_ls && !_ls.classList.contains('active')) {
     _ls.classList.add('active');
