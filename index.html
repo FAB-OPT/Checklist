@@ -4033,6 +4033,10 @@ body:has(#login-screen.active) {
 .nav-logout-btn { color: var(--danger); }
 .nav-logout-btn .material-symbols-rounded { color: var(--danger); }
 .nav-logout-btn.active::after { background: var(--danger); }
+/* กลับเมนูหลัก: สีฟ้า/ทอง ชัดกว่าปุ่มอื่น เพื่อแยกจาก logout */
+.nav-back-hub-btn { color: #0E7490 !important; font-weight: 700; }
+.nav-back-hub-btn .material-symbols-rounded { color: #0E7490 !important; }
+.nav-back-hub-btn.active::after { background: #0E7490; }
 
 /* ============ DESKTOP LAYOUT (≥1024px) ============ */
 @media (min-width: 1024px) {
@@ -4082,6 +4086,12 @@ body:has(#login-screen.active) {
     font-size: 13px; font-weight: 600;
     color: rgba(255,255,255,0.92);
     margin-top: 8px; line-height: 1.35;
+  }
+  .nav-app-user {
+    font-size: 13.5px; font-weight: 700;
+    color: rgba(255,255,255,0.96);
+    margin-top: 8px; line-height: 1.35;
+    letter-spacing: 0.1px;
   }
   /* Divider between app title and branch identity */
   .nav-brand-divider {
@@ -5797,35 +5807,35 @@ function applyBrandHeader() {
   const view = currentView || (currentUser && currentUser.brand);
   let appTitle, appSub, eyebrow;
   if (view === 'santafe') {
-    appTitle = 'Operations Standard Skill & Operations Checklist';
+    appTitle = 'Operations Standard Skill &\nOperations Checklist';
     appSub   = 'Santa Fe Happy Steak';
     eyebrow  = 'Operations Standard Skill';
   } else if (view === 'jaedaeng') {
-    appTitle = 'Quality Service Cleanliness & Operations Checklist';
+    appTitle = 'Quality Service Cleanliness &\nOperations Checklist';
     appSub   = 'เจ๊แดงสามย่าน';
     eyebrow  = 'Quality Service Cleanliness';
   } else {
-    appTitle = 'Quality Service Cleanliness & Operations Checklist';
+    appTitle = 'Quality Service Cleanliness &\nOperations Checklist';
     appSub   = 'ระบบตรวจสอบมาตรฐานการทำงาน';
     eyebrow  = 'Quality Service Cleanliness';
   }
-  if (titleEl) titleEl.textContent = appTitle;
+  // \n → <br> เพื่อบังคับขึ้นบรรทัดใหม่ตรง '&' (มือถือ — 2 บรรทัด)
+  if (titleEl) titleEl.innerHTML = escapeHtml(appTitle).replace(/\n/g, '<br>');
   if (subEl)   subEl.textContent   = appSub;
   document.querySelectorAll('.brand-eyebrow-label').forEach(el => {
     el.textContent = eyebrow;
   });
-  // Populate "คุณ <ชื่อ> (<ตำแหน่ง>)" on row 2 of the header
+  // Row 3 ของ header: "<ชื่อ> (<ตำแหน่ง>)" — ตัดคำนำหน้า · ไม่มี "คุณ"
   const userLineEl = document.getElementById('app-user-line');
   if (userLineEl && currentUser) {
     const roleLabels = { branch: 'สาขา', bzm: 'BZM', admin: 'Admin', coo: 'COO', vp: 'VP' };
     const roleLabel = roleLabels[currentUser.role] || currentUser.role;
-    let nameLabel;
     if (currentUser.role === 'branch') {
-      nameLabel = branchLabel(currentUser.branchCode, currentUser.branchName);
-      userLineEl.textContent = nameLabel;
+      userLineEl.textContent = branchLabel(currentUser.branchCode, currentUser.branchName);
     } else {
-      nameLabel = currentUser.name || currentUser.nick || '-';
-      userLineEl.textContent = `คุณ ${nameLabel} (${roleLabel})`;
+      const cleanName = String(currentUser.name || currentUser.nick || '-')
+        .replace(/^(นางสาว|นาย|นาง|น\.ส\.|ดร\.)\s*/, '').trim();
+      userLineEl.textContent = `${cleanName} (${roleLabel})`;
     }
   }
 }
@@ -5940,25 +5950,25 @@ function renderBottomNav() {
   const nav = document.getElementById('bottom-nav');
   let html = '';
   const isBranch = currentUser.role === 'branch';
+  // ชื่อ (ตำแหน่ง) — ตัดคำนำหน้า (นาย/นางสาว/นาง) ออก · branch ใช้ "รหัส ชื่อสาขา"
   let pillText;
   if (isBranch) {
     pillText = `${currentUser.branchCode} ${currentUser.branchName}`;
   } else {
     const roleLabel = ({ 'bzm': 'BZM', 'admin': 'Admin', 'coo': 'COO', 'vp': 'VP' }[currentUser.role] || '');
-    const fullName = currentUser.name || '';
-    const nick = currentUser.nick && currentUser.nick !== currentUser.name ? ` (${currentUser.nick})` : '';
-    pillText = `${fullName}${nick}${roleLabel ? ' · ' + roleLabel : ''}`;
+    const cleanName = String(currentUser.name || '').replace(/^(นางสาว|นาย|นาง|น\.ส\.|ดร\.)\s*/, '').trim();
+    pillText = cleanName + (roleLabel ? ` (${roleLabel})` : '');
   }
   html += '<div class="nav-brand">' +
     '<div class="nav-brand-app">' +
-      '<div class="nav-app-name">Quality Assurance<br>&amp; Operations Checklist</div>' +
-      '<div class="nav-app-sub">ระบบตรวจสอบมาตรฐานการทำงาน</div>' +
+      '<div class="nav-app-name">Quality Assurance &amp;<br>Operations Checklist</div>' +
+      '<div class="nav-app-user">' + escapeHtml(pillText) + '</div>' +
     '</div>' +
     '<div class="nav-brand-divider"></div>' +
     '<div class="nav-brand-branch">' +
       '<div class="nav-brand-icon">' + santaFeLogoSVG() + '</div>' +
       '<div class="nav-branch-info">' +
-        '<div class="nav-branch-text">' + escapeHtml(pillText) + '</div>' +
+        '<div class="nav-branch-text">ระบบตรวจสอบมาตรฐานการทำงาน</div>' +
       '</div>' +
     '</div>' +
   '</div>';
@@ -5983,7 +5993,7 @@ function renderBottomNav() {
   // Render the secondary tools (brand toggle + test mode) up in the header
   // instead of crowding the bottom nav.
   renderHeaderTools(view);
-  html += '<button class="bottom-nav-item" id="nav-back-hub" onclick="backToHub()"><span class="material-symbols-rounded">apps</span><span>เมนูหลัก</span></button>';
+  html += '<button class="bottom-nav-item nav-back-hub-btn" id="nav-back-hub" onclick="backToHub()"><span class="material-symbols-rounded">arrow_back</span><span>กลับเมนูหลัก</span></button>';
   html += '<button class="bottom-nav-item nav-logout-btn" id="nav-logout" onclick="logout()"><span class="material-symbols-rounded">logout</span><span>ออกระบบ</span></button>';
   nav.innerHTML = html;
 }
@@ -6102,22 +6112,36 @@ function showDashboard() {
 }
 
 function renderZoneList(completed) {
-  const bzms = [...new Set(BRANCHES.map(b => b.manager))];
+  // จัดกลุ่มสาขาตาม BZM (manager) · เก็บทั้ง name + nick จาก BRANCHES.managerNick
+  const zoneMap = {};
+  for (const b of BRANCHES) {
+    if (!zoneMap[b.manager]) zoneMap[b.manager] = { name: b.manager, nick: b.managerNick || '', branches: [] };
+    zoneMap[b.manager].branches.push(b);
+  }
+  const zones = Object.values(zoneMap).sort((a,b) => (b.branches.length - a.branches.length));
   let html = '';
-  for (const bzm of bzms) {
-    const zoneBranches = BRANCHES.filter(b => b.manager === bzm);
-    const zoneAudits = completed.filter(a => a.branchInfo.bzm === bzm);
+  for (const z of zones) {
+    const zoneAudits = completed.filter(a => a.branchInfo.bzm === z.name);
     const audited = new Set(zoneAudits.map(a => a.branchInfo.branchCode)).size;
     const avg = zoneAudits.length ? zoneAudits.reduce((s,a) => s + (a.scoreData?.grandTotal||0), 0) / zoneAudits.length : 0;
-    const nick = zoneBranches[0] ? '' : '';
-    const branch1 = zoneBranches[0];
-    const nickname = bzm.split(' ').slice(-1)[0]; // last word as fallback
+    const coverPct = z.branches.length ? (audited / z.branches.length * 100) : 0;
+    const avgColor = avg >= 85 ? 'var(--success)' : (avg < 70 ? 'var(--danger)' : 'var(--warning)');
+    const coverColor = coverPct >= 80 ? 'var(--success)' : (coverPct < 50 ? 'var(--danger)' : 'var(--warning)');
     html += `<div class="zone-card">
-      <div class="zone-name">${escapeHtml(bzm)}</div>
+      <div class="zone-name">${escapeHtml(z.name)} <span style="font-weight:500;color:var(--text-secondary);font-size:13px;">(${escapeHtml(z.nick || '-')})</span></div>
       <div class="zone-stats">
-        <div><div class="num">${audited}/${zoneBranches.length}</div><div class="lbl">สาขาตรวจแล้ว</div></div>
-        <div><div class="num">${zoneAudits.length}</div><div class="lbl">ครั้งที่ตรวจ</div></div>
-        <div><div class="num" style="color:${avg>=85?'var(--success)':(avg<70?'var(--danger)':'var(--warning)')};">${avg.toFixed(1)}%</div><div class="lbl">คะแนนเฉลี่ย</div></div>
+        <div>
+          <div class="num" style="color:${coverColor};">${audited}/${z.branches.length}</div>
+          <div class="lbl">สาขาที่ตรวจแล้ว · ${coverPct.toFixed(0)}%</div>
+        </div>
+        <div>
+          <div class="num">${zoneAudits.length}</div>
+          <div class="lbl">ครั้งที่ตรวจ</div>
+        </div>
+        <div>
+          <div class="num" style="color:${avgColor};">${zoneAudits.length ? avg.toFixed(1) + '%' : '—'}</div>
+          <div class="lbl">คะแนนเฉลี่ย</div>
+        </div>
       </div>
     </div>`;
   }
@@ -6169,8 +6193,12 @@ function renderTopFailItems(completed) {
     const cls = pct >= 50 ? 'bad' : (pct >= 25 ? 'warn' : '');
     return `<div class="jd-dash-row">
       <div>
-        <div class="jd-dash-row-name">${i+1}. ${escapeHtml(f.text)}</div>
-        <div class="jd-dash-row-meta">หมวด ${escapeHtml(f.letter)} · ${escapeHtml(f.section)} · ตก ${f.fail} / ${f.total} ครั้ง</div>
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:4px;">
+          <span style="display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;padding:0 7px;background:var(--primary);color:#fff;border-radius:6px;font-weight:800;font-size:12px;">${escapeHtml(f.letter)}</span>
+          <span style="font-weight:700;font-size:13px;color:var(--text);">${escapeHtml(f.section)}</span>
+        </div>
+        <div class="jd-dash-row-name" style="font-size:13.5px;">${i+1}. ${escapeHtml(f.text)}</div>
+        <div class="jd-dash-row-meta">ตก ${f.fail} / ${f.total} ครั้ง</div>
         <div class="jd-dash-bar"><div class="jd-dash-bar-fill ${cls}" style="width:${Math.min(100, pct)}%"></div></div>
       </div>
       <div class="jd-dash-row-value is-bad">${pct.toFixed(1)}%</div>
@@ -7782,8 +7810,9 @@ function renderJaedaengDashboard() {
         const cls = pct >= 50 ? 'bad' : (pct >= 25 ? 'warn' : '');
         return `<div class="jd-dash-row">
           <div>
-            <div class="jd-dash-row-name">${i+1}. ${escapeHtml(f.text)}</div>
-            <div class="jd-dash-row-meta">หมวด ${escapeHtml(f.section || '-')} · ตก ${f.fail} / ${f.total} ครั้ง</div>
+            <div style="font-weight:800;font-size:12.5px;color:var(--primary);margin-bottom:3px;">หมวด: ${escapeHtml(f.section || '-')}</div>
+            <div class="jd-dash-row-name" style="font-size:13.5px;">${i+1}. ${escapeHtml(f.text)}</div>
+            <div class="jd-dash-row-meta">ตก ${f.fail} / ${f.total} ครั้ง</div>
             <div class="jd-dash-bar"><div class="jd-dash-bar-fill ${cls}" style="width:${Math.min(100, pct)}%"></div></div>
           </div>
           <div class="jd-dash-row-value is-bad">${pct.toFixed(1)}%</div>
@@ -7803,9 +7832,13 @@ function renderJaedaengDashboard() {
     .sort((a, b) => b.count - a.count);
   byBzmEl.innerHTML = bzmList.map(b => {
     const tier = b.avg >= 90 ? 'is-good' : b.avg < 70 ? 'is-bad' : 'is-warn';
+    // ชื่อจริง (นิค) — ใช้ full ก่อน นิค ในวงเล็บ
+    const displayName = b.full && b.full !== b.nick
+      ? `${escapeHtml(b.full)} <span style="color:var(--text-secondary);font-weight:500;font-size:12px;">(${escapeHtml(b.nick)})</span>`
+      : escapeHtml(b.nick);
     return `<div class="jd-dash-row">
       <div>
-        <div class="jd-dash-row-name">${escapeHtml(b.nick)}${b.full && b.full !== b.nick ? ` <span class="jd-dash-row-meta" style="display:inline;">(${escapeHtml(b.full)})</span>` : ''}</div>
+        <div class="jd-dash-row-name">${displayName}</div>
         <div class="jd-dash-row-meta">ตรวจ ${b.count} ครั้ง · เฉลี่ย ${b.avg.toFixed(1)}%</div>
       </div>
       <div class="jd-dash-row-value ${tier}">${b.count}</div>
