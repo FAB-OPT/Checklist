@@ -4993,7 +4993,7 @@ html.fab-sso-pending #login-screen { display: none !important; }
       </div>
       <div class="jd-dash-date-filter" id="jd-dash-date-chips"></div>
       <div class="jd-dash-kpis" id="jd-dash-kpis"></div>
-      <div class="card">
+      <div class="card" id="jd-dash-zone-card">
         <div class="card-header">
           <span class="material-symbols-rounded" style="color:#0E7490;">groups</span>
           <h2>คะแนนเฉลี่ยต่อโซน</h2>
@@ -8382,7 +8382,12 @@ function renderJaedaengDashboard() {
   _jdTfRecords = records.slice();
   renderJaedaengTopFails();
 
-  // คะแนนเฉลี่ยต่อโซน — แสดงแบบเดียวกับต่อสาขา (avg% + แถบ) เรียงตามคะแนน
+  // คะแนนเฉลี่ยต่อโซน — แสดงเฉพาะ vp/coo/admin
+  var _zoneCard = document.getElementById('jd-dash-zone-card');
+  var _showZone = currentUser && ['vp','coo','admin'].includes(currentUser.role);
+  if (_zoneCard) _zoneCard.style.display = _showZone ? '' : 'none';
+  if (!_showZone) { if (byBzmEl) byBzmEl.innerHTML = ''; }
+  else {
   const byBzm = {};
   records.forEach(r => {
     const key = r.bzmNick || r.bzm || 'ไม่ระบุ';
@@ -8401,6 +8406,7 @@ function renderJaedaengDashboard() {
       : escapeHtml(b.nick);
     return _scoreRowHTML(i+1, displayName, b.avg, b.count, b.fails, b.records, 'zone');
   }).join('');
+  }
 
   // ผลการตรวจล่าสุด — การ์ดใหม่
   if (recentEl) {
