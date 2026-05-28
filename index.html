@@ -4781,6 +4781,14 @@ html.fab-sso-pending #login-screen { display: none !important; }
           <span class="material-symbols-rounded" style="color:var(--danger);">priority_high</span>
           <h2>หัวข้อที่ตกบ่อย <span class="card-header-en">Top failed items</span></h2>
         </div>
+        <div id="jd-tf-filter" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
+          <select id="jd-tf-zone" class="jd-form-input" onchange="onJdTopFailZoneChange()" style="flex:1;min-width:140px;">
+            <option value="">ทุกโซน (BZM)</option>
+          </select>
+          <select id="jd-tf-branch" class="jd-form-input" onchange="renderJaedaengTopFails()" style="flex:1;min-width:140px;">
+            <option value="">ทุกสาขา</option>
+          </select>
+        </div>
         <div id="jd-dash-top-fails"></div>
       </div>
       <div class="card">
@@ -7843,6 +7851,112 @@ function setJaedaengDashScope(value) {
   renderJaedaengDashboard();
 }
 
+/* drill-down state เจ๊แดง top-fails */
+var _jdTfRecords = [];
+
+function _populateJdTopFailFilters() {
+  const zoneSel = document.getElementById('jd-tf-zone');
+  const branchSel = document.getElementById('jd-tf-branch');
+  if (!zoneSel || !branchSel) return;
+  const zones = [...new Set(_jdTfRecords.map(r => r.bzmNick || r.bzm).filter(Boolean))].sort();
+  const curZone = zoneSel.value;
+  zoneSel.innerHTML = '<option value="">ทุกโซน (BZM)</option>' +
+    zones.map(z => `<option value="${escapeAttr(z)}"${z===curZone?' selected':''}>${escapeHtml(z)}</option>`).join('');
+  _populateJdTopFailBranches(zoneSel.value);
+}
+function _populateJdTopFailBranches(zone) {
+  const branchSel = document.getElementById('jd-tf-branch');
+  if (!branchSel) return;
+  let pool = _jdTfRecords;
+  if (zone) pool = pool.filter(r => (r.bzmNick || r.bzm) === zone);
+  const names = [...new Set(pool.map(r => r.storeName).filter(Boolean))].sort();
+  const cur = branchSel.value;
+  branchSel.innerHTML = '<option value="">ทุกสาขา</option>' +
+    names.map(n => `<option value="${escapeAttr(n)}"${n===cur?' selected':''}>${escapeHtml(n)}</option>`).join('');
+}
+function onJdTopFailZoneChange() {
+  _populateJdTopFailBranches(document.getElementById('jd-tf-zone').value);
+  renderJaedaengTopFails();
+}
+
+function renderJaedaengTopFails() {
+  const topFailsEl = document.getElementById('jd-dash-top-fails');
+  if (!topFailsEl) return;
+  _populateJdTopFailFilters();
+  const fZone = (document.getElementById('jd-tf-zone') || {}).value || '';
+  const fBranch = (document.getElementById('jd-tf-branch') || {}).value || '';
+  const records = _jdTfRecords.filter(r => {
+    if (fZone && (r.bzmNick || r.bzm) !== fZone) return false;
+    if (fBranch && r.storeName !== fBranch) return false;
+    return true;
+  });
+  if (!records.length) {
+    topFailsEl.innerHTML = '<div class="jd-dash-empty">ยังไม่มีข้อมูลในขอบเขตที่เลือก</div>';
+    return;
+  }
+  const failItemStats = {};
+  const failCatStats = {};
+  records.forEach(r => {
+    (r.items || []).forEach(it => {
+      if (!it || !it.text) return;
+      const section = it.section || '-';
+      if (!failCatStats[section]) failCatStats[section] = { section, fail: 0, total: 0 };
+      const key = section + '||' + it.text;
+      if (!failItemStats[key]) failItemStats[key] = { text: it.text, section, fail: 0, total: 0 };
+      if (it.status === 'fail' || it.status === 'pass') {
+        failItemStats[key].total++;
+        failCatStats[section].total++;
+        if (it.status === 'fail') {
+          failItemStats[key].fail++;
+          failCatStats[section].fail++;
+        }
+      }
+    });
+  });
+  const catTotalFails = Object.values(failCatStats).reduce((s, c) => s + c.fail, 0);
+  const sortedCats = Object.values(failCatStats)
+    .filter(c => c.fail > 0)
+    .sort((a, b) => b.fail - a.fail);
+  topFailsEl.innerHTML = sortedCats.length === 0
+    ? '<div class="jd-dash-empty">ยังไม่มีข้อไม่ผ่าน</div>'
+    : sortedCats.map(cat => {
+        const catSharePct = catTotalFails > 0 ? (cat.fail / catTotalFails * 100) : 0;
+        const headColor = catSharePct >= 25 ? '#dc2626' : (catSharePct >= 10 ? '#f59e0b' : '#0E7490');
+        const items = Object.values(failItemStats)
+          .filter(i => i.section === cat.section && i.fail > 0)
+          .sort((a, b) => b.fail - a.fail)
+          .slice(0, 5);
+        return `<div style="margin-bottom:14px;border:1px solid var(--border);border-radius:12px;overflow:hidden;background:#fff;">
+          <div style="padding:14px 16px;background:linear-gradient(135deg, ${headColor}, ${headColor}cc);color:#fff;">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+              <div style="flex:1;min-width:0;">
+                <div style="font-weight:900;font-size:15px;line-height:1.3;margin-bottom:4px;">${escapeHtml(cat.section)}</div>
+                <div style="font-size:12.5px;opacity:0.95;font-weight:600;">ตก ${cat.fail} / ${cat.total} ข้อย่อย</div>
+              </div>
+              <div style="text-align:right;flex:none;">
+                <div style="font-size:24px;font-weight:900;line-height:1;">${catSharePct.toFixed(1)}%</div>
+                <div style="font-size:10.5px;opacity:0.85;margin-top:2px;">ของยอดตกทั้งหมด</div>
+              </div>
+            </div>
+          </div>
+          ${items.length ? `<div style="padding:10px 14px 12px;">
+            ${items.map((it, i) => {
+              const itPct = it.total > 0 ? (it.fail / it.total * 100) : 0;
+              const cls = itPct >= 50 ? 'bad' : (itPct >= 25 ? 'warn' : '');
+              return `<div class="jd-dash-row" style="padding:8px 0;border-bottom:1px dashed var(--border);">
+                <div>
+                  <div class="jd-dash-row-name" style="font-size:13px;">${i+1}. ${escapeHtml(it.text)}</div>
+                  <div class="jd-dash-row-meta">ตก ${it.fail} / ${it.total} ครั้ง</div>
+                  <div class="jd-dash-bar"><div class="jd-dash-bar-fill ${cls}" style="width:${Math.min(100, itPct)}%"></div></div>
+                </div>
+                <div class="jd-dash-row-value is-bad">${itPct.toFixed(1)}%</div>
+              </div>`;
+            }).join('')}
+          </div>` : ''}
+        </div>`;
+      }).join('');
+}
+
 function renderJaedaengDashboard() {
   let records = getVisibleJaedaengAudits();
   if (currentUser && currentUser.role !== 'bzm') {
@@ -7913,69 +8027,9 @@ function renderJaedaengDashboard() {
     </div>`;
   }).join('');
 
-  // Top failed items — group ตามหมวด (section) · คิด % ของยอดตกรวม
-  const failItemStats = {};
-  const failCatStats = {};
-  records.forEach(r => {
-    (r.items || []).forEach(it => {
-      if (!it || !it.text) return;
-      const section = it.section || '-';
-      if (!failCatStats[section]) failCatStats[section] = { section, fail: 0, total: 0 };
-      const key = section + '||' + it.text;
-      if (!failItemStats[key]) failItemStats[key] = { text: it.text, section, fail: 0, total: 0 };
-      if (it.status === 'fail' || it.status === 'pass') {
-        failItemStats[key].total++;
-        failCatStats[section].total++;
-        if (it.status === 'fail') {
-          failItemStats[key].fail++;
-          failCatStats[section].fail++;
-        }
-      }
-    });
-  });
-  const catTotalFails = Object.values(failCatStats).reduce((s, c) => s + c.fail, 0);
-  const sortedCats = Object.values(failCatStats)
-    .filter(c => c.fail > 0)
-    .sort((a, b) => b.fail - a.fail);
-  topFailsEl.innerHTML = sortedCats.length === 0
-    ? '<div class="jd-dash-empty">ยังไม่มีข้อไม่ผ่าน</div>'
-    : sortedCats.map(cat => {
-        const catSharePct = catTotalFails > 0 ? (cat.fail / catTotalFails * 100) : 0;
-        const catFailRatePct = cat.total > 0 ? (cat.fail / cat.total * 100) : 0;
-        const headColor = catSharePct >= 25 ? '#dc2626' : (catSharePct >= 10 ? '#f59e0b' : '#0E7490');
-        const items = Object.values(failItemStats)
-          .filter(i => i.section === cat.section && i.fail > 0)
-          .sort((a, b) => b.fail - a.fail)
-          .slice(0, 5);
-        return `<div style="margin-bottom:14px;border:1px solid var(--border);border-radius:12px;overflow:hidden;background:#fff;">
-          <div style="padding:14px 16px;background:linear-gradient(135deg, ${headColor}, ${headColor}cc);color:#fff;">
-            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
-              <div style="flex:1;min-width:0;">
-                <div style="font-weight:900;font-size:15px;line-height:1.3;margin-bottom:4px;">${escapeHtml(cat.section)}</div>
-                <div style="font-size:12.5px;opacity:0.95;font-weight:600;">ตก ${cat.fail} / ${cat.total} ข้อย่อย</div>
-              </div>
-              <div style="text-align:right;flex:none;">
-                <div style="font-size:24px;font-weight:900;line-height:1;">${catSharePct.toFixed(1)}%</div>
-                <div style="font-size:10.5px;opacity:0.85;margin-top:2px;">ของยอดตกทั้งหมด</div>
-              </div>
-            </div>
-          </div>
-          ${items.length ? `<div style="padding:10px 14px 12px;">
-            ${items.map((it, i) => {
-              const itPct = it.total > 0 ? (it.fail / it.total * 100) : 0;
-              const cls = itPct >= 50 ? 'bad' : (itPct >= 25 ? 'warn' : '');
-              return `<div class="jd-dash-row" style="padding:8px 0;border-bottom:1px dashed var(--border);">
-                <div>
-                  <div class="jd-dash-row-name" style="font-size:13px;">${i+1}. ${escapeHtml(it.text)}</div>
-                  <div class="jd-dash-row-meta">ตก ${it.fail} / ${it.total} ครั้ง</div>
-                  <div class="jd-dash-bar"><div class="jd-dash-bar-fill ${cls}" style="width:${Math.min(100, itPct)}%"></div></div>
-                </div>
-                <div class="jd-dash-row-value is-bad">${itPct.toFixed(1)}%</div>
-              </div>`;
-            }).join('')}
-          </div>` : ''}
-        </div>`;
-      }).join('');
+  // Top failed items — group ตามหมวด + drill-down โซน/สาขา (แยกเป็นฟังก์ชัน)
+  _jdTfRecords = records.slice();
+  renderJaedaengTopFails();
 
   // By BZM
   const byBzm = {};
