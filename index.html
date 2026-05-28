@@ -4822,7 +4822,7 @@ html.fab-sso-pending #login-screen { display: none !important; }
       <div class="card">
         <div class="card-header">
           <span class="material-symbols-rounded" style="color:#0E7490;">groups</span>
-          <h2>สรุปต่อโซน</h2>
+          <h2>คะแนนเฉลี่ยต่อโซน</h2>
         </div>
         <div id="jd-dash-by-bzm"></div>
       </div>
@@ -8081,29 +8081,31 @@ function renderJaedaengDashboard() {
   _jdTfRecords = records.slice();
   renderJaedaengTopFails();
 
-  // By BZM
+  // คะแนนเฉลี่ยต่อโซน — แสดงแบบเดียวกับต่อสาขา (avg% + แถบ) เรียงตามคะแนน
   const byBzm = {};
   records.forEach(r => {
     const key = r.bzmNick || r.bzm || 'ไม่ระบุ';
-    if (!byBzm[key]) byBzm[key] = { count: 0, sumPct: 0, full: r.bzm };
+    if (!byBzm[key]) byBzm[key] = { count: 0, sumPct: 0, fails: 0, full: r.bzm };
     byBzm[key].count++;
     byBzm[key].sumPct += r.passPct || 0;
+    byBzm[key].fails += r.failCount || 0;
   });
   const bzmList = Object.entries(byBzm)
-    .map(([nick, s]) => ({ nick, full: s.full, count: s.count, avg: s.sumPct / s.count }))
-    .sort((a, b) => b.count - a.count);
+    .map(([nick, s]) => ({ nick, full: s.full, count: s.count, fails: s.fails, avg: s.sumPct / s.count }))
+    .sort((a, b) => b.avg - a.avg);
   byBzmEl.innerHTML = bzmList.map(b => {
     const tier = b.avg >= 90 ? 'is-good' : b.avg < 70 ? 'is-bad' : 'is-warn';
-    // ชื่อจริง (นิค) — ใช้ full ก่อน นิค ในวงเล็บ
+    const fillCls = b.avg >= 90 ? '' : b.avg < 70 ? 'bad' : 'warn';
     const displayName = b.full && b.full !== b.nick
       ? `${escapeHtml(b.full)} <span style="color:var(--text-secondary);font-weight:500;font-size:12px;">(${escapeHtml(b.nick)})</span>`
       : escapeHtml(b.nick);
     return `<div class="jd-dash-row">
       <div>
         <div class="jd-dash-row-name">${displayName}</div>
-        <div class="jd-dash-row-meta">ตรวจ ${b.count} ครั้ง · เฉลี่ย ${b.avg.toFixed(1)}%</div>
+        <div class="jd-dash-row-meta">ตรวจ ${b.count} ครั้ง · NCR ${b.fails}</div>
+        <div class="jd-dash-bar"><div class="jd-dash-bar-fill ${fillCls}" style="width:${Math.min(100, b.avg)}%"></div></div>
       </div>
-      <div class="jd-dash-row-value ${tier}">${b.count}</div>
+      <div class="jd-dash-row-value ${tier}">${b.avg.toFixed(1)}%</div>
     </div>`;
   }).join('');
 
