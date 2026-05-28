@@ -1472,28 +1472,46 @@ input[type="time"].jd-form-input {
 }
 .jd-dash-row {
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: auto 1fr auto;
   align-items: center;
   gap: 12px;
-  padding: 10px 4px;
+  padding: 12px 4px;
   border-bottom: 1px dashed var(--border);
   font-size: 13px;
 }
 .jd-dash-row:last-child { border-bottom: none; }
 .jd-dash-row-name { font-weight: 700; color: var(--text); }
 .jd-dash-row-meta { font-size: 11px; color: var(--text-secondary); margin-top: 2px; }
+/* อันดับ — วงกลมสีตามระดับ */
+.jd-rank {
+  width: 28px; height: 28px; flex-shrink: 0;
+  border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-weight: 900; font-size: 13px;
+  background: rgba(80,40,20,0.08); color: var(--text-secondary);
+}
+.jd-rank.is-good { background: rgba(45,122,74,0.14); color: var(--success); }
+.jd-rank.is-warn { background: rgba(245,158,11,0.16); color: #B45309; }
+.jd-rank.is-bad  { background: rgba(220,38,38,0.14); color: var(--danger); }
+.jd-dash-row-right { text-align: right; min-width: 76px; }
 .jd-dash-row-value {
   font-weight: 900; font-variant-numeric: tabular-nums;
-  text-align: right; min-width: 70px;
-  letter-spacing: -0.3px;
+  letter-spacing: -0.3px; font-size: 17px; line-height: 1.1;
 }
 .jd-dash-row-value.is-good { color: var(--success); }
 .jd-dash-row-value.is-warn { color: var(--warning); }
 .jd-dash-row-value.is-bad  { color: var(--danger); }
+.jd-dash-row-tier {
+  font-size: 10.5px; font-weight: 800; margin-top: 2px;
+  letter-spacing: 0.2px;
+}
+.jd-dash-row-tier.is-good { color: var(--success); }
+.jd-dash-row-tier.is-warn { color: #B45309; }
+.jd-dash-row-tier.is-bad  { color: var(--danger); }
 .jd-dash-bar {
-  height: 6px; border-radius: var(--r-pill);
+  height: 9px; border-radius: var(--r-pill);
   background: rgba(80,40,20,0.08); overflow: hidden;
-  margin-top: 4px;
+  margin-top: 6px;
 }
 .jd-dash-bar-fill {
   height: 100%; border-radius: var(--r-pill);
@@ -7888,6 +7906,13 @@ function setJaedaengDashScope(value) {
   renderJaedaengDashboard();
 }
 
+/* ป้ายระดับคะแนน (ใช้ในคะแนนเฉลี่ยต่อโซน/ต่อสาขา) */
+function _jdTierLabel(avg) {
+  if (avg >= 90) return 'ดีมาก';
+  if (avg >= 70) return 'ปรับปรุง';
+  return 'เร่งด่วน';
+}
+
 /* drill-down state เจ๊แดง top-fails */
 var _jdTfRecords = [];
 
@@ -8064,16 +8089,20 @@ function renderJaedaengDashboard() {
   const branchList = Object.entries(byBranch)
     .map(([name, s]) => ({ name, count: s.count, avg: s.sumPct / s.count, fails: s.fails }))
     .sort((a, b) => b.avg - a.avg);
-  branchesEl.innerHTML = branchList.map(b => {
+  branchesEl.innerHTML = branchList.map((b, i) => {
     const tier = b.avg >= 90 ? 'is-good' : b.avg < 70 ? 'is-bad' : 'is-warn';
     const fillCls = b.avg >= 90 ? '' : b.avg < 70 ? 'bad' : 'warn';
     return `<div class="jd-dash-row">
+      <div class="jd-rank ${tier}">${i+1}</div>
       <div>
         <div class="jd-dash-row-name">${escapeHtml(b.name)}</div>
         <div class="jd-dash-row-meta">ตรวจ ${b.count} ครั้ง · NCR ${b.fails}</div>
         <div class="jd-dash-bar"><div class="jd-dash-bar-fill ${fillCls}" style="width:${Math.min(100, b.avg)}%"></div></div>
       </div>
-      <div class="jd-dash-row-value ${tier}">${b.avg.toFixed(1)}%</div>
+      <div class="jd-dash-row-right">
+        <div class="jd-dash-row-value ${tier}">${b.avg.toFixed(1)}%</div>
+        <div class="jd-dash-row-tier ${tier}">${_jdTierLabel(b.avg)}</div>
+      </div>
     </div>`;
   }).join('');
 
@@ -8093,19 +8122,23 @@ function renderJaedaengDashboard() {
   const bzmList = Object.entries(byBzm)
     .map(([nick, s]) => ({ nick, full: s.full, count: s.count, fails: s.fails, avg: s.sumPct / s.count }))
     .sort((a, b) => b.avg - a.avg);
-  byBzmEl.innerHTML = bzmList.map(b => {
+  byBzmEl.innerHTML = bzmList.map((b, i) => {
     const tier = b.avg >= 90 ? 'is-good' : b.avg < 70 ? 'is-bad' : 'is-warn';
     const fillCls = b.avg >= 90 ? '' : b.avg < 70 ? 'bad' : 'warn';
     const displayName = b.full && b.full !== b.nick
       ? `${escapeHtml(b.full)} <span style="color:var(--text-secondary);font-weight:500;font-size:12px;">(${escapeHtml(b.nick)})</span>`
       : escapeHtml(b.nick);
     return `<div class="jd-dash-row">
+      <div class="jd-rank ${tier}">${i+1}</div>
       <div>
         <div class="jd-dash-row-name">${displayName}</div>
         <div class="jd-dash-row-meta">ตรวจ ${b.count} ครั้ง · NCR ${b.fails}</div>
         <div class="jd-dash-bar"><div class="jd-dash-bar-fill ${fillCls}" style="width:${Math.min(100, b.avg)}%"></div></div>
       </div>
-      <div class="jd-dash-row-value ${tier}">${b.avg.toFixed(1)}%</div>
+      <div class="jd-dash-row-right">
+        <div class="jd-dash-row-value ${tier}">${b.avg.toFixed(1)}%</div>
+        <div class="jd-dash-row-tier ${tier}">${_jdTierLabel(b.avg)}</div>
+      </div>
     </div>`;
   }).join('');
 
