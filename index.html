@@ -1601,6 +1601,14 @@ input[type="time"].jd-form-input {
 }
 .recent-del:hover { background: var(--danger); color: #fff; }
 .recent-del .material-symbols-rounded { font-size: 18px; }
+.recent-edit {
+  width: 32px; height: 32px;
+  border-radius: 9px; border: 1px solid rgba(37,99,235,0.3);
+  background: rgba(37,99,235,0.08); color: #2563eb;
+  display: inline-flex; align-items: center; justify-content: center; cursor: pointer;
+}
+.recent-edit:hover { background: #2563eb; color: #fff; }
+.recent-edit .material-symbols-rounded { font-size: 18px; }
 
 /* ─── Score row (คะแนนเฉลี่ยต่อโซน/ต่อสาขา) — UX ใหม่ ─── */
 .score-row {
@@ -1779,6 +1787,16 @@ input[type="time"].jd-form-input {
 }
 .jd-history-del:hover { background: var(--danger); color: #fff; }
 .jd-history-del .material-symbols-rounded { font-size: 20px; }
+.jd-history-actions { display: flex; gap: 6px; }
+.jd-history-edit {
+  width: 36px; height: 36px; flex-shrink: 0;
+  border-radius: 10px; border: 1px solid rgba(37,99,235,0.3);
+  background: rgba(37,99,235,0.08); color: #2563eb;
+  display: inline-flex; align-items: center; justify-content: center; cursor: pointer;
+  transition: background 0.15s;
+}
+.jd-history-edit:hover { background: #2563eb; color: #fff; }
+.jd-history-edit .material-symbols-rounded { font-size: 20px; }
 .jd-history-name {
   font-size: 14px; font-weight: 800;
   color: var(--text);
@@ -8422,7 +8440,10 @@ function renderJaedaengDashboard() {
       const pass = r.passCount || 0;
       const fail = r.failCount || 0;
       const delBtn = isAdmin
-        ? `<button type="button" class="recent-del" title="ลบ" onclick="deleteJaedaengFromList(event, '${escapeAttr(r.id)}', '${escapeAttr(r.storeName||'')}')"><span class="material-symbols-rounded">delete</span></button>`
+        ? `<div style="display:flex;gap:6px;margin-top:4px;">`
+          + `<button type="button" class="recent-edit" title="แก้ไข" onclick="event.stopPropagation();editJaedaengAudit('${escapeAttr(r.id)}')"><span class="material-symbols-rounded">edit</span></button>`
+          + `<button type="button" class="recent-del" title="ลบ" onclick="deleteJaedaengFromList(event, '${escapeAttr(r.id)}', '${escapeAttr(r.storeName||'')}')"><span class="material-symbols-rounded">delete</span></button>`
+          + `</div>`
         : '';
       return `<div class="recent-card ${tierCls}" onclick="showJaedaengDetail('${escapeAttr(r.id)}')">
         <div class="recent-card-main">
@@ -8474,8 +8495,9 @@ function renderJaedaengList() {
     } else {
       gpsLine = `<div class="jd-history-gps is-warn">📍 ไม่มีข้อมูล GPS</div>`;
     }
-    const delBtn = (currentUser && currentUser.role === 'admin')
-      ? `<button type="button" class="jd-history-del" title="ลบผลตรวจ" onclick="deleteJaedaengFromList(event, '${escapeAttr(r.id)}', '${escapeAttr(r.storeName||'')}')"><span class="material-symbols-rounded">delete</span></button>`
+    const adminBtns = (currentUser && currentUser.role === 'admin')
+      ? `<button type="button" class="jd-history-edit" title="แก้ไขผลตรวจ" onclick="event.stopPropagation();editJaedaengAudit('${escapeAttr(r.id)}')"><span class="material-symbols-rounded">edit</span></button>`
+        + `<button type="button" class="jd-history-del" title="ลบผลตรวจ" onclick="deleteJaedaengFromList(event, '${escapeAttr(r.id)}', '${escapeAttr(r.storeName||'')}')"><span class="material-symbols-rounded">delete</span></button>`
       : '';
     return `<div class="jd-history-card ${tier}" onclick="showJaedaengDetail('${escapeAttr(r.id)}')">
       <div>
@@ -8485,7 +8507,7 @@ function renderJaedaengList() {
       </div>
       <div class="jd-history-right">
         <div class="jd-history-score">${r.passPct.toFixed(1)}<span class="jd-history-score-unit"> %</span></div>
-        ${delBtn}
+        <div class="jd-history-actions">${adminBtns}</div>
       </div>
     </div>`;
   }).join('');
