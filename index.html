@@ -5113,6 +5113,9 @@ html.fab-sso-pending #login-screen { display: none !important; }
           <button class="btn btn-secondary" style="flex:1;min-width:130px;" onclick="showJaedaengHub()">
             <span class="material-symbols-rounded">arrow_back</span> กลับไปประวัติ
           </button>
+          <button class="btn btn-primary" id="jd-detail-edit-btn" style="flex:1;min-width:130px;display:none;" onclick="editJaedaengAudit(currentJDDetailId)">
+            <span class="material-symbols-rounded">edit</span> แก้ไขผล
+          </button>
           <button class="btn btn-danger" id="jd-detail-delete-btn" style="flex:1;min-width:130px;display:none;" onclick="deleteJaedaengAudit()">
             <span class="material-symbols-rounded">delete</span> ลบผลตรวจ
           </button>
@@ -8618,6 +8621,63 @@ function _startJaedaengAuditWithGps(gps) {
   renderJaedaengForm();
 }
 
+/* แก้ไขผลตรวจที่บันทึกแล้ว (admin) — โหลด record กลับเข้าฟอร์ม แล้ว submit ทับ id เดิม */
+function editJaedaengAudit(id) {
+  if (!currentUser || currentUser.role !== 'admin') {
+    showModal('ไม่มีสิทธิ์แก้ไข', 'เฉพาะ Admin เท่านั้นที่แก้ไขผลตรวจได้');
+    return;
+  }
+  const rec = allJaedaengAudits.find(x => x.id === id);
+  if (!rec) return;
+  // clone กัน mutate ของเดิมก่อนกดบันทึก
+  currentJDAudit = JSON.parse(JSON.stringify(rec));
+  if (!Array.isArray(currentJDAudit.items)) currentJDAudit.items = [];
+  if (!Array.isArray(currentJDAudit.requiredPhotos)) currentJDAudit.requiredPhotos = [];
+
+  hideAllScreens();
+  document.getElementById('jaedaeng-audit-screen').style.display = 'block';
+  // store dropdown
+  const select = document.getElementById('jd-store-name');
+  const zones = {}; const zoneOrder = [];
+  JAEDAENG_BRANCHES.forEach(b => {
+    const key = b.manager || b.managerNick || 'อื่นๆ';
+    if (!zones[key]) { zones[key] = { items: [], nick: b.managerNick || '' }; zoneOrder.push(key); }
+    zones[key].items.push(b);
+  });
+  let opts = '<option value="">— เลือกสาขา —</option>';
+  zoneOrder.forEach(z => {
+    const zd = zones[z];
+    const label = zd.nick ? `โซน ${z} (${zd.nick})` : `โซน ${z}`;
+    opts += `<optgroup label="${escapeAttr(label)}">`;
+    zd.items.forEach(b => { opts += `<option value="${escapeAttr(b.name)}">${escapeHtml(b.name)}</option>`; });
+    opts += '</optgroup>';
+  });
+  select.innerHTML = opts;
+  select.value = currentJDAudit.storeName || '';
+
+  document.getElementById('jd-auditor-display').textContent = currentJDAudit.auditor || '-';
+  document.getElementById('jd-date-display').textContent = fmtDateDMY(currentJDAudit.date || '');
+  document.getElementById('jd-time-display').textContent = (currentJDAudit.time || '') + ' น.';
+  // BZM row
+  const bzmRow = document.getElementById('jd-bzm-row');
+  const bzmDisp = document.getElementById('jd-bzm-display');
+  if (currentJDAudit.bzm || currentJDAudit.bzmNick) {
+    if (bzmDisp) bzmDisp.textContent = currentJDAudit.bzm + (currentJDAudit.bzmNick ? ' (' + currentJDAudit.bzmNick + ')' : '');
+    if (bzmRow) bzmRow.style.display = '';
+  } else if (bzmRow) { bzmRow.style.display = 'none'; }
+  // GPS row
+  const gpsRow = document.getElementById('jd-gps-row');
+  const gpsDisp = document.getElementById('jd-gps-display');
+  if (gpsRow && gpsDisp && currentJDAudit.gps) {
+    const g = currentJDAudit.gps;
+    gpsDisp.innerHTML = `<a href="https://www.google.com/maps?q=${g.lat},${g.lng}" target="_blank" rel="noopener" style="color:var(--primary-dark);text-decoration:underline;">เปิด Google Maps</a> <span style="font-size:11px;color:var(--text-tertiary);">±${Math.round(g.accuracy || 0)} m</span>`;
+    gpsRow.style.display = '';
+  } else if (gpsRow) { gpsRow.style.display = 'none'; }
+
+  renderJaedaengForm();
+  window.scrollTo(0, 0);
+}
+
 function setJDStore(field, value) {
   if (!currentJDAudit) return;
   if (field === 'store') {
@@ -9185,9 +9245,12 @@ function showJaedaengDetail(id) {
   currentJDDetailId = id;
   hideAllScreens();
   document.getElementById('jaedaeng-detail-screen').style.display = 'block';
-  // Show the delete button only for admin
+  // Show edit + delete buttons only for admin
+  const isAdmin = currentUser && currentUser.role === 'admin';
   const delBtn = document.getElementById('jd-detail-delete-btn');
-  if (delBtn) delBtn.style.display = (currentUser && currentUser.role === 'admin') ? '' : 'none';
+  if (delBtn) delBtn.style.display = isAdmin ? '' : 'none';
+  const editBtn = document.getElementById('jd-detail-edit-btn');
+  if (editBtn) editBtn.style.display = isAdmin ? '' : 'none';
   // Build lightbox source list of every photo URL in this audit
   lightboxImages = [];
   (r.items || []).forEach(it => (it.photos || []).forEach(p => lightboxImages.push(p)));
