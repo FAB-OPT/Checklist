@@ -104,7 +104,7 @@ body {
   color: rgba(255,255,255,0.95);
   margin-top: 6px;
   letter-spacing: 0.1px;
-  text-align: right;
+  text-align: left;
 }
 .header-tools {
   display: flex; align-items: center; gap: 8px;
@@ -4981,8 +4981,8 @@ html.fab-sso-pending #login-screen { display: none !important; }
     <!-- JAE DAENG DASHBOARD -->
     <div id="jaedaeng-dashboard-screen" style="display:none;">
       <div class="page-eyebrow">
-        <h2 class="page-eyebrow-title" style="font-size:16px;white-space:nowrap;">
-          แดชบอร์ด <span class="page-eyebrow-inline" style="font-size:13px;">เจ๊แดงสามย่าน</span>
+        <h2 class="page-eyebrow-title">
+          แดชบอร์ด <span class="page-eyebrow-inline">เจ๊แดงสามย่าน</span>
         </h2>
       </div>
       <div class="jd-dash-scope" id="jd-dash-scope"></div>
@@ -8262,7 +8262,8 @@ function renderJaedaengTopFails() {
     return;
   }
   // กราฟสรุป — แถบสัดส่วนของแต่ละหมวด (รวม = ยอดตกทั้งหมด)
-  const segColors = ['#dc2626','#ef4444','#f59e0b','#fbbf24','#0E7490','#0ea5e9','#8b5cf6','#ec4899'];
+  // เลือกสีให้โทนต่างกันชัดเจน (แดง·ส้ม·เหลืองทอง·เขียว·ฟ้า·น้ำเงิน·ม่วง·ชมพู)
+  const segColors = ['#dc2626','#ea580c','#ca8a04','#16a34a','#0891b2','#2563eb','#7c3aed','#db2777','#0d9488','#b45309'];
   const overview = '<div class="tf-overview">'
     + '<div class="tf-overview-bar">'
     + sortedCats.map((cat, i) => {
