@@ -4033,15 +4033,12 @@ body:has(#login-screen.active) {
 .nav-logout-btn { color: var(--danger); }
 .nav-logout-btn .material-symbols-rounded { color: var(--danger); }
 .nav-logout-btn.active::after { background: var(--danger); }
-/* 4 ปุ่ม nav แยกสีต่างกันชัดเจน */
-.nav-dash-btn { color: #ea580c; font-weight: 700; }
-.nav-dash-btn .material-symbols-rounded { color: #ea580c; }
-.nav-dash-btn.active { color: #ea580c !important; }
-.nav-dash-btn.active .material-symbols-rounded { color: #ea580c !important; }
+/* 4 ปุ่ม nav แยกสีต่างกันชัดเจน — แบบกรอบสี (outline) */
+.nav-dash-btn { color: #ea580c !important; font-weight: 700; }
+.nav-dash-btn .material-symbols-rounded { color: #ea580c !important; }
 .nav-dash-btn.active::after { background: #ea580c; }
 .nav-audit-btn { color: #6d28d9 !important; font-weight: 700; }
 .nav-audit-btn .material-symbols-rounded { color: #6d28d9 !important; }
-.nav-audit-btn.active { color: #6d28d9 !important; }
 .nav-audit-btn.active::after { background: #6d28d9; }
 .nav-daily-btn { color: #047857 !important; font-weight: 700; }
 .nav-daily-btn .material-symbols-rounded { color: #047857 !important; }
@@ -4049,25 +4046,26 @@ body:has(#login-screen.active) {
 .nav-back-hub-btn { color: #0E7490 !important; font-weight: 700; }
 .nav-back-hub-btn .material-symbols-rounded { color: #0E7490 !important; }
 .nav-back-hub-btn.active::after { background: #0E7490; }
-/* มือถือ: กลับเมนูหลัก + ออกระบบ เป็นกล่องสีชัด แยกจากปุ่มอื่น */
+/* มือถือ: ทุกปุ่มเป็นกรอบสี (outline) · กลับเมนูหลัก/ออกระบบ กรอบเด่น */
 @media (max-width: 1023px) {
-  .bottom-nav .nav-back-hub-btn {
-    color: #ffffff !important; font-weight: 800;
-    background: #0E7490;
-    border-radius: 12px;
-    margin: 4px 3px 4px 0;
-    min-height: 48px;
-  }
-  .bottom-nav .nav-back-hub-btn .material-symbols-rounded { color: #ffffff !important; }
-  .bottom-nav .nav-back-hub-btn.active::after { display: none; }
+  .bottom-nav .nav-dash-btn,
+  .bottom-nav .nav-audit-btn,
+  .bottom-nav .nav-daily-btn,
+  .bottom-nav .nav-back-hub-btn,
   .bottom-nav .nav-logout-btn {
-    color: #ffffff !important; font-weight: 800;
-    background: var(--danger);
+    border: 1.5px solid currentColor;
     border-radius: 12px;
-    margin: 4px 0 4px 3px;
-    min-height: 48px;
+    margin: 4px 3px;
+    min-height: 50px;
+    background: transparent;
   }
-  .bottom-nav .nav-logout-btn .material-symbols-rounded { color: #ffffff !important; }
+  .bottom-nav .nav-dash-btn    { border-color: #ea580c; }
+  .bottom-nav .nav-audit-btn   { border-color: #6d28d9; }
+  .bottom-nav .nav-daily-btn   { border-color: #047857; }
+  .bottom-nav .nav-back-hub-btn{ border-color: #0E7490; color: #0E7490 !important; }
+  .bottom-nav .nav-logout-btn  { border-color: var(--danger); color: var(--danger) !important; }
+  .bottom-nav .nav-logout-btn .material-symbols-rounded { color: var(--danger) !important; }
+  .bottom-nav .nav-back-hub-btn.active::after,
   .bottom-nav .nav-logout-btn.active::after { display: none; }
 }
 
@@ -6248,7 +6246,7 @@ function renderTopFailItems(completed) {
               <span style="display:inline-flex;align-items:center;justify-content:center;min-width:26px;height:26px;padding:0 9px;background:rgba(255,255,255,0.25);border:1.5px solid rgba(255,255,255,0.4);color:#fff;border-radius:8px;font-weight:900;font-size:14px;">${escapeHtml(cat.letter)}</span>
               <span style="font-weight:900;font-size:15px;line-height:1.3;">${escapeHtml(cat.section)}</span>
             </div>
-            <div style="font-size:12.5px;opacity:0.95;font-weight:600;">ตก ${cat.fail} / ${cat.total} ข้อย่อย · อัตราตกในหมวด ${catFailRatePct.toFixed(1)}%</div>
+            <div style="font-size:12.5px;opacity:0.95;font-weight:600;">ตก ${cat.fail} / ${cat.total} ข้อย่อย</div>
           </div>
           <div style="text-align:right;flex:none;">
             <div style="font-size:24px;font-weight:900;line-height:1;">${catSharePct.toFixed(1)}%</div>
@@ -7893,7 +7891,7 @@ function renderJaedaengDashboard() {
             <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
               <div style="flex:1;min-width:0;">
                 <div style="font-weight:900;font-size:15px;line-height:1.3;margin-bottom:4px;">${escapeHtml(cat.section)}</div>
-                <div style="font-size:12.5px;opacity:0.95;font-weight:600;">ตก ${cat.fail} / ${cat.total} ข้อย่อย · อัตราตกในหมวด ${catFailRatePct.toFixed(1)}%</div>
+                <div style="font-size:12.5px;opacity:0.95;font-weight:600;">ตก ${cat.fail} / ${cat.total} ข้อย่อย</div>
               </div>
               <div style="text-align:right;flex:none;">
                 <div style="font-size:24px;font-weight:900;line-height:1;">${catSharePct.toFixed(1)}%</div>
