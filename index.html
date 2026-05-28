@@ -7853,14 +7853,14 @@ function renderJaedaengDashboard() {
       }
     });
   });
-  const totalFails = Object.values(failCatStats).reduce((s, c) => s + c.fail, 0);
+  const catTotalFails = Object.values(failCatStats).reduce((s, c) => s + c.fail, 0);
   const sortedCats = Object.values(failCatStats)
     .filter(c => c.fail > 0)
     .sort((a, b) => b.fail - a.fail);
   topFailsEl.innerHTML = sortedCats.length === 0
     ? '<div class="jd-dash-empty">ยังไม่มีข้อไม่ผ่าน</div>'
     : sortedCats.map(cat => {
-        const catSharePct = totalFails > 0 ? (cat.fail / totalFails * 100) : 0;
+        const catSharePct = catTotalFails > 0 ? (cat.fail / catTotalFails * 100) : 0;
         const catFailRatePct = cat.total > 0 ? (cat.fail / cat.total * 100) : 0;
         const headColor = catSharePct >= 25 ? 'var(--danger)' : (catSharePct >= 10 ? 'var(--warning)' : '#0E7490');
         const items = Object.values(failItemStats)
