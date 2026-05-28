@@ -8693,7 +8693,11 @@ function showConfirm(title, bodyHtml, opts) {
   okBtn.textContent = okLabel;
   cancelBtn.textContent = cancelLabel;
   cancelBtn.style.display = '';
-  if (danger) okBtn.className = okClsOrig.replace('btn-primary', 'btn-danger');
+  // โหมด confirm: ปุ่ม 2 อันแบ่งครึ่งเท่ากัน (ตัด btn-block ที่ทำให้ปุ่ม OK ใหญ่เกิน)
+  okBtn.className = okClsOrig.replace('btn-block', '').trim();
+  if (danger) okBtn.className = okBtn.className.replace('btn-primary', 'btn-danger');
+  okBtn.style.flex = '1';
+  cancelBtn.style.flex = '1';
   modal.classList.add('show');
   return new Promise(resolve => {
     const restore = () => {
@@ -8701,6 +8705,8 @@ function showConfirm(title, bodyHtml, opts) {
       cancelBtn.textContent = cancelOrig;
       cancelBtn.style.display = 'none';
       okBtn.className = okClsOrig;
+      okBtn.style.flex = '';
+      cancelBtn.style.flex = '';
       okBtn.removeEventListener('click', onOk);
       cancelBtn.removeEventListener('click', onCancel);
     };
@@ -8762,7 +8768,7 @@ function renderJaedaengForm() {
             <span class="material-symbols-rounded">remove_circle</span><span>N/A</span>
           </button>
         </div>
-        ${isFail ? `<input type="text" class="jd-note-input" placeholder="หมายเหตุ / Action" value="${escapeAttr(it.note || '')}" oninput="setJDNote(${idx}, this.value)">` : ''}
+        ${isFail ? `<input type="text" class="jd-note-input${(it.note||'').trim()?'':' is-required'}" placeholder="ระบุหมายเหตุ / Action (จำเป็น)" value="${escapeAttr(it.note || '')}" oninput="setJDNote(${idx}, this.value)">` : ''}
         ${isNA ? `<input type="text" class="jd-note-input${(it.note||'').trim()?'':' is-required'}" placeholder="ระบุเหตุผลที่ N/A (จำเป็น)" value="${escapeAttr(it.note || '')}" oninput="setJDNote(${idx}, this.value)">` : ''}
         ${photosHtml}
       </div>`;
@@ -9057,8 +9063,17 @@ async function submitJaedaengAudit() {
     showModal('กรุณาระบุเวลาที่ตรวจ', 'เลือกเวลาก่อนบันทึก');
     return;
   }
-  // Required-photo items must have at least one photo attached
+  // ข้อที่ต้องถ่ายรูปหลักฐาน ต้องมีการตรวจ (ผ่าน/ไม่ผ่าน/N/A) ก่อน
   const required = currentJDAudit.requiredPhotos || [];
+  const reqNoStatus = required.filter(i => {
+    const it = currentJDAudit.items[i];
+    return !it || !it.status;
+  });
+  if (reqNoStatus.length > 0) {
+    showModal('ข้อหลักฐานต้องตรวจก่อน', `มี ${reqNoStatus.length} ข้อที่ต้องถ่ายรูปหลักฐาน แต่ยังไม่ได้เลือกผล (ผ่าน/ไม่ผ่าน/N/A)`);
+    return;
+  }
+  // Required-photo items must have at least one photo attached
   const missing = required.filter(i => {
     const it = currentJDAudit.items[i];
     return !it || !it.photos || it.photos.length === 0;
@@ -9073,6 +9088,14 @@ async function submitJaedaengAudit() {
   );
   if (failsWithoutPhoto.length > 0) {
     showModal('ข้อไม่ผ่านต้องแนบรูป', `มี ${failsWithoutPhoto.length} ข้อที่ตอบ "ไม่ผ่าน" แต่ยังไม่ได้แนบรูปหลักฐาน — ถ่ายรูปก่อนแล้วบันทึก`);
+    return;
+  }
+  // ทุกข้อที่ตอบ "ไม่ผ่าน" ต้องระบุหมายเหตุ
+  const failsWithoutNote = currentJDAudit.items.filter(it =>
+    it.status === 'fail' && (!it.note || !it.note.trim())
+  );
+  if (failsWithoutNote.length > 0) {
+    showModal('ข้อไม่ผ่านต้องระบุหมายเหตุ', `มี ${failsWithoutNote.length} ข้อที่ตอบ "ไม่ผ่าน" แต่ยังไม่ได้ระบุหมายเหตุ — กรอกหมายเหตุก่อนบันทึก`);
     return;
   }
   // ทุกข้อที่ตอบ N/A ต้องระบุเหตุผล
