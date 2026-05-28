@@ -4033,21 +4033,17 @@ body:has(#login-screen.active) {
 .nav-logout-btn { color: var(--danger); }
 .nav-logout-btn .material-symbols-rounded { color: var(--danger); }
 .nav-logout-btn.active::after { background: var(--danger); }
-/* 4 ปุ่ม nav แยกสีต่างกันชัดเจน — แบบกรอบสี (outline) */
-.nav-dash-btn { color: #ea580c !important; font-weight: 700; }
-.nav-dash-btn .material-symbols-rounded { color: #ea580c !important; }
-.nav-dash-btn.active::after { background: #ea580c; }
-.nav-audit-btn { color: #6d28d9 !important; font-weight: 700; }
-.nav-audit-btn .material-symbols-rounded { color: #6d28d9 !important; }
-.nav-audit-btn.active::after { background: #6d28d9; }
-.nav-daily-btn { color: #047857 !important; font-weight: 700; }
-.nav-daily-btn .material-symbols-rounded { color: #047857 !important; }
-.nav-daily-btn.active::after { background: #047857; }
-.nav-back-hub-btn { color: #0E7490 !important; font-weight: 700; }
-.nav-back-hub-btn .material-symbols-rounded { color: #0E7490 !important; }
-.nav-back-hub-btn.active::after { background: #0E7490; }
-/* มือถือ: ไม่มีกรอบ · กลับเมนูหลัก + ออกระบบ เน้นด้วยพื้นสีเต็ม ตัวอักษรขาว */
+/* มือถือ (≤1023px): nav 4 ปุ่มแยกสี · กลับเมนู/ออกระบบ พื้นสีเต็ม */
 @media (max-width: 1023px) {
+  .nav-dash-btn { color: #ea580c !important; font-weight: 700; }
+  .nav-dash-btn .material-symbols-rounded { color: #ea580c !important; }
+  .nav-dash-btn.active::after { background: #ea580c; }
+  .nav-audit-btn { color: #6d28d9 !important; font-weight: 700; }
+  .nav-audit-btn .material-symbols-rounded { color: #6d28d9 !important; }
+  .nav-audit-btn.active::after { background: #6d28d9; }
+  .nav-daily-btn { color: #047857 !important; font-weight: 700; }
+  .nav-daily-btn .material-symbols-rounded { color: #047857 !important; }
+  .nav-daily-btn.active::after { background: #047857; }
   .bottom-nav .nav-back-hub-btn {
     color: #ffffff !important; font-weight: 800;
     background: #0E7490;
@@ -4066,6 +4062,23 @@ body:has(#login-screen.active) {
   }
   .bottom-nav .nav-logout-btn .material-symbols-rounded { color: #ffffff !important; }
   .bottom-nav .nav-logout-btn.active::after { display: none; }
+}
+/* เดสก์ท็อป (sidebar gradient): กลับเมนูหลัก + ออกระบบ เด่นด้วยพื้นกล่อง */
+@media (min-width: 1024px) {
+  .bottom-nav .nav-back-hub-btn {
+    background: rgba(255,255,255,0.16);
+    border: 1px solid rgba(255,255,255,0.35);
+  }
+  .bottom-nav .nav-back-hub-btn:hover { background: rgba(255,255,255,0.26); }
+  .bottom-nav .nav-logout-btn {
+    background: rgba(255,255,255,0.96);
+    color: var(--danger) !important;
+    font-weight: 800;
+    text-shadow: none !important;
+  }
+  .bottom-nav .nav-logout-btn .material-symbols-rounded { color: var(--danger) !important; }
+  .bottom-nav .nav-logout-btn:hover { background: var(--danger); color: #fff !important; }
+  .bottom-nav .nav-logout-btn:hover .material-symbols-rounded { color: #fff !important; }
 }
 
 /* ============ DESKTOP LAYOUT (≥1024px) ============ */
@@ -4111,6 +4124,11 @@ body:has(#login-screen.active) {
     font-weight: 800; font-size: 18px;
     color: white; letter-spacing: -0.3px;
     line-height: 1.25;
+  }
+  .nav-app-name-underline {
+    padding-bottom: 12px;
+    margin-bottom: 12px;
+    border-bottom: 1.5px solid rgba(255,255,255,0.4);
   }
   .nav-app-sub {
     font-size: 13px; font-weight: 600;
@@ -6005,21 +6023,17 @@ function renderBottomNav() {
     const cleanName = String(currentUser.name || '').replace(/^(นางสาว|นาย|นาง|น\.ส\.|ดร\.)\s*/, '').trim();
     pillText = cleanName + (roleLabel ? ` (${roleLabel})` : '');
   }
-  // title ตาม brand (ตรงกับ app-header มือถือ)
+  // title ย่อ ตาม brand — OSS/QSC + ขีดเส้นใต้ · บรรทัดถัดไป โลโก้ + ชื่อสาขา
   const _v = currentView || (currentUser && currentUser.brand);
   const _navTitle = _v === 'santafe'
-    ? 'Operations Standard Skill &amp;<br>Operations Checklist'
-    : 'Quality Service Cleanliness &amp;<br>Operations Checklist';
+    ? 'OSS &amp; Operations Checklist'
+    : 'QSC &amp; Operations Checklist';
   html += '<div class="nav-brand">' +
-    '<div class="nav-brand-app">' +
-      '<div class="nav-app-name">' + _navTitle + '</div>' +
-      '<div class="nav-app-user">' + escapeHtml(pillText) + '</div>' +
-    '</div>' +
-    '<div class="nav-brand-divider"></div>' +
+    '<div class="nav-app-name nav-app-name-underline">' + _navTitle + '</div>' +
     '<div class="nav-brand-branch">' +
       '<div class="nav-brand-icon">' + santaFeLogoSVG() + '</div>' +
       '<div class="nav-branch-info">' +
-        '<div class="nav-branch-text">ระบบตรวจสอบมาตรฐานการทำงาน</div>' +
+        '<div class="nav-branch-text">' + escapeHtml(pillText) + '</div>' +
       '</div>' +
     '</div>' +
   '</div>';
@@ -6203,15 +6217,21 @@ function renderZoneList(completed) {
 var _tfLastCompleted = [];
 
 function _populateTopFailFilters(completed) {
+  const filterRow = document.getElementById('top-fails-filter');
   const zoneSel = document.getElementById('tf-filter-zone');
   const branchSel = document.getElementById('tf-filter-branch');
   if (!zoneSel || !branchSel) return;
-  // BZM เห็นแค่โซนตัวเอง → ซ่อน dropdown โซน
+  // vp/coo/admin: ดูข้อมูลทั้งหมด → ซ่อนทั้งแถว filter
+  // bzm: เห็นแค่โซนตัวเอง → ซ่อน dropdown โซน เหลือแค่เลือกสาขา
   if (currentUser && currentUser.role === 'bzm') {
+    if (filterRow) filterRow.style.display = 'flex';
     zoneSel.style.display = 'none';
     zoneSel.value = '';
   } else {
-    zoneSel.style.display = '';
+    if (filterRow) filterRow.style.display = 'none';
+    zoneSel.value = '';
+    branchSel.value = '';
+    return;
   }
   // โซน = BZM ที่มีใน completed
   const zones = [...new Set(completed.map(a => a.branchInfo && a.branchInfo.bzm).filter(Boolean))].sort();
@@ -7862,15 +7882,21 @@ function setJaedaengDashScope(value) {
 var _jdTfRecords = [];
 
 function _populateJdTopFailFilters() {
+  const filterRow = document.getElementById('jd-tf-filter');
   const zoneSel = document.getElementById('jd-tf-zone');
   const branchSel = document.getElementById('jd-tf-branch');
   if (!zoneSel || !branchSel) return;
-  // BZM เห็นแค่โซนตัวเอง → ซ่อน dropdown โซน
+  // vp/coo/admin: มี filter ด้านบนของแดชบอร์ดอยู่แล้ว → ซ่อนทั้งแถวในการ์ดนี้
+  // bzm: เห็นแค่โซนตัวเอง → ซ่อน dropdown โซน เหลือแค่เลือกสาขา
   if (currentUser && currentUser.role === 'bzm') {
+    if (filterRow) filterRow.style.display = 'flex';
     zoneSel.style.display = 'none';
     zoneSel.value = '';
   } else {
-    zoneSel.style.display = '';
+    if (filterRow) filterRow.style.display = 'none';
+    zoneSel.value = '';
+    branchSel.value = '';
+    return;
   }
   const zones = [...new Set(_jdTfRecords.map(r => r.bzmNick || r.bzm).filter(Boolean))].sort();
   const curZone = zoneSel.value;
