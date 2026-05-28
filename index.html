@@ -4046,26 +4046,25 @@ body:has(#login-screen.active) {
 .nav-back-hub-btn { color: #0E7490 !important; font-weight: 700; }
 .nav-back-hub-btn .material-symbols-rounded { color: #0E7490 !important; }
 .nav-back-hub-btn.active::after { background: #0E7490; }
-/* มือถือ: ทุกปุ่มเป็นกรอบสี (outline) · กลับเมนูหลัก/ออกระบบ กรอบเด่น */
+/* มือถือ: ไม่มีกรอบ · กลับเมนูหลัก + ออกระบบ เน้นด้วยพื้นสีเต็ม ตัวอักษรขาว */
 @media (max-width: 1023px) {
-  .bottom-nav .nav-dash-btn,
-  .bottom-nav .nav-audit-btn,
-  .bottom-nav .nav-daily-btn,
-  .bottom-nav .nav-back-hub-btn,
-  .bottom-nav .nav-logout-btn {
-    border: 1.5px solid currentColor;
+  .bottom-nav .nav-back-hub-btn {
+    color: #ffffff !important; font-weight: 800;
+    background: #0E7490;
     border-radius: 12px;
     margin: 4px 3px;
     min-height: 50px;
-    background: transparent;
   }
-  .bottom-nav .nav-dash-btn    { border-color: #ea580c; }
-  .bottom-nav .nav-audit-btn   { border-color: #6d28d9; }
-  .bottom-nav .nav-daily-btn   { border-color: #047857; }
-  .bottom-nav .nav-back-hub-btn{ border-color: #0E7490; color: #0E7490 !important; }
-  .bottom-nav .nav-logout-btn  { border-color: var(--danger); color: var(--danger) !important; }
-  .bottom-nav .nav-logout-btn .material-symbols-rounded { color: var(--danger) !important; }
-  .bottom-nav .nav-back-hub-btn.active::after,
+  .bottom-nav .nav-back-hub-btn .material-symbols-rounded { color: #ffffff !important; }
+  .bottom-nav .nav-back-hub-btn.active::after { display: none; }
+  .bottom-nav .nav-logout-btn {
+    color: #ffffff !important; font-weight: 800;
+    background: var(--danger);
+    border-radius: 12px;
+    margin: 4px 3px;
+    min-height: 50px;
+  }
+  .bottom-nav .nav-logout-btn .material-symbols-rounded { color: #ffffff !important; }
   .bottom-nav .nav-logout-btn.active::after { display: none; }
 }
 
@@ -4449,8 +4448,16 @@ html.fab-sso-pending #login-screen { display: none !important; }
         <div class="stripe-card-head">
           <div>
             <div class="stripe-card-title">หัวข้อที่ตกบ่อย <span style="font-weight:500;font-size:13px;color:var(--text-secondary);">Top failed items</span></div>
-            <div class="stripe-card-sub">เรียงตามจำนวนครั้งที่ "ไม่ผ่าน" · แสดง % ที่ตก = fail ÷ (pass+fail)</div>
+            <div class="stripe-card-sub">% = สัดส่วนของยอดตกทั้งหมด · เลือกโซน/สาขาเพื่อดูแยก</div>
           </div>
+        </div>
+        <div id="top-fails-filter" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
+          <select id="tf-filter-zone" class="filter-sel-pretty" onchange="onTopFailZoneChange()" style="flex:1;min-width:140px;">
+            <option value="">ทุกโซน (BZM)</option>
+          </select>
+          <select id="tf-filter-branch" class="filter-sel-pretty" onchange="renderTopFailItems(_tfLastCompleted)" style="flex:1;min-width:140px;">
+            <option value="">ทุกสาขา</option>
+          </select>
         </div>
         <div id="top-fails-content"></div>
       </div>
@@ -6010,6 +6017,8 @@ function renderBottomNav() {
   '</div>';
   html += '<div class="nav-items">';
   const view = currentView || currentUser.brand;
+  // ลำดับ: กลับเมนูหลัก → แดชบอร์ด → ตรวจร้าน → ออกจากระบบ
+  html += '<button class="bottom-nav-item nav-back-hub-btn" id="nav-back-hub" onclick="backToHub()"><span class="material-symbols-rounded">arrow_back</span><span>กลับเมนูหลัก</span></button>';
   if (view === 'jaedaeng') {
     html += '<button class="bottom-nav-item nav-dash-btn active" id="nav-dash" onclick="showJaedaengDashboard()"><span class="material-symbols-rounded">dashboard</span><span>แดชบอร์ด</span></button>';
     html += '<button class="bottom-nav-item nav-audit-btn" id="nav-jd-hub" onclick="showJaedaengHub()"><span class="material-symbols-rounded">checklist</span><span>ตรวจร้าน</span></button>';
@@ -6024,13 +6033,11 @@ function renderBottomNav() {
       html += '<button class="bottom-nav-item nav-daily-btn" id="nav-daily" onclick="showDailyHub()"><span class="material-symbols-rounded">checklist</span><span>Open-Close</span></button>';
     }
   }
+  html += '<button class="bottom-nav-item nav-logout-btn" id="nav-logout" onclick="logout()"><span class="material-symbols-rounded">logout</span><span>ออกระบบ</span></button>';
   html += '</div>';
 
   // Render the secondary tools (brand toggle + test mode) up in the header
-  // instead of crowding the bottom nav.
   renderHeaderTools(view);
-  html += '<button class="bottom-nav-item nav-back-hub-btn" id="nav-back-hub" onclick="backToHub()"><span class="material-symbols-rounded">arrow_back</span><span>กลับเมนูหลัก</span></button>';
-  html += '<button class="bottom-nav-item nav-logout-btn" id="nav-logout" onclick="logout()"><span class="material-symbols-rounded">logout</span><span>ออกระบบ</span></button>';
   nav.innerHTML = html;
 }
 
@@ -6184,13 +6191,67 @@ function renderZoneList(completed) {
   document.getElementById('zone-list-content').innerHTML = html;
 }
 
-/* หัวข้อที่ตกบ่อย — group ตามหมวด (section) · คิด %fail-ของหมวด-ต่อ-fail-รวม
-   ตัวอย่าง: "หมวด A : ภายในครัว ตก 25 ครั้ง คิดเป็น 18.4% ของยอดตกทั้งหมด" */
+/* drill-down state สำหรับหัวข้อตก — เก็บชุด completed ล่าสุดไว้ re-render เมื่อเปลี่ยน filter */
+var _tfLastCompleted = [];
+
+function _populateTopFailFilters(completed) {
+  const zoneSel = document.getElementById('tf-filter-zone');
+  const branchSel = document.getElementById('tf-filter-branch');
+  if (!zoneSel || !branchSel) return;
+  // โซน = BZM ที่มีใน completed
+  const zones = [...new Set(completed.map(a => a.branchInfo && a.branchInfo.bzm).filter(Boolean))].sort();
+  const curZone = zoneSel.value;
+  zoneSel.innerHTML = '<option value="">ทุกโซน (BZM)</option>' +
+    zones.map(z => {
+      const nick = (BRANCHES.find(b => b.manager === z) || {}).managerNick || '';
+      const label = nick ? `${z} (${nick})` : z;
+      return `<option value="${escapeAttr(z)}"${z===curZone?' selected':''}>${escapeHtml(label)}</option>`;
+    }).join('');
+  // สาขา = ขึ้นกับโซนที่เลือก
+  _populateTopFailBranches(completed, zoneSel.value);
+}
+
+function _populateTopFailBranches(completed, zone) {
+  const branchSel = document.getElementById('tf-filter-branch');
+  if (!branchSel) return;
+  let pool = completed;
+  if (zone) pool = pool.filter(a => a.branchInfo && a.branchInfo.bzm === zone);
+  const seen = {};
+  const branches = [];
+  pool.forEach(a => {
+    const code = a.branchInfo && a.branchInfo.branchCode;
+    const name = a.branchInfo && (a.branchInfo.branch || a.branchInfo.branchName);
+    if (code && !seen[code]) { seen[code] = true; branches.push({ code, name: name || code }); }
+  });
+  branches.sort((a,b) => a.code.localeCompare(b.code));
+  const cur = branchSel.value;
+  branchSel.innerHTML = '<option value="">ทุกสาขา</option>' +
+    branches.map(b => `<option value="${escapeAttr(b.code)}"${b.code===cur?' selected':''}>${escapeHtml(b.code + ' ' + b.name)}</option>`).join('');
+}
+
+function onTopFailZoneChange() {
+  _populateTopFailBranches(_tfLastCompleted, document.getElementById('tf-filter-zone').value);
+  renderTopFailItems(_tfLastCompleted);
+}
+
+/* หัวข้อที่ตกบ่อย — group ตามหมวด (section) · % = สัดส่วนของยอดตกทั้งหมด
+   กดเลือกโซน/สาขา เพื่อดูแยกได้ */
 function renderTopFailItems(completed) {
+  _tfLastCompleted = completed || [];
   const host = document.getElementById('top-fails-content');
   if (!host) return;
+  // sync ตัวเลือก filter ให้ครบ (เฉพาะตอน completed ใหม่)
+  _populateTopFailFilters(_tfLastCompleted);
+  // กรองตามโซน/สาขาที่เลือก
+  const fZone = (document.getElementById('tf-filter-zone') || {}).value || '';
+  const fBranch = (document.getElementById('tf-filter-branch') || {}).value || '';
+  completed = _tfLastCompleted.filter(a => {
+    if (fZone && !(a.branchInfo && a.branchInfo.bzm === fZone)) return false;
+    if (fBranch && !(a.branchInfo && a.branchInfo.branchCode === fBranch)) return false;
+    return true;
+  });
   if (!completed.length) {
-    host.innerHTML = '<div style="text-align:center;padding:22px 14px;color:var(--text-secondary);font-size:13px;">ยังไม่มีข้อมูลการตรวจ</div>';
+    host.innerHTML = '<div style="text-align:center;padding:22px 14px;color:var(--text-secondary);font-size:13px;">ยังไม่มีข้อมูลการตรวจในขอบเขตที่เลือก</div>';
     return;
   }
   const itemStats = {};
