@@ -5820,13 +5820,26 @@ function addJdDeletedId(id) {
     localStorage.setItem(JAEDAENG_DELETED_KEY, JSON.stringify(Array.from(s)));
   } catch (_) {}
 }
-/* รวม remote + local-only โดยกรอง id ที่ถูกลบทิ้งออก (ใช้ทั้ง load + refresh) */
+/* รวม remote + local-only (ใช้ทั้ง load + refresh)
+   - remote = source of truth (มาจาก cloud → mark _syncedAt)
+   - local-only ที่จะ "ดึงกลับ + re-upload" ได้ ต้องเป็นของที่ยังไม่เคยขึ้น cloud (!_syncedAt)
+     → record ที่เคย sync แล้วแต่หายจาก cloud = ถูกลบจากเครื่องอื่น → ไม่ดึงกลับ
+   - tombstone (id ที่ลบในเครื่องนี้) ก็กรองออกด้วย */
 function _mergeJaedaeng(remote, local) {
   const deleted = loadJdDeletedIds();
   const remoteIds = new Set(remote.map(r => r.id));
-  // local-only = มีในเครื่องแต่ไม่มีใน cloud และ "ไม่ได้ถูกลบ" → ของค้างอัปโหลดจริง
-  const localOnly = local.filter(r => r && r.id && !remoteIds.has(r.id) && !deleted.has(String(r.id)));
-  // กรอง record ที่ถูก tombstone ออกจากผลรวม (กันค้างในเครื่องที่ลบ)
+  remote.forEach(r => { if (r && !r._syncedAt) r._syncedAt = 'remote'; });
+  const RECENT_MS = 24 * 60 * 60 * 1000; // ของค้างอัปโหลด ถือว่าต้องเพิ่งสร้างใน 24 ชม.
+  const now = Date.now();
+  const localOnly = local.filter(r => {
+    if (!r || !r.id) return false;
+    if (remoteIds.has(r.id)) return false;
+    if (deleted.has(String(r.id))) return false;
+    if (r._syncedAt) return false;          // เคยขึ้น cloud แล้ว → หายจาก cloud = ถูกลบ
+    const ts = new Date(r.submittedAt || r.date || 0).getTime();
+    if (Number.isFinite(ts) && (now - ts) > RECENT_MS) return false; // เก่าเกิน = ไม่ resurrect
+    return true;                            // ของใหม่ค้างอัปโหลดจริง
+  });
   const merged = remote.concat(localOnly).filter(r => r && !deleted.has(String(r.id)));
   return { merged: merged, localOnly: localOnly };
 }
@@ -5889,6 +5902,10 @@ async function saveJaedaengToBackend(audit) {
   if (!firebaseDb || !audit || !audit.id) return;
   try {
     await firebaseDb.collection(JAEDAENG_COLLECTION).doc(String(audit.id)).set(audit);
+    // mark ว่าเคยขึ้น cloud สำเร็จ — ถ้าภายหลังหายจาก cloud = ถูกลบ (ไม่ resurrect)
+    audit._syncedAt = new Date().toISOString();
+    const i = (allJaedaengAudits || []).findIndex(a => a && a.id === audit.id);
+    if (i >= 0) { allJaedaengAudits[i]._syncedAt = audit._syncedAt; saveJaedaengLocal(); }
   } catch (e) {
     console.warn('Jae Daeng Firestore save failed', e);
     showModal('บันทึก cloud ไม่สำเร็จ', 'ข้อมูลถูกเก็บไว้ในเครื่องนี้แล้ว แต่ส่งขึ้น Firestore ไม่ได้ (อาจเป็นเพราะ Security Rules) — กรุณาแจ้ง Admin: ' + (e && e.message || e));
