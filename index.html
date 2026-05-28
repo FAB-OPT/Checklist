@@ -4069,20 +4069,25 @@ body:has(#login-screen.active) {
   .bottom-nav .nav-back-hub-btn {
     order: 98;
     margin-top: auto;       /* ดันกลุ่มล่างลงไปติดก้น sidebar */
-    background: rgba(255,255,255,0.16);
-    border: 1px solid rgba(255,255,255,0.35);
-  }
-  .bottom-nav .nav-back-hub-btn:hover { background: rgba(255,255,255,0.26); }
-  .bottom-nav .nav-logout-btn {
-    order: 99;
-    margin-top: 0 !important;  /* อยู่ติดใต้ปุ่มกลับเมนูหลัก ไม่แยก */
-    background: rgba(255,255,255,0.96);
-    color: var(--danger) !important;
+    background: #0E7490;     /* cyan ทึบ */
+    color: #ffffff !important;
     font-weight: 800;
     text-shadow: none !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.18);
   }
-  .bottom-nav .nav-logout-btn .material-symbols-rounded { color: var(--danger) !important; }
-  .bottom-nav .nav-logout-btn:hover { background: var(--danger); color: #fff !important; }
+  .bottom-nav .nav-back-hub-btn .material-symbols-rounded { color: #ffffff !important; }
+  .bottom-nav .nav-back-hub-btn:hover { background: #0c6378; }
+  .bottom-nav .nav-logout-btn {
+    order: 99;
+    margin-top: 8px !important;  /* เว้นจากปุ่มกลับเมนูหลักนิดนึง */
+    background: var(--danger);   /* แดงทึบ */
+    color: #ffffff !important;
+    font-weight: 800;
+    text-shadow: none !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.18);
+  }
+  .bottom-nav .nav-logout-btn .material-symbols-rounded { color: #ffffff !important; }
+  .bottom-nav .nav-logout-btn:hover { background: #b91c1c; color: #fff !important; }
   .bottom-nav .nav-logout-btn:hover .material-symbols-rounded { color: #fff !important; }
 }
 
