@@ -4063,14 +4063,19 @@ body:has(#login-screen.active) {
   .bottom-nav .nav-logout-btn .material-symbols-rounded { color: #ffffff !important; }
   .bottom-nav .nav-logout-btn.active::after { display: none; }
 }
-/* เดสก์ท็อป (sidebar gradient): กลับเมนูหลัก + ออกระบบ เด่นด้วยพื้นกล่อง */
+/* เดสก์ท็อป (sidebar gradient): กลับเมนูหลัก + ออกระบบ จับกลุ่มไว้ล่างสุด
+   ลำดับ: ...แดชบอร์ด/ตรวจร้าน (บน) → [ดันลง] → กลับเมนูหลัก → ออกจากระบบ (ล่าง) */
 @media (min-width: 1024px) {
   .bottom-nav .nav-back-hub-btn {
+    order: 98;
+    margin-top: auto;       /* ดันกลุ่มล่างลงไปติดก้น sidebar */
     background: rgba(255,255,255,0.16);
     border: 1px solid rgba(255,255,255,0.35);
   }
   .bottom-nav .nav-back-hub-btn:hover { background: rgba(255,255,255,0.26); }
   .bottom-nav .nav-logout-btn {
+    order: 99;
+    margin-top: 0 !important;  /* อยู่ติดใต้ปุ่มกลับเมนูหลัก ไม่แยก */
     background: rgba(255,255,255,0.96);
     color: var(--danger) !important;
     font-weight: 800;
