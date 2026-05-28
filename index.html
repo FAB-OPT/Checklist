@@ -4034,11 +4034,11 @@ body:has(#login-screen.active) {
 .nav-logout-btn .material-symbols-rounded { color: var(--danger); }
 .nav-logout-btn.active::after { background: var(--danger); }
 /* 4 ปุ่ม nav แยกสีต่างกันชัดเจน */
-.nav-dash-btn { color: #b91c1c; font-weight: 700; }
-.nav-dash-btn .material-symbols-rounded { color: #b91c1c; }
-.nav-dash-btn.active { color: #b91c1c !important; }
-.nav-dash-btn.active .material-symbols-rounded { color: #b91c1c !important; }
-.nav-dash-btn.active::after { background: #b91c1c; }
+.nav-dash-btn { color: #ea580c; font-weight: 700; }
+.nav-dash-btn .material-symbols-rounded { color: #ea580c; }
+.nav-dash-btn.active { color: #ea580c !important; }
+.nav-dash-btn.active .material-symbols-rounded { color: #ea580c !important; }
+.nav-dash-btn.active::after { background: #ea580c; }
 .nav-audit-btn { color: #6d28d9 !important; font-weight: 700; }
 .nav-audit-btn .material-symbols-rounded { color: #6d28d9 !important; }
 .nav-audit-btn.active { color: #6d28d9 !important; }
@@ -4049,6 +4049,27 @@ body:has(#login-screen.active) {
 .nav-back-hub-btn { color: #0E7490 !important; font-weight: 700; }
 .nav-back-hub-btn .material-symbols-rounded { color: #0E7490 !important; }
 .nav-back-hub-btn.active::after { background: #0E7490; }
+/* มือถือ: กลับเมนูหลัก + ออกระบบ เป็นกล่องสีชัด แยกจากปุ่มอื่น */
+@media (max-width: 1023px) {
+  .bottom-nav .nav-back-hub-btn {
+    color: #ffffff !important; font-weight: 800;
+    background: #0E7490;
+    border-radius: 12px;
+    margin: 4px 3px 4px 0;
+    min-height: 48px;
+  }
+  .bottom-nav .nav-back-hub-btn .material-symbols-rounded { color: #ffffff !important; }
+  .bottom-nav .nav-back-hub-btn.active::after { display: none; }
+  .bottom-nav .nav-logout-btn {
+    color: #ffffff !important; font-weight: 800;
+    background: var(--danger);
+    border-radius: 12px;
+    margin: 4px 0 4px 3px;
+    min-height: 48px;
+  }
+  .bottom-nav .nav-logout-btn .material-symbols-rounded { color: #ffffff !important; }
+  .bottom-nav .nav-logout-btn.active::after { display: none; }
+}
 
 /* ============ DESKTOP LAYOUT (≥1024px) ============ */
 @media (min-width: 1024px) {
@@ -5819,20 +5840,20 @@ function applyBrandHeader() {
   const view = currentView || (currentUser && currentUser.brand);
   let appTitle, appSub, eyebrow;
   if (view === 'santafe') {
-    appTitle = 'Operations Standard Skill &\nOperations Checklist';
+    appTitle = 'Operations Standard Skill & Operations Checklist';
     appSub   = 'Santa Fe Happy Steak';
     eyebrow  = 'Operations Standard Skill';
   } else if (view === 'jaedaeng') {
-    appTitle = 'Quality Service Cleanliness &\nOperations Checklist';
+    appTitle = 'Quality Service Cleanliness & Operations Checklist';
     appSub   = 'เจ๊แดงสามย่าน';
     eyebrow  = 'Quality Service Cleanliness';
   } else {
-    appTitle = 'Quality Service Cleanliness &\nOperations Checklist';
+    appTitle = 'Quality Service Cleanliness & Operations Checklist';
     appSub   = 'ระบบตรวจสอบมาตรฐานการทำงาน';
     eyebrow  = 'Quality Service Cleanliness';
   }
-  // \n → <br> เพื่อบังคับขึ้นบรรทัดใหม่ตรง '&' (มือถือ — 2 บรรทัด)
-  if (titleEl) titleEl.innerHTML = escapeHtml(appTitle).replace(/\n/g, '<br>');
+  // ชื่อระบบบรรทัดเดียว (wrap เองตามความกว้าง) · ชื่อผู้ใช้อยู่บรรทัดถัดไป (app-user-line)
+  if (titleEl) titleEl.textContent = appTitle;
   if (subEl)   subEl.textContent   = appSub;
   document.querySelectorAll('.brand-eyebrow-label').forEach(el => {
     el.textContent = eyebrow;
@@ -6213,7 +6234,7 @@ function renderTopFailItems(completed) {
   host.innerHTML = sortedCats.map(cat => {
     const catSharePct = totalFails > 0 ? (cat.fail / totalFails * 100) : 0;
     const catFailRatePct = cat.total > 0 ? (cat.fail / cat.total * 100) : 0;
-    const headColor = catSharePct >= 25 ? 'var(--danger)' : (catSharePct >= 10 ? 'var(--warning)' : '#0E7490');
+    const headColor = catSharePct >= 25 ? '#dc2626' : (catSharePct >= 10 ? '#f59e0b' : '#0E7490');
     // ข้อย่อยที่ตกในหมวดนี้ — สูงสุด 5 อันดับ
     const items = Object.values(itemStats)
       .filter(i => i.letter === cat.letter && i.fail > 0)
@@ -7862,7 +7883,7 @@ function renderJaedaengDashboard() {
     : sortedCats.map(cat => {
         const catSharePct = catTotalFails > 0 ? (cat.fail / catTotalFails * 100) : 0;
         const catFailRatePct = cat.total > 0 ? (cat.fail / cat.total * 100) : 0;
-        const headColor = catSharePct >= 25 ? 'var(--danger)' : (catSharePct >= 10 ? 'var(--warning)' : '#0E7490');
+        const headColor = catSharePct >= 25 ? '#dc2626' : (catSharePct >= 10 ? '#f59e0b' : '#0E7490');
         const items = Object.values(failItemStats)
           .filter(i => i.section === cat.section && i.fail > 0)
           .sort((a, b) => b.fail - a.fail)
