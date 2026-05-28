@@ -104,6 +104,7 @@ body {
   color: rgba(255,255,255,0.95);
   margin-top: 6px;
   letter-spacing: 0.1px;
+  text-align: right;
 }
 .header-tools {
   display: flex; align-items: center; gap: 8px;
@@ -1086,6 +1087,8 @@ body.test-mode-on { box-shadow: inset 0 0 0 3px #F59E0B; }
 .jd-form-head-row + .jd-form-grid2 { border-top: 1px dashed var(--border); padding-top: 10px; margin-top: 4px; }
 @media (max-width: 560px) {
   .jd-form-grid2 { grid-template-columns: 1fr; gap: 8px; }
+  /* วันที่+เวลา คงไว้ 2 คอลัมน์เสมอ (แม้บนมือถือ) */
+  .jd-form-grid2-keep { grid-template-columns: 1fr 1fr !important; gap: 12px; }
 }
 .jd-form-label {
   font-size: 11px; font-weight: 800;
@@ -1570,7 +1573,8 @@ input[type="time"].jd-form-input {
 .recent-card.tier-warn { border-left: 4px solid var(--warning); }
 .recent-card.tier-bad  { border-left: 4px solid var(--danger); }
 .recent-card-main { flex: 1; min-width: 0; }
-.recent-card-name { font-weight: 800; font-size: 14.5px; color: var(--text); margin-bottom: 5px; }
+.recent-card-name { font-weight: 800; font-size: 14px; color: var(--text); margin-bottom: 4px; }
+.recent-card-subline { font-size: 12px; font-weight: 500; color: var(--text-secondary); margin-bottom: 7px; }
 .recent-card-meta { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 11.5px; color: var(--text-secondary); margin-bottom: 7px; }
 .recent-card-meta span { display: inline-flex; align-items: center; gap: 4px; }
 .recent-card-meta .material-symbols-rounded { font-size: 14px; }
@@ -4976,14 +4980,10 @@ html.fab-sso-pending #login-screen { display: none !important; }
 
     <!-- JAE DAENG DASHBOARD -->
     <div id="jaedaeng-dashboard-screen" style="display:none;">
-      <div class="page-eyebrow" style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
-        <h2 class="page-eyebrow-title">
-          แดชบอร์ด <span class="page-eyebrow-inline">เจ๊แดงสามย่าน</span>
+      <div class="page-eyebrow">
+        <h2 class="page-eyebrow-title" style="font-size:16px;white-space:nowrap;">
+          แดชบอร์ด <span class="page-eyebrow-inline" style="font-size:13px;">เจ๊แดงสามย่าน</span>
         </h2>
-        <button type="button" class="jd-refresh-btn" onclick="refreshJaedaengData()" title="ดึงข้อมูลใหม่จาก cloud">
-          <span class="material-symbols-rounded">refresh</span>
-          <span>รีเฟรช</span>
-        </button>
       </div>
       <div class="jd-dash-scope" id="jd-dash-scope"></div>
       <div class="jd-dash-filter" id="jd-dash-filter" style="display:none;">
@@ -5068,7 +5068,7 @@ html.fab-sso-pending #login-screen { display: none !important; }
           <label class="jd-form-label">ทีม BZM</label>
           <div class="jd-form-static" id="jd-bzm-display">—</div>
         </div>
-        <div class="jd-form-grid2">
+        <div class="jd-form-grid2 jd-form-grid2-keep">
           <div class="jd-form-head-row">
             <label class="jd-form-label">วันที่ตรวจ</label>
             <div class="jd-form-static" id="jd-date-display">—</div>
@@ -6081,15 +6081,15 @@ function applyBrandHeader() {
   const view = currentView || (currentUser && currentUser.brand);
   let appTitle, appSub, eyebrow;
   if (view === 'santafe') {
-    appTitle = 'Operations Standard Skill & Operations Checklist';
+    appTitle = 'OSS & Operations Checklist';
     appSub   = 'Santa Fe Happy Steak';
     eyebrow  = 'Operations Standard Skill';
   } else if (view === 'jaedaeng') {
-    appTitle = 'Quality Service Cleanliness & Operations Checklist';
+    appTitle = 'QSC & Operations Checklist';
     appSub   = 'เจ๊แดงสามย่าน';
     eyebrow  = 'Quality Service Cleanliness';
   } else {
-    appTitle = 'Quality Service Cleanliness & Operations Checklist';
+    appTitle = 'QSC & Operations Checklist';
     appSub   = 'ระบบตรวจสอบมาตรฐานการทำงาน';
     eyebrow  = 'Quality Service Cleanliness';
   }
@@ -7908,9 +7908,11 @@ function showJaedaengDashboard() {
   setupJaedaengDashFilter();
   setupJaedaengDashDateChips();
   renderJaedaengDashboard();
+  // auto อัปเดตจาก cloud เบื้องหลัง (เงียบ ไม่มี popup)
+  refreshJaedaengData(true);
 }
 
-async function refreshJaedaengData() {
+async function refreshJaedaengData(silent) {
   const btn = document.querySelector('.jd-refresh-btn');
   if (btn) btn.classList.add('is-loading');
   let resyncedCount = 0;
@@ -7931,14 +7933,14 @@ async function refreshJaedaengData() {
     }
   } catch (e) {
     console.warn('Refresh failed', e);
-    showModal('รีเฟรชไม่สำเร็จ', 'โหลดข้อมูลจาก cloud ไม่ได้ — เช็คอินเทอร์เน็ตและลองอีกครั้ง');
+    if (!silent) showModal('รีเฟรชไม่สำเร็จ', 'โหลดข้อมูลจาก cloud ไม่ได้ — เช็คอินเทอร์เน็ตและลองอีกครั้ง');
   } finally {
     if (btn) btn.classList.remove('is-loading');
   }
   const dashShown = document.getElementById('jaedaeng-dashboard-screen').style.display !== 'none';
   if (dashShown) renderJaedaengDashboard();
   else renderJaedaengList();
-  if (resyncedCount > 0) {
+  if (resyncedCount > 0 && !silent) {
     showModal('ซิงค์ข้อมูลกลับ Cloud', `พบ ${resyncedCount} รายการที่ยังไม่ขึ้น cloud — อัปโหลดเรียบร้อย`);
   }
 }
@@ -8275,9 +8277,9 @@ function renderJaedaengTopFails() {
       }).join('')
     + '</div></div>';
 
-  const cards = sortedCats.map(cat => {
+  const cards = sortedCats.map((cat, ci) => {
     const catSharePct = catTotalFails > 0 ? (cat.fail / catTotalFails * 100) : 0;
-    const headColor = catSharePct >= 25 ? '#dc2626' : (catSharePct >= 10 ? '#f59e0b' : '#0E7490');
+    const headColor = segColors[ci % segColors.length];  // สีต่างกันต่อหมวด (ตรงกับ legend/แถบสรุป)
     const items = Object.values(failItemStats)
       .filter(i => i.section === cat.section && i.fail > 0)
       .sort((a, b) => b.fail - a.fail)
@@ -8286,7 +8288,7 @@ function renderJaedaengTopFails() {
       <div class="tf-cat-head" style="background:linear-gradient(135deg, ${headColor}, ${headColor}cc);" onclick="this.parentNode.classList.toggle('open')">
         <div style="flex:1;min-width:0;">
           <div style="font-weight:900;font-size:15px;line-height:1.3;margin-bottom:4px;">${escapeHtml(cat.section)}</div>
-          <div style="font-size:12.5px;opacity:0.95;font-weight:600;">ตก ${cat.fail} / ${cat.total} ข้อย่อย</div>
+          <div style="font-size:12.5px;opacity:0.95;font-weight:600;">ตก ${cat.fail} ข้อ / จากทั้งหมด ${cat.total} ข้อย่อย</div>
         </div>
         <div style="text-align:right;flex:none;">
           <div style="font-size:24px;font-weight:900;line-height:1;">${catSharePct.toFixed(1)}%</div>
@@ -8301,7 +8303,7 @@ function renderJaedaengTopFails() {
           return `<div class="jd-dash-row" style="padding:8px 0;border-bottom:1px dashed var(--border);">
             <div>
               <div class="jd-dash-row-name" style="font-size:13px;">${i+1}. ${escapeHtml(it.text)}</div>
-              <div class="jd-dash-row-meta">ตก ${it.fail} / ${it.total} ครั้ง</div>
+              <div class="jd-dash-row-meta">ตก ${it.fail} ครั้ง / จากการตรวจ ${it.total} ครั้ง</div>
               <div class="jd-dash-bar"><div class="jd-dash-bar-fill ${cls}" style="width:${Math.min(100, itPct)}%"></div></div>
             </div>
             <div class="jd-dash-row-value is-bad">${itPct.toFixed(1)}%</div>
@@ -8415,10 +8417,7 @@ function renderJaedaengDashboard() {
       return `<div class="recent-card ${tierCls}" onclick="showJaedaengDetail('${escapeAttr(r.id)}')">
         <div class="recent-card-main">
           <div class="recent-card-name">${escapeHtml(r.storeName || '-')}</div>
-          <div class="recent-card-meta">
-            <span><span class="material-symbols-rounded">event</span>${escapeHtml(fmtDateDMY(r.date))}${r.time ? ' · ' + escapeHtml(r.time) : ''}</span>
-            <span><span class="material-symbols-rounded">person</span>${escapeHtml(r.auditor || '-')}</span>
-          </div>
+          <div class="recent-card-subline">${escapeHtml(fmtDateDMY(r.date))}${r.time ? ' · ' + escapeHtml(r.time) : ''} · ${escapeHtml(r.auditor || '-')}</div>
           <div class="recent-card-stats">
             <span class="recent-chip ok"><span class="material-symbols-rounded">check_circle</span> ผ่าน ${pass}</span>
             <span class="recent-chip ${fail>0?'fail':'ok'}"><span class="material-symbols-rounded">${fail>0?'cancel':'check'}</span> ตก ${fail}</span>
