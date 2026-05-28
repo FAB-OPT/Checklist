@@ -5806,7 +5806,7 @@ function saveJaedaengLocal() {
   try { localStorage.setItem(JAEDAENG_STORAGE_KEY, JSON.stringify(allJaedaengAudits)); } catch (_) {}
 }
 
-/* Tombstones — จำ id ที่ถูกลบ เพื่อกัน logic resync ดึง record ที่ลบแล้วกลับมาใส่ใหม่ */
+/* Tombstones — จำ id ที่ถูกลบ (กัน resync ดึงกลับในเครื่องที่ลบ) */
 const JAEDAENG_DELETED_KEY = 'qa_jaedaeng_deleted_v1';
 function loadJdDeletedIds() {
   try { return new Set(JSON.parse(localStorage.getItem(JAEDAENG_DELETED_KEY) || '[]')); }
@@ -5820,26 +5820,32 @@ function addJdDeletedId(id) {
     localStorage.setItem(JAEDAENG_DELETED_KEY, JSON.stringify(Array.from(s)));
   } catch (_) {}
 }
-/* รวม remote + local-only (ใช้ทั้ง load + refresh)
-   - remote = source of truth (มาจาก cloud → mark _syncedAt)
-   - local-only ที่จะ "ดึงกลับ + re-upload" ได้ ต้องเป็นของที่ยังไม่เคยขึ้น cloud (!_syncedAt)
-     → record ที่เคย sync แล้วแต่หายจาก cloud = ถูกลบจากเครื่องอื่น → ไม่ดึงกลับ
-   - tombstone (id ที่ลบในเครื่องนี้) ก็กรองออกด้วย */
+
+/* Pending-upload set — เก็บเฉพาะ id ที่ "สร้างในเครื่องนี้แต่อัปโหลด cloud ยังไม่สำเร็จ"
+   มีแค่ record พวกนี้เท่านั้นที่จะถูกดึงกลับ/อัปโหลดซ้ำ → record ที่ลบจากเครื่องอื่น
+   (ไม่เคยอยู่ใน pending) จะไม่ถูก resurrect */
+const JAEDAENG_PENDING_KEY = 'qa_jaedaeng_pending_v1';
+function loadJdPendingIds() {
+  try { return new Set(JSON.parse(localStorage.getItem(JAEDAENG_PENDING_KEY) || '[]')); }
+  catch (_) { return new Set(); }
+}
+function _saveJdPendingIds(s) {
+  try { localStorage.setItem(JAEDAENG_PENDING_KEY, JSON.stringify(Array.from(s))); } catch (_) {}
+}
+function addJdPendingId(id) { if (!id) return; const s = loadJdPendingIds(); s.add(String(id)); _saveJdPendingIds(s); }
+function removeJdPendingId(id) { if (!id) return; const s = loadJdPendingIds(); if (s.delete(String(id))) _saveJdPendingIds(s); }
+
+/* รวม remote (source of truth) + เฉพาะ pending ของเครื่องนี้ที่ยังไม่ขึ้น cloud */
 function _mergeJaedaeng(remote, local) {
   const deleted = loadJdDeletedIds();
+  const pending = loadJdPendingIds();
   const remoteIds = new Set(remote.map(r => r.id));
-  remote.forEach(r => { if (r && !r._syncedAt) r._syncedAt = 'remote'; });
-  const RECENT_MS = 24 * 60 * 60 * 1000; // ของค้างอัปโหลด ถือว่าต้องเพิ่งสร้างใน 24 ชม.
-  const now = Date.now();
-  const localOnly = local.filter(r => {
-    if (!r || !r.id) return false;
-    if (remoteIds.has(r.id)) return false;
-    if (deleted.has(String(r.id))) return false;
-    if (r._syncedAt) return false;          // เคยขึ้น cloud แล้ว → หายจาก cloud = ถูกลบ
-    const ts = new Date(r.submittedAt || r.date || 0).getTime();
-    if (Number.isFinite(ts) && (now - ts) > RECENT_MS) return false; // เก่าเกิน = ไม่ resurrect
-    return true;                            // ของใหม่ค้างอัปโหลดจริง
-  });
+  const localOnly = local.filter(r =>
+    r && r.id &&
+    !remoteIds.has(r.id) &&
+    !deleted.has(String(r.id)) &&
+    pending.has(String(r.id))   // ดึงกลับเฉพาะของที่ค้างอัปโหลดจริงในเครื่องนี้
+  );
   const merged = remote.concat(localOnly).filter(r => r && !deleted.has(String(r.id)));
   return { merged: merged, localOnly: localOnly };
 }
@@ -5900,12 +5906,11 @@ async function loadJaedaengAudits() {
 async function saveJaedaengToBackend(audit) {
   if (testMode) return;
   if (!firebaseDb || !audit || !audit.id) return;
+  // มาร์คว่า "ค้างอัปโหลด" ไว้ก่อน — ถ้าสำเร็จค่อยเอาออก
+  addJdPendingId(audit.id);
   try {
     await firebaseDb.collection(JAEDAENG_COLLECTION).doc(String(audit.id)).set(audit);
-    // mark ว่าเคยขึ้น cloud สำเร็จ — ถ้าภายหลังหายจาก cloud = ถูกลบ (ไม่ resurrect)
-    audit._syncedAt = new Date().toISOString();
-    const i = (allJaedaengAudits || []).findIndex(a => a && a.id === audit.id);
-    if (i >= 0) { allJaedaengAudits[i]._syncedAt = audit._syncedAt; saveJaedaengLocal(); }
+    removeJdPendingId(audit.id);  // อัปโหลดสำเร็จ → ไม่ค้างแล้ว
   } catch (e) {
     console.warn('Jae Daeng Firestore save failed', e);
     showModal('บันทึก cloud ไม่สำเร็จ', 'ข้อมูลถูกเก็บไว้ในเครื่องนี้แล้ว แต่ส่งขึ้น Firestore ไม่ได้ (อาจเป็นเพราะ Security Rules) — กรุณาแจ้ง Admin: ' + (e && e.message || e));
@@ -9284,7 +9289,8 @@ async function _deleteJaedaengById(id, storeName) {
   }
   const ok = await showConfirm('ลบผลตรวจ?', (storeName ? '<b>'+escapeHtml(storeName)+'</b><br>' : '') + 'การดำเนินการนี้ไม่สามารถย้อนกลับได้', { okLabel: 'ลบ', cancelLabel: 'ยกเลิก', danger: true });
   if (!ok) return false;
-  addJdDeletedId(id);  // tombstone — กัน resync ดึงกลับมา
+  addJdDeletedId(id);     // tombstone — กัน resync ดึงกลับมา (เครื่องนี้)
+  removeJdPendingId(id);  // เผื่อ record นี้ยังค้างอัปโหลด — เอาออกจาก pending
   allJaedaengAudits = allJaedaengAudits.filter(r => r.id !== id);
   saveJaedaengLocal();
   if (firebaseDb && !testMode) {
