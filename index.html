@@ -4033,7 +4033,19 @@ body:has(#login-screen.active) {
 .nav-logout-btn { color: var(--danger); }
 .nav-logout-btn .material-symbols-rounded { color: var(--danger); }
 .nav-logout-btn.active::after { background: var(--danger); }
-/* กลับเมนูหลัก: สีฟ้า/ทอง ชัดกว่าปุ่มอื่น เพื่อแยกจาก logout */
+/* 4 ปุ่ม nav แยกสีต่างกันชัดเจน */
+.nav-dash-btn { color: #b91c1c; font-weight: 700; }
+.nav-dash-btn .material-symbols-rounded { color: #b91c1c; }
+.nav-dash-btn.active { color: #b91c1c !important; }
+.nav-dash-btn.active .material-symbols-rounded { color: #b91c1c !important; }
+.nav-dash-btn.active::after { background: #b91c1c; }
+.nav-audit-btn { color: #6d28d9 !important; font-weight: 700; }
+.nav-audit-btn .material-symbols-rounded { color: #6d28d9 !important; }
+.nav-audit-btn.active { color: #6d28d9 !important; }
+.nav-audit-btn.active::after { background: #6d28d9; }
+.nav-daily-btn { color: #047857 !important; font-weight: 700; }
+.nav-daily-btn .material-symbols-rounded { color: #047857 !important; }
+.nav-daily-btn.active::after { background: #047857; }
 .nav-back-hub-btn { color: #0E7490 !important; font-weight: 700; }
 .nav-back-hub-btn .material-symbols-rounded { color: #0E7490 !important; }
 .nav-back-hub-btn.active::after { background: #0E7490; }
@@ -4407,8 +4419,8 @@ html.fab-sso-pending #login-screen { display: none !important; }
       <div id="zone-list" style="display:none;" class="stripe-card">
         <div class="stripe-card-head">
           <div>
-            <div class="stripe-card-title">สรุปรายโซน</div>
-            <div class="stripe-card-sub">คะแนนเฉลี่ยตามผู้รับผิดชอบ (เฉพาะ VP)</div>
+            <div class="stripe-card-title">สรุปต่อโซน</div>
+            <div class="stripe-card-sub">คะแนนเฉลี่ยตามผู้รับผิดชอบ</div>
           </div>
         </div>
         <div id="zone-list-content"></div>
@@ -4748,7 +4760,7 @@ html.fab-sso-pending #login-screen { display: none !important; }
       <div class="card">
         <div class="card-header">
           <span class="material-symbols-rounded" style="color:#0E7490;">groups</span>
-          <h2>สรุปต่อโซน (BZM)</h2>
+          <h2>สรุปต่อโซน</h2>
         </div>
         <div id="jd-dash-by-bzm"></div>
       </div>
@@ -5959,9 +5971,14 @@ function renderBottomNav() {
     const cleanName = String(currentUser.name || '').replace(/^(นางสาว|นาย|นาง|น\.ส\.|ดร\.)\s*/, '').trim();
     pillText = cleanName + (roleLabel ? ` (${roleLabel})` : '');
   }
+  // title ตาม brand (ตรงกับ app-header มือถือ)
+  const _v = currentView || (currentUser && currentUser.brand);
+  const _navTitle = _v === 'santafe'
+    ? 'Operations Standard Skill &amp;<br>Operations Checklist'
+    : 'Quality Service Cleanliness &amp;<br>Operations Checklist';
   html += '<div class="nav-brand">' +
     '<div class="nav-brand-app">' +
-      '<div class="nav-app-name">Quality Assurance &amp;<br>Operations Checklist</div>' +
+      '<div class="nav-app-name">' + _navTitle + '</div>' +
       '<div class="nav-app-user">' + escapeHtml(pillText) + '</div>' +
     '</div>' +
     '<div class="nav-brand-divider"></div>' +
@@ -5975,17 +5992,17 @@ function renderBottomNav() {
   html += '<div class="nav-items">';
   const view = currentView || currentUser.brand;
   if (view === 'jaedaeng') {
-    html += '<button class="bottom-nav-item active" id="nav-dash" onclick="showJaedaengDashboard()"><span class="material-symbols-rounded">dashboard</span><span>แดชบอร์ด</span></button>';
-    html += '<button class="bottom-nav-item" id="nav-jd-hub" onclick="showJaedaengHub()"><span class="material-symbols-rounded">checklist</span><span>ตรวจร้าน</span></button>';
+    html += '<button class="bottom-nav-item nav-dash-btn active" id="nav-dash" onclick="showJaedaengDashboard()"><span class="material-symbols-rounded">dashboard</span><span>แดชบอร์ด</span></button>';
+    html += '<button class="bottom-nav-item nav-audit-btn" id="nav-jd-hub" onclick="showJaedaengHub()"><span class="material-symbols-rounded">checklist</span><span>ตรวจร้าน</span></button>';
   } else {
-    html += '<button class="bottom-nav-item active" id="nav-dash" onclick="showDashboard()"><span class="material-symbols-rounded">dashboard</span><span>หน้าหลัก</span></button>';
+    html += '<button class="bottom-nav-item nav-dash-btn active" id="nav-dash" onclick="showDashboard()"><span class="material-symbols-rounded">dashboard</span><span>หน้าหลัก</span></button>';
     // ตรวจสาขา is for branches' BZM only; VP / COO / Admin only review results.
     if (currentUser.role === 'bzm' && currentUser.brand === 'santafe') {
-      html += '<button class="bottom-nav-item" id="nav-new" onclick="newAudit()"><span class="material-symbols-rounded">add_circle</span><span>ตรวจสาขา</span></button>';
+      html += '<button class="bottom-nav-item nav-audit-btn" id="nav-new" onclick="newAudit()"><span class="material-symbols-rounded">add_circle</span><span>ตรวจสาขา</span></button>';
     }
     // Open-Close checklist is for branch logins only.
     if (currentUser.role === 'branch') {
-      html += '<button class="bottom-nav-item" id="nav-daily" onclick="showDailyHub()"><span class="material-symbols-rounded">checklist</span><span>Open-Close</span></button>';
+      html += '<button class="bottom-nav-item nav-daily-btn" id="nav-daily" onclick="showDailyHub()"><span class="material-symbols-rounded">checklist</span><span>Open-Close</span></button>';
     }
   }
   html += '</div>';
@@ -6082,8 +6099,8 @@ function showDashboard() {
   if (srcCount) srcCount.textContent = completed.length;
   renderTierChart(completed);
 
-  // Zone breakdown — เฉพาะ VP เท่านั้น
-  if (currentUser.role === 'vp') {
+  // Zone breakdown — เฉพาะ VP/COO/Admin
+  if (['vp','coo','admin'].includes(currentUser.role)) {
     document.getElementById('zone-list').style.display = 'block';
     renderZoneList(completed);
   } else {
@@ -6148,7 +6165,8 @@ function renderZoneList(completed) {
   document.getElementById('zone-list-content').innerHTML = html;
 }
 
-/* หัวข้อที่ตกบ่อย — รวม fail จากทุก audit · group ตาม item · คิด % ตก (fail / (pass+fail)) */
+/* หัวข้อที่ตกบ่อย — group ตามหมวด (section) · คิด %fail-ของหมวด-ต่อ-fail-รวม
+   ตัวอย่าง: "หมวด A : ภายในครัว ตก 25 ครั้ง คิดเป็น 18.4% ของยอดตกทั้งหมด" */
 function renderTopFailItems(completed) {
   const host = document.getElementById('top-fails-content');
   if (!host) return;
@@ -6156,52 +6174,81 @@ function renderTopFailItems(completed) {
     host.innerHTML = '<div style="text-align:center;padding:22px 14px;color:var(--text-secondary);font-size:13px;">ยังไม่มีข้อมูลการตรวจ</div>';
     return;
   }
-  const stats = {};
+  const itemStats = {};
+  const catStats = {};
   completed.forEach(a => {
     const ans = a.answers || {};
     for (const sec of SECTIONS) {
       if (!['A','B','C','D','E','F','G','H','I','J','K','L','M'].includes(sec.letter)) continue;
+      if (!catStats[sec.letter]) catStats[sec.letter] = {
+        letter: sec.letter, section: sec.title || '', fail: 0, total: 0
+      };
       sec.subsections.forEach((sub, subIdx) => {
         sub.items.forEach(item => {
           const key = sec.letter + '|' + subIdx + '|' + item.num;
           const v = ans[key];
           if (!v || v.value == null || v.value === 'na') return;
-          if (!stats[key]) stats[key] = {
-            letter: sec.letter,
-            section: sec.title || '',
-            num: item.num,
-            text: item.text || '-',
-            fail: 0,
-            total: 0
+          if (!itemStats[key]) itemStats[key] = {
+            letter: sec.letter, section: sec.title || '',
+            num: item.num, text: item.text || '-', fail: 0, total: 0
           };
-          stats[key].total++;
-          if (v.value === 'fail') stats[key].fail++;
+          itemStats[key].total++;
+          catStats[sec.letter].total++;
+          if (v.value === 'fail') {
+            itemStats[key].fail++;
+            catStats[sec.letter].fail++;
+          }
         });
       });
     }
   });
-  const top = Object.values(stats)
-    .filter(s => s.fail > 0)
-    .sort((a, b) => (b.fail - a.fail) || ((b.fail/b.total) - (a.fail/a.total)))
-    .slice(0, 10);
-  if (!top.length) {
+  const totalFails = Object.values(catStats).reduce((s, c) => s + c.fail, 0);
+  const sortedCats = Object.values(catStats)
+    .filter(c => c.fail > 0)
+    .sort((a, b) => b.fail - a.fail);
+  if (!sortedCats.length) {
     host.innerHTML = '<div style="text-align:center;padding:22px 14px;color:var(--success);font-size:13px;">ไม่มีหัวข้อที่ตกในข้อมูลที่เห็น</div>';
     return;
   }
-  host.innerHTML = top.map((f, i) => {
-    const pct = f.total > 0 ? (f.fail / f.total * 100) : 0;
-    const cls = pct >= 50 ? 'bad' : (pct >= 25 ? 'warn' : '');
-    return `<div class="jd-dash-row">
-      <div>
-        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:4px;">
-          <span style="display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;padding:0 7px;background:var(--primary);color:#fff;border-radius:6px;font-weight:800;font-size:12px;">${escapeHtml(f.letter)}</span>
-          <span style="font-weight:700;font-size:13px;color:var(--text);">${escapeHtml(f.section)}</span>
+  host.innerHTML = sortedCats.map(cat => {
+    const catSharePct = totalFails > 0 ? (cat.fail / totalFails * 100) : 0;
+    const catFailRatePct = cat.total > 0 ? (cat.fail / cat.total * 100) : 0;
+    const headColor = catSharePct >= 25 ? 'var(--danger)' : (catSharePct >= 10 ? 'var(--warning)' : '#0E7490');
+    // ข้อย่อยที่ตกในหมวดนี้ — สูงสุด 5 อันดับ
+    const items = Object.values(itemStats)
+      .filter(i => i.letter === cat.letter && i.fail > 0)
+      .sort((a, b) => b.fail - a.fail)
+      .slice(0, 5);
+    return `<div style="margin-bottom:14px;border:1px solid var(--border);border-radius:12px;overflow:hidden;background:#fff;">
+      <div style="padding:14px 16px;background:linear-gradient(135deg, ${headColor}, ${headColor}cc);color:#fff;">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+          <div style="flex:1;min-width:0;">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+              <span style="display:inline-flex;align-items:center;justify-content:center;min-width:26px;height:26px;padding:0 9px;background:rgba(255,255,255,0.25);border:1.5px solid rgba(255,255,255,0.4);color:#fff;border-radius:8px;font-weight:900;font-size:14px;">${escapeHtml(cat.letter)}</span>
+              <span style="font-weight:900;font-size:15px;line-height:1.3;">${escapeHtml(cat.section)}</span>
+            </div>
+            <div style="font-size:12.5px;opacity:0.95;font-weight:600;">ตก ${cat.fail} / ${cat.total} ข้อย่อย · อัตราตกในหมวด ${catFailRatePct.toFixed(1)}%</div>
+          </div>
+          <div style="text-align:right;flex:none;">
+            <div style="font-size:24px;font-weight:900;line-height:1;">${catSharePct.toFixed(1)}%</div>
+            <div style="font-size:10.5px;opacity:0.85;margin-top:2px;">ของยอดตกทั้งหมด</div>
+          </div>
         </div>
-        <div class="jd-dash-row-name" style="font-size:13.5px;">${i+1}. ${escapeHtml(f.text)}</div>
-        <div class="jd-dash-row-meta">ตก ${f.fail} / ${f.total} ครั้ง</div>
-        <div class="jd-dash-bar"><div class="jd-dash-bar-fill ${cls}" style="width:${Math.min(100, pct)}%"></div></div>
       </div>
-      <div class="jd-dash-row-value is-bad">${pct.toFixed(1)}%</div>
+      ${items.length ? `<div style="padding:10px 14px 12px;">
+        ${items.map((it, i) => {
+          const itPct = it.total > 0 ? (it.fail / it.total * 100) : 0;
+          const cls = itPct >= 50 ? 'bad' : (itPct >= 25 ? 'warn' : '');
+          return `<div class="jd-dash-row" style="padding:8px 0;border-bottom:1px dashed var(--border);">
+            <div>
+              <div class="jd-dash-row-name" style="font-size:13px;">${i+1}. ${escapeHtml(it.text)}</div>
+              <div class="jd-dash-row-meta">ตก ${it.fail} / ${it.total} ครั้ง</div>
+              <div class="jd-dash-bar"><div class="jd-dash-bar-fill ${cls}" style="width:${Math.min(100, itPct)}%"></div></div>
+            </div>
+            <div class="jd-dash-row-value is-bad">${itPct.toFixed(1)}%</div>
+          </div>`;
+        }).join('')}
+      </div>` : ''}
     </div>`;
   }).join('');
 }
@@ -7786,36 +7833,67 @@ function renderJaedaengDashboard() {
     </div>`;
   }).join('');
 
-  // Top failed items — count fail + total per item (text) → % ตก
-  const failStats = {};
+  // Top failed items — group ตามหมวด (section) · คิด % ของยอดตกรวม
+  const failItemStats = {};
+  const failCatStats = {};
   records.forEach(r => {
     (r.items || []).forEach(it => {
       if (!it || !it.text) return;
-      const key = (it.section || '') + '||' + it.text;
-      if (!failStats[key]) failStats[key] = { text: it.text, section: it.section || '', fail: 0, total: 0 };
+      const section = it.section || '-';
+      if (!failCatStats[section]) failCatStats[section] = { section, fail: 0, total: 0 };
+      const key = section + '||' + it.text;
+      if (!failItemStats[key]) failItemStats[key] = { text: it.text, section, fail: 0, total: 0 };
       if (it.status === 'fail' || it.status === 'pass') {
-        failStats[key].total++;
-        if (it.status === 'fail') failStats[key].fail++;
+        failItemStats[key].total++;
+        failCatStats[section].total++;
+        if (it.status === 'fail') {
+          failItemStats[key].fail++;
+          failCatStats[section].fail++;
+        }
       }
     });
   });
-  const topFails = Object.values(failStats)
-    .filter(s => s.fail > 0)
-    .sort((a, b) => (b.fail - a.fail) || ((b.fail/b.total) - (a.fail/a.total)))
-    .slice(0, 10);
-  topFailsEl.innerHTML = topFails.length === 0
+  const totalFails = Object.values(failCatStats).reduce((s, c) => s + c.fail, 0);
+  const sortedCats = Object.values(failCatStats)
+    .filter(c => c.fail > 0)
+    .sort((a, b) => b.fail - a.fail);
+  topFailsEl.innerHTML = sortedCats.length === 0
     ? '<div class="jd-dash-empty">ยังไม่มีข้อไม่ผ่าน</div>'
-    : topFails.map((f, i) => {
-        const pct = f.total > 0 ? (f.fail / f.total * 100) : 0;
-        const cls = pct >= 50 ? 'bad' : (pct >= 25 ? 'warn' : '');
-        return `<div class="jd-dash-row">
-          <div>
-            <div style="font-weight:800;font-size:12.5px;color:var(--primary);margin-bottom:3px;">หมวด: ${escapeHtml(f.section || '-')}</div>
-            <div class="jd-dash-row-name" style="font-size:13.5px;">${i+1}. ${escapeHtml(f.text)}</div>
-            <div class="jd-dash-row-meta">ตก ${f.fail} / ${f.total} ครั้ง</div>
-            <div class="jd-dash-bar"><div class="jd-dash-bar-fill ${cls}" style="width:${Math.min(100, pct)}%"></div></div>
+    : sortedCats.map(cat => {
+        const catSharePct = totalFails > 0 ? (cat.fail / totalFails * 100) : 0;
+        const catFailRatePct = cat.total > 0 ? (cat.fail / cat.total * 100) : 0;
+        const headColor = catSharePct >= 25 ? 'var(--danger)' : (catSharePct >= 10 ? 'var(--warning)' : '#0E7490');
+        const items = Object.values(failItemStats)
+          .filter(i => i.section === cat.section && i.fail > 0)
+          .sort((a, b) => b.fail - a.fail)
+          .slice(0, 5);
+        return `<div style="margin-bottom:14px;border:1px solid var(--border);border-radius:12px;overflow:hidden;background:#fff;">
+          <div style="padding:14px 16px;background:linear-gradient(135deg, ${headColor}, ${headColor}cc);color:#fff;">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+              <div style="flex:1;min-width:0;">
+                <div style="font-weight:900;font-size:15px;line-height:1.3;margin-bottom:4px;">${escapeHtml(cat.section)}</div>
+                <div style="font-size:12.5px;opacity:0.95;font-weight:600;">ตก ${cat.fail} / ${cat.total} ข้อย่อย · อัตราตกในหมวด ${catFailRatePct.toFixed(1)}%</div>
+              </div>
+              <div style="text-align:right;flex:none;">
+                <div style="font-size:24px;font-weight:900;line-height:1;">${catSharePct.toFixed(1)}%</div>
+                <div style="font-size:10.5px;opacity:0.85;margin-top:2px;">ของยอดตกทั้งหมด</div>
+              </div>
+            </div>
           </div>
-          <div class="jd-dash-row-value is-bad">${pct.toFixed(1)}%</div>
+          ${items.length ? `<div style="padding:10px 14px 12px;">
+            ${items.map((it, i) => {
+              const itPct = it.total > 0 ? (it.fail / it.total * 100) : 0;
+              const cls = itPct >= 50 ? 'bad' : (itPct >= 25 ? 'warn' : '');
+              return `<div class="jd-dash-row" style="padding:8px 0;border-bottom:1px dashed var(--border);">
+                <div>
+                  <div class="jd-dash-row-name" style="font-size:13px;">${i+1}. ${escapeHtml(it.text)}</div>
+                  <div class="jd-dash-row-meta">ตก ${it.fail} / ${it.total} ครั้ง</div>
+                  <div class="jd-dash-bar"><div class="jd-dash-bar-fill ${cls}" style="width:${Math.min(100, itPct)}%"></div></div>
+                </div>
+                <div class="jd-dash-row-value is-bad">${itPct.toFixed(1)}%</div>
+              </div>`;
+            }).join('')}
+          </div>` : ''}
         </div>`;
       }).join('');
 
