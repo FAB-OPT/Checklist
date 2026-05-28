@@ -6206,6 +6206,13 @@ function _populateTopFailFilters(completed) {
   const zoneSel = document.getElementById('tf-filter-zone');
   const branchSel = document.getElementById('tf-filter-branch');
   if (!zoneSel || !branchSel) return;
+  // BZM เห็นแค่โซนตัวเอง → ซ่อน dropdown โซน
+  if (currentUser && currentUser.role === 'bzm') {
+    zoneSel.style.display = 'none';
+    zoneSel.value = '';
+  } else {
+    zoneSel.style.display = '';
+  }
   // โซน = BZM ที่มีใน completed
   const zones = [...new Set(completed.map(a => a.branchInfo && a.branchInfo.bzm).filter(Boolean))].sort();
   const curZone = zoneSel.value;
@@ -7858,6 +7865,13 @@ function _populateJdTopFailFilters() {
   const zoneSel = document.getElementById('jd-tf-zone');
   const branchSel = document.getElementById('jd-tf-branch');
   if (!zoneSel || !branchSel) return;
+  // BZM เห็นแค่โซนตัวเอง → ซ่อน dropdown โซน
+  if (currentUser && currentUser.role === 'bzm') {
+    zoneSel.style.display = 'none';
+    zoneSel.value = '';
+  } else {
+    zoneSel.style.display = '';
+  }
   const zones = [...new Set(_jdTfRecords.map(r => r.bzmNick || r.bzm).filter(Boolean))].sort();
   const curZone = zoneSel.value;
   zoneSel.innerHTML = '<option value="">ทุกโซน (BZM)</option>' +
