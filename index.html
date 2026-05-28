@@ -1078,6 +1078,15 @@ body.test-mode-on { box-shadow: inset 0 0 0 3px #F59E0B; }
 .jd-form-head .jd-form-head-row + .jd-form-head-row {
   border-top: 1px dashed var(--border);
 }
+/* 2 คอลัมน์ — สาขา|ผู้ตรวจ · วันที่|เวลา */
+.jd-form-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.jd-form-grid2 .jd-form-head-row { border-top: none; grid-template-columns: 1fr; gap: 4px; align-items: stretch; }
+.jd-form-grid2 + .jd-form-grid2,
+.jd-form-grid2 + .jd-form-head-row,
+.jd-form-head-row + .jd-form-grid2 { border-top: 1px dashed var(--border); padding-top: 10px; margin-top: 4px; }
+@media (max-width: 560px) {
+  .jd-form-grid2 { grid-template-columns: 1fr; gap: 8px; }
+}
 .jd-form-label {
   font-size: 11px; font-weight: 800;
   color: var(--text-secondary);
@@ -4968,27 +4977,31 @@ html.fab-sso-pending #login-screen { display: none !important; }
     <!-- JAE DAENG AUDIT FORM -->
     <div id="jaedaeng-audit-screen" style="display:none;">
       <div class="card jd-form-head">
-        <div class="jd-form-head-row">
-          <label class="jd-form-label">สาขา <span class="req">*</span></label>
-          <select id="jd-store-name" class="jd-form-input" onchange="setJDStore('store', this.value)">
-            <option value="">— เลือกสาขา —</option>
-          </select>
+        <div class="jd-form-grid2">
+          <div class="jd-form-head-row">
+            <label class="jd-form-label">สาขา <span class="req">*</span></label>
+            <select id="jd-store-name" class="jd-form-input" onchange="setJDStore('store', this.value)">
+              <option value="">— เลือกสาขา —</option>
+            </select>
+          </div>
+          <div class="jd-form-head-row">
+            <label class="jd-form-label">ผู้ตรวจ</label>
+            <div class="jd-form-static" id="jd-auditor-display">—</div>
+          </div>
         </div>
         <div class="jd-form-head-row" id="jd-bzm-row" style="display:none;">
           <label class="jd-form-label">ทีม BZM</label>
           <div class="jd-form-static" id="jd-bzm-display">—</div>
         </div>
-        <div class="jd-form-head-row">
-          <label class="jd-form-label">ผู้ตรวจ</label>
-          <div class="jd-form-static" id="jd-auditor-display">—</div>
-        </div>
-        <div class="jd-form-head-row">
-          <label class="jd-form-label">วันที่ตรวจ <span class="req">*</span></label>
-          <input type="date" id="jd-date" class="jd-form-input" onchange="setJDStore('date', this.value)">
-        </div>
-        <div class="jd-form-head-row">
-          <label class="jd-form-label">เวลาที่ตรวจ <span class="req">*</span></label>
-          <input type="time" id="jd-time" class="jd-form-input" onchange="setJDStore('time', this.value)">
+        <div class="jd-form-grid2">
+          <div class="jd-form-head-row">
+            <label class="jd-form-label">วันที่ตรวจ</label>
+            <div class="jd-form-static" id="jd-date-display">—</div>
+          </div>
+          <div class="jd-form-head-row">
+            <label class="jd-form-label">เวลาที่ตรวจ</label>
+            <div class="jd-form-static" id="jd-time-display">—</div>
+          </div>
         </div>
         <div class="jd-form-head-row" id="jd-gps-row" style="display:none;">
           <label class="jd-form-label">ตำแหน่ง GPS</label>
@@ -7859,11 +7872,10 @@ function setupJaedaengDashDateChips() {
   const host = document.getElementById('jd-dash-date-chips');
   if (!host) return;
   const opts = [
-    { key: 'all',    label: 'ทั้งหมด' },
-    { key: '7',      label: '7 วัน' },
-    { key: '30',     label: '30 วัน' },
-    { key: '90',     label: '90 วัน' },
+    { key: 'today',  label: 'วันนี้' },
+    { key: 'week',   label: 'อาทิตย์นี้' },
     { key: 'month',  label: 'เดือนนี้' },
+    { key: 'all',    label: 'ทั้งหมด' },
     { key: 'custom', label: 'กำหนดเอง' },
   ];
   let html = opts.map(o =>
@@ -7900,9 +7912,13 @@ function applyJaedaengDateFilter(records) {
   const today = new Date();
   today.setHours(23, 59, 59, 999);
   let fromDate, toDate = today;
-  if (jdDashDate.type === '7' || jdDashDate.type === '30' || jdDashDate.type === '90') {
+  if (jdDashDate.type === 'today') {
+    fromDate = new Date(today); fromDate.setHours(0, 0, 0, 0);
+  } else if (jdDashDate.type === 'week') {
+    // อาทิตย์นี้ — เริ่มวันจันทร์
     fromDate = new Date(today);
-    fromDate.setDate(fromDate.getDate() - parseInt(jdDashDate.type, 10) + 1);
+    const dow = (fromDate.getDay() + 6) % 7; // จันทร์=0
+    fromDate.setDate(fromDate.getDate() - dow);
     fromDate.setHours(0, 0, 0, 0);
   } else if (jdDashDate.type === 'month') {
     fromDate = new Date(today.getFullYear(), today.getMonth(), 1);
@@ -8031,23 +8047,25 @@ function _scoreDetailZone(records) {
     }).join('');
 }
 
-/* รายละเอียดต่อสาขา — ข้อที่ตก (ข้อความ · หมวด · ครั้งที่ตรวจ) */
+/* รายละเอียดต่อสาขา — แต่ละครั้งที่ตรวจ (วันที่ · ผ่านกี่ข้อ · ตกกี่ข้อ) */
 function _scoreDetailBranch(records) {
-  const fails = [];
-  records.forEach(r => (r.items||[]).forEach(it => {
-    if (it && it.status === 'fail') fails.push({ text: it.text, section: it.section||'-', date: r.date });
-  }));
-  if (!fails.length) {
-    return '<div class="score-detail-item"><span class="material-symbols-rounded sd-icon ok">check_circle</span><div class="score-detail-name">ผ่านทุกข้อ ไม่มีข้อที่ตก</div></div>';
-  }
-  return '<div class="score-detail-head">ข้อที่ไม่ผ่าน ('+fails.length+')</div>' +
-    fails.map((f, i) => `<div class="score-detail-item">
-      <span class="material-symbols-rounded sd-icon fail">error</span>
-      <div style="flex:1;min-width:0;">
-        <div class="score-detail-name">${i+1}. ${escapeHtml(f.text)}</div>
-        <div class="score-detail-sub">หมวด ${escapeHtml(f.section)}${f.date?' · '+escapeHtml(fmtDateDMY(f.date)):''}</div>
-      </div>
-    </div>`).join('');
+  const sorted = records.slice().sort((a,b) => (b.date||'').localeCompare(a.date||''));
+  return '<div class="score-detail-head">ครั้งที่ตรวจ</div>' +
+    sorted.map(r => {
+      const items = r.items || [];
+      const pass = items.filter(it => it && it.status === 'pass').length;
+      const fail = items.filter(it => it && it.status === 'fail').length;
+      const pct = r.passPct || 0;
+      const valColor = pct >= 90 ? 'var(--success)' : pct < 70 ? 'var(--danger)' : '#B45309';
+      return `<div class="score-detail-item">
+        <span class="material-symbols-rounded sd-icon ${fail>0?'fail':'ok'}">${fail>0?'error':'check_circle'}</span>
+        <div style="flex:1;min-width:0;">
+          <div class="score-detail-name">${escapeHtml(fmtDateDMY(r.date))}${r.time?' · '+escapeHtml(r.time):''}</div>
+          <div class="score-detail-sub">ผ่าน ${pass} ข้อ · ตก ${fail} ข้อ</div>
+        </div>
+        <span class="score-detail-val" style="color:${valColor};">${pct.toFixed(1)}%</span>
+      </div>`;
+    }).join('');
 }
 
 /* การ์ดคะแนนเฉลี่ย (โซน/สาขา) — UX ใหม่ · nameHtml = HTML escape แล้ว · records = ใช้สร้าง detail */
@@ -8457,8 +8475,9 @@ function _startJaedaengAuditWithGps(gps) {
   select.innerHTML = opts;
   select.value = '';
   document.getElementById('jd-auditor-display').textContent = currentJDAudit.auditor || '-';
-  document.getElementById('jd-date').value = today;
-  document.getElementById('jd-time').value = hhmm;
+  // วันที่/เวลา — static (auto = ตอนเริ่มตรวจ) แก้ไขไม่ได้
+  document.getElementById('jd-date-display').textContent = fmtDateDMY(currentJDAudit.date || today);
+  document.getElementById('jd-time-display').textContent = (currentJDAudit.time || hhmm) + ' น.';
   document.getElementById('jd-bzm-row').style.display = 'none';
   const gpsRow = document.getElementById('jd-gps-row');
   const gpsDisp = document.getElementById('jd-gps-display');
@@ -8622,6 +8641,7 @@ function renderJaedaengForm() {
           </button>
         </div>
         ${isFail ? `<input type="text" class="jd-note-input" placeholder="หมายเหตุ / Action" value="${escapeAttr(it.note || '')}" oninput="setJDNote(${idx}, this.value)">` : ''}
+        ${isNA ? `<input type="text" class="jd-note-input${(it.note||'').trim()?'':' is-required'}" placeholder="ระบุเหตุผลที่ N/A (จำเป็น)" value="${escapeAttr(it.note || '')}" oninput="setJDNote(${idx}, this.value)">` : ''}
         ${photosHtml}
       </div>`;
     });
@@ -8931,6 +8951,14 @@ async function submitJaedaengAudit() {
   );
   if (failsWithoutPhoto.length > 0) {
     showModal('ข้อไม่ผ่านต้องแนบรูป', `มี ${failsWithoutPhoto.length} ข้อที่ตอบ "ไม่ผ่าน" แต่ยังไม่ได้แนบรูปหลักฐาน — ถ่ายรูปก่อนแล้วบันทึก`);
+    return;
+  }
+  // ทุกข้อที่ตอบ N/A ต้องระบุเหตุผล
+  const naWithoutReason = currentJDAudit.items.filter(it =>
+    it.status === 'na' && (!it.note || !it.note.trim())
+  );
+  if (naWithoutReason.length > 0) {
+    showModal('N/A ต้องระบุเหตุผล', `มี ${naWithoutReason.length} ข้อที่ตอบ "N/A" แต่ยังไม่ได้ระบุเหตุผล — กรอกเหตุผลก่อนบันทึก`);
     return;
   }
   const items = currentJDAudit.items;
