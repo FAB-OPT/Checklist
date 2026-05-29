@@ -5627,10 +5627,20 @@ function jdHaversineMeters(lat1, lng1, lat2, lng2) {
   return 2 * R * Math.asin(Math.sqrt(a));
 }
 
+// ใช้ JAEDAENG_BRANCHES (ฝัง lat/lng) เป็นแหล่งเดียว → ตรงกับ jdDistanceFromGpsToBranch
+// fallback ไป JAEDAENG_LOCATIONS เฉพาะกรณี JAEDAENG_BRANCHES ยังไม่โหลด/ว่าง (เผื่อ legacy)
+function _jdAllCoords() {
+  const src = (Array.isArray(JAEDAENG_BRANCHES) && JAEDAENG_BRANCHES.length)
+    ? JAEDAENG_BRANCHES.filter(b => b && b.lat != null && b.lng != null && !isNaN(b.lat) && !isNaN(b.lng))
+    : [];
+  if (src.length) return src;
+  return JAEDAENG_LOCATIONS;
+}
+
 function findNearestJaedaengBranch(lat, lng) {
   if (lat == null || lng == null) return null;
   let best = null;
-  for (const b of JAEDAENG_LOCATIONS) {
+  for (const b of _jdAllCoords()) {
     const m = jdHaversineMeters(lat, lng, b.lat, b.lng);
     if (!best || m < best.distance) best = { name: b.name, lat: b.lat, lng: b.lng, distance: m };
   }
@@ -5641,7 +5651,7 @@ function findNearestJaedaengBranch(lat, lng) {
 function findJaedaengBranchesWithinRadius(lat, lng, radiusM) {
   if (lat == null || lng == null) return [];
   const out = [];
-  for (const b of JAEDAENG_LOCATIONS) {
+  for (const b of _jdAllCoords()) {
     const m = jdHaversineMeters(lat, lng, b.lat, b.lng);
     if (m <= radiusM) out.push({ name: b.name, distance: m });
   }
