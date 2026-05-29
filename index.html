@@ -8871,12 +8871,19 @@ function setJDStore(field, value) {
     }
     // Warn if the selected branch is not within 500m of the captured GPS.
     const g = currentJDAudit.gps;
-    if (value && g && Array.isArray(g.nearby500)) {
-      const within = g.nearby500.some(b => jdBranchMatchesLocation(value, b.name));
+    if (value && g && g.lat != null && g.lng != null) {
+      // หาพิกัดของสาขาที่ผู้ใช้เลือก (fuzzy match กับ JAEDAENG_LOCATIONS)
+      const selectedLoc = JAEDAENG_LOCATIONS.find(b => jdBranchMatchesLocation(value, b.name));
+      const within = Array.isArray(g.nearby500) && g.nearby500.some(b => jdBranchMatchesLocation(value, b.name));
       if (!within) {
-        const distTxt = g.nearestBranch
-          ? `GPS ห่าง <b>${fmtDistance(g.nearestDistance)}</b>`
-          : 'GPS อยู่นอกรัศมีสาขา';
+        let distTxt;
+        if (selectedLoc) {
+          // คำนวณระยะจาก GPS → สาขาที่เลือก (ของจริง)
+          const distM = Math.round(jdHaversineMeters(g.lat, g.lng, selectedLoc.lat, selectedLoc.lng));
+          distTxt = `ห่างจากสาขา <b>${escapeHtml(value)}</b> <b>${fmtDistance(distM)}</b>`;
+        } else {
+          distTxt = 'ไม่พบพิกัดของสาขานี้ในระบบ';
+        }
         showModalHtml('ตำแหน่งไม่ตรงกับสาขา', `<div class="modal-warn-body">
           <div class="modal-warn-icon"><span class="material-symbols-rounded">wrong_location</span></div>
           <div class="modal-warn-dist">${distTxt}</div>
