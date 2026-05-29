@@ -5873,6 +5873,7 @@ function removeJdPendingId(id) { if (!id) return; const s = loadJdPendingIds(); 
 
 /* รวม remote (source of truth) + เฉพาะ pending ของเครื่องนี้ที่ยังไม่ขึ้น cloud */
 function _mergeJaedaeng(remote, local) {
+  remote = (remote || []).filter(r => !_isJdConfigDoc(r)); // ตัด doc พิเศษ (เช่น flag โหมดทดสอบ) ออก
   const deleted = loadJdDeletedIds();
   const pending = loadJdPendingIds();
   const remoteIds = new Set(remote.map(r => r.id));
@@ -5923,11 +5924,31 @@ function _rerenderJaedaengIfVisible() {
   if (dash && dash.style.display !== 'none') renderJaedaengDashboard();
   else if (hub && hub.style.display !== 'none') renderJaedaengList();
 }
+// เก็บ flag โหมดทดสอบเป็น doc พิเศษในคอลเลกชันเดิม (ใช้ rules ที่อนุญาตอยู่แล้ว)
+const JD_TESTMODE_ID = '__config_testmode__';
+function _isJdConfigDoc(r) { return !r || !r.id || r.id === JD_TESTMODE_ID || r.__config; }
+
 function startJaedaengRealtime() {
   if (!firebaseDb || _jdUnsub) return;
   try {
     _jdUnsub = firebaseDb.collection(JAEDAENG_COLLECTION).onSnapshot(function(snap){
-      const remote = snap.docs.map(d => d.data());
+      let cfgOn = null;
+      const remote = [];
+      snap.docs.forEach(function(d){
+        if (d.id === JD_TESTMODE_ID) { const v = d.data() || {}; cfgOn = !!v.on; return; }
+        remote.push(d.data());
+      });
+      // sync โหมดทดสอบจาก cloud
+      if (cfgOn !== null) {
+        const wasOn = testMode;
+        _applyTestMode(cfgOn);
+        if (wasOn && !cfgOn && currentUser) {
+          currentAudit = null; currentDaily = null; currentJDAudit = null;
+          Promise.all([loadAudits(), loadDailyChecklists(), loadJaedaengAudits()])
+            .then(() => { if (currentUser) routeByRole(); }).catch(()=>{});
+          return;
+        }
+      }
       const local = loadLocalJaedaeng();
       const m = _mergeJaedaeng(remote, local);
       allJaedaengAudits = m.merged;
@@ -5937,37 +5958,17 @@ function startJaedaengRealtime() {
   } catch (e) { console.warn('startJaedaengRealtime failed', e); }
 }
 
-/* ─── Test mode แบบ cloud (ซิงค์ทุกเครื่อง · admin เปิด/ปิด · system-wide) ─── */
-const JD_TESTMODE_DOC = ['appConfig', 'jdTestMode'];
 function _applyTestMode(on) {
   testMode = !!on;
   document.body.classList.toggle('test-mode-on', testMode);
   const b = document.getElementById('test-mode-banner');
   if (b) b.style.display = testMode ? 'flex' : 'none';
-  try { testMode ? sessionStorage.setItem('qa_testmode','1') : sessionStorage.removeItem('qa_testmode'); } catch(e){}
   updateTestModeToggle();
-}
-function startTestModeRealtime() {
-  if (!firebaseDb) return;
-  try {
-    firebaseDb.collection(JD_TESTMODE_DOC[0]).doc(JD_TESTMODE_DOC[1]).onSnapshot(function(doc){
-      const on = !!(doc && doc.exists && doc.data() && doc.data().on);
-      const wasOn = testMode;
-      _applyTestMode(on);
-      // ถ้าเพิ่งถูกปิดจากเครื่องอื่น → โหลดข้อมูลจริงกลับ
-      if (wasOn && !on && currentUser) {
-        currentAudit = null; currentDaily = null; currentJDAudit = null;
-        Promise.all([loadAudits(), loadDailyChecklists(), loadJaedaengAudits()])
-          .then(() => { if (currentUser) routeByRole(); }).catch(()=>{});
-      }
-    }, function(err){ console.warn('testmode realtime error', err); });
-  } catch (e) { console.warn('startTestModeRealtime failed', e); }
 }
 function initRealtimeSync() {
   if (_jdRealtimeStarted) return;
   _jdRealtimeStarted = true;
   startJaedaengRealtime();
-  startTestModeRealtime();
 }
 
 async function loadJaedaengAudits() {
@@ -6303,6 +6304,8 @@ function logout() {
     sessionStorage.removeItem('fab_branch_name');
     sessionStorage.removeItem('qa_testmode');
   } catch (_) {}
+  // ล้าง cache ผลตรวจ — login ใหม่จะโหลดสดจาก cloud (กันเห็น record ที่ถูกลบไปแล้วกระพริบ)
+  try { localStorage.removeItem(JAEDAENG_STORAGE_KEY); } catch (_) {}
   // กลับ Hub → ต้อง login ใหม่ทั้งหมด (?logout=1 บอก Hub ว่ามาจากการ logout)
   var hubUrl = (location.protocol === 'file:')
     ? '../fab-operations-hub/index.html?logout=1'
@@ -6339,18 +6342,16 @@ async function toggleTestMode() {
     ? await showConfirm('เปิดโหมดทดสอบ?', 'ข้อมูลที่บันทึกระหว่างทดสอบจะไม่ถูกเก็บ · ทุกเครื่องจะเข้าโหมดทดสอบพร้อมกัน', { okLabel: 'เปิดโหมดทดสอบ', cancelLabel: 'ยกเลิก' })
     : await showConfirm('ปิดโหมดทดสอบ?', 'ข้อมูลที่กรอกตอนทดสอบจะถูกลบทั้งหมด', { okLabel: 'ปิดโหมดทดสอบ', cancelLabel: 'ยกเลิก', danger: true });
   if (!ok) return;
-  // เขียนสถานะลง cloud (bypass testMode guard) — listener จะ apply ให้ทุกเครื่อง
+  // เขียน flag เป็น doc พิเศษในคอลเลกชัน jaedaengAudits (rules เดิมอนุญาต) — listener apply ทุกเครื่อง
   if (firebaseDb) {
     try {
-      await firebaseDb.collection(JD_TESTMODE_DOC[0]).doc(JD_TESTMODE_DOC[1])
-        .set({ on: turningOn, by: (currentUser && (currentUser.nick || currentUser.name)) || '', at: new Date().toISOString() });
+      await firebaseDb.collection(JAEDAENG_COLLECTION).doc(JD_TESTMODE_ID)
+        .set({ __config: 'testmode', on: turningOn, by: (currentUser && (currentUser.nick || currentUser.name)) || '', at: new Date().toISOString() });
     } catch (e) {
       console.warn('write testmode failed', e);
-      showModal('ตั้งค่าโหมดทดสอบไม่สำเร็จ', 'เชื่อมต่อ cloud ไม่ได้ — ลองอีกครั้ง');
-      return;
+      _applyTestMode(turningOn);  // เขียน cloud ไม่ได้ → อย่างน้อยทำงานเฉพาะเครื่อง
     }
   } else {
-    // ไม่มี cloud → ทำงานเฉพาะเครื่อง
     _applyTestMode(turningOn);
   }
   // ถ้าปิด → โหลดข้อมูลจริงกลับ (กันข้อมูลทดสอบค้าง)
@@ -8392,14 +8393,11 @@ function onJdTopFailZoneChange() {
 function renderJaedaengTopFails() {
   const topFailsEl = document.getElementById('jd-dash-top-fails');
   if (!topFailsEl) return;
-  _populateJdTopFailFilters();
-  const fZone = (document.getElementById('jd-tf-zone') || {}).value || '';
-  const fBranch = (document.getElementById('jd-tf-branch') || {}).value || '';
-  const records = _jdTfRecords.filter(r => {
-    if (fZone && (r.bzmNick || r.bzm) !== fZone) return false;
-    if (fBranch && r.storeName !== fBranch) return false;
-    return true;
-  });
+  // ซ่อน dropdown ในการ์ดนี้ — ใช้ตัวกรองด้านบนสุดของแดชบอร์ดแทน
+  const _ff = document.getElementById('jd-tf-filter');
+  if (_ff) _ff.style.display = 'none';
+  // ใช้ _jdTfRecords ที่ถูกกรองตาม scope บนสุดแล้ว
+  const records = _jdTfRecords;
   if (!records.length) {
     topFailsEl.innerHTML = '<div class="jd-dash-empty">ยังไม่มีข้อมูลในขอบเขตที่เลือก</div>';
     return;
