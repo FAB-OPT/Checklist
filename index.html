@@ -1272,6 +1272,15 @@ input[type="time"].jd-form-input {
 .jd-item.is-required-photo .jd-item-num {
   background: var(--warning); color: white;
 }
+/* ไฮไลต์ชั่วคราวเมื่อ scroll มาที่ข้อที่ขาด */
+.jd-item.is-flash {
+  animation: jd-flash 2.2s ease-out;
+}
+@keyframes jd-flash {
+  0%   { background: rgba(220,38,38,0.25); box-shadow: 0 0 0 3px rgba(220,38,38,0.45); }
+  60%  { background: rgba(220,38,38,0.10); box-shadow: 0 0 0 2px rgba(220,38,38,0.20); }
+  100% { background: transparent; box-shadow: 0 0 0 0 transparent; }
+}
 .jd-photo-section {
   margin-top: 10px;
   background: transparent;
@@ -9032,7 +9041,7 @@ function renderJaedaengForm() {
           '</div>' : '') +
           '</div>';
       }
-      html += `<div class="jd-item ${isPass ? 'is-pass' : ''} ${isFail ? 'is-fail' : ''} ${isNA ? 'is-na' : ''} ${isRequired ? 'is-required-photo' : ''}">
+      html += `<div class="jd-item ${isPass ? 'is-pass' : ''} ${isFail ? 'is-fail' : ''} ${isNA ? 'is-na' : ''} ${isRequired ? 'is-required-photo' : ''}" id="jd-item-${idx}">
         <div class="jd-item-q">
           <span class="jd-item-num">${j + 1}</span>
           <span class="jd-item-text">${escapeHtml(it.text)}</span>
@@ -9083,6 +9092,33 @@ function scrollToJDSection(sIdx) {
   const headerOffset = 80;
   const top = el.getBoundingClientRect().top + window.scrollY - headerOffset;
   window.scrollTo({ top, behavior: 'smooth' });
+}
+
+// เด่งไปข้อที่ระบุ + ไฮไลต์ชั่วคราว
+function scrollToJDItem(idx) {
+  const el = document.getElementById(`jd-item-${idx}`);
+  if (!el) return;
+  const headerOffset = 90;
+  const top = el.getBoundingClientRect().top + window.scrollY - headerOffset;
+  window.scrollTo({ top, behavior: 'smooth' });
+  el.classList.remove('is-flash');
+  // restart animation
+  void el.offsetWidth;
+  el.classList.add('is-flash');
+  setTimeout(() => el.classList.remove('is-flash'), 2200);
+  // focus input ถ้ามี (note input)
+  setTimeout(() => {
+    const inp = el.querySelector('.jd-note-input');
+    if (inp) inp.focus();
+  }, 350);
+}
+
+// ผูก one-shot callback ให้ปุ่ม "ตกลง" ของ modal — ทำงานครั้งเดียวแล้วลบทิ้ง
+function _onModalOkOnce(fn) {
+  const btn = document.getElementById('modal-ok');
+  if (!btn) return;
+  const handler = () => { btn.removeEventListener('click', handler); try { fn(); } catch(e){} };
+  btn.addEventListener('click', handler);
 }
 
 function setJDAnswer(idx, value) {
@@ -9350,7 +9386,8 @@ async function submitJaedaengAudit() {
     return !it || !it.status;
   });
   if (reqNoStatus.length > 0) {
-    showModal('ข้อหลักฐานต้องตรวจก่อน', `มี ${reqNoStatus.length} ข้อที่ต้องถ่ายรูปหลักฐาน แต่ยังไม่ได้เลือกผล (ผ่าน/ไม่ผ่าน/N/A)`);
+    showModal('ข้อหลักฐานต้องตรวจก่อน', `มี ${reqNoStatus.length} ข้อที่ต้องถ่ายรูปหลักฐาน แต่ยังไม่ได้เลือกผล — กดตกลงเพื่อไปข้อนั้น`);
+    _onModalOkOnce(() => scrollToJDItem(reqNoStatus[0]));
     return;
   }
   // Required-photo items must have at least one photo attached
@@ -9359,15 +9396,20 @@ async function submitJaedaengAudit() {
     return !it || !it.photos || it.photos.length === 0;
   });
   if (missing.length > 0) {
-    showModal('ยังขาดรูปหลักฐาน', `มี ${missing.length} ข้อที่ต้องแนบรูปแต่ยังไม่ได้แนบ`);
+    showModal('ยังขาดรูปหลักฐาน', `มี ${missing.length} ข้อที่ต้องแนบรูปแต่ยังไม่ได้แนบ — กดตกลงเพื่อไปข้อนั้น`);
+    _onModalOkOnce(() => scrollToJDItem(missing[0]));
     return;
   }
   // Every "fail" item must have at least one photo
+  const failsWithoutPhotoIdx = currentJDAudit.items.findIndex(it =>
+    it.status === 'fail' && (!it.photos || it.photos.length === 0)
+  );
   const failsWithoutPhoto = currentJDAudit.items.filter(it =>
     it.status === 'fail' && (!it.photos || it.photos.length === 0)
   );
   if (failsWithoutPhoto.length > 0) {
-    showModal('ข้อไม่ผ่านต้องแนบรูป', `มี ${failsWithoutPhoto.length} ข้อที่ตอบ "ไม่ผ่าน" แต่ยังไม่ได้แนบรูปหลักฐาน — ถ่ายรูปก่อนแล้วบันทึก`);
+    showModal('ข้อไม่ผ่านต้องแนบรูป', `มี ${failsWithoutPhoto.length} ข้อที่ตอบ "ไม่ผ่าน" แต่ยังไม่ได้แนบรูปหลักฐาน — กดตกลงเพื่อไปข้อนั้น`);
+    _onModalOkOnce(() => scrollToJDItem(failsWithoutPhotoIdx));
     return;
   }
   // ทุกข้อที่ตอบ "ไม่ผ่าน" ต้องระบุหมายเหตุ
@@ -9378,12 +9420,24 @@ async function submitJaedaengAudit() {
     showModal('ข้อไม่ผ่านต้องระบุหมายเหตุ', `มี ${failsWithoutNote.length} ข้อที่ตอบ "ไม่ผ่าน" แต่ยังไม่ได้ระบุหมายเหตุ — กรอกหมายเหตุก่อนบันทึก`);
     return;
   }
-  // ทุกข้อที่ตอบ N/A ต้องระบุเหตุผล
-  const naWithoutReason = currentJDAudit.items.filter(it =>
+  // ทุกข้อที่ตอบ N/A ต้องระบุเหตุผล — เด่งไปข้อแรกที่ขาด
+  const naFirstIdx = currentJDAudit.items.findIndex(it =>
     it.status === 'na' && (!it.note || !it.note.trim())
   );
-  if (naWithoutReason.length > 0) {
-    showModal('N/A ต้องระบุเหตุผล', `มี ${naWithoutReason.length} ข้อที่ตอบ "N/A" แต่ยังไม่ได้ระบุเหตุผล — กรอกเหตุผลก่อนบันทึก`);
+  if (naFirstIdx >= 0) {
+    const naCount = currentJDAudit.items.filter(it => it.status === 'na' && (!it.note || !it.note.trim())).length;
+    showModal('N/A ต้องระบุเหตุผล', `มี ${naCount} ข้อที่ตอบ "N/A" แต่ยังไม่ได้ระบุเหตุผล — กดตกลงเพื่อไปข้อนั้น`);
+    _onModalOkOnce(() => scrollToJDItem(naFirstIdx));
+    return;
+  }
+  // ทุกข้อที่ตอบ "ไม่ผ่าน" ต้องระบุหมายเหตุด้วย
+  const failFirstIdx = currentJDAudit.items.findIndex(it =>
+    it.status === 'fail' && (!it.note || !it.note.trim())
+  );
+  if (failFirstIdx >= 0) {
+    const failCount = currentJDAudit.items.filter(it => it.status === 'fail' && (!it.note || !it.note.trim())).length;
+    showModal('ระบุหมายเหตุ', `มี ${failCount} ข้อที่ตอบ "ไม่ผ่าน" แต่ยังไม่ได้ระบุหมายเหตุ — กดตกลงเพื่อไปข้อนั้น`);
+    _onModalOkOnce(() => scrollToJDItem(failFirstIdx));
     return;
   }
   const items = currentJDAudit.items;
@@ -9394,7 +9448,9 @@ async function submitJaedaengAudit() {
   const pending = totalCount - passCount - failCount - naCount;
   if (pending > 0) {
     // บังคับต้องตอบทุกข้อ — บันทึกไม่ได้ถ้ายังไม่ครบ
-    showModal('ตอบไม่ครบทุกข้อ', `มี ${pending} ข้อที่ยังไม่ตอบ — ต้องตรวจให้ครบทุกข้อก่อนบันทึก (ผ่าน / ไม่ผ่าน / N/A)`);
+    const firstPendingIdx = items.findIndex(i => i.status !== 'pass' && i.status !== 'fail' && i.status !== 'na');
+    showModal('ตอบไม่ครบทุกข้อ', `มี ${pending} ข้อที่ยังไม่ตอบ — กดตกลงเพื่อไปข้อแรกที่ยังไม่ตอบ`);
+    _onModalOkOnce(() => scrollToJDItem(firstPendingIdx));
     return;
   }
   const denom = totalCount - naCount;
