@@ -152,7 +152,7 @@ body {
 .header-tool-btn { background: #facc15; color: #713f12; }
 .header-tool-btn .material-symbols-rounded { color: #713f12; }
 .header-tool-btn.is-on {
-  background: #dc2626;
+  background: #7c3aed;
   color: #fff;
 }
 .header-tool-btn.is-on .material-symbols-rounded { color: #fff; }
@@ -4308,10 +4308,10 @@ body:has(#login-screen.active) {
      แม้ tools ว่าง (non-admin) ก็ยังทำหน้าที่เป็น spacer ดันกลุ่มลง — ตำแหน่งคงที่ทุก role */
   .nav-tools {
     display: flex; flex-direction: column; gap: 8px;
-    order: 97; margin-top: auto;
+    order: 97; margin-top: auto; margin-bottom: 8px;  /* เว้นจากปุ่มกลับเมนูหลัก */
     padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.25);
   }
-  .nav-tools:empty { border-top: none; padding-top: 0; }
+  .nav-tools:empty { border-top: none; padding-top: 0; margin-bottom: 0; }
   /* สลับแบรนด์ — กล่องเต็มแถบ คอนทราสต์ชัด */
   .nav-tools .header-view-toggle {
     background: rgba(0,0,0,0.28); width: 100%; justify-content: center;
@@ -4336,7 +4336,7 @@ body:has(#login-screen.active) {
   }
   .nav-tools .test-mode-toggle .material-symbols-rounded { color: #713f12 !important; font-size: 22px; }
   .nav-tools .test-mode-toggle:hover { background: #eab308; }
-  .nav-tools .test-mode-toggle.is-on { background: #dc2626; color: #fff !important; border-color: #fff; }
+  .nav-tools .test-mode-toggle.is-on { background: #7c3aed; color: #fff !important; border-color: #fff; }
   .nav-tools .test-mode-toggle.is-on .material-symbols-rounded { color: #fff !important; }
   .nav-tools .test-mode-toggle .header-tool-label { display: inline !important; }
 }
@@ -5914,6 +5914,62 @@ async function pruneOldJaedaengPhotos() {
   if (touched) saveJaedaengLocal();
 }
 
+/* ─── Realtime sync (อัปเดตสด ไม่ต้องรีเฟรช) ─── */
+var _jdRealtimeStarted = false;
+var _jdUnsub = null;
+function _rerenderJaedaengIfVisible() {
+  const dash = document.getElementById('jaedaeng-dashboard-screen');
+  const hub = document.getElementById('jaedaeng-hub-screen');
+  if (dash && dash.style.display !== 'none') renderJaedaengDashboard();
+  else if (hub && hub.style.display !== 'none') renderJaedaengList();
+}
+function startJaedaengRealtime() {
+  if (!firebaseDb || _jdUnsub) return;
+  try {
+    _jdUnsub = firebaseDb.collection(JAEDAENG_COLLECTION).onSnapshot(function(snap){
+      const remote = snap.docs.map(d => d.data());
+      const local = loadLocalJaedaeng();
+      const m = _mergeJaedaeng(remote, local);
+      allJaedaengAudits = m.merged;
+      saveJaedaengLocal();
+      _rerenderJaedaengIfVisible();
+    }, function(err){ console.warn('JD realtime error', err); });
+  } catch (e) { console.warn('startJaedaengRealtime failed', e); }
+}
+
+/* ─── Test mode แบบ cloud (ซิงค์ทุกเครื่อง · admin เปิด/ปิด · system-wide) ─── */
+const JD_TESTMODE_DOC = ['appConfig', 'jdTestMode'];
+function _applyTestMode(on) {
+  testMode = !!on;
+  document.body.classList.toggle('test-mode-on', testMode);
+  const b = document.getElementById('test-mode-banner');
+  if (b) b.style.display = testMode ? 'flex' : 'none';
+  try { testMode ? sessionStorage.setItem('qa_testmode','1') : sessionStorage.removeItem('qa_testmode'); } catch(e){}
+  updateTestModeToggle();
+}
+function startTestModeRealtime() {
+  if (!firebaseDb) return;
+  try {
+    firebaseDb.collection(JD_TESTMODE_DOC[0]).doc(JD_TESTMODE_DOC[1]).onSnapshot(function(doc){
+      const on = !!(doc && doc.exists && doc.data() && doc.data().on);
+      const wasOn = testMode;
+      _applyTestMode(on);
+      // ถ้าเพิ่งถูกปิดจากเครื่องอื่น → โหลดข้อมูลจริงกลับ
+      if (wasOn && !on && currentUser) {
+        currentAudit = null; currentDaily = null; currentJDAudit = null;
+        Promise.all([loadAudits(), loadDailyChecklists(), loadJaedaengAudits()])
+          .then(() => { if (currentUser) routeByRole(); }).catch(()=>{});
+      }
+    }, function(err){ console.warn('testmode realtime error', err); });
+  } catch (e) { console.warn('startTestModeRealtime failed', e); }
+}
+function initRealtimeSync() {
+  if (_jdRealtimeStarted) return;
+  _jdRealtimeStarted = true;
+  startJaedaengRealtime();
+  startTestModeRealtime();
+}
+
 async function loadJaedaengAudits() {
   const local = loadLocalJaedaeng();
   if (firebaseDb) {
@@ -6278,32 +6334,30 @@ function routeByRole() {
 }
 
 async function toggleTestMode() {
-  if (!testMode) {
-    // Enter test mode — confirm with user
-    const ok = await showConfirm('เปิดโหมดทดสอบ?', 'ข้อมูลที่บันทึกระหว่างทดสอบจะไม่ถูกเก็บ<br>และจะหายไปทันทีที่ปิดโหมด', { okLabel: 'เปิดโหมดทดสอบ', cancelLabel: 'ยกเลิก' });
-    if (!ok) return;
-    testMode = true;
-    try { sessionStorage.setItem('qa_testmode', '1'); } catch (e) {}
-    document.body.classList.add('test-mode-on');
-    document.getElementById('test-mode-banner').style.display = 'flex';
-    updateTestModeToggle();
-  } else {
-    // Exit test mode — wipe in-memory test data by reloading from real storage
-    const ok = await showConfirm('ปิดโหมดทดสอบ?', 'ข้อมูลที่กรอกตอนทดสอบจะถูกลบทั้งหมด', { okLabel: 'ปิดโหมดทดสอบ', cancelLabel: 'ยกเลิก', danger: true });
-    if (!ok) return;
-    testMode = false;
-    try { sessionStorage.removeItem('qa_testmode'); } catch (e) {}
-    document.body.classList.remove('test-mode-on');
-    document.getElementById('test-mode-banner').style.display = 'none';
-    updateTestModeToggle();
-    // Refresh data from real storage; cancel any open form so test-only state doesn't leak
-    currentAudit = null;
-    currentDaily = null;
-    currentJDAudit = null;
-    if (currentUser) {
-      await Promise.all([loadAudits(), loadDailyChecklists(), loadJaedaengAudits()]);
-      routeByRole();
+  const turningOn = !testMode;
+  const ok = turningOn
+    ? await showConfirm('เปิดโหมดทดสอบ?', 'ข้อมูลที่บันทึกระหว่างทดสอบจะไม่ถูกเก็บ · ทุกเครื่องจะเข้าโหมดทดสอบพร้อมกัน', { okLabel: 'เปิดโหมดทดสอบ', cancelLabel: 'ยกเลิก' })
+    : await showConfirm('ปิดโหมดทดสอบ?', 'ข้อมูลที่กรอกตอนทดสอบจะถูกลบทั้งหมด', { okLabel: 'ปิดโหมดทดสอบ', cancelLabel: 'ยกเลิก', danger: true });
+  if (!ok) return;
+  // เขียนสถานะลง cloud (bypass testMode guard) — listener จะ apply ให้ทุกเครื่อง
+  if (firebaseDb) {
+    try {
+      await firebaseDb.collection(JD_TESTMODE_DOC[0]).doc(JD_TESTMODE_DOC[1])
+        .set({ on: turningOn, by: (currentUser && (currentUser.nick || currentUser.name)) || '', at: new Date().toISOString() });
+    } catch (e) {
+      console.warn('write testmode failed', e);
+      showModal('ตั้งค่าโหมดทดสอบไม่สำเร็จ', 'เชื่อมต่อ cloud ไม่ได้ — ลองอีกครั้ง');
+      return;
     }
+  } else {
+    // ไม่มี cloud → ทำงานเฉพาะเครื่อง
+    _applyTestMode(turningOn);
+  }
+  // ถ้าปิด → โหลดข้อมูลจริงกลับ (กันข้อมูลทดสอบค้าง)
+  if (!turningOn && currentUser) {
+    currentAudit = null; currentDaily = null; currentJDAudit = null;
+    await Promise.all([loadAudits(), loadDailyChecklists(), loadJaedaengAudits()]);
+    routeByRole();
   }
 }
 
@@ -6328,18 +6382,8 @@ function switchViewBrand(brand) {
 
 function renderBottomNav() {
   const nav = document.getElementById('bottom-nav');
-  // คืนค่าโหมดทดสอบหลังรีเฟรช (เก็บใน sessionStorage · เฉพาะ admin · ครั้งเดียว)
-  if (!_testModeRestored) {
-    _testModeRestored = true;
-    try {
-      if (sessionStorage.getItem('qa_testmode') === '1' && currentUser && currentUser.role === 'admin') {
-        testMode = true;
-        document.body.classList.add('test-mode-on');
-        const _b = document.getElementById('test-mode-banner');
-        if (_b) _b.style.display = 'flex';
-      }
-    } catch (e) {}
-  }
+  // เริ่ม realtime sync (ครั้งเดียวหลัง login) — อัปเดตข้อมูล+โหมดทดสอบสดทุกเครื่อง
+  initRealtimeSync();
   let html = '';
   const isBranch = currentUser.role === 'branch';
   // ชื่อ (ตำแหน่ง) — ตัดคำนำหน้า (นาย/นางสาว/นาง) ออก · branch ใช้ "รหัส ชื่อสาขา"
