@@ -6243,14 +6243,20 @@ function showUserMenu() {
 }
 
 function logout() {
-  clearFabSession();
+  clearFabSession();  // ลบ localStorage fab_session (SSO)
   currentUser = null;
   currentAudit = null;
-  // Redirect back to Hub (login screen) — single login point
-  // file:// → ../fab-operations-hub/index.html · http(s) → /fab-operations-hub/
+  // ลบ sessionStorage ของ Hub ด้วย (same-origin same-tab) — กัน Hub auto-เข้าเมนูโดยไม่ login
+  try {
+    sessionStorage.removeItem('fab_role');
+    sessionStorage.removeItem('fab_branch_pin');
+    sessionStorage.removeItem('fab_branch_name');
+    sessionStorage.removeItem('qa_testmode');
+  } catch (_) {}
+  // กลับ Hub → ต้อง login ใหม่ทั้งหมด (?logout=1 บอก Hub ว่ามาจากการ logout)
   var hubUrl = (location.protocol === 'file:')
-    ? '../fab-operations-hub/index.html'
-    : '/fab-operations-hub/';
+    ? '../fab-operations-hub/index.html?logout=1'
+    : '/fab-operations-hub/?logout=1';
   window.location.href = hubUrl;
 }
 
