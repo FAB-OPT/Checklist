@@ -111,6 +111,8 @@ body {
   flex-shrink: 0;
 }
 .header-tools:empty { display: none; }
+/* เครื่องมือใน sidebar — โชว์เฉพาะคอม (≥1024px) */
+.nav-tools { display: none; }
 .header-view-toggle {
   display: inline-flex; gap: 2px;
   padding: 3px;
@@ -4307,6 +4309,15 @@ body:has(#login-screen.active) {
   .bottom-nav .nav-logout-btn .material-symbols-rounded { color: #ffffff !important; }
   .bottom-nav .nav-logout-btn:hover { background: #b91c1c; color: #fff !important; }
   .bottom-nav .nav-logout-btn:hover .material-symbols-rounded { color: #fff !important; }
+  /* เครื่องมือใน sidebar (สลับแบรนด์ + โหมดทดสอบ) — โชว์บนคอม */
+  .nav-tools {
+    display: flex; flex-wrap: wrap; gap: 8px;
+    order: 50; margin-top: 14px;
+    padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.25);
+  }
+  .nav-tools:empty { display: none; }
+  .nav-tools .header-view-pill { color: rgba(255,255,255,0.85); }
+  .nav-tools .header-view-toggle { background: rgba(0,0,0,0.18); }
 }
 
 /* ============ DESKTOP LAYOUT (≥1024px) ============ */
@@ -6264,16 +6275,13 @@ async function toggleTestMode() {
 }
 
 function updateTestModeToggle() {
-  const btn = document.getElementById('test-mode-toggle');
-  const label = document.getElementById('test-mode-toggle-label');
-  if (!btn || !label) return;
-  if (testMode) {
-    btn.classList.add('is-on');
-    label.textContent = 'ปิดโหมดทดสอบ';
-  } else {
-    btn.classList.remove('is-on');
-    label.textContent = 'เปิดโหมดทดสอบ';
-  }
+  // มีได้ทั้งใน header (มือถือ) และ sidebar (คอม) → อัปเดตทุกตัว
+  document.querySelectorAll('.test-mode-toggle').forEach(btn => {
+    btn.classList.toggle('is-on', testMode);
+  });
+  document.querySelectorAll('.test-mode-toggle-label').forEach(lbl => {
+    lbl.textContent = testMode ? 'ปิดทดสอบ' : 'ทดสอบ';
+  });
 }
 
 function switchViewBrand(brand) {
@@ -6332,15 +6340,16 @@ function renderBottomNav() {
   }
   html += '<button class="bottom-nav-item nav-logout-btn" id="nav-logout" onclick="logout()"><span class="material-symbols-rounded">logout</span><span>ออกระบบ</span></button>';
   html += '</div>';
+  // เครื่องมือ (สลับแบรนด์ + โหมดทดสอบ) — โชว์ใน sidebar เฉพาะคอม
+  html += '<div class="nav-tools" id="nav-tools"></div>';
 
-  // Render the secondary tools (brand toggle + test mode) up in the header
-  renderHeaderTools(view);
   nav.innerHTML = html;
+  // ต้อง render หลัง innerHTML เพราะ #nav-tools เพิ่งถูกสร้าง
+  renderHeaderTools(view);
 }
 
-function renderHeaderTools(view) {
-  const host = document.getElementById('header-tools');
-  if (!host) return;
+// HTML ของเครื่องมือ (สลับแบรนด์ + โหมดทดสอบ) — ใช้ทั้งใน header (มือถือ) และ sidebar (คอม)
+function _toolsHtml(view) {
   let html = '';
   if (currentUser.crossBrand) {
     html += '<div class="header-view-toggle">' +
@@ -6349,12 +6358,18 @@ function renderHeaderTools(view) {
     '</div>';
   }
   if (currentUser.role === 'admin') {
-    html += `<button type="button" class="header-tool-btn ${testMode ? 'is-on' : ''}" id="test-mode-toggle" onclick="toggleTestMode()" title="โหมดทดสอบ" aria-label="โหมดทดสอบ">` +
+    html += `<button type="button" class="header-tool-btn test-mode-toggle ${testMode ? 'is-on' : ''}" onclick="toggleTestMode()" title="โหมดทดสอบ" aria-label="โหมดทดสอบ">` +
       '<span class="material-symbols-rounded">science</span>' +
-      `<span class="header-tool-label" id="test-mode-toggle-label">${testMode ? 'ปิดทดสอบ' : 'ทดสอบ'}</span>` +
+      `<span class="header-tool-label test-mode-toggle-label">${testMode ? 'ปิดทดสอบ' : 'ทดสอบ'}</span>` +
     '</button>';
   }
-  host.innerHTML = html;
+  return html;
+}
+function renderHeaderTools(view) {
+  const host = document.getElementById('header-tools');
+  if (host) host.innerHTML = _toolsHtml(view);          // มือถือ (ในแถบหัว)
+  const side = document.getElementById('nav-tools');
+  if (side) side.innerHTML = _toolsHtml(view);          // คอม (ใน sidebar)
 }
 
 function setActiveNav(id) {
