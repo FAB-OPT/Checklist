@@ -93,11 +93,14 @@ body {
 /* Mobile: ใช้ position:fixed บังคับให้ติดบนสุดเสมอ (sticky บางที iOS Safari มีปัญหา) */
 @media (max-width: 1023px) {
   .app-header {
-    position: fixed;
+    position: fixed !important;
     top: 0; left: 0; right: 0;
     width: 100%;
     padding: 10px 16px;
     padding-top: calc(10px + env(safe-area-inset-top));
+    -webkit-transform: translateZ(0);
+            transform: translateZ(0);
+    will-change: transform;
   }
   .app-header h1 { font-size: 14px; }
   .app-header .app-user-line { font-size: 11px; }
