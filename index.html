@@ -6342,11 +6342,20 @@ async function toggleTestMode() {
     ? await showConfirm('เปิดโหมดทดสอบ?', 'ข้อมูลที่บันทึกระหว่างทดสอบจะไม่ถูกเก็บ · ทุกเครื่องจะเข้าโหมดทดสอบพร้อมกัน', { okLabel: 'เปิดโหมดทดสอบ', cancelLabel: 'ยกเลิก' })
     : await showConfirm('ปิดโหมดทดสอบ?', 'ข้อมูลที่กรอกตอนทดสอบจะถูกลบทั้งหมด', { okLabel: 'ปิดโหมดทดสอบ', cancelLabel: 'ยกเลิก', danger: true });
   if (!ok) return;
-  // เขียน flag เป็น doc พิเศษในคอลเลกชัน jaedaengAudits (rules เดิมอนุญาต) — listener apply ทุกเครื่อง
+  // เขียน flag เป็น doc พิเศษในคอลเลกชัน jaedaengAudits — ใส่โครงสร้างครบเหมือน audit จริง
+  // เพื่อให้ผ่าน Firestore rules ที่อาจ validate ฟิลด์ · listener จะ apply ให้ทุกเครื่อง
   if (firebaseDb) {
     try {
-      await firebaseDb.collection(JAEDAENG_COLLECTION).doc(JD_TESTMODE_ID)
-        .set({ __config: 'testmode', on: turningOn, by: (currentUser && (currentUser.nick || currentUser.name)) || '', at: new Date().toISOString() });
+      await firebaseDb.collection(JAEDAENG_COLLECTION).doc(JD_TESTMODE_ID).set({
+        id: JD_TESTMODE_ID, __config: 'testmode', on: turningOn,
+        brand: 'jaedaeng', storeName: '__config__',
+        bzm: '', bzmNick: '', auditor: '', auditorCode: '',
+        date: '', time: '', gps: null, items: [], requiredPhotos: [],
+        passCount: 0, failCount: 0, naCount: 0, totalCount: 0, passPct: 0,
+        submittedAt: new Date().toISOString(),
+        submittedBy: (currentUser && currentUser.code) || '',
+        by: (currentUser && (currentUser.nick || currentUser.name)) || ''
+      });
     } catch (e) {
       console.warn('write testmode failed', e);
       _applyTestMode(turningOn);  // เขียน cloud ไม่ได้ → อย่างน้อยทำงานเฉพาะเครื่อง
