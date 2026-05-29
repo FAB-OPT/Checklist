@@ -1599,22 +1599,18 @@ input[type="time"].jd-form-input {
 .recent-card-tier.is-good { color: var(--success); }
 .recent-card-tier.is-warn { color: #B45309; }
 .recent-card-tier.is-bad  { color: var(--danger); }
-.recent-del {
-  margin-top: 4px; width: 32px; height: 32px;
-  border-radius: 9px; border: 1px solid rgba(220,38,38,0.3);
-  background: rgba(220,38,38,0.08); color: var(--danger);
+.recent-edit, .recent-del {
+  box-sizing: border-box;
+  width: 34px; height: 34px; padding: 0; margin: 0; flex-shrink: 0;
+  border-radius: 9px; border: 1px solid; line-height: 1;
   display: inline-flex; align-items: center; justify-content: center; cursor: pointer;
 }
-.recent-del:hover { background: var(--danger); color: #fff; }
-.recent-del .material-symbols-rounded { font-size: 18px; }
-.recent-edit {
-  width: 32px; height: 32px;
-  border-radius: 9px; border: 1px solid rgba(37,99,235,0.3);
-  background: rgba(37,99,235,0.08); color: #2563eb;
-  display: inline-flex; align-items: center; justify-content: center; cursor: pointer;
-}
+.recent-edit { border-color: rgba(37,99,235,0.3); background: rgba(37,99,235,0.08); color: #2563eb; }
 .recent-edit:hover { background: #2563eb; color: #fff; }
-.recent-edit .material-symbols-rounded { font-size: 18px; }
+.recent-del { border-color: rgba(220,38,38,0.3); background: rgba(220,38,38,0.08); color: var(--danger); }
+.recent-del:hover { background: var(--danger); color: #fff; }
+.recent-edit .material-symbols-rounded,
+.recent-del .material-symbols-rounded { font-size: 18px; }
 
 /* ─── Score row (คะแนนเฉลี่ยต่อโซน/ต่อสาขา) — UX ใหม่ ─── */
 .score-row {
@@ -1784,25 +1780,20 @@ input[type="time"].jd-form-input {
 }
 .jd-history-card:hover { box-shadow: var(--shadow); transform: translateX(2px); }
 .jd-history-right { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
-.jd-history-del {
-  width: 36px; height: 36px; flex-shrink: 0;
-  border-radius: 10px; border: 1px solid rgba(220,38,38,0.3);
-  background: rgba(220,38,38,0.08); color: var(--danger);
+.jd-history-actions { display: flex; align-items: center; gap: 6px; }
+.jd-history-edit, .jd-history-del {
+  box-sizing: border-box;
+  width: 38px; height: 38px; flex-shrink: 0; padding: 0; margin: 0;
+  border-radius: 10px; border: 1px solid;
   display: inline-flex; align-items: center; justify-content: center;
-  cursor: pointer; transition: background 0.15s;
+  cursor: pointer; transition: background 0.15s; line-height: 1;
 }
-.jd-history-del:hover { background: var(--danger); color: #fff; }
-.jd-history-del .material-symbols-rounded { font-size: 20px; }
-.jd-history-actions { display: flex; gap: 6px; }
-.jd-history-edit {
-  width: 36px; height: 36px; flex-shrink: 0;
-  border-radius: 10px; border: 1px solid rgba(37,99,235,0.3);
-  background: rgba(37,99,235,0.08); color: #2563eb;
-  display: inline-flex; align-items: center; justify-content: center; cursor: pointer;
-  transition: background 0.15s;
-}
+.jd-history-edit { border-color: rgba(37,99,235,0.3); background: rgba(37,99,235,0.08); color: #2563eb; }
 .jd-history-edit:hover { background: #2563eb; color: #fff; }
-.jd-history-edit .material-symbols-rounded { font-size: 20px; }
+.jd-history-del { border-color: rgba(220,38,38,0.3); background: rgba(220,38,38,0.08); color: var(--danger); }
+.jd-history-del:hover { background: var(--danger); color: #fff; }
+.jd-history-edit .material-symbols-rounded,
+.jd-history-del .material-symbols-rounded { font-size: 20px; }
 .jd-history-name {
   font-size: 14px; font-weight: 800;
   color: var(--text);
@@ -5840,7 +5831,10 @@ const JAEDAENG_COLLECTION = 'jaedaengAudits';
 function loadLocalJaedaeng() {
   try {
     const raw = localStorage.getItem(JAEDAENG_STORAGE_KEY);
-    return raw ? JSON.parse(raw) : [];
+    const arr = raw ? JSON.parse(raw) : [];
+    // กรอง record ที่ถูกลบ (tombstone) ออกตั้งแต่อ่าน cache — กันกระพริบตอนเข้าใหม่
+    const deleted = loadJdDeletedIds();
+    return deleted.size ? arr.filter(r => r && !deleted.has(String(r.id))) : arr;
   } catch (_) { return []; }
 }
 function saveJaedaengLocal() {
