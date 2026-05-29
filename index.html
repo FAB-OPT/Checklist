@@ -5640,6 +5640,15 @@ function jdBranchShortKey(fullName) {
   return (m ? m[1] : fullName).replace(/เจ๊แดง.*$/, '').trim();
 }
 
+// Distance (meters) from a captured GPS point → the SELECTED branch.
+// Returns null if GPS missing or selected branch has no coords in JAEDAENG_LOCATIONS.
+function jdDistanceFromGpsToBranch(gps, branchName) {
+  if (!gps || gps.lat == null || gps.lng == null || !branchName) return null;
+  const loc = JAEDAENG_LOCATIONS.find(b => jdBranchMatchesLocation(branchName, b.name));
+  if (!loc) return null;
+  return Math.round(jdHaversineMeters(gps.lat, gps.lng, loc.lat, loc.lng));
+}
+
 // Fuzzy match: returns true if the selected branch name shares its short key
 // with a nearby location name (case-insensitive substring either direction).
 function jdBranchMatchesLocation(selectedName, locationName) {
@@ -8636,13 +8645,18 @@ function renderJaedaengList() {
     const tier = r.passPct >= 90 ? 'tier-good' : r.passPct >= 70 ? 'tier-warn' : 'tier-bad';
     let gpsLine = '';
     if (r.gps) {
-      const inside500 = (r.gps.nearestDistance != null && r.gps.nearestDistance <= 500);
-      const matched = r.gps.nearestBranch && jdBranchMatchesLocation(r.storeName || '', r.gps.nearestBranch);
-      const cls = matched ? 'is-good' : (inside500 ? 'is-warn' : 'is-bad');
-      const txt = matched
-        ? `📍 ใกล้สาขา ${escapeHtml(r.gps.nearestBranch)} · ${fmtDistance(r.gps.nearestDistance)} (ตรงสาขา)`
-        : `📍 GPS ห่างจาก ${escapeHtml(r.gps.nearestBranch || '—')} ${fmtDistance(r.gps.nearestDistance)} (${matched ? 'ตรง' : 'ไม่ตรง'}สาขา)`;
-      gpsLine = `<div class="jd-history-gps ${cls}">${txt}</div>`;
+      // ระยะจาก GPS → สาขาที่เลือกจริง (ไม่ใช่สาขาใกล้สุด)
+      const distToSelected = jdDistanceFromGpsToBranch(r.gps, r.storeName);
+      if (distToSelected != null) {
+        const inside500 = distToSelected <= 500;
+        const cls = inside500 ? 'is-good' : (distToSelected <= 1500 ? 'is-warn' : 'is-bad');
+        const txt = inside500
+          ? `📍 ตรงสาขา ${escapeHtml(r.storeName)} · ${fmtDistance(distToSelected)}`
+          : `📍 ห่างจากสาขา ${escapeHtml(r.storeName)} · ${fmtDistance(distToSelected)}`;
+        gpsLine = `<div class="jd-history-gps ${cls}">${txt}</div>`;
+      } else {
+        gpsLine = `<div class="jd-history-gps is-warn">📍 ไม่พบพิกัดของสาขา ${escapeHtml(r.storeName || '—')} ในระบบ</div>`;
+      }
     } else {
       gpsLine = `<div class="jd-history-gps is-warn">📍 ไม่มีข้อมูล GPS</div>`;
     }
@@ -9472,7 +9486,12 @@ function showJaedaengDetail(id) {
         <div class="summary-meta-row-value">
           <a href="https://www.google.com/maps?q=${r.gps.lat},${r.gps.lng}" target="_blank" rel="noopener" style="color:var(--primary-dark);text-decoration:underline;">เปิดบน Google Maps</a>
           <span style="font-size:11px;color:var(--text-tertiary);margin-left:6px;">±${Math.round(r.gps.accuracy || 0)} m</span>
-          ${r.gps.nearestBranch ? `<div style="font-size:12px;margin-top:4px;color:var(--text-secondary);">ใกล้ <b>${escapeHtml(r.gps.nearestBranch)}</b> · ${fmtDistance(r.gps.nearestDistance)}</div>` : ''}
+          ${(() => {
+            const d = jdDistanceFromGpsToBranch(r.gps, r.storeName);
+            if (d == null) return '';
+            const tag = d <= 500 ? '<span style="color:var(--success);font-weight:700;">✓ ตรงสาขา</span>' : '<span style="color:var(--warning);font-weight:700;">ห่างจากสาขา</span>';
+            return `<div style="font-size:12px;margin-top:4px;color:var(--text-secondary);">${tag} <b>${escapeHtml(r.storeName || '—')}</b> · ${fmtDistance(d)}</div>`;
+          })()}
         </div>
       </div>
     </div>` : ''}
