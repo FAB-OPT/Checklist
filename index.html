@@ -4288,7 +4288,6 @@ body:has(#login-screen.active) {
 @media (min-width: 1024px) {
   .bottom-nav .nav-back-hub-btn {
     order: 98;
-    margin-top: auto;       /* ดันกลุ่มล่างลงไปติดก้น sidebar */
     background: #0E7490;     /* cyan ทึบ */
     color: #ffffff !important;
     font-weight: 800;
@@ -4309,10 +4308,10 @@ body:has(#login-screen.active) {
   .bottom-nav .nav-logout-btn .material-symbols-rounded { color: #ffffff !important; }
   .bottom-nav .nav-logout-btn:hover { background: #b91c1c; color: #fff !important; }
   .bottom-nav .nav-logout-btn:hover .material-symbols-rounded { color: #fff !important; }
-  /* เครื่องมือใน sidebar (สลับแบรนด์ + โหมดทดสอบ) — โชว์บนคอม */
+  /* เครื่องมือใน sidebar (สลับแบรนด์ + โหมดทดสอบ) — อยู่เหนือปุ่มกลับเมนูหลัก */
   .nav-tools {
     display: flex; flex-wrap: wrap; gap: 8px;
-    order: 50; margin-top: 14px;
+    order: 97; margin-top: auto;   /* ดันกลุ่มล่าง (tools→กลับเมนู→ออกระบบ) ลงก้น sidebar */
     padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.25);
   }
   .nav-tools:empty { display: none; }
@@ -7397,7 +7396,8 @@ function branchLabel(code, name) {
 }
 
 function santaFeLogoSVG() {
-  const brand = currentUser && currentUser.brand;
+  // ใช้แบรนด์ที่กำลังดู (currentView) — รองรับ cross-brand ที่สลับแบรนด์
+  const brand = currentView || (currentUser && currentUser.brand);
   if (brand === 'jaedaeng') {
     return '<img src="Logo-Jaedang_samyan.png" alt="เจ๊แดงสามย่าน" loading="lazy">';
   }
