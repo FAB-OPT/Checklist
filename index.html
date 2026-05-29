@@ -1090,7 +1090,19 @@ body.test-mode-on { box-shadow: inset 0 0 0 3px #F59E0B; }
 .nav-test-mode { margin: 10px 12px 0; justify-content: center; }
 
 /* Jae Daeng audit form */
-.jd-form-head { padding: 14px 16px; }
+.jd-form-head {
+  padding: 14px 16px;
+  position: sticky;
+  top: 0;
+  z-index: 35;
+  background: var(--surface);
+}
+@media (max-width: 1023px) {
+  .jd-form-head { top: calc(56px + env(safe-area-inset-top)); }
+}
+@media (min-width: 1024px) {
+  .jd-form-head { top: 0; }
+}
 .jd-form-head .jd-form-head-row {
   display: grid;
   grid-template-columns: 90px 1fr;
@@ -1198,6 +1210,14 @@ input[type="time"].jd-form-input {
 .jd-section-tab:hover { border-color: var(--border-strong); color: var(--text); }
 .jd-section-tab.is-done { background: var(--success-bg); border-color: var(--success); color: #1E6B36; }
 .jd-section-tab.has-fail { background: var(--danger-bg); border-color: var(--danger); color: #7A1F10; }
+.jd-section-tab.is-active {
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark, var(--primary)));
+  border-color: var(--primary-dark, var(--primary));
+  color: white !important;
+  box-shadow: 0 4px 12px rgba(168,37,24,0.25);
+  transform: translateY(-1px);
+}
+.jd-section-tab.is-active .jd-section-tab-progress { color: rgba(255,255,255,0.85) !important; }
 .jd-section-tab-progress {
   font-size: 10px; font-weight: 700;
   letter-spacing: 0.3px;
@@ -9050,6 +9070,29 @@ function showConfirm(title, bodyHtml, opts) {
   });
 }
 
+// Observer ที่อัปเดต active section จาก scroll
+var _jdSectionObserver = null;
+function _setupJdSectionObserver() {
+  if (_jdSectionObserver) { _jdSectionObserver.disconnect(); _jdSectionObserver = null; }
+  if (!('IntersectionObserver' in window)) return;
+  const sections = document.querySelectorAll('.jd-section-card');
+  if (!sections.length) return;
+  _jdSectionObserver = new IntersectionObserver(entries => {
+    // หา entry ที่อยู่บนสุดของจอที่ intersect
+    let topMostIdx = -1;
+    let topMostY = Infinity;
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        const idx = parseInt(e.target.id.replace('jd-section-', ''), 10);
+        const y = e.boundingClientRect.top;
+        if (y < topMostY) { topMostY = y; topMostIdx = idx; }
+      }
+    });
+    if (topMostIdx >= 0) _setActiveJDSection(topMostIdx);
+  }, { rootMargin: '-100px 0px -60% 0px', threshold: 0 });
+  sections.forEach(s => _jdSectionObserver.observe(s));
+}
+
 function renderJaedaengForm() {
   renderJaedaengSectionTabs();
   const container = document.getElementById('jaedaeng-sections-container');
@@ -9109,6 +9152,8 @@ function renderJaedaengForm() {
     html += `</div>`;
   });
   container.innerHTML = html;
+  // setup scroll observer ให้ active tab อัปเดตตอน scroll
+  setTimeout(_setupJdSectionObserver, 100);
 }
 
 function renderJaedaengSectionTabs() {
@@ -9123,16 +9168,34 @@ function renderJaedaengSectionTabs() {
     let cls = '';
     if (fail > 0) cls = 'has-fail';
     else if (done === sec.items.length) cls = 'is-done';
-    return `<button type="button" class="jd-section-tab ${cls}" onclick="scrollToJDSection(${sIdx})">
+    if (sIdx === _currentJDViewSectionIdx) cls += ' is-active';
+    return `<button type="button" class="jd-section-tab ${cls}" data-section-idx="${sIdx}" onclick="scrollToJDSection(${sIdx})">
       <span>${escapeHtml(sec.name.replace(/\s*\(.*\)$/, ''))}</span>
       <span class="jd-section-tab-progress">${done}/${sec.items.length}${fail ? ' · ✗' + fail : ''}</span>
     </button>`;
   }).join('');
 }
 
+// section ที่ผู้ใช้ดูอยู่ปัจจุบัน (อัปเดตจาก click หรือ scroll)
+var _currentJDViewSectionIdx = 0;
+function _setActiveJDSection(sIdx) {
+  if (sIdx === _currentJDViewSectionIdx) return;
+  _currentJDViewSectionIdx = sIdx;
+  document.querySelectorAll('.jd-section-tab').forEach(btn => {
+    const i = parseInt(btn.getAttribute('data-section-idx'), 10);
+    btn.classList.toggle('is-active', i === sIdx);
+  });
+  // เลื่อน tab ที่ active ให้อยู่กลางจอ (horizontal scroll)
+  const activeBtn = document.querySelector(`.jd-section-tab[data-section-idx="${sIdx}"]`);
+  if (activeBtn) {
+    activeBtn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+  }
+}
+
 function scrollToJDSection(sIdx) {
   const el = document.getElementById(`jd-section-${sIdx}`);
   if (!el) return;
+  _setActiveJDSection(sIdx);
   const headerOffset = 80;
   const top = el.getBoundingClientRect().top + window.scrollY - headerOffset;
   window.scrollTo({ top, behavior: 'smooth' });
