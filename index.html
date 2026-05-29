@@ -1154,9 +1154,16 @@ input[type="time"].jd-form-input {
   overflow-x: auto;
   padding: 10px 4px 12px;
   margin-bottom: 8px;
-  position: sticky; top: 0; z-index: 40;
+  position: sticky; top: 56px; z-index: 40;
   background: var(--bg);
   scrollbar-width: thin;
+  box-shadow: 0 6px 10px -6px rgba(0,0,0,0.08);
+}
+@media (max-width: 768px) {
+  .jd-section-tabs { top: 56px; padding-top: 8px; padding-bottom: 10px; }
+}
+@media (min-width: 769px) {
+  .jd-section-tabs { top: 0; }
 }
 .jd-section-tab {
   flex-shrink: 0;
@@ -1281,6 +1288,7 @@ input[type="time"].jd-form-input {
   60%  { background: rgba(220,38,38,0.10); box-shadow: 0 0 0 2px rgba(220,38,38,0.20); }
   100% { background: transparent; box-shadow: 0 0 0 0 transparent; }
 }
+@keyframes jd-spin { to { transform: rotate(360deg); } }
 .jd-photo-section {
   margin-top: 10px;
   background: transparent;
@@ -5993,6 +6001,8 @@ async function pruneOldJaedaengPhotos() {
 /* ─── Realtime sync (อัปเดตสด ไม่ต้องรีเฟรช) ─── */
 var _jdRealtimeStarted = false;
 var _jdUnsub = null;
+// flag: snapshot ตัวแรกเข้ามาแล้วหรือยัง — ใช้กันแสดงข้อมูล cache เก่าก่อน sync (กันกระพริบ)
+var _jdFirstSnapshotReceived = false;
 function _rerenderJaedaengIfVisible() {
   const dash = document.getElementById('jaedaeng-dashboard-screen');
   const hub = document.getElementById('jaedaeng-hub-screen');
@@ -6028,8 +6038,9 @@ function startJaedaengRealtime() {
       const m = _mergeJaedaeng(remote, local);
       allJaedaengAudits = m.merged;
       saveJaedaengLocal();
+      _jdFirstSnapshotReceived = true;
       _rerenderJaedaengIfVisible();
-    }, function(err){ console.warn('JD realtime error', err); });
+    }, function(err){ console.warn('JD realtime error', err); _jdFirstSnapshotReceived = true; _rerenderJaedaengIfVisible(); });
   } catch (e) { console.warn('startJaedaengRealtime failed', e); }
 }
 
@@ -8676,6 +8687,14 @@ function showJaedaengHub() {
 
 function renderJaedaengList() {
   const list = document.getElementById('jaedaeng-list');
+  // กันกระพริบ: ถ้ายังไม่ได้รับ snapshot ตัวแรกจาก cloud และมี firebase อยู่ → แสดง loading แทน cache เก่า
+  if (!_jdFirstSnapshotReceived && firebaseDb && !testMode) {
+    list.innerHTML = `<div class="jd-history-empty">
+      <span class="material-symbols-rounded" style="font-size:40px;opacity:0.5;display:block;margin-bottom:8px;animation:jd-spin 1s linear infinite;">sync</span>
+      กำลังโหลดข้อมูลล่าสุด...
+    </div>`;
+    return;
+  }
   const records = getVisibleJaedaengAudits().sort((a, b) => (b.submittedAt || b.date || '').localeCompare(a.submittedAt || a.date || ''));
   if (records.length === 0) {
     list.innerHTML = `<div class="jd-history-empty">
