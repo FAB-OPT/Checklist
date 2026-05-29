@@ -84,30 +84,15 @@ body {
   color: white;
   padding: 16px 20px calc(16px + env(safe-area-inset-top));
   padding-top: calc(16px + env(safe-area-inset-top));
-  position: sticky;
-  top: 0;
+  position: static;
   z-index: 100;
   box-shadow: 0 4px 12px rgba(168,37,24,0.10);
   text-shadow: 0 1px 2px rgba(0,0,0,0.18);
 }
-/* Mobile: ใช้ position:fixed บังคับให้ติดบนสุดเสมอ (sticky บางที iOS Safari มีปัญหา) */
 @media (max-width: 1023px) {
-  .app-header {
-    position: fixed !important;
-    top: 0; left: 0; right: 0;
-    width: 100%;
-    padding: 10px 16px;
-    padding-top: calc(10px + env(safe-area-inset-top));
-    -webkit-transform: translateZ(0);
-            transform: translateZ(0);
-    will-change: transform;
-  }
+  .app-header { padding: 12px 16px; padding-top: calc(12px + env(safe-area-inset-top)); }
   .app-header h1 { font-size: 14px; }
   .app-header .app-user-line { font-size: 11px; }
-  /* push content ลงมาให้ไม่โดน header ทับ */
-  #app-screen > .container { padding-top: calc(72px + env(safe-area-inset-top)); }
-  /* section tabs ของ Jaedaeng ต้อง offset ใต้ fixed header */
-  .jd-section-tabs { top: calc(64px + env(safe-area-inset-top)); }
 }
 .app-header-inner { display:flex; justify-content:space-between; align-items:center; gap:12px; }
 .app-header-inner > div:first-child { flex: 1; min-width: 0; }
@@ -1173,16 +1158,10 @@ input[type="time"].jd-form-input {
   overflow-x: auto;
   padding: 10px 4px 12px;
   margin-bottom: 8px;
-  position: sticky; top: 56px; z-index: 40;
+  position: sticky; top: 0; z-index: 40;
   background: var(--bg);
   scrollbar-width: thin;
   box-shadow: 0 6px 10px -6px rgba(0,0,0,0.08);
-}
-@media (max-width: 768px) {
-  .jd-section-tabs { top: 56px; padding-top: 8px; padding-bottom: 10px; }
-}
-@media (min-width: 769px) {
-  .jd-section-tabs { top: 0; }
 }
 .jd-section-tab {
   flex-shrink: 0;
