@@ -4266,7 +4266,7 @@ body:has(#login-screen.active) {
   .nav-daily-btn.active::after { background: #047857; }
   .bottom-nav .nav-back-hub-btn {
     color: #ffffff !important; font-weight: 800;
-    background: #0E7490;
+    background: #16a34a;
     border-radius: 12px;
     margin: 4px 3px;
     min-height: 50px;
@@ -4288,14 +4288,14 @@ body:has(#login-screen.active) {
 @media (min-width: 1024px) {
   .bottom-nav .nav-back-hub-btn {
     order: 98;
-    background: #0E7490;     /* cyan ทึบ */
+    background: #16a34a;     /* เขียวทึบ */
     color: #ffffff !important;
     font-weight: 800;
     text-shadow: none !important;
     box-shadow: 0 4px 12px rgba(0,0,0,0.18);
   }
   .bottom-nav .nav-back-hub-btn .material-symbols-rounded { color: #ffffff !important; }
-  .bottom-nav .nav-back-hub-btn:hover { background: #0c6378; }
+  .bottom-nav .nav-back-hub-btn:hover { background: #15803d; }
   .bottom-nav .nav-logout-btn {
     order: 99;
     margin-top: 8px !important;  /* เว้นจากปุ่มกลับเมนูหลักนิดนึง */
@@ -4310,13 +4310,27 @@ body:has(#login-screen.active) {
   .bottom-nav .nav-logout-btn:hover .material-symbols-rounded { color: #fff !important; }
   /* เครื่องมือใน sidebar (สลับแบรนด์ + โหมดทดสอบ) — อยู่เหนือปุ่มกลับเมนูหลัก */
   .nav-tools {
-    display: flex; flex-wrap: wrap; gap: 8px;
+    display: flex; flex-direction: column; gap: 8px;
     order: 97; margin-top: auto;   /* ดันกลุ่มล่าง (tools→กลับเมนู→ออกระบบ) ลงก้น sidebar */
     padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.25);
   }
   .nav-tools:empty { display: none; }
-  .nav-tools .header-view-pill { color: rgba(255,255,255,0.85); }
-  .nav-tools .header-view-toggle { background: rgba(0,0,0,0.18); }
+  .nav-tools .header-view-toggle { background: rgba(0,0,0,0.18); width: 100%; justify-content: center; }
+  .nav-tools .header-view-pill { color: rgba(255,255,255,0.85); flex: 1; text-align: center; }
+  /* ปุ่มโหมดทดสอบ — กล่องเต็มแถบ สีเหลือง เหมือนปุ่มเมนู */
+  .nav-tools .test-mode-toggle {
+    width: 100%; justify-content: center;
+    padding: 12px 16px; border-radius: 12px;
+    min-height: 50px; gap: 8px;
+    background: #facc15; color: #713f12 !important;
+    font-weight: 800; font-size: 14px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.18);
+  }
+  .nav-tools .test-mode-toggle .material-symbols-rounded { color: #713f12 !important; font-size: 22px; }
+  .nav-tools .test-mode-toggle:hover { background: #eab308; }
+  .nav-tools .test-mode-toggle.is-on { background: var(--warning); color: #fff !important; }
+  .nav-tools .test-mode-toggle.is-on .material-symbols-rounded { color: #fff !important; }
+  .nav-tools .test-mode-toggle .header-tool-label { display: inline !important; }
 }
 
 /* ============ DESKTOP LAYOUT (≥1024px) ============ */
@@ -5348,6 +5362,7 @@ let currentJDAudit = null; // Jae Daeng audit being filled
 let allJaedaengAudits = []; // loaded from storage
 let currentView = null; // 'santafe' | 'jaedaeng' — defaults to user's brand; cross-brand users can toggle
 let testMode = false; // when true, all writes are in-memory only — exiting reloads real data
+let _testModeRestored = false; // กันร้องคืนค่าซ้ำ
 let jdDashFilter = { zone: 'all', branch: 'all' };
 let jdDashDate = { type: 'all', from: '', to: '' };
 
@@ -6251,6 +6266,7 @@ async function toggleTestMode() {
     const ok = await showConfirm('เปิดโหมดทดสอบ?', 'ข้อมูลที่บันทึกระหว่างทดสอบจะไม่ถูกเก็บ<br>และจะหายไปทันทีที่ปิดโหมด', { okLabel: 'เปิดโหมดทดสอบ', cancelLabel: 'ยกเลิก' });
     if (!ok) return;
     testMode = true;
+    try { sessionStorage.setItem('qa_testmode', '1'); } catch (e) {}
     document.body.classList.add('test-mode-on');
     document.getElementById('test-mode-banner').style.display = 'flex';
     updateTestModeToggle();
@@ -6259,6 +6275,7 @@ async function toggleTestMode() {
     const ok = await showConfirm('ปิดโหมดทดสอบ?', 'ข้อมูลที่กรอกตอนทดสอบจะถูกลบทั้งหมด', { okLabel: 'ปิดโหมดทดสอบ', cancelLabel: 'ยกเลิก', danger: true });
     if (!ok) return;
     testMode = false;
+    try { sessionStorage.removeItem('qa_testmode'); } catch (e) {}
     document.body.classList.remove('test-mode-on');
     document.getElementById('test-mode-banner').style.display = 'none';
     updateTestModeToggle();
@@ -6294,6 +6311,18 @@ function switchViewBrand(brand) {
 
 function renderBottomNav() {
   const nav = document.getElementById('bottom-nav');
+  // คืนค่าโหมดทดสอบหลังรีเฟรช (เก็บใน sessionStorage · เฉพาะ admin · ครั้งเดียว)
+  if (!_testModeRestored) {
+    _testModeRestored = true;
+    try {
+      if (sessionStorage.getItem('qa_testmode') === '1' && currentUser && currentUser.role === 'admin') {
+        testMode = true;
+        document.body.classList.add('test-mode-on');
+        const _b = document.getElementById('test-mode-banner');
+        if (_b) _b.style.display = 'flex';
+      }
+    } catch (e) {}
+  }
   let html = '';
   const isBranch = currentUser.role === 'branch';
   // ชื่อ (ตำแหน่ง) — ตัดคำนำหน้า (นาย/นางสาว/นาง) ออก · branch ใช้ "รหัส ชื่อสาขา"
