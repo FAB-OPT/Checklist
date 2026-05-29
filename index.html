@@ -5062,14 +5062,6 @@ html.fab-sso-pending #login-screen { display: none !important; }
           <span class="material-symbols-rounded" style="color:var(--danger);">priority_high</span>
           <h2>หัวข้อที่ตกบ่อย <span class="card-header-en">Top failed items</span></h2>
         </div>
-        <div id="jd-tf-filter" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
-          <select id="jd-tf-zone" class="jd-form-input" onchange="onJdTopFailZoneChange()" style="flex:1;min-width:140px;">
-            <option value="">ทุกโซน (BZM)</option>
-          </select>
-          <select id="jd-tf-branch" class="jd-form-input" onchange="renderJaedaengTopFails()" style="flex:1;min-width:140px;">
-            <option value="">ทุกสาขา</option>
-          </select>
-        </div>
         <div id="jd-dash-top-fails"></div>
       </div>
       <div class="card">
@@ -9323,8 +9315,9 @@ async function submitJaedaengAudit() {
   const naCount = items.filter(i => i.status === 'na').length;
   const pending = totalCount - passCount - failCount - naCount;
   if (pending > 0) {
-    const ok = await showConfirm('ยังตอบไม่ครบ', `มี <b>${pending}</b> ข้อที่ยังไม่ตอบ — ต้องการบันทึกเลยหรือไม่?`, { okLabel: 'บันทึกเลย', cancelLabel: 'กลับไปตอบ' });
-    if (!ok) return;
+    // บังคับต้องตอบทุกข้อ — บันทึกไม่ได้ถ้ายังไม่ครบ
+    showModal('ตอบไม่ครบทุกข้อ', `มี <b>${pending}</b> ข้อที่ยังไม่ตอบ — ต้องตรวจให้ครบทุกข้อก่อนบันทึก (ผ่าน / ไม่ผ่าน / N/A)`);
+    return;
   }
   const denom = totalCount - naCount;
   const passPct = denom > 0 ? (passCount / denom) * 100 : 0;
