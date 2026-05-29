@@ -5036,12 +5036,12 @@ html.fab-sso-pending #login-screen { display: none !important; }
         </h2>
       </div>
       <div class="jd-dash-scope" id="jd-dash-scope"></div>
+      <div class="jd-dash-date-filter" id="jd-dash-date-chips"></div>
       <div class="jd-dash-filter" id="jd-dash-filter" style="display:none;">
         <select id="jd-dash-scope-select" class="jd-form-input" onchange="setJaedaengDashScope(this.value)">
           <option value="all">ดูทุกโซน · ทุกสาขา</option>
         </select>
       </div>
-      <div class="jd-dash-date-filter" id="jd-dash-date-chips"></div>
       <div class="jd-dash-kpis" id="jd-dash-kpis"></div>
       <div class="card" id="jd-dash-zone-card">
         <div class="card-header">
@@ -5963,11 +5963,15 @@ function _applyTestMode(on) {
   document.body.classList.toggle('test-mode-on', testMode);
   const b = document.getElementById('test-mode-banner');
   if (b) b.style.display = testMode ? 'flex' : 'none';
+  // persist ในเครื่อง (รอดทั้ง refresh + re-login บนเครื่องเดิม แม้ cloud จะติด rules)
+  try { testMode ? localStorage.setItem('qa_testmode', '1') : localStorage.removeItem('qa_testmode'); } catch (e) {}
   updateTestModeToggle();
 }
 function initRealtimeSync() {
   if (_jdRealtimeStarted) return;
   _jdRealtimeStarted = true;
+  // คืนค่าโหมดทดสอบจากเครื่อง (ถ้า cloud มีค่า listener จะ override ทีหลัง)
+  try { if (localStorage.getItem('qa_testmode') === '1') _applyTestMode(true); } catch (e) {}
   startJaedaengRealtime();
 }
 
@@ -8220,13 +8224,23 @@ function getJaedaengBranchesForUser() {
 function setupJaedaengDashFilter() {
   const filterRow = document.getElementById('jd-dash-filter');
   if (!filterRow) return;
-  const showFilter = currentUser && currentUser.role !== 'bzm';
-  filterRow.style.display = showFilter ? '' : 'none';
-  if (!showFilter) return;
-
+  const isBzm = currentUser && currentUser.role === 'bzm';
+  filterRow.style.display = '';  // แสดงทุก role
   const select = document.getElementById('jd-dash-scope-select');
 
-  // Collect unique zones (use full name + nick) and the full branch list
+  if (isBzm) {
+    // BZM เห็นเฉพาะสาขาที่ตัวเองรับผิดชอบ — เลือกแยกรายสาขาได้
+    const myBranches = getJaedaengBranchesForUser();
+    let opts = '<option value="all">ทุกสาขาของฉัน</option>';
+    myBranches.forEach(b => {
+      opts += `<option value="branch:${escapeAttr(b.name)}">${escapeHtml(b.name)}</option>`;
+    });
+    select.innerHTML = opts;
+    select.value = (jdDashFilter.branch && jdDashFilter.branch !== 'all') ? 'branch:' + jdDashFilter.branch : 'all';
+    return;
+  }
+
+  // admin/coo/vp — เลือกได้ทั้งโซนและสาขา (รวมเป็น dropdown เดียว)
   const zones = [];
   const seenZone = new Set();
   JAEDAENG_BRANCHES.forEach(b => {
@@ -8251,7 +8265,6 @@ function setupJaedaengDashFilter() {
   });
   opts += '</optgroup>';
   select.innerHTML = opts;
-  // Restore selection
   if (jdDashFilter.branch !== 'all') select.value = 'branch:' + jdDashFilter.branch;
   else if (jdDashFilter.zone !== 'all') select.value = 'zone:' + jdDashFilter.zone;
   else select.value = 'all';
@@ -8494,14 +8507,13 @@ function renderJaedaengTopFails() {
 }
 
 function renderJaedaengDashboard() {
-  let records = getVisibleJaedaengAudits();
-  if (currentUser && currentUser.role !== 'bzm') {
-    if (jdDashFilter.zone !== 'all') {
-      records = records.filter(r => (r.bzmNick || r.bzm) === jdDashFilter.zone);
-    }
-    if (jdDashFilter.branch !== 'all') {
-      records = records.filter(r => r.storeName === jdDashFilter.branch);
-    }
+  let records = getVisibleJaedaengAudits();  // bzm ได้เฉพาะของตัวเองอยู่แล้ว
+  // กรองตาม dropdown (ทุก role) — bzm เลือกได้เฉพาะสาขาตัวเอง
+  if (jdDashFilter.zone !== 'all') {
+    records = records.filter(r => (r.bzmNick || r.bzm) === jdDashFilter.zone);
+  }
+  if (jdDashFilter.branch !== 'all') {
+    records = records.filter(r => r.storeName === jdDashFilter.branch);
   }
   records = applyJaedaengDateFilter(records);
   const scopeEl = document.getElementById('jd-dash-scope');
