@@ -9316,7 +9316,7 @@ async function submitJaedaengAudit() {
   const pending = totalCount - passCount - failCount - naCount;
   if (pending > 0) {
     // บังคับต้องตอบทุกข้อ — บันทึกไม่ได้ถ้ายังไม่ครบ
-    showModal('ตอบไม่ครบทุกข้อ', `มี <b>${pending}</b> ข้อที่ยังไม่ตอบ — ต้องตรวจให้ครบทุกข้อก่อนบันทึก (ผ่าน / ไม่ผ่าน / N/A)`);
+    showModal('ตอบไม่ครบทุกข้อ', `มี ${pending} ข้อที่ยังไม่ตอบ — ต้องตรวจให้ครบทุกข้อก่อนบันทึก (ผ่าน / ไม่ผ่าน / N/A)`);
     return;
   }
   const denom = totalCount - naCount;
