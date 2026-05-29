@@ -5349,11 +5349,27 @@ let JAEDAENG_BRANCHES = [
 // ── โหลด JAEDAENG_BRANCHES override (จัดการผ่าน Hub) ──
 const JD_BRANCH_LS_KEY = 'fab_jaedaeng_branches_v1';
 const JD_BRANCH_CLOUD_URL = 'https://script.google.com/macros/s/AKfycbyjGvhSuDrnnOkWdwoq4CsR5jM3__lp58ZWe_BjcrxDIoOtnlFaiEdKUXX10EANUFCRXA/exec';
+// snapshot ของ default (ฝัง lat/lng) — ใช้ backfill ถ้า cloud/localStorage มีข้อมูลเก่าที่ขาด coords
+const DEFAULT_JAEDAENG_BRANCHES = JAEDAENG_BRANCHES.slice();
+// Merge: สำหรับ entry ใน arr ที่ขาด lat/lng → backfill จาก DEFAULT (match ด้วยชื่อ exact)
+function _mergeJdBranches(arr) {
+  if (!Array.isArray(arr)) return JAEDAENG_BRANCHES;
+  return arr.map(e => {
+    if (!e || typeof e !== 'object') return e;
+    const hasCoord = e.lat != null && e.lng != null && !isNaN(e.lat) && !isNaN(e.lng);
+    if (hasCoord) return e;
+    const def = DEFAULT_JAEDAENG_BRANCHES.find(d => d.name === e.name);
+    if (def && def.lat != null && def.lng != null) {
+      return Object.assign({}, e, { lat: def.lat, lng: def.lng });
+    }
+    return e;
+  });
+}
 try {
   const saved = localStorage.getItem(JD_BRANCH_LS_KEY);
   if (saved) {
     const arr = JSON.parse(saved);
-    if (Array.isArray(arr) && arr.length) JAEDAENG_BRANCHES = arr;
+    if (Array.isArray(arr) && arr.length) JAEDAENG_BRANCHES = _mergeJdBranches(arr);
   }
 } catch (e) {}
 function loadJaedaengBranchesFromCloud() {
@@ -5361,7 +5377,7 @@ function loadJaedaengBranchesFromCloud() {
     .then(r => r.json())
     .then(res => {
       if (res && res.ok && Array.isArray(res.jaedaengBranches) && res.jaedaengBranches.length) {
-        JAEDAENG_BRANCHES = res.jaedaengBranches;
+        JAEDAENG_BRANCHES = _mergeJdBranches(res.jaedaengBranches);
         try { localStorage.setItem(JD_BRANCH_LS_KEY, JSON.stringify(JAEDAENG_BRANCHES)); } catch(e){}
         // re-render dashboard/list ถ้ากำลังเปิดอยู่
         try {
