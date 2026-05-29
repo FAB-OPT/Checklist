@@ -5958,20 +5958,18 @@ function startJaedaengRealtime() {
   } catch (e) { console.warn('startJaedaengRealtime failed', e); }
 }
 
+// ยกเลิกโหมดทดสอบแล้ว — บังคับปิดเสมอ + ล้างค่าที่ค้าง
 function _applyTestMode(on) {
-  testMode = !!on;
-  document.body.classList.toggle('test-mode-on', testMode);
+  testMode = false;
+  document.body.classList.remove('test-mode-on');
   const b = document.getElementById('test-mode-banner');
-  if (b) b.style.display = testMode ? 'flex' : 'none';
-  // persist ในเครื่อง (รอดทั้ง refresh + re-login บนเครื่องเดิม แม้ cloud จะติด rules)
-  try { testMode ? localStorage.setItem('qa_testmode', '1') : localStorage.removeItem('qa_testmode'); } catch (e) {}
-  updateTestModeToggle();
+  if (b) b.style.display = 'none';
+  try { localStorage.removeItem('qa_testmode'); sessionStorage.removeItem('qa_testmode'); } catch (e) {}
 }
 function initRealtimeSync() {
   if (_jdRealtimeStarted) return;
   _jdRealtimeStarted = true;
-  // คืนค่าโหมดทดสอบจากเครื่อง (ถ้า cloud มีค่า listener จะ override ทีหลัง)
-  try { if (localStorage.getItem('qa_testmode') === '1') _applyTestMode(true); } catch (e) {}
+  _applyTestMode(false);  // กันค้างจากเวอร์ชันก่อน
   startJaedaengRealtime();
 }
 
@@ -6340,42 +6338,9 @@ function routeByRole() {
   }
 }
 
-async function toggleTestMode() {
-  const turningOn = !testMode;
-  const ok = turningOn
-    ? await showConfirm('เปิดโหมดทดสอบ?', 'ข้อมูลที่บันทึกระหว่างทดสอบจะไม่ถูกเก็บ · ทุกเครื่องจะเข้าโหมดทดสอบพร้อมกัน', { okLabel: 'เปิดโหมดทดสอบ', cancelLabel: 'ยกเลิก' })
-    : await showConfirm('ปิดโหมดทดสอบ?', 'ข้อมูลที่กรอกตอนทดสอบจะถูกลบทั้งหมด', { okLabel: 'ปิดโหมดทดสอบ', cancelLabel: 'ยกเลิก', danger: true });
-  if (!ok) return;
-  // เขียน flag เป็น doc พิเศษในคอลเลกชัน jaedaengAudits — ใส่โครงสร้างครบเหมือน audit จริง
-  // เพื่อให้ผ่าน Firestore rules ที่อาจ validate ฟิลด์ · listener จะ apply ให้ทุกเครื่อง
-  if (firebaseDb) {
-    try {
-      await firebaseDb.collection(JAEDAENG_COLLECTION).doc(JD_TESTMODE_ID).set({
-        id: JD_TESTMODE_ID, __config: 'testmode', on: turningOn,
-        brand: 'jaedaeng', storeName: '__config__',
-        bzm: '', bzmNick: '', auditor: '', auditorCode: '',
-        date: '', time: '', gps: null, items: [], requiredPhotos: [],
-        passCount: 0, failCount: 0, naCount: 0, totalCount: 0, passPct: 0,
-        submittedAt: new Date().toISOString(),
-        submittedBy: (currentUser && currentUser.code) || '',
-        by: (currentUser && (currentUser.nick || currentUser.name)) || ''
-      });
-    } catch (e) {
-      console.warn('write testmode failed', e);
-      _applyTestMode(turningOn);  // เขียน cloud ไม่ได้ → อย่างน้อยทำงานเฉพาะเครื่อง
-    }
-  } else {
-    _applyTestMode(turningOn);
-  }
-  // ถ้าปิด → โหลดข้อมูลจริงกลับ (กันข้อมูลทดสอบค้าง)
-  if (!turningOn && currentUser) {
-    currentAudit = null; currentDaily = null; currentJDAudit = null;
-    await Promise.all([loadAudits(), loadDailyChecklists(), loadJaedaengAudits()]);
-    routeByRole();
-  }
-}
+async function toggleTestMode() { /* ยกเลิกโหมดทดสอบแล้ว */ }
 
-function updateTestModeToggle() {
+function _unusedUpdateTestModeToggle() {
   // มีได้ทั้งใน header (มือถือ) และ sidebar (คอม) → อัปเดตทุกตัว
   document.querySelectorAll('.test-mode-toggle').forEach(btn => {
     btn.classList.toggle('is-on', testMode);
@@ -6451,7 +6416,8 @@ function renderBottomNav() {
   renderHeaderTools(view);
 }
 
-// HTML ของเครื่องมือ (สลับแบรนด์ + โหมดทดสอบ) — ใช้ทั้งใน header (มือถือ) และ sidebar (คอม)
+// HTML ของเครื่องมือ (สลับแบรนด์) — ใช้ทั้งใน header (มือถือ) และ sidebar (คอม)
+// หมายเหตุ: ยกเลิกโหมดทดสอบแล้ว
 function _toolsHtml(view) {
   let html = '';
   if (currentUser.crossBrand) {
@@ -6459,12 +6425,6 @@ function _toolsHtml(view) {
       `<button type="button" class="header-view-pill ${view === 'santafe' ? 'active' : ''}" onclick="switchViewBrand('santafe')">Santa Fe</button>` +
       `<button type="button" class="header-view-pill ${view === 'jaedaeng' ? 'active' : ''}" onclick="switchViewBrand('jaedaeng')">เจ๊แดง</button>` +
     '</div>';
-  }
-  if (currentUser.role === 'admin') {
-    html += `<button type="button" class="header-tool-btn test-mode-toggle ${testMode ? 'is-on' : ''}" onclick="toggleTestMode()" title="โหมดทดสอบ" aria-label="โหมดทดสอบ">` +
-      '<span class="material-symbols-rounded">science</span>' +
-      `<span class="header-tool-label test-mode-toggle-label">${testMode ? 'ปิดทดสอบ' : 'ทดสอบ'}</span>` +
-    '</button>';
   }
   return html;
 }
