@@ -5284,10 +5284,10 @@ function subsectionRequiresPhoto(section, subsection) {
 let currentUser = null; // {code, name, nick, role}
 let currentRole = 'branch'; // login form mode
 let currentBrand = null; // 'santafe' | 'jaedaeng'
-// Jae Daeng branches — keyed by name (no branch code yet). Truncated names
-// from the source screenshot are marked with "…" so they're easy to spot
-// and clean up later.
-const JAEDAENG_BRANCHES = [
+// Jae Daeng branches — keyed by name (no branch code yet).
+// Editable via Hub: 👥 จัดการสาขาเจ๊แดง · sync ผ่าน cloud key='jaedaengBranches'
+// รายการด้านล่างเป็น default · จะถูก override โดย cloud หรือ localStorage ถ้ามี
+let JAEDAENG_BRANCHES = [
   // นุชจรินทร์ (พี่กัส)
   { name: "ร้านส้มตำเจ๊แดง (ธนิยะ)",                      manager: "นุชจรินทร์",   managerNick: "พี่กัส" },
   { name: "ร้านส้มตำเจ๊แดง (ดุสิต เซ็นทรัล พาร์ค)",        manager: "นุชจรินทร์",   managerNick: "พี่กัส" },
@@ -5345,6 +5345,37 @@ const JAEDAENG_BRANCHES = [
   { name: "4005 ซีคอนบางแค (เจ๊แดง จุ่มนัว)",                manager: "จุรีพร",     managerNick: "พี่อีฟ" },
   { name: "4015 เดอะมอลล์ท่าพระ (เจ๊แดง จุ่มนัว)",            manager: "จุรีพร",     managerNick: "พี่อีฟ" },
 ];
+
+// ── โหลด JAEDAENG_BRANCHES override (จัดการผ่าน Hub) ──
+const JD_BRANCH_LS_KEY = 'fab_jaedaeng_branches_v1';
+const JD_BRANCH_CLOUD_URL = 'https://script.google.com/macros/s/AKfycbyjGvhSuDrnnOkWdwoq4CsR5jM3__lp58ZWe_BjcrxDIoOtnlFaiEdKUXX10EANUFCRXA/exec';
+try {
+  const saved = localStorage.getItem(JD_BRANCH_LS_KEY);
+  if (saved) {
+    const arr = JSON.parse(saved);
+    if (Array.isArray(arr) && arr.length) JAEDAENG_BRANCHES = arr;
+  }
+} catch (e) {}
+function loadJaedaengBranchesFromCloud() {
+  return fetch(JD_BRANCH_CLOUD_URL + '?action=config&_=' + Date.now())
+    .then(r => r.json())
+    .then(res => {
+      if (res && res.ok && Array.isArray(res.jaedaengBranches) && res.jaedaengBranches.length) {
+        JAEDAENG_BRANCHES = res.jaedaengBranches;
+        try { localStorage.setItem(JD_BRANCH_LS_KEY, JSON.stringify(JAEDAENG_BRANCHES)); } catch(e){}
+        // re-render dashboard/list ถ้ากำลังเปิดอยู่
+        try {
+          const dash = document.getElementById('jaedaeng-dashboard-screen');
+          const hub = document.getElementById('jaedaeng-hub-screen');
+          if (dash && dash.style.display !== 'none' && typeof renderJaedaengDashboard === 'function') renderJaedaengDashboard();
+          else if (hub && hub.style.display !== 'none' && typeof renderJaedaengList === 'function') renderJaedaengList();
+        } catch(e){}
+      }
+    })
+    .catch(() => {});
+}
+// ยิงโหลดตอนเปิดแอป (background)
+setTimeout(loadJaedaengBranchesFromCloud, 800);
 
 const USERS_JAEDAENG = {
   "550713": { name: "ณฐกร",      nick: "พี่ปอ",    role: "vp",  title: "นาย" },
