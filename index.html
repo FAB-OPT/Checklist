@@ -6113,6 +6113,14 @@ function notifyJDToTelegram(r) {
     const failed = (r.items || [])
       .filter(it => it && it.status === 'fail')
       .map(it => ({ section: it.section || '', num: it.num || '', text: it.text || '', note: it.note || '' }));
+    // รูปหลักฐาน — เฉพาะ URL (ที่อัปขึ้น R2 แล้ว) · รูปข้อ "ไม่ผ่าน" ก่อน · สูงสุด 10
+    const isUrl = u => typeof u === 'string' && /^https?:\/\//i.test(u);
+    const failPhotos = [], otherPhotos = [];
+    (r.items || []).forEach(it => (it.photos || []).forEach(u => {
+      if (!isUrl(u)) return;
+      (it.status === 'fail' ? failPhotos : otherPhotos).push(u);
+    }));
+    const photos = [...new Set(failPhotos.concat(otherPhotos))].slice(0, 10);
     fetch(JD_TG_NOTIFY_URL, {
       method: 'POST',
       mode: 'no-cors',
@@ -6124,7 +6132,7 @@ function notifyJDToTelegram(r) {
         passPct: r.passPct, passCount: r.passCount, failCount: r.failCount,
         naCount: r.naCount, totalCount: r.totalCount,
         time: r.time || '', date: r.date || '', gps: r.gps || null,
-        failed: failed
+        failed: failed, photos: photos
       })
     });
   } catch (e) {}

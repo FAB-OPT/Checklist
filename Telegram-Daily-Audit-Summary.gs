@@ -84,12 +84,32 @@ function doPost(e) {
   try {
     var data = (e && e.postData && e.postData.contents) ? JSON.parse(e.postData.contents) : {};
     sendTelegram_(formatInstant_(data));
+    if (data.photos && data.photos.length) sendPhotos_(data.photos);
     return ContentService.createTextOutput(JSON.stringify({ ok: true }))
       .setMimeType(ContentService.MimeType.JSON);
   } catch (err) {
     return ContentService.createTextOutput(JSON.stringify({ ok: false, error: String(err) }))
       .setMimeType(ContentService.MimeType.JSON);
   }
+}
+
+/** ส่งรูปหลักฐานเข้ากลุ่ม (สูงสุด 10 รูป · เฉพาะ URL http/https) */
+function sendPhotos_(urls) {
+  var props = PropertiesService.getScriptProperties();
+  var token = props.getProperty('TG_BOT_TOKEN');
+  var chatId = props.getProperty('TG_CHAT_ID');
+  urls = (urls || []).filter(function (u) { return typeof u === 'string' && /^https?:\/\//i.test(u); }).slice(0, 10);
+  if (!token || !chatId || !urls.length) return;
+  if (urls.length === 1) {
+    UrlFetchApp.fetch('https://api.telegram.org/bot' + token + '/sendPhoto', {
+      method: 'post', payload: { chat_id: chatId, photo: urls[0] }, muteHttpExceptions: true
+    });
+    return;
+  }
+  var media = urls.map(function (u) { return { type: 'photo', media: u }; });
+  UrlFetchApp.fetch('https://api.telegram.org/bot' + token + '/sendMediaGroup', {
+    method: 'post', payload: { chat_id: chatId, media: JSON.stringify(media) }, muteHttpExceptions: true
+  });
 }
 
 /** ข้อความแจ้งเตือนทันที (ต่อ 1 การตรวจ) — แบบละเอียด */
