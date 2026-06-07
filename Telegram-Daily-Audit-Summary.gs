@@ -92,20 +92,51 @@ function doPost(e) {
   }
 }
 
-/** ข้อความแจ้งเตือนทันที (ต่อ 1 การตรวจ) */
+/** ข้อความแจ้งเตือนทันที (ต่อ 1 การตรวจ) — แบบละเอียด */
 function formatInstant_(a) {
   var who = esc_(nameByCode_(a.auditorCode || a.submittedBy, a.auditor || a.submittedByName));
   var store = esc_(a.storeName || '-');
-  var time = a.time ? ('  ' + esc_(a.time) + ' น.') : '';
+  var time = a.time ? ('  ·  ' + esc_(a.time) + ' น.') : '';
   var date = a.date ? (' · ' + esc_(thaiDate_(a.date))) : '';
+
   var pctNum = parseFloat(a.passPct);
   var pct = isNaN(pctNum) ? '-' : pctNum.toFixed(1) + '%';
+  var tier = isNaN(pctNum) ? '' : (pctNum >= 90 ? '🟢 ดีเยี่ยม' : pctNum >= 70 ? '🟡 ผ่านเกณฑ์' : '🔴 เร่งด่วน');
+
+  var pass = parseInt(a.passCount, 10), na = parseInt(a.naCount, 10), tot = parseInt(a.totalCount, 10);
   var fail = parseInt(a.failCount, 10) || 0;
-  var failTxt = fail > 0 ? ('  (ไม่ผ่าน ' + fail + ' ข้อ)') : '';
+  var counts = '\n   ✅ ผ่าน ' + (isNaN(pass) ? '-' : pass) +
+               ' · ❌ ไม่ผ่าน ' + fail +
+               ' · ⚪ N/A ' + (isNaN(na) ? '-' : na) +
+               (isNaN(tot) ? '' : (' · รวม ' + tot + ' ข้อ'));
+
+  var bzm = (a.bzmNick || a.bzm) ? ('\n👥 BZM: ' + esc_(a.bzmNick || a.bzm)) : '';
+
+  // รายการข้อที่ไม่ผ่าน (พร้อมหมายเหตุ) — จำกัดไม่เกิน 12 ข้อ
+  var failedTxt = '';
+  var fails = a.failed || [];
+  if (fails.length) {
+    var CAP = 12;
+    var rows = fails.slice(0, CAP).map(function (it) {
+      var sec = it.section ? ('[' + esc_(it.section) + '] ') : '';
+      var note = it.note ? (' — <i>' + esc_(it.note) + '</i>') : '';
+      return '• ' + sec + esc_(it.text || '') + note;
+    });
+    var more = fails.length > CAP ? ('\n…และอีก ' + (fails.length - CAP) + ' ข้อ') : '';
+    failedTxt = '\n\n❌ <b>ข้อที่ไม่ผ่าน (' + fails.length + '):</b>\n' + rows.join('\n') + more;
+  }
+
+  // ลิงก์พิกัดที่ตรวจ (ถ้ามี GPS)
+  var gpsTxt = '';
+  if (a.gps && a.gps.lat != null && a.gps.lng != null) {
+    gpsTxt = '\n\n📍 <a href="https://www.google.com/maps?q=' + a.gps.lat + ',' + a.gps.lng + '">ดูพิกัดที่ตรวจ</a>';
+  }
+
   return '🔔 <b>มีการตรวจสาขาใหม่</b> — ' + esc_(BRAND_LABEL) + esc_(date) + '\n\n' +
-         '👤 <b>' + who + '</b>\n' +
-         '🏬 ' + store + time + '\n' +
-         '✅ ผ่านเกณฑ์ ' + pct + esc_(failTxt);
+         '🏬 <b>' + store + '</b>\n' +
+         '👤 ' + who + time + bzm + '\n\n' +
+         '📊 ผ่านเกณฑ์ <b>' + pct + '</b>' + (tier ? ('  ' + tier) : '') + counts +
+         failedTxt + gpsTxt;
 }
 
 /** ── สร้าง trigger รายวัน 17:00 (รันครั้งเดียว) ── */

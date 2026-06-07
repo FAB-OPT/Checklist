@@ -6110,6 +6110,9 @@ const JD_TG_NOTIFY_URL = '';
 function notifyJDToTelegram(r) {
   if (!JD_TG_NOTIFY_URL || !r) return;
   try {
+    const failed = (r.items || [])
+      .filter(it => it && it.status === 'fail')
+      .map(it => ({ section: it.section || '', num: it.num || '', text: it.text || '', note: it.note || '' }));
     fetch(JD_TG_NOTIFY_URL, {
       method: 'POST',
       mode: 'no-cors',
@@ -6117,8 +6120,11 @@ function notifyJDToTelegram(r) {
       body: JSON.stringify({
         auditorCode: r.auditorCode || '', submittedBy: r.submittedBy || '',
         auditor: r.auditor || '', submittedByName: r.submittedByName || '',
-        storeName: r.storeName || '', passPct: r.passPct, failCount: r.failCount,
-        time: r.time || '', date: r.date || ''
+        storeName: r.storeName || '', bzm: r.bzm || '', bzmNick: r.bzmNick || '',
+        passPct: r.passPct, passCount: r.passCount, failCount: r.failCount,
+        naCount: r.naCount, totalCount: r.totalCount,
+        time: r.time || '', date: r.date || '', gps: r.gps || null,
+        failed: failed
       })
     });
   } catch (e) {}
