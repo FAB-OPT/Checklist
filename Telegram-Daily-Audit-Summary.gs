@@ -1,0 +1,223 @@
+/****************************************************************************************
+ * สรุปการตรวจสาขา (เจ๊แดง) → แจ้งเตือนกลุ่ม Telegram ทุกวัน 17:00 น.
+ * ───────────────────────────────────────────────────────────────────────────────────
+ * อ่านข้อมูลการตรวจของ "วันนี้" จาก Firebase Firestore (collection: jaedaengAudits)
+ * แล้วโพสต์สรุปลงกลุ่ม Telegram ว่า "มีใครตรวจที่ไหนบ้าง"
+ *
+ * ── วิธีติดตั้ง (ทำครั้งเดียว) ────────────────────────────────────────────────────────
+ * 1) สร้าง Apps Script ใหม่: https://script.google.com → New project → วางโค้ดนี้ทั้งไฟล์
+ *
+ * 2) สร้าง Service Account ให้สิทธิ์อ่าน Firestore:
+ *    - เปิด https://console.cloud.google.com → เลือกโปรเจกต์ checklist-a89e2
+ *    - IAM & Admin → Service Accounts → Create service account (ตั้งชื่ออะไรก็ได้)
+ *    - ให้ Role: "Cloud Datastore Viewer" (หรือ "Firebase Viewer")
+ *    - กดเข้า service account ที่สร้าง → Keys → Add key → Create new key → JSON → ดาวน์โหลด
+ *    - เปิดไฟล์ JSON จะเห็น "client_email" และ "private_key"
+ *
+ * 3) ใส่ค่าลับใน Project Settings → Script properties (อย่าฮาร์ดโค้ดในไฟล์):
+ *    TG_BOT_TOKEN     = โทเค็นบอท (จาก @BotFather — ใช้บอทเดิมที่มีอยู่ได้)
+ *    TG_CHAT_ID       = chat_id ของกลุ่ม (ดูข้อ 5)
+ *    FB_PROJECT_ID    = checklist-a89e2
+ *    FB_CLIENT_EMAIL  = client_email จากไฟล์ JSON
+ *    FB_PRIVATE_KEY   = private_key จากไฟล์ JSON (วางทั้งก้อน รวม -----BEGIN/END-----)
+ *
+ * 4) เพิ่มบอทเข้ากลุ่ม Telegram + ตั้งบอทเป็นแอดมิน (ให้โพสต์ได้)
+ *
+ * 5) หา chat_id ของกลุ่ม: ส่งข้อความอะไรก็ได้ในกลุ่ม แล้วเปิด
+ *    https://api.telegram.org/bot<TG_BOT_TOKEN>/getUpdates
+ *    มองหา "chat":{"id":-100xxxxxxxxxx ...} → เลขนั้น (ติดลบ) คือ chat_id ของกลุ่ม
+ *
+ * 6) กดรันฟังก์ชัน testRun() หนึ่งครั้ง → กด Allow สิทธิ์ → เช็คว่ามีข้อความเข้ากลุ่ม
+ *
+ * 7) ตั้งให้รันอัตโนมัติ 17:00 ทุกวัน: รันฟังก์ชัน createDailyTrigger() หนึ่งครั้ง
+ *    (หรือ Triggers ⏰ → Add Trigger → sendDailyAuditSummary → Time-driven → Day timer → 5pm–6pm)
+ *
+ * หมายเหตุ: timezone ของ trigger ใช้ตามโปรเจกต์ Apps Script — ตั้งเป็น (GMT+07:00) Bangkok
+ *           ที่ Project Settings → Time zone
+ ****************************************************************************************/
+
+var COLLECTION = 'jaedaengAudits';   // เฉพาะการตรวจเจ๊แดง
+var BRAND_LABEL = 'เจ๊แดง จุ่มนัวร์';
+var TZ = 'Asia/Bangkok';
+
+var TH_MONTH = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+
+/** ── ฟังก์ชันหลัก (ตัวที่ตั้ง trigger ให้รัน 17:00) ── */
+function sendDailyAuditSummary() {
+  var today = Utilities.formatDate(new Date(), TZ, 'yyyy-MM-dd');
+  var audits = queryAuditsByDate_(today);
+  var text = formatMessage_(audits, today);
+  sendTelegram_(text);
+}
+
+/** ── ทดสอบรันทันที (วันนี้) ── */
+function testRun() {
+  sendDailyAuditSummary();
+}
+
+/** ── สร้าง trigger รายวัน 17:00 (รันครั้งเดียว) ── */
+function createDailyTrigger() {
+  // ลบ trigger เดิมของฟังก์ชันนี้ก่อน กันซ้ำ
+  ScriptApp.getProjectTriggers().forEach(function (t) {
+    if (t.getHandlerFunction() === 'sendDailyAuditSummary') ScriptApp.deleteTrigger(t);
+  });
+  ScriptApp.newTrigger('sendDailyAuditSummary')
+    .timeBased().everyDays(1).atHour(17).nearMinute(0)
+    .inTimezone(TZ)
+    .create();
+  Logger.log('ตั้ง trigger 17:00 ทุกวันเรียบร้อย');
+}
+
+/* ─────────────────────────── Firestore ─────────────────────────── */
+
+/** ดึงเอกสารใน collection ที่ field date == dateStr */
+function queryAuditsByDate_(dateStr) {
+  var props = PropertiesService.getScriptProperties();
+  var pid = props.getProperty('FB_PROJECT_ID');
+  var token = getAccessToken_();
+  var url = 'https://firestore.googleapis.com/v1/projects/' + pid +
+            '/databases/(default)/documents:runQuery';
+  var body = {
+    structuredQuery: {
+      from: [{ collectionId: COLLECTION }],
+      where: {
+        fieldFilter: {
+          field: { fieldPath: 'date' },
+          op: 'EQUAL',
+          value: { stringValue: dateStr }
+        }
+      }
+    }
+  };
+  var res = UrlFetchApp.fetch(url, {
+    method: 'post',
+    contentType: 'application/json',
+    headers: { Authorization: 'Bearer ' + token },
+    payload: JSON.stringify(body),
+    muteHttpExceptions: true
+  });
+  if (res.getResponseCode() !== 200) {
+    throw new Error('Firestore query error ' + res.getResponseCode() + ': ' + res.getContentText());
+  }
+  var arr = JSON.parse(res.getContentText()) || [];
+  var out = [];
+  arr.forEach(function (row) {
+    if (!row.document || !row.document.fields) return;
+    out.push(parseFields_(row.document.fields));
+  });
+  return out;
+}
+
+/** แปลง fields แบบ Firestore (typed) → object ธรรมดา */
+function parseFields_(fields) {
+  var o = {};
+  Object.keys(fields).forEach(function (k) { o[k] = fsVal_(fields[k]); });
+  return o;
+}
+function fsVal_(v) {
+  if (v == null) return null;
+  if ('stringValue' in v) return v.stringValue;
+  if ('integerValue' in v) return parseInt(v.integerValue, 10);
+  if ('doubleValue' in v) return Number(v.doubleValue);
+  if ('booleanValue' in v) return v.booleanValue;
+  if ('timestampValue' in v) return v.timestampValue;
+  if ('nullValue' in v) return null;
+  if ('mapValue' in v) return parseFields_((v.mapValue && v.mapValue.fields) || {});
+  if ('arrayValue' in v) return ((v.arrayValue && v.arrayValue.values) || []).map(fsVal_);
+  return null;
+}
+
+/** OAuth access token จาก service account (scope: datastore) */
+function getAccessToken_() {
+  var props = PropertiesService.getScriptProperties();
+  var email = props.getProperty('FB_CLIENT_EMAIL');
+  var key = (props.getProperty('FB_PRIVATE_KEY') || '').replace(/\\n/g, '\n');
+  if (!email || !key) throw new Error('ยังไม่ได้ตั้ง FB_CLIENT_EMAIL / FB_PRIVATE_KEY ใน Script properties');
+
+  var now = Math.floor(Date.now() / 1000);
+  var enc = function (o) { return Utilities.base64EncodeWebSafe(JSON.stringify(o)).replace(/=+$/, ''); };
+  var header = { alg: 'RS256', typ: 'JWT' };
+  var claim = {
+    iss: email,
+    scope: 'https://www.googleapis.com/auth/datastore',
+    aud: 'https://oauth2.googleapis.com/token',
+    iat: now,
+    exp: now + 3600
+  };
+  var toSign = enc(header) + '.' + enc(claim);
+  var sig = Utilities.computeRsaSha256Signature(toSign, key);
+  var jwt = toSign + '.' + Utilities.base64EncodeWebSafe(sig).replace(/=+$/, '');
+
+  var res = UrlFetchApp.fetch('https://oauth2.googleapis.com/token', {
+    method: 'post',
+    payload: { grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer', assertion: jwt },
+    muteHttpExceptions: true
+  });
+  var data = JSON.parse(res.getContentText());
+  if (!data.access_token) throw new Error('ขอ OAuth token ไม่สำเร็จ: ' + res.getContentText());
+  return data.access_token;
+}
+
+/* ─────────────────────────── ข้อความสรุป ─────────────────────────── */
+
+function thaiDate_(ymd) {
+  var p = String(ymd).split('-');
+  return parseInt(p[2], 10) + ' ' + TH_MONTH[parseInt(p[1], 10) - 1] + ' ' + (parseInt(p[0], 10) + 543);
+}
+
+function esc_(s) {
+  return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function formatMessage_(audits, dateStr) {
+  var head = '📋 <b>สรุปการตรวจสาขา ' + esc_(BRAND_LABEL) + '</b>\n' +
+             '🗓️ ' + esc_(thaiDate_(dateStr)) + '\n';
+
+  if (!audits.length) {
+    return head + '\n📭 วันนี้ยังไม่มีการตรวจสาขา';
+  }
+
+  // เรียงตามเวลา (ถ้ามี) แล้วค่อย submittedAt
+  audits.sort(function (a, b) {
+    var ta = a.time || '', tb = b.time || '';
+    if (ta !== tb) return ta < tb ? -1 : 1;
+    return String(a.submittedAt || '') < String(b.submittedAt || '') ? -1 : 1;
+  });
+
+  var lines = audits.map(function (a, i) {
+    var store = esc_(a.storeName || '-');
+    var who = esc_(a.auditor && a.auditor !== '-' ? a.auditor : (a.submittedByName || a.bzmNick || '-'));
+    var time = a.time ? (' · ' + esc_(a.time) + ' น.') : '';
+    var pct = (typeof a.passPct === 'number') ? a.passPct.toFixed(1) + '%' : '-';
+    var fail = (typeof a.failCount === 'number') ? a.failCount : 0;
+    var failTxt = fail > 0 ? ('  (ไม่ผ่าน ' + fail + ' ข้อ)') : '';
+    return (i + 1) + '. <b>' + store + '</b>\n' +
+           '   👤 ' + who + time + '\n' +
+           '   ✅ ผ่านเกณฑ์ ' + pct + esc_(failTxt);
+  });
+
+  return head + '\n✅ วันนี้มีการตรวจ <b>' + audits.length + '</b> สาขา\n\n' + lines.join('\n\n');
+}
+
+/* ─────────────────────────── Telegram ─────────────────────────── */
+
+function sendTelegram_(text) {
+  var props = PropertiesService.getScriptProperties();
+  var token = props.getProperty('TG_BOT_TOKEN');
+  var chatId = props.getProperty('TG_CHAT_ID');
+  if (!token || !chatId) throw new Error('ยังไม่ได้ตั้ง TG_BOT_TOKEN / TG_CHAT_ID ใน Script properties');
+
+  var res = UrlFetchApp.fetch('https://api.telegram.org/bot' + token + '/sendMessage', {
+    method: 'post',
+    payload: {
+      chat_id: chatId,
+      text: text,
+      parse_mode: 'HTML',
+      disable_web_page_preview: 'true'
+    },
+    muteHttpExceptions: true
+  });
+  if (res.getResponseCode() !== 200) {
+    throw new Error('Telegram error ' + res.getResponseCode() + ': ' + res.getContentText());
+  }
+}
