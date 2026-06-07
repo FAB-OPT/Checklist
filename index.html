@@ -6104,6 +6104,26 @@ async function saveJaedaengToBackend(audit) {
   }
 }
 
+// URL Web App ของ Apps Script "Checklist JD BOT" — แจ้งเตือน Telegram ทันทีที่บันทึกผลตรวจ
+// วาง URL /exec ที่ได้จาก Deploy → Web app (เว้นว่าง = ปิดการแจ้งเตือนทันที)
+const JD_TG_NOTIFY_URL = '';
+function notifyJDToTelegram(r) {
+  if (!JD_TG_NOTIFY_URL || !r) return;
+  try {
+    fetch(JD_TG_NOTIFY_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({
+        auditorCode: r.auditorCode || '', submittedBy: r.submittedBy || '',
+        auditor: r.auditor || '', submittedByName: r.submittedByName || '',
+        storeName: r.storeName || '', passPct: r.passPct, failCount: r.failCount,
+        time: r.time || '', date: r.date || ''
+      })
+    });
+  } catch (e) {}
+}
+
 function saveCurrentAudit() {
   if (!currentAudit) return;
   const idx = allAudits.findIndex(a => a.id === currentAudit.id);
@@ -9550,6 +9570,7 @@ async function submitJaedaengAudit() {
   else allJaedaengAudits.push(record);
   saveJaedaengLocal();
   saveJaedaengToBackend(record);
+  notifyJDToTelegram(record);   // แจ้งเตือนกลุ่ม Telegram ทันที
   currentJDAudit = null;
   showModal('บันทึกสำเร็จ', `ผ่านเกณฑ์ ${passPct.toFixed(1)}% (ผ่าน ${passCount} · ไม่ผ่าน ${failCount} · N/A ${naCount})`);
   showJaedaengHub();

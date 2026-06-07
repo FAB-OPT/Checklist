@@ -77,6 +77,37 @@ function testRun() {
   sendDailyAuditSummary();
 }
 
+/** ── แจ้งเตือนทันที เมื่อแอปบันทึกผลตรวจใหม่ (เรียกผ่าน Web App POST) ──
+ *  ต้อง Deploy โปรเจกต์นี้เป็น Web app (Execute as: Me · Access: Anyone)
+ *  แล้วเอา URL /exec ไปใส่ในแอป (ตัวแปร JD_TG_NOTIFY_URL ใน index.html) */
+function doPost(e) {
+  try {
+    var data = (e && e.postData && e.postData.contents) ? JSON.parse(e.postData.contents) : {};
+    sendTelegram_(formatInstant_(data));
+    return ContentService.createTextOutput(JSON.stringify({ ok: true }))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({ ok: false, error: String(err) }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+/** ข้อความแจ้งเตือนทันที (ต่อ 1 การตรวจ) */
+function formatInstant_(a) {
+  var who = esc_(nameByCode_(a.auditorCode || a.submittedBy, a.auditor || a.submittedByName));
+  var store = esc_(a.storeName || '-');
+  var time = a.time ? ('  ' + esc_(a.time) + ' น.') : '';
+  var date = a.date ? (' · ' + esc_(thaiDate_(a.date))) : '';
+  var pctNum = parseFloat(a.passPct);
+  var pct = isNaN(pctNum) ? '-' : pctNum.toFixed(1) + '%';
+  var fail = parseInt(a.failCount, 10) || 0;
+  var failTxt = fail > 0 ? ('  (ไม่ผ่าน ' + fail + ' ข้อ)') : '';
+  return '🔔 <b>มีการตรวจสาขาใหม่</b> — ' + esc_(BRAND_LABEL) + esc_(date) + '\n\n' +
+         '👤 <b>' + who + '</b>\n' +
+         '🏬 ' + store + time + '\n' +
+         '✅ ผ่านเกณฑ์ ' + pct + esc_(failTxt);
+}
+
 /** ── สร้าง trigger รายวัน 17:00 (รันครั้งเดียว) ── */
 function createDailyTrigger() {
   // ลบ trigger เดิมของฟังก์ชันนี้ก่อน กันซ้ำ
