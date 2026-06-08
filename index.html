@@ -6106,7 +6106,7 @@ async function saveJaedaengToBackend(audit) {
 
 // URL Web App ของ Apps Script "Checklist JD BOT" — แจ้งเตือน Telegram ทันทีที่บันทึกผลตรวจ
 // วาง URL /exec ที่ได้จาก Deploy → Web app (เว้นว่าง = ปิดการแจ้งเตือนทันที)
-const JD_TG_NOTIFY_URL = '';
+const JD_TG_NOTIFY_URL = 'https://script.google.com/macros/s/AKfycbzbPEmT3TTf4z1OO59iIIiUPg1c4thTm9rJbUYJwmpCyDVZKQ5gfeve8MoesT3Qy7HR/exec';
 function notifyJDToTelegram(r) {
   if (!JD_TG_NOTIFY_URL || !r) return;
   try {
