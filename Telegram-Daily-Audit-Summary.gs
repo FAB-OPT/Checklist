@@ -16,7 +16,8 @@
  *
  * 3) ใส่ค่าลับใน Project Settings → Script properties (อย่าฮาร์ดโค้ดในไฟล์):
  *    TG_BOT_TOKEN     = โทเค็นบอท (จาก @BotFather — ใช้บอทเดิมที่มีอยู่ได้)
- *    TG_CHAT_ID       = chat_id ของกลุ่ม (ดูข้อ 5)
+ *    TG_CHAT_ID       = chat_id ของกลุ่มหลัก (รับทั้งเด้งทันที+รูป และสรุป 17:00) (ดูข้อ 5)
+ *    TG_CHAT_ID_2     = (ไม่บังคับ) chat_id ของกลุ่มที่ 2 — รับ "เฉพาะสรุป 17:00" เท่านั้น
  *    FB_PROJECT_ID    = checklist-a89e2
  *    FB_CLIENT_EMAIL  = client_email จากไฟล์ JSON
  *    FB_PRIVATE_KEY   = private_key จากไฟล์ JSON (วางทั้งก้อน รวม -----BEGIN/END-----)
@@ -64,12 +65,17 @@ function nameByCode_(code, fallback) {
 
 var TH_MONTH = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
 
-/** ── ฟังก์ชันหลัก (ตัวที่ตั้ง trigger ให้รัน 17:00) ── */
+/** ── ฟังก์ชันหลัก (ตัวที่ตั้ง trigger ให้รัน 17:00) ──
+ *  ส่ง "สรุปประจำวัน" เข้าทุกกลุ่ม: TG_CHAT_ID (กลุ่มหลัก) + TG_CHAT_ID_2 (กลุ่มสรุปอย่างเดียว)
+ *  หมายเหตุ: การเด้งทันที + รูป (doPost) ส่งเฉพาะกลุ่มหลัก TG_CHAT_ID เท่านั้น */
 function sendDailyAuditSummary() {
   var today = Utilities.formatDate(new Date(), TZ, 'yyyy-MM-dd');
   var audits = queryAuditsByDate_(today);
   var text = formatMessage_(audits, today);
-  sendTelegram_(text);
+  var props = PropertiesService.getScriptProperties();
+  var ids = [props.getProperty('TG_CHAT_ID'), props.getProperty('TG_CHAT_ID_2')]
+    .filter(function (x) { return x && String(x).trim(); });
+  ids.forEach(function (id) { sendTelegram_(text, id); });
 }
 
 /** ── ทดสอบรันทันที (วันนี้) ── */
@@ -317,10 +323,10 @@ function formatMessage_(audits, dateStr) {
 
 /* ─────────────────────────── Telegram ─────────────────────────── */
 
-function sendTelegram_(text) {
+function sendTelegram_(text, chatId) {
   var props = PropertiesService.getScriptProperties();
   var token = props.getProperty('TG_BOT_TOKEN');
-  var chatId = props.getProperty('TG_CHAT_ID');
+  chatId = chatId || props.getProperty('TG_CHAT_ID');
   if (!token || !chatId) throw new Error('ยังไม่ได้ตั้ง TG_BOT_TOKEN / TG_CHAT_ID ใน Script properties');
 
   var res = UrlFetchApp.fetch('https://api.telegram.org/bot' + token + '/sendMessage', {
