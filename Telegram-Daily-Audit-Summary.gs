@@ -106,19 +106,22 @@ function sendPhotos_(urls) {
   var chatId = props.getProperty('TG_CHAT_ID');
   urls = (urls || []).filter(function (u) { return typeof u === 'string' && /^https?:\/\//i.test(u); }).slice(0, 10);
   if (!token || !chatId || !urls.length) return;
-  var url, payload;
-  if (urls.length === 1) {
-    url = 'https://api.telegram.org/bot' + token + '/sendPhoto';
-    payload = { chat_id: chatId, photo: urls[0] };
-  } else {
-    url = 'https://api.telegram.org/bot' + token + '/sendMediaGroup';
-    payload = { chat_id: chatId, media: JSON.stringify(urls.map(function (u) { return { type: 'photo', media: u }; })) };
-  }
-  var res = UrlFetchApp.fetch(url, { method: 'post', payload: payload, muteHttpExceptions: true });
-  if (res.getResponseCode() !== 200) {
-    // แจ้งสาเหตุเข้ากลุ่ม (ดีบั๊ก) — เช่น Telegram ดึง URL รูปไม่ได้ / รูปไม่ public
-    try { sendTelegram_('⚠️ ส่งรูปไม่สำเร็จ (' + res.getResponseCode() + '): ' + String(res.getContentText()).slice(0, 300)); } catch (e) {}
-  }
+  var sendUrl = 'https://api.telegram.org/bot' + token + '/sendPhoto';
+  var errReported = false;
+  function _err(msg) { if (!errReported) { errReported = true; try { sendTelegram_('⚠️ ' + msg); } catch (e) {} } }
+  // โหลดรูปเองแล้วอัปขึ้น Telegram (multipart) — กันเคส Telegram ดึง URL ไม่ได้
+  urls.forEach(function (u) {
+    try {
+      var img = UrlFetchApp.fetch(u, { muteHttpExceptions: true, followRedirects: true });
+      if (img.getResponseCode() !== 200) { _err('โหลดรูปไม่ได้ (' + img.getResponseCode() + '): ' + u); return; }
+      var res = UrlFetchApp.fetch(sendUrl, {
+        method: 'post',
+        payload: { chat_id: chatId, photo: img.getBlob() },
+        muteHttpExceptions: true
+      });
+      if (res.getResponseCode() !== 200) { _err('ส่งรูปไม่สำเร็จ (' + res.getResponseCode() + '): ' + String(res.getContentText()).slice(0, 200)); }
+    } catch (e) { _err('ส่งรูป error: ' + (e && e.message || e)); }
+  });
 }
 
 /** ข้อความแจ้งเตือนทันที (ต่อ 1 การตรวจ) — แบบละเอียด */
