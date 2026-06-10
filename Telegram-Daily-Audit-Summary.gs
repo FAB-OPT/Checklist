@@ -106,16 +106,19 @@ function sendPhotos_(urls) {
   var chatId = props.getProperty('TG_CHAT_ID');
   urls = (urls || []).filter(function (u) { return typeof u === 'string' && /^https?:\/\//i.test(u); }).slice(0, 10);
   if (!token || !chatId || !urls.length) return;
+  var url, payload;
   if (urls.length === 1) {
-    UrlFetchApp.fetch('https://api.telegram.org/bot' + token + '/sendPhoto', {
-      method: 'post', payload: { chat_id: chatId, photo: urls[0] }, muteHttpExceptions: true
-    });
-    return;
+    url = 'https://api.telegram.org/bot' + token + '/sendPhoto';
+    payload = { chat_id: chatId, photo: urls[0] };
+  } else {
+    url = 'https://api.telegram.org/bot' + token + '/sendMediaGroup';
+    payload = { chat_id: chatId, media: JSON.stringify(urls.map(function (u) { return { type: 'photo', media: u }; })) };
   }
-  var media = urls.map(function (u) { return { type: 'photo', media: u }; });
-  UrlFetchApp.fetch('https://api.telegram.org/bot' + token + '/sendMediaGroup', {
-    method: 'post', payload: { chat_id: chatId, media: JSON.stringify(media) }, muteHttpExceptions: true
-  });
+  var res = UrlFetchApp.fetch(url, { method: 'post', payload: payload, muteHttpExceptions: true });
+  if (res.getResponseCode() !== 200) {
+    // แจ้งสาเหตุเข้ากลุ่ม (ดีบั๊ก) — เช่น Telegram ดึง URL รูปไม่ได้ / รูปไม่ public
+    try { sendTelegram_('⚠️ ส่งรูปไม่สำเร็จ (' + res.getResponseCode() + '): ' + String(res.getContentText()).slice(0, 300)); } catch (e) {}
+  }
 }
 
 /** ข้อความแจ้งเตือนทันที (ต่อ 1 การตรวจ) — แบบละเอียด */
