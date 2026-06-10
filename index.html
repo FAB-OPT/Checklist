@@ -6113,11 +6113,10 @@ function notifyJDToTelegram(r) {
     const failed = (r.items || [])
       .filter(it => it && it.status === 'fail')
       .map(it => ({ section: it.section || '', num: it.num || '', text: it.text || '', note: it.note || '' }));
-    // รูปหลักฐาน — เฉพาะ URL (ที่อัปขึ้น R2 แล้ว) · รูปข้อ "ไม่ผ่าน" ก่อน · สูงสุด 10
-    const isUrl = u => typeof u === 'string' && /^https?:\/\//i.test(u);
+    // รูปหลักฐาน — ส่งทั้ง URL (R2) และ base64 (อัปไม่ทัน) · รูปข้อ "ไม่ผ่าน" ก่อน · สูงสุด 10
     const failPhotos = [], otherPhotos = [];
     (r.items || []).forEach(it => (it.photos || []).forEach(u => {
-      if (!isUrl(u)) return;
+      if (typeof u !== 'string' || !u) return;
       (it.status === 'fail' ? failPhotos : otherPhotos).push(u);
     }));
     const photos = [...new Set(failPhotos.concat(otherPhotos))].slice(0, 10);

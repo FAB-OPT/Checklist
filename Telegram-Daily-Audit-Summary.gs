@@ -104,19 +104,26 @@ function sendPhotos_(urls) {
   var props = PropertiesService.getScriptProperties();
   var token = props.getProperty('TG_BOT_TOKEN');
   var chatId = props.getProperty('TG_CHAT_ID');
-  urls = (urls || []).filter(function (u) { return typeof u === 'string' && /^https?:\/\//i.test(u); }).slice(0, 10);
+  urls = (urls || []).filter(function (u) { return typeof u === 'string' && u; }).slice(0, 10);
   if (!token || !chatId || !urls.length) return;
   var sendUrl = 'https://api.telegram.org/bot' + token + '/sendPhoto';
   var errReported = false;
   function _err(msg) { if (!errReported) { errReported = true; try { sendTelegram_('⚠️ ' + msg); } catch (e) {} } }
-  // โหลดรูปเองแล้วอัปขึ้น Telegram (multipart) — กันเคส Telegram ดึง URL ไม่ได้
+  // อัปรูปขึ้น Telegram เอง (multipart) — รองรับทั้ง URL (R2) และ base64 (อัปไม่ทัน)
   urls.forEach(function (u) {
     try {
-      var img = UrlFetchApp.fetch(u, { muteHttpExceptions: true, followRedirects: true });
-      if (img.getResponseCode() !== 200) { _err('โหลดรูปไม่ได้ (' + img.getResponseCode() + '): ' + u); return; }
+      var blob;
+      var m = /^data:(image\/[\w.+-]+);base64,(.*)$/i.exec(u);
+      if (m) {
+        blob = Utilities.newBlob(Utilities.base64Decode(m[2]), m[1], 'photo.jpg');
+      } else if (/^https?:\/\//i.test(u)) {
+        var img = UrlFetchApp.fetch(u, { muteHttpExceptions: true, followRedirects: true });
+        if (img.getResponseCode() !== 200) { _err('โหลดรูปไม่ได้ (' + img.getResponseCode() + '): ' + u); return; }
+        blob = img.getBlob();
+      } else { return; }
       var res = UrlFetchApp.fetch(sendUrl, {
         method: 'post',
-        payload: { chat_id: chatId, photo: img.getBlob() },
+        payload: { chat_id: chatId, photo: blob },
         muteHttpExceptions: true
       });
       if (res.getResponseCode() !== 200) { _err('ส่งรูปไม่สำเร็จ (' + res.getResponseCode() + '): ' + String(res.getContentText()).slice(0, 200)); }
