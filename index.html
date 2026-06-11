@@ -8788,7 +8788,21 @@ function renderJaedaengList() {
   }).join('');
 }
 
-function startJaedaengAudit() {
+async function startJaedaengAudit() {
+  // มีการตรวจที่ค้างอยู่ (draft) → ถามทำต่อ / เริ่มใหม่
+  const draft = _loadJDDraft();
+  const draftMine = draft && draft.items && draft.items.length &&
+    (!draft.auditorCode || !currentUser || draft.auditorCode === currentUser.code);
+  if (draftMine) {
+    const store = draft.storeName || '(ยังไม่เลือกสาขา)';
+    const ok = await showConfirm('พบการตรวจที่ค้างอยู่', 'สาขา: <b>' + escapeHtml(store) + '</b><br>ต้องการทำต่อจากที่ค้างไว้ไหม?', { okLabel: 'ทำต่อ', cancelLabel: 'เริ่มใหม่' });
+    if (ok) { currentJDAudit = draft; currentJDAudit._draft = true; _renderJDAuditScreen(); return; }
+    _clearJDDraft();
+  }
+  _startNewJDAudit();
+}
+
+function _startNewJDAudit() {
   if (!navigator.geolocation) {
     showModal('อุปกรณ์ไม่รองรับ GPS', 'เบราว์เซอร์นี้ไม่รองรับการระบุตำแหน่ง ไม่สามารถเริ่มตรวจได้');
     return;
@@ -8872,10 +8886,38 @@ function _startJaedaengAuditWithGps(gps) {
     required.add(pick);
   });
   currentJDAudit.requiredPhotos = Array.from(required).sort((a, b) => a - b);
+  currentJDAudit._draft = true;
+  _renderJDAuditScreen();
+  _saveJDDraft();
+}
+
+/* ─── Draft: บันทึกการตรวจที่ค้างอัตโนมัติ (กันหายเมื่อออกจากหน้า/รีโหลด) ─── */
+const JD_DRAFT_KEY = 'jd_audit_draft_v1';
+function _saveJDDraft() {
+  try {
+    if (!currentJDAudit || !currentJDAudit._draft) return;
+    localStorage.setItem(JD_DRAFT_KEY, JSON.stringify(currentJDAudit));
+  } catch (e) {
+    // เกิน quota (รูป base64 เยอะ) → เซฟแบบเก็บเฉพาะรูปที่เป็น URL
+    try {
+      const lite = JSON.parse(JSON.stringify(currentJDAudit));
+      (lite.items || []).forEach(it => { if (it.photos) it.photos = it.photos.filter(p => typeof p === 'string' && /^https?:/i.test(p)); });
+      localStorage.setItem(JD_DRAFT_KEY, JSON.stringify(lite));
+    } catch (e2) {}
+  }
+}
+function _loadJDDraft() {
+  try { const s = localStorage.getItem(JD_DRAFT_KEY); return s ? JSON.parse(s) : null; } catch (e) { return null; }
+}
+function _clearJDDraft() {
+  try { localStorage.removeItem(JD_DRAFT_KEY); } catch (e) {}
+}
+
+/* แสดงหน้าจอฟอร์มตรวจจาก currentJDAudit (ใช้ทั้งเริ่มใหม่และทำต่อ draft) */
+function _renderJDAuditScreen() {
+  const a = currentJDAudit;
   hideAllScreens();
   document.getElementById('jaedaeng-audit-screen').style.display = 'block';
-  // Populate branch dropdown — group stores by their BZM zone, label as
-  // "โซน <full name> (<nick>)" so the zone owner is unambiguous.
   const select = document.getElementById('jd-store-name');
   const zones = {};
   const zoneOrder = [];
@@ -8895,16 +8937,20 @@ function _startJaedaengAuditWithGps(gps) {
     opts += '</optgroup>';
   });
   select.innerHTML = opts;
-  select.value = '';
-  document.getElementById('jd-auditor-display').textContent = currentJDAudit.auditor || '-';
-  // วันที่/เวลา — static (auto = ตอนเริ่มตรวจ) แก้ไขไม่ได้
-  document.getElementById('jd-date-display').textContent = fmtDateDMY(currentJDAudit.date || today);
-  document.getElementById('jd-time-display').textContent = (currentJDAudit.time || hhmm) + ' น.';
-  document.getElementById('jd-bzm-row').style.display = 'none';
+  select.value = a.storeName || '';
+  document.getElementById('jd-auditor-display').textContent = a.auditor || '-';
+  document.getElementById('jd-date-display').textContent = fmtDateDMY(a.date || todayDateStr());
+  document.getElementById('jd-time-display').textContent = (a.time || '') + ' น.';
+  const bzmRow = document.getElementById('jd-bzm-row');
+  const bzmDisp = document.getElementById('jd-bzm-display');
+  if ((a.bzm || a.bzmNick) && bzmRow && bzmDisp) {
+    bzmDisp.textContent = (a.bzm || '') + (a.bzmNick ? ' (' + a.bzmNick + ')' : '');
+    bzmRow.style.display = '';
+  } else if (bzmRow) { bzmRow.style.display = 'none'; }
   const gpsRow = document.getElementById('jd-gps-row');
   const gpsDisp = document.getElementById('jd-gps-display');
-  if (gpsRow && gpsDisp && currentJDAudit.gps) {
-    const g = currentJDAudit.gps;
+  if (gpsRow && gpsDisp && a.gps) {
+    const g = a.gps;
     let nearbyHtml = '';
     if (g.nearby500 && g.nearby500.length > 0) {
       nearbyHtml = '<div style="font-size:12px;margin-top:6px;color:var(--text-secondary);">สาขาในระยะ 500 ม.: ' +
@@ -9019,6 +9065,7 @@ function setJDStore(field, value) {
   }
   else if (field === 'date') currentJDAudit.date = value;
   else if (field === 'time') currentJDAudit.time = value;
+  _saveJDDraft();
 }
 
 // Variant of showModal that allows HTML content in the body.
@@ -9240,12 +9287,14 @@ function setJDAnswer(idx, value) {
     // Keep photos on required-photo items even when toggled to pass/na
     if (!isRequired) currentJDAudit.items[idx].photos = [];
   }
+  _saveJDDraft();
   renderJaedaengForm();
 }
 
 function setJDNote(idx, value) {
   if (!currentJDAudit) return;
   currentJDAudit.items[idx].note = value;
+  _saveJDDraft();
 }
 
 // Camera capture — Jae Daeng photos must come from a live camera feed,
@@ -9377,6 +9426,7 @@ async function handleJDPhotoFile(idx, file) {
       if (!item.photos) item.photos = [];
       const localSlot = item.photos.length;
       item.photos.push(dataUrl);
+      _saveJDDraft();
       jdCameraItemIdx = null;
       renderJaedaengForm();
       if (testMode || !blob) return;
@@ -9384,6 +9434,7 @@ async function handleJDPhotoFile(idx, file) {
         const url = await uploadJDPhotoToR2(blob);
         if (item.photos[localSlot] === dataUrl) {
           item.photos[localSlot] = url;
+          _saveJDDraft();
           renderJaedaengForm();
         }
       } catch (e) { console.warn('R2 upload (native capture) failed:', e); }
@@ -9432,6 +9483,7 @@ async function captureJDPhoto() {
   if (!item.photos) item.photos = [];
   const localSlot = item.photos.length;
   item.photos.push(dataUrl);
+  _saveJDDraft();
   closeJDCamera();
   renderJaedaengForm();
 
@@ -9443,6 +9495,7 @@ async function captureJDPhoto() {
     // Replace the inline preview with the R2 URL once the upload lands.
     if (item.photos[localSlot] === dataUrl) {
       item.photos[localSlot] = url;
+      _saveJDDraft();
       renderJaedaengForm();
     }
   } catch (e) {
@@ -9471,6 +9524,7 @@ function removeJDPhoto(idx, photoIdx) {
 async function cancelJaedaengAudit() {
   const ok = await showConfirm('ยกเลิกการตรวจ?', 'ข้อมูลที่กรอกจะไม่ถูกบันทึก', { okLabel: 'ยกเลิกการตรวจ', cancelLabel: 'กลับไปกรอก', danger: true });
   if (!ok) return;
+  _clearJDDraft();
   currentJDAudit = null;
   showJaedaengHub();
 }
@@ -9584,6 +9638,7 @@ async function submitJaedaengAudit() {
   saveJaedaengLocal();
   saveJaedaengToBackend(record);
   notifyJDToTelegram(record);   // แจ้งเตือนกลุ่ม Telegram ทันที
+  _clearJDDraft();
   currentJDAudit = null;
   showModal('บันทึกสำเร็จ', `ผ่านเกณฑ์ ${passPct.toFixed(1)}% (ผ่าน ${passCount} · ไม่ผ่าน ${failCount} · N/A ${naCount})`);
   showJaedaengHub();
