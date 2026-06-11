@@ -106,29 +106,44 @@ function sendPhotos_(urls) {
   var chatId = props.getProperty('TG_CHAT_ID');
   urls = (urls || []).filter(function (u) { return typeof u === 'string' && u; }).slice(0, 10);
   if (!token || !chatId || !urls.length) return;
-  var sendUrl = 'https://api.telegram.org/bot' + token + '/sendPhoto';
   var errReported = false;
   function _err(msg) { if (!errReported) { errReported = true; try { sendTelegram_('⚠️ ' + msg); } catch (e) {} } }
-  // อัปรูปขึ้น Telegram เอง (multipart) — รองรับทั้ง URL (R2) และ base64 (อัปไม่ทัน)
+
+  // เตรียม blob ของรูปทุกใบ (รองรับทั้ง base64 และ URL R2)
+  var blobs = [];
   urls.forEach(function (u) {
     try {
-      var blob;
       var m = /^data:(image\/[\w.+-]+);base64,(.*)$/i.exec(u);
       if (m) {
-        blob = Utilities.newBlob(Utilities.base64Decode(m[2]), m[1], 'photo.jpg');
+        blobs.push(Utilities.newBlob(Utilities.base64Decode(m[2]), m[1], 'photo.jpg'));
       } else if (/^https?:\/\//i.test(u)) {
         var img = UrlFetchApp.fetch(u, { muteHttpExceptions: true, followRedirects: true });
         if (img.getResponseCode() !== 200) { _err('โหลดรูปไม่ได้ (' + img.getResponseCode() + '): ' + u); return; }
-        blob = img.getBlob();
-      } else { return; }
-      var res = UrlFetchApp.fetch(sendUrl, {
-        method: 'post',
-        payload: { chat_id: chatId, photo: blob },
-        muteHttpExceptions: true
-      });
-      if (res.getResponseCode() !== 200) { _err('ส่งรูปไม่สำเร็จ (' + res.getResponseCode() + '): ' + String(res.getContentText()).slice(0, 200)); }
-    } catch (e) { _err('ส่งรูป error: ' + (e && e.message || e)); }
+        blobs.push(img.getBlob());
+      }
+    } catch (e) { _err('เตรียมรูป error: ' + (e && e.message || e)); }
   });
+  if (!blobs.length) return;
+
+  // รูปเดียว → sendPhoto · หลายรูป → sendMediaGroup (อัลบั้มเดียว)
+  if (blobs.length === 1) {
+    var res1 = UrlFetchApp.fetch('https://api.telegram.org/bot' + token + '/sendPhoto', {
+      method: 'post', payload: { chat_id: chatId, photo: blobs[0] }, muteHttpExceptions: true
+    });
+    if (res1.getResponseCode() !== 200) _err('ส่งรูปไม่สำเร็จ (' + res1.getResponseCode() + '): ' + String(res1.getContentText()).slice(0, 200));
+    return;
+  }
+  var media = [], payload = { chat_id: chatId };
+  blobs.forEach(function (b, i) {
+    var key = 'photo' + i;
+    media.push({ type: 'photo', media: 'attach://' + key });
+    payload[key] = b;
+  });
+  payload.media = JSON.stringify(media);
+  var res = UrlFetchApp.fetch('https://api.telegram.org/bot' + token + '/sendMediaGroup', {
+    method: 'post', payload: payload, muteHttpExceptions: true
+  });
+  if (res.getResponseCode() !== 200) _err('ส่งอัลบั้มไม่สำเร็จ (' + res.getResponseCode() + '): ' + String(res.getContentText()).slice(0, 200));
 }
 
 /** ข้อความแจ้งเตือนทันที (ต่อ 1 การตรวจ) — แบบละเอียด */
