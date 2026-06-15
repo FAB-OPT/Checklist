@@ -4636,6 +4636,16 @@ html.fab-sso-pending #login-screen { display: none !important; }
 .sf-day-side.all-ok .sf-day-side-stat { color:#1E6B36; }
 .sf-day-side.is-empty { opacity:0.6; }
 @media (max-width:480px){ .sf-day-row{flex-direction:column;align-items:stretch;gap:6px;} .sf-day-date{width:auto;} }
+
+/* แท็บแดชบอร์ดซานตาเฟ่ (OSS / Operations Checklist) */
+.sf-dash-tabs { display:flex; gap:8px; margin-bottom:16px; background:var(--surface-2); padding:5px; border-radius:14px; border:1px solid var(--border); }
+.sf-dash-tab { flex:1; padding:11px 10px; border:none; background:transparent; border-radius:10px; font-family:inherit; font-weight:800; font-size:13.5px; color:var(--text-secondary); cursor:pointer; transition:all .15s; }
+.sf-dash-tab:hover { color:var(--text); }
+.sf-dash-tab.is-active { background:linear-gradient(135deg, var(--primary), var(--primary-dark, var(--primary))); color:#fff; box-shadow:0 4px 12px rgba(168,37,24,.25); }
+/* ป้าย "เกินเวลา" + เหตุผล ในการ์ดเวลาการส่ง */
+.sf-late-badge { margin-left:auto; font-size:10px; font-weight:900; color:#fff; background:var(--danger); padding:2px 7px; border-radius:999px; letter-spacing:.3px; }
+.sf-day-side-head { position:relative; }
+.sf-late-reason { font-size:11px; color:var(--danger); margin-top:4px; line-height:1.4; font-weight:600; }
 </style>
 <script>
 /* Runs in <head> before #login-screen paints. If a valid fab_session
@@ -4736,21 +4746,24 @@ html.fab-sso-pending #login-screen { display: none !important; }
   <div class="container">
     <!-- DASHBOARD (admin/bzm) -->
     <div id="dashboard-screen" style="display:none;">
-      <!-- ▼ หน้าหลักสไตล์ Dashboard เจ๊แดง · ปุ่มสลับดูผล OSS แบบเดิม ▼ -->
+      <!-- ▼ แดชบอร์ดซานตาเฟ่ — 2 แท็บ: OSS / Operations Checklist ▼ -->
       <div class="page-eyebrow">
         <h2 class="page-eyebrow-title">แดชบอร์ด <span class="page-eyebrow-inline brand-eyebrow-label">ซานตาเฟ่</span></h2>
       </div>
-      <div style="margin-bottom:14px;">
-        <button type="button" class="btn btn-secondary" id="sf-oss-toggle-btn" onclick="toggleSfOssView()"></button>
+      <div class="sf-dash-tabs">
+        <button type="button" class="sf-dash-tab is-active" id="sf-tab-btn-oss" onclick="setSfDashTab('oss')">Operations Standard Skill</button>
+        <button type="button" class="sf-dash-tab" id="sf-tab-btn-checklist" onclick="setSfDashTab('checklist')">Operations Checklist</button>
       </div>
-      <div id="sf-dash-new">
+
+      <!-- TAB: Operations Standard Skill (ผล OSS audit) -->
+      <div id="sf-tab-oss">
         <div class="jd-dash-kpis" id="sf-dash-kpis"></div>
         <div class="card" id="sf-dash-zone-card">
           <div class="card-header"><span class="material-symbols-rounded" style="color:#0E7490;">groups</span><h2>คะแนนเฉลี่ยต่อโซน</h2></div>
           <div id="sf-dash-by-bzm"><div class="jd-dash-empty">กำลังโหลด…</div></div>
         </div>
         <div class="card">
-          <div class="card-header"><span class="material-symbols-rounded" style="color:var(--primary);">event</span><h2>เช็คลิสต์รายวัน · เปิด/ปิดร้าน</h2></div>
+          <div class="card-header"><span class="material-symbols-rounded" style="color:var(--primary);">leaderboard</span><h2>คะแนนเฉลี่ยต่อสาขา</h2></div>
           <div id="sf-dash-branches"><div class="jd-dash-empty">กำลังโหลด…</div></div>
         </div>
         <div class="card">
@@ -4762,7 +4775,22 @@ html.fab-sso-pending #login-screen { display: none !important; }
           <div id="sf-dash-recent"><div class="jd-dash-empty">กำลังโหลด…</div></div>
         </div>
       </div>
-      <!-- ▲ จบส่วนใหม่ ▲ -->
+
+      <!-- TAB: Operations Checklist (Daily เปิด-ปิดร้าน) -->
+      <div id="sf-tab-checklist" style="display:none;">
+        <div class="card">
+          <div class="card-header"><span class="material-symbols-rounded" style="color:var(--danger);">priority_high</span><h2>สรุปหมวดที่ตก <span class="card-header-en">รายวัน เปิด-ปิดร้าน</span></h2></div>
+          <div id="sf-daily-topfails"><div class="jd-dash-empty">กำลังโหลด…</div></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><span class="material-symbols-rounded" style="color:#0E7490;">schedule</span><h2>เวลาการส่ง · เปิด/ปิดร้าน</h2></div>
+          <div id="sf-daily-times"><div class="jd-dash-empty">กำลังโหลด…</div></div>
+        </div>
+        <div style="text-align:center;margin-top:4px;">
+          <button type="button" class="btn btn-secondary" onclick="showDailyHub()"><span class="material-symbols-rounded">checklist</span> ดูรายละเอียดที่ "การตรวจ"</button>
+        </div>
+      </div>
+      <!-- ▲ จบ 2 แท็บ ▲ -->
 
       <!-- ═══ OSS RESULTS (ซ่อนไว้ชั่วคราว · เปิดคืน: ลบ style display:none ที่ wrapper นี้ + ลบ early-return ใน showDashboard) ═══ -->
       <div id="oss-results-disabled" style="display:none;">
@@ -6631,9 +6659,9 @@ function getVisibleAudits() {
   }
 }
 
-var _sfDashView = 'new';   // 'new' = การ์ดสไตล์เจ๊แดง · 'oss' = ผลสรุปคะแนนแบบเดิม
-function toggleSfOssView() {
-  _sfDashView = (_sfDashView === 'oss') ? 'new' : 'oss';
+var _sfDashTab = 'oss';   // 'oss' = Operations Standard Skill · 'checklist' = Operations Checklist (Daily)
+function setSfDashTab(tab) {
+  _sfDashTab = tab;
   showDashboard();
   window.scrollTo(0, 0);
 }
@@ -6643,17 +6671,21 @@ function showDashboard() {
   document.getElementById('dashboard-screen').style.display = 'block';
   setActiveNav('nav-dash');
   try { applyBrandHeader(); } catch (e) {}
-  const isOss = _sfDashView === 'oss';
-  const newEl = document.getElementById('sf-dash-new');
-  const ossEl = document.getElementById('oss-results-disabled');
-  if (newEl) newEl.style.display = isOss ? 'none' : '';
-  if (ossEl) ossEl.style.display = isOss ? 'block' : 'none';
-  const _tgl = document.getElementById('sf-oss-toggle-btn');
-  if (_tgl) _tgl.innerHTML = isOss
-    ? '<span class="material-symbols-rounded">arrow_back</span> กลับหน้าหลัก'
-    : '<span class="material-symbols-rounded">assessment</span> ดูผล OSS (สรุปคะแนนแบบเดิม)';
-  if (isOss) renderOssResults();
-  else renderSfDashboard();
+
+  const isCl = _sfDashTab === 'checklist';
+  const ossTab = document.getElementById('sf-tab-oss');
+  const clTab  = document.getElementById('sf-tab-checklist');
+  if (ossTab) ossTab.style.display = isCl ? 'none' : '';
+  if (clTab)  clTab.style.display  = isCl ? '' : 'none';
+  const bOss = document.getElementById('sf-tab-btn-oss');
+  const bCl  = document.getElementById('sf-tab-btn-checklist');
+  if (bOss) bOss.classList.toggle('is-active', !isCl);
+  if (bCl)  bCl.classList.toggle('is-active', isCl);
+  const ossOld = document.getElementById('oss-results-disabled');
+  if (ossOld) ossOld.style.display = 'none';
+
+  renderSfDashboard();      // แท็บ OSS
+  renderSfChecklistTab();   // แท็บ Operations Checklist (Daily)
 }
 
 function renderOssResults() {
@@ -6817,9 +6849,74 @@ function _sfTopFailsHTML(completed) {
   return overview + cards;
 }
 
-// เช็คลิสต์รายวัน จัดตามวันที่ · แต่ละวันแยกซ้าย=เปิดร้าน / ขวา=ปิดร้าน
-function _sfDailyByDateHTML() {
+// ============ แท็บ Operations Checklist (Daily เปิด-ปิดร้าน) ============
+function renderSfChecklistTab() {
   const dailies = (typeof getVisibleDailyChecklists === 'function') ? getVisibleDailyChecklists() : [];
+  const tfEl = document.getElementById('sf-daily-topfails');
+  const tEl  = document.getElementById('sf-daily-times');
+  if (tfEl) tfEl.innerHTML = _sfDailyTopFailsHTML(dailies);
+  if (tEl)  tEl.innerHTML  = _sfDailyTimesHTML(dailies);
+}
+
+// สรุปหมวดที่ตก (รายวัน) — จัดกลุ่มตามหมวดของ Daily checklist (จุดเตรียมงาน/PASTA/STEAK…)
+function _sfDailyTopFailsHTML(dailies) {
+  if (!dailies.length) return '<div class="jd-dash-empty">ยังไม่มีเช็คลิสต์รายวัน</div>';
+  const catStats = {}, itemStats = {};
+  dailies.forEach(d => (d.items || []).forEach(it => {
+    if (!it || (it.status !== 'fail' && it.status !== 'pass')) return;
+    const section = it.section || '-';
+    if (!catStats[section]) catStats[section] = { section, fail: 0, total: 0 };
+    const key = section + '||' + it.text;
+    if (!itemStats[key]) itemStats[key] = { text: it.text, section, fail: 0, total: 0 };
+    catStats[section].total++; itemStats[key].total++;
+    if (it.status === 'fail') { catStats[section].fail++; itemStats[key].fail++; }
+  }));
+  const catTotalFails = Object.values(catStats).reduce((s, c) => s + c.fail, 0);
+  const sortedCats = Object.values(catStats).filter(c => c.fail > 0).sort((a, b) => b.fail - a.fail);
+  if (!sortedCats.length) return '<div class="jd-dash-empty">ยังไม่มีข้อไม่ผ่าน 🎉</div>';
+  const segColors = ['#dc2626','#ea580c','#ca8a04','#16a34a','#0891b2','#2563eb','#7c3aed','#db2777','#0d9488','#b45309'];
+  const overview = '<div class="tf-overview"><div class="tf-overview-bar">'
+    + sortedCats.map((cat, i) => { const w = catTotalFails > 0 ? (cat.fail / catTotalFails * 100) : 0; return `<span class="tf-overview-seg" style="width:${w}%;background:${segColors[i % segColors.length]};" title="${escapeAttr(cat.section)}: ${w.toFixed(1)}%"></span>`; }).join('')
+    + '</div><div class="tf-overview-legend">'
+    + sortedCats.map((cat, i) => { const w = catTotalFails > 0 ? (cat.fail / catTotalFails * 100) : 0; return `<span class="tf-legend-item"><span class="tf-legend-dot" style="background:${segColors[i % segColors.length]};"></span>${escapeHtml(cat.section)} ${w.toFixed(0)}%</span>`; }).join('')
+    + '</div></div>';
+  const cards = sortedCats.map((cat, ci) => {
+    const catSharePct = catTotalFails > 0 ? (cat.fail / catTotalFails * 100) : 0;
+    const headColor = segColors[ci % segColors.length];
+    const items = Object.values(itemStats).filter(i => i.section === cat.section && i.fail > 0).sort((a, b) => b.fail - a.fail).slice(0, 5);
+    return `<div class="tf-cat">
+      <div class="tf-cat-head" style="background:linear-gradient(135deg, ${headColor}, ${headColor}cc);" onclick="this.parentNode.classList.toggle('open')">
+        <div style="flex:1;min-width:0;">
+          <div style="font-weight:900;font-size:15px;line-height:1.3;margin-bottom:4px;">${escapeHtml(cat.section)}</div>
+          <div style="font-size:12.5px;opacity:0.95;font-weight:600;">ตก ${cat.fail} ข้อ / จากทั้งหมด ${cat.total} ข้อย่อย</div>
+        </div>
+        <div style="text-align:right;flex:none;">
+          <div style="font-size:24px;font-weight:900;line-height:1;">${catSharePct.toFixed(1)}%</div>
+          <div style="font-size:10.5px;opacity:0.85;margin-top:2px;">ของยอดตกทั้งหมด</div>
+        </div>
+        <span class="material-symbols-rounded tf-cat-chev">expand_more</span>
+      </div>
+      ${items.length ? `<div class="tf-cat-body">
+        ${items.map((it, i) => {
+          const itPct = it.total > 0 ? (it.fail / it.total * 100) : 0;
+          const cls = itPct >= 50 ? 'bad' : (itPct >= 25 ? 'warn' : '');
+          return `<div class="jd-dash-row" style="padding:8px 0;border-bottom:1px dashed var(--border);">
+            <div>
+              <div class="jd-dash-row-name" style="font-size:13px;">${i+1}. ${escapeHtml(it.text)}</div>
+              <div class="jd-dash-row-meta">ตก ${it.fail} ครั้ง / จากการตรวจ ${it.total} ครั้ง</div>
+              <div class="jd-dash-bar"><div class="jd-dash-bar-fill ${cls}" style="width:${Math.min(100, itPct)}%"></div></div>
+            </div>
+            <div class="jd-dash-row-value is-bad">${itPct.toFixed(1)}%</div>
+          </div>`;
+        }).join('')}
+      </div>` : ''}
+    </div>`;
+  }).join('');
+  return overview + cards;
+}
+
+// เวลาการส่ง · เปิด/ปิดร้าน — ต่อวันที่ (ใหม่สุดก่อน) · โชว์เวลาส่ง + ป้ายเกินเวลา + เหตุผล
+function _sfDailyTimesHTML(dailies) {
   if (!dailies.length) return '<div class="jd-dash-empty">ยังไม่มีเช็คลิสต์รายวัน</div>';
   const byDate = {};
   dailies.forEach(d => {
@@ -6827,23 +6924,28 @@ function _sfDailyByDateHTML() {
     if (!byDate[date]) byDate[date] = { open: [], close: [] };
     (d.shift === 'close' ? byDate[date].close : byDate[date].open).push(d);
   });
-  const dates = Object.keys(byDate).sort((a, b) => b.localeCompare(a));   // ใหม่สุดก่อน
+  const dates = Object.keys(byDate).sort((a, b) => b.localeCompare(a));
+  const fmtT = (iso) => { if (!iso) return null; const dd = new Date(iso); return String(dd.getHours()).padStart(2, '0') + ':' + String(dd.getMinutes()).padStart(2, '0'); };
 
   const side = (recs, shift) => {
     const icon = shift === 'open' ? 'wb_sunny' : 'bedtime';
     const label = shift === 'open' ? 'เปิดร้าน' : 'ปิดร้าน';
     const cls = shift === 'open' ? 'sf-day-open' : 'sf-day-close';
     if (!recs.length) {
-      return '<div class="sf-day-side ' + cls + ' is-empty">' +
-        '<div class="sf-day-side-head"><span class="material-symbols-rounded">' + icon + '</span> ' + label + '</div>' +
-        '<div class="sf-day-side-stat">ยังไม่ตรวจ</div></div>';
+      return '<div class="sf-day-side ' + cls + ' is-empty"><div class="sf-day-side-head"><span class="material-symbols-rounded">' + icon + '</span> ' + label + '</div><div class="sf-day-side-stat">ยังไม่ส่ง</div></div>';
     }
-    let fail = 0;
-    recs.forEach(r => (r.items || []).forEach(it => { if (it.status === 'fail') fail++; }));
-    const statusCls = fail > 0 ? 'has-fail' : 'all-ok';
+    const sent = recs.filter(r => r.submittedAt);
+    const t = sent.length ? fmtT(sent[0].submittedAt) : null;
+    const isLate = recs.some(r => r.late);
+    const lateRec = recs.find(r => r.late && r.lateReason);
+    const statusCls = isLate ? 'has-fail' : (t ? 'all-ok' : 'is-empty');
+    const lateBadge = isLate ? '<span class="sf-late-badge">เกินเวลา</span>' : '';
+    const multi = recs.length > 1 ? (' · ' + recs.length + ' สาขา') : '';
     return '<div class="sf-day-side ' + cls + ' ' + statusCls + '">' +
-      '<div class="sf-day-side-head"><span class="material-symbols-rounded">' + icon + '</span> ' + label + '</div>' +
-      '<div class="sf-day-side-stat">' + recs.length + ' รายการ · ' + (fail > 0 ? ('ตก ' + fail + ' ข้อ') : 'ผ่านครบ') + '</div></div>';
+      '<div class="sf-day-side-head"><span class="material-symbols-rounded">' + icon + '</span> ' + label + lateBadge + '</div>' +
+      '<div class="sf-day-side-stat">' + (t ? ('ส่ง ' + t + ' น.') : 'ยังไม่ส่ง') + multi + '</div>' +
+      (lateRec ? '<div class="sf-late-reason">เหตุผล: ' + escapeHtml(lateRec.lateReason) + '</div>' : '') +
+      '</div>';
   };
 
   return dates.map(date =>
@@ -6887,8 +6989,18 @@ function renderSfDashboard() {
     '<div class="jd-kpi is-danger"><div class="jd-kpi-label">รวมข้อไม่ผ่าน</div><div class="jd-kpi-value">' + totalFails + '</div><div class="jd-kpi-sub">ข้อ</div></div>' +
     '<div class="jd-kpi"><div class="jd-kpi-label">สาขาที่ตรวจแล้ว</div><div class="jd-kpi-value">' + distinctBranches + '</div><div class="jd-kpi-sub">จาก ' + totalBranches + ' สาขา</div></div>';
 
-  // ── เช็คลิสต์รายวัน ต่อวันที่ตรวจ (ซ้าย=เปิดร้าน · ขวา=ปิดร้าน) ──
-  if (branchesEl) branchesEl.innerHTML = _sfDailyByDateHTML();
+  // ── คะแนนเฉลี่ยต่อสาขา (OSS) ──
+  const byBranch = {};
+  records.forEach(r => {
+    if (!byBranch[r.storeName]) byBranch[r.storeName] = { count: 0, sumPct: 0, fails: 0, records: [] };
+    const o = byBranch[r.storeName]; o.count++; o.sumPct += r.passPct; o.fails += r.failCount; o.records.push(r);
+  });
+  const branchList = Object.entries(byBranch)
+    .map(([name, s]) => ({ name, count: s.count, avg: s.sumPct / s.count, fails: s.fails, records: s.records }))
+    .sort((a, b) => b.avg - a.avg);
+  if (branchesEl) branchesEl.innerHTML = branchList.map((b, i) =>
+    _scoreRowHTML(i + 1, escapeHtml(b.name), b.avg, b.count, b.fails, b.records, 'branch')
+  ).join('');
 
   // ── คะแนนเฉลี่ยต่อโซน (เฉพาะ vp/coo/admin) ──
   const showZone = currentUser && ['vp', 'coo', 'admin'].includes(currentUser.role);
@@ -8119,11 +8231,36 @@ function renderDailyList() {
   }).join('');
 }
 
-function startDailyShift(shift) {
+async function startDailyShift(shift) {
   if (currentUser.role !== 'branch') return;
   const today = todayDateStr();
   const id = `${currentUser.branchCode}_${today}_${shift}`;
   const existing = allDailyChecklists.find(d => d.id === id);
+
+  // ── กติกาเวลา (ตรวจเฉพาะตอนเริ่มครั้งแรก): รอบเปิด ≤ 11:00 · รอบปิด ≤ 22:00 ──
+  //    เทียบกับเวลาจริงของเครื่องตอนกดเริ่มตรวจ · เกิน → ป็อปอัพเตือน + บังคับใส่เหตุผล
+  const _now = new Date();
+  let _isLate    = existing ? !!existing.late : false;
+  let _lateReason = existing ? (existing.lateReason || '') : '';
+  let _startedAt  = (existing && existing.startedAt) ? existing.startedAt : _now.toISOString();
+  if (!existing) {
+    const _cutoffH = shift === 'open' ? 11 : 22;
+    _isLate = (_now.getHours() > _cutoffH) || (_now.getHours() === _cutoffH && (_now.getMinutes() > 0 || _now.getSeconds() > 0));
+    if (_isLate) {
+      const _shiftTxt = shift === 'open' ? 'เปิดร้าน' : 'ปิดร้าน';
+      const _nowTxt = String(_now.getHours()).padStart(2, '0') + ':' + String(_now.getMinutes()).padStart(2, '0');
+      const _ok = await showConfirm(
+        '⚠️ ตรวจรอบ' + _shiftTxt + 'เกินเวลา',
+        'รอบ' + _shiftTxt + 'กำหนดให้ตรวจ<b>ไม่เกิน ' + _cutoffH + ':00 น.</b> แต่ขณะนี้เวลา <b>' + _nowTxt + ' น.</b><br><br>กรุณาระบุเหตุผลที่ตรวจช้า <b style="color:var(--danger)">(จำเป็น)</b>:' +
+        '<textarea id="late-reason-input" rows="3" style="width:100%;margin-top:8px;padding:10px;border:1.5px solid var(--border);border-radius:10px;font-family:inherit;font-size:14px;resize:vertical;box-sizing:border-box;" placeholder="เช่น ลูกค้าเยอะช่วงเช้า / พนักงานมาสาย ..."></textarea>',
+        { okLabel: 'ยืนยันเริ่มตรวจ', cancelLabel: 'ยกเลิก' }
+      );
+      if (!_ok) return;
+      const _inp = document.getElementById('late-reason-input');
+      _lateReason = (_inp ? _inp.value : '').trim();
+      if (!_lateReason) { showModal('ต้องระบุเหตุผล', 'กรุณากรอกเหตุผลที่ตรวจช้าก่อนเริ่มตรวจรอบนี้'); return; }
+    }
+  }
 
   const template = shift === 'open' ? DAILY_OPEN : DAILY_CLOSE;
   const items = [];
@@ -8173,7 +8310,10 @@ function startDailyShift(shift) {
     requiredPhotos,
     submittedBy: currentUser.code,
     submittedByName: currentUser.name,
-    submittedAt: null
+    submittedAt: null,
+    startedAt: _startedAt,
+    late: _isLate,
+    lateReason: _lateReason
   };
 
   hideAllScreens();
