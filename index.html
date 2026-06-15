@@ -4646,6 +4646,32 @@ html.fab-sso-pending #login-screen { display: none !important; }
 .sf-late-badge { margin-left:auto; font-size:10px; font-weight:900; color:#fff; background:var(--danger); padding:2px 7px; border-radius:999px; letter-spacing:.3px; }
 .sf-day-side-head { position:relative; }
 .sf-late-reason { font-size:11px; color:var(--danger); margin-top:4px; line-height:1.4; font-weight:600; }
+
+/* ── Polish แดชบอร์ดซานตาเฟ่ (scope #dashboard-screen — ไม่กระทบเจ๊แดง) ── */
+#dashboard-screen .jd-dash-kpis { gap:12px; }
+#dashboard-screen .sf-kpi {
+  display:flex; align-items:center; gap:12px;
+  border:1px solid var(--border); border-left:1px solid var(--border);
+  border-radius:16px; padding:16px;
+  box-shadow:0 1px 2px rgba(15,23,42,.04);
+  transition:transform .15s var(--ease,ease), box-shadow .15s var(--ease,ease);
+}
+#dashboard-screen .sf-kpi:hover { transform:translateY(-2px); box-shadow:0 10px 22px -12px rgba(15,23,42,.22); }
+#dashboard-screen .sf-kpi-ico { flex:none; width:44px; height:44px; border-radius:13px; display:flex; align-items:center; justify-content:center; }
+#dashboard-screen .sf-kpi-ico .material-symbols-rounded { font-size:23px; }
+#dashboard-screen .sf-kpi-body { min-width:0; }
+#dashboard-screen .sf-kpi .jd-kpi-value { margin-top:1px; }
+#dashboard-screen .sf-kpi[data-tone="neutral"] .sf-kpi-ico { background:rgba(14,116,144,.12); color:#0E7490; }
+#dashboard-screen .sf-kpi[data-tone="good"]    .sf-kpi-ico { background:var(--success-bg); color:var(--success); }
+#dashboard-screen .sf-kpi[data-tone="warn"]    .sf-kpi-ico { background:#FEF3C7; color:#B45309; }
+#dashboard-screen .sf-kpi[data-tone="danger"]  .sf-kpi-ico { background:var(--danger-bg); color:var(--danger); }
+/* การ์ดเนื้อหา — เงานุ่ม + หัวการ์ดมีเส้นคั่นบาง */
+#dashboard-screen .card { border-radius:18px; box-shadow:0 1px 3px rgba(15,23,42,.05); }
+#dashboard-screen .card > .card-header { padding-bottom:12px; margin-bottom:12px; border-bottom:1px solid var(--border); }
+#dashboard-screen .card > .card-header h2 { font-size:15px; }
+/* leaderboard rows — มน + hover */
+#dashboard-screen .score-row { border-radius:14px; transition:background .12s; }
+#dashboard-screen .score-row.is-clickable:hover { background:var(--surface-2); }
 </style>
 <script>
 /* Runs in <head> before #login-screen paints. If a valid fab_session
@@ -6983,11 +7009,20 @@ function renderSfDashboard() {
   const totalBranches = (currentUser.role === 'bzm')
     ? BRANCHES.filter(b => b.manager === currentUser.name).length
     : BRANCHES.length;
+  const _avgTone = avgPct >= 90 ? 'good' : avgPct < 70 ? 'danger' : 'warn';
+  const _kpiCard = (tone, icon, label, value, sub) =>
+    '<div class="jd-kpi sf-kpi" data-tone="' + tone + '">' +
+      '<div class="sf-kpi-ico"><span class="material-symbols-rounded">' + icon + '</span></div>' +
+      '<div class="sf-kpi-body">' +
+        '<div class="jd-kpi-label">' + label + '</div>' +
+        '<div class="jd-kpi-value">' + value + '</div>' +
+        '<div class="jd-kpi-sub">' + sub + '</div>' +
+      '</div></div>';
   if (kpis) kpis.innerHTML =
-    '<div class="jd-kpi"><div class="jd-kpi-label">การตรวจทั้งหมด</div><div class="jd-kpi-value">' + totalAudits + '</div><div class="jd-kpi-sub">เดือนนี้ ' + thisMonth + ' ครั้ง</div></div>' +
-    '<div class="jd-kpi ' + (avgPct >= 90 ? 'is-success' : avgPct < 70 ? 'is-danger' : 'is-warn') + '"><div class="jd-kpi-label">คะแนนเฉลี่ย</div><div class="jd-kpi-value">' + avgPct.toFixed(1) + '<span style="font-size:14px;">%</span></div><div class="jd-kpi-sub">ผ่านเกณฑ์</div></div>' +
-    '<div class="jd-kpi is-danger"><div class="jd-kpi-label">รวมข้อไม่ผ่าน</div><div class="jd-kpi-value">' + totalFails + '</div><div class="jd-kpi-sub">ข้อ</div></div>' +
-    '<div class="jd-kpi"><div class="jd-kpi-label">สาขาที่ตรวจแล้ว</div><div class="jd-kpi-value">' + distinctBranches + '</div><div class="jd-kpi-sub">จาก ' + totalBranches + ' สาขา</div></div>';
+    _kpiCard('neutral', 'fact_check',  'การตรวจทั้งหมด', totalAudits, 'เดือนนี้ ' + thisMonth + ' ครั้ง') +
+    _kpiCard(_avgTone, 'military_tech', 'คะแนนเฉลี่ย', avgPct.toFixed(1) + '<span style="font-size:14px;">%</span>', 'ผ่านเกณฑ์') +
+    _kpiCard('danger',  'report',       'รวมข้อไม่ผ่าน', totalFails, 'ข้อ') +
+    _kpiCard('neutral', 'storefront',   'สาขาที่ตรวจแล้ว', distinctBranches, 'จาก ' + totalBranches + ' สาขา');
 
   // ── คะแนนเฉลี่ยต่อสาขา (OSS) ──
   const byBranch = {};
