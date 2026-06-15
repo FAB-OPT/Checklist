@@ -4731,7 +4731,7 @@ html.fab-sso-pending #login-screen { display: none !important; }
           <div id="sf-dash-by-bzm"><div class="jd-dash-empty">กำลังโหลด…</div></div>
         </div>
         <div class="card">
-          <div class="card-header"><span class="material-symbols-rounded" style="color:var(--primary);">leaderboard</span><h2>คะแนนเฉลี่ยต่อสาขา</h2></div>
+          <div class="card-header"><span class="material-symbols-rounded" style="color:var(--primary);">event</span><h2>คะแนนเฉลี่ยต่อวันที่ตรวจ</h2></div>
           <div id="sf-dash-branches"><div class="jd-dash-empty">กำลังโหลด…</div></div>
         </div>
         <div class="card">
@@ -6831,17 +6831,18 @@ function renderSfDashboard() {
     '<div class="jd-kpi is-danger"><div class="jd-kpi-label">รวมข้อไม่ผ่าน</div><div class="jd-kpi-value">' + totalFails + '</div><div class="jd-kpi-sub">ข้อ</div></div>' +
     '<div class="jd-kpi"><div class="jd-kpi-label">สาขาที่ตรวจแล้ว</div><div class="jd-kpi-value">' + distinctBranches + '</div><div class="jd-kpi-sub">จาก ' + totalBranches + ' สาขา</div></div>';
 
-  // ── คะแนนเฉลี่ยต่อสาขา ──
-  const byBranch = {};
+  // ── คะแนนเฉลี่ยต่อวันที่ตรวจ (จัดกลุ่มตามวันที่ · ใหม่สุดก่อน · กดขยายดูรายสาขา) ──
+  const byDate = {};
   records.forEach(r => {
-    if (!byBranch[r.storeName]) byBranch[r.storeName] = { count: 0, sumPct: 0, fails: 0, records: [] };
-    const o = byBranch[r.storeName]; o.count++; o.sumPct += r.passPct; o.fails += r.failCount; o.records.push(r);
+    const d = r.date || '-';
+    if (!byDate[d]) byDate[d] = { count: 0, sumPct: 0, fails: 0, records: [] };
+    const o = byDate[d]; o.count++; o.sumPct += r.passPct; o.fails += r.failCount; o.records.push(r);
   });
-  const branchList = Object.entries(byBranch)
-    .map(([name, s]) => ({ name, count: s.count, avg: s.sumPct / s.count, fails: s.fails, records: s.records }))
-    .sort((a, b) => b.avg - a.avg);
-  if (branchesEl) branchesEl.innerHTML = branchList.map((b, i) =>
-    _scoreRowHTML(i + 1, escapeHtml(b.name), b.avg, b.count, b.fails, b.records, 'branch')
+  const dateList = Object.entries(byDate)
+    .map(([date, s]) => ({ date, count: s.count, avg: s.sumPct / s.count, fails: s.fails, records: s.records }))
+    .sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+  if (branchesEl) branchesEl.innerHTML = dateList.map((d, i) =>
+    _scoreRowHTML(i + 1, escapeHtml(fmtDateDMY(d.date)), d.avg, d.count, d.fails, d.records, 'date')
   ).join('');
 
   // ── คะแนนเฉลี่ยต่อโซน (เฉพาะ vp/coo/admin) ──
@@ -8722,6 +8723,25 @@ function _scoreDetailZone(records) {
     }).join('');
 }
 
+/* รายละเอียดต่อวันที่ตรวจ — สาขาที่ตรวจในวันนั้น (สาขา · เวลา · คะแนน · ตกกี่ข้อ) */
+function _scoreDetailDate(records) {
+  const sorted = records.slice().sort((a,b) => (b.passPct||0) - (a.passPct||0));
+  return '<div class="score-detail-head">สาขาที่ตรวจในวันนี้</div>' +
+    sorted.map(r => {
+      const pct = r.passPct || 0;
+      const f = r.failCount || 0;
+      const valColor = pct >= 90 ? 'var(--success)' : pct < 70 ? 'var(--danger)' : '#B45309';
+      return `<div class="score-detail-item">
+        <span class="material-symbols-rounded sd-icon ${f>0?'fail':'ok'}">${f>0?'error':'check_circle'}</span>
+        <div style="flex:1;min-width:0;">
+          <div class="score-detail-name">${escapeHtml(r.storeName||'-')}</div>
+          <div class="score-detail-sub">${r.time?escapeHtml(r.time)+' · ':''}${f>0?('ตก '+f+' ข้อ'):'ผ่านทุกข้อ'} · ${escapeHtml(r.auditor||'-')}</div>
+        </div>
+        <span class="score-detail-val" style="color:${valColor};">${pct.toFixed(1)}%</span>
+      </div>`;
+    }).join('');
+}
+
 /* รายละเอียดต่อสาขา — แต่ละครั้งที่ตรวจ (วันที่ · ผ่านกี่ข้อ · ตกกี่ข้อ) */
 function _scoreDetailBranch(records) {
   const sorted = records.slice().sort((a,b) => (b.date||'').localeCompare(a.date||''));
@@ -8754,7 +8774,9 @@ function _scoreRowHTML(rank, nameHtml, avg, count, fails, records, type) {
   let detail = '';
   if (records && records.length) {
     detail = '<div class="score-detail">' +
-      (type === 'zone' ? _scoreDetailZone(records) : _scoreDetailBranch(records)) +
+      (type === 'zone' ? _scoreDetailZone(records)
+        : type === 'date' ? _scoreDetailDate(records)
+        : _scoreDetailBranch(records)) +
       '</div>';
   }
   const clickable = detail ? ' is-clickable" onclick="_toggleScoreRow(this)' : '';
