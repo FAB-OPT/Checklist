@@ -6722,33 +6722,80 @@ function _sfNormalizeAudit(a) {
   };
 }
 
-// Top failed items ของ OSS — นับข้อที่ "ไม่ผ่าน" บ่อยสุด
+// Top failed items ของ OSS — จัดกลุ่มตามหมวด (A–M) + แถบสรุป + การ์ดไล่สี + กดขยาย
+// (ใช้ markup tf-* ชุดเดียวกับการ์ดของเจ๊แดง เพื่อให้หน้าตาตรงกันเป๊ะ)
 function _sfTopFailsHTML(completed) {
-  const counts = {};
+  const catStats = {};   // section -> { section, fail, total }
+  const itemStats = {};  // section||text -> { text, section, fail, total }
   completed.forEach(a => {
     const ans = a.answers || {};
     SECTIONS.forEach(sec => sec.subsections.forEach((sub, subIdx) => sub.items.forEach(item => {
       const v = ans[sec.letter + '|' + subIdx + '|' + item.num];
-      if (v && v.value === 'fail') {
-        const ck = sec.letter + '|' + item.text;
-        if (!counts[ck]) counts[ck] = { text: item.text, letter: sec.letter, count: 0 };
-        counts[ck].count++;
-      }
+      if (!v || (v.value !== 'fail' && v.value !== 'pass')) return;
+      const section = sec.title;
+      if (!catStats[section]) catStats[section] = { section, fail: 0, total: 0 };
+      const key = section + '||' + item.text;
+      if (!itemStats[key]) itemStats[key] = { text: item.text, section, fail: 0, total: 0 };
+      catStats[section].total++;
+      itemStats[key].total++;
+      if (v.value === 'fail') { catStats[section].fail++; itemStats[key].fail++; }
     })));
   });
-  const arr = Object.values(counts).sort((a, b) => b.count - a.count).slice(0, 10);
-  if (!arr.length) return '<div class="jd-dash-empty">ไม่มีข้อที่ตก 🎉</div>';
-  const maxC = arr[0].count;
-  return arr.map((it, i) =>
-    '<div class="score-row tier-bad">' +
-      '<div class="score-row-top">' +
-        '<span class="score-rank is-bad">' + (i + 1) + '</span>' +
-        '<span class="score-name">[' + it.letter + '] ' + escapeHtml(it.text) + '</span>' +
-        '<span class="score-pct is-bad">' + it.count + '<small> ครั้ง</small></span>' +
-      '</div>' +
-      '<div class="score-bar"><div class="score-bar-fill bad" style="width:' + Math.round(it.count / maxC * 100) + '%"></div></div>' +
-    '</div>'
-  ).join('');
+  const catTotalFails = Object.values(catStats).reduce((s, c) => s + c.fail, 0);
+  const sortedCats = Object.values(catStats).filter(c => c.fail > 0).sort((a, b) => b.fail - a.fail);
+  if (!sortedCats.length) return '<div class="jd-dash-empty">ยังไม่มีข้อไม่ผ่าน 🎉</div>';
+
+  const segColors = ['#dc2626','#ea580c','#ca8a04','#16a34a','#0891b2','#2563eb','#7c3aed','#db2777','#0d9488','#b45309'];
+  const overview = '<div class="tf-overview">'
+    + '<div class="tf-overview-bar">'
+    + sortedCats.map((cat, i) => {
+        const w = catTotalFails > 0 ? (cat.fail / catTotalFails * 100) : 0;
+        return `<span class="tf-overview-seg" style="width:${w}%;background:${segColors[i % segColors.length]};" title="${escapeAttr(cat.section)}: ${w.toFixed(1)}%"></span>`;
+      }).join('')
+    + '</div>'
+    + '<div class="tf-overview-legend">'
+    + sortedCats.map((cat, i) => {
+        const w = catTotalFails > 0 ? (cat.fail / catTotalFails * 100) : 0;
+        return `<span class="tf-legend-item"><span class="tf-legend-dot" style="background:${segColors[i % segColors.length]};"></span>${escapeHtml(cat.section)} ${w.toFixed(0)}%</span>`;
+      }).join('')
+    + '</div></div>';
+
+  const cards = sortedCats.map((cat, ci) => {
+    const catSharePct = catTotalFails > 0 ? (cat.fail / catTotalFails * 100) : 0;
+    const headColor = segColors[ci % segColors.length];
+    const items = Object.values(itemStats)
+      .filter(i => i.section === cat.section && i.fail > 0)
+      .sort((a, b) => b.fail - a.fail)
+      .slice(0, 5);
+    return `<div class="tf-cat">
+      <div class="tf-cat-head" style="background:linear-gradient(135deg, ${headColor}, ${headColor}cc);" onclick="this.parentNode.classList.toggle('open')">
+        <div style="flex:1;min-width:0;">
+          <div style="font-weight:900;font-size:15px;line-height:1.3;margin-bottom:4px;">${escapeHtml(cat.section)}</div>
+          <div style="font-size:12.5px;opacity:0.95;font-weight:600;">ตก ${cat.fail} ข้อ / จากทั้งหมด ${cat.total} ข้อย่อย</div>
+        </div>
+        <div style="text-align:right;flex:none;">
+          <div style="font-size:24px;font-weight:900;line-height:1;">${catSharePct.toFixed(1)}%</div>
+          <div style="font-size:10.5px;opacity:0.85;margin-top:2px;">ของยอดตกทั้งหมด</div>
+        </div>
+        <span class="material-symbols-rounded tf-cat-chev">expand_more</span>
+      </div>
+      ${items.length ? `<div class="tf-cat-body">
+        ${items.map((it, i) => {
+          const itPct = it.total > 0 ? (it.fail / it.total * 100) : 0;
+          const cls = itPct >= 50 ? 'bad' : (itPct >= 25 ? 'warn' : '');
+          return `<div class="jd-dash-row" style="padding:8px 0;border-bottom:1px dashed var(--border);">
+            <div>
+              <div class="jd-dash-row-name" style="font-size:13px;">${i+1}. ${escapeHtml(it.text)}</div>
+              <div class="jd-dash-row-meta">ตก ${it.fail} ครั้ง / จากการตรวจ ${it.total} ครั้ง</div>
+              <div class="jd-dash-bar"><div class="jd-dash-bar-fill ${cls}" style="width:${Math.min(100, itPct)}%"></div></div>
+            </div>
+            <div class="jd-dash-row-value is-bad">${itPct.toFixed(1)}%</div>
+          </div>`;
+        }).join('')}
+      </div>` : ''}
+    </div>`;
+  }).join('');
+  return overview + cards;
 }
 
 function renderSfDashboard() {
