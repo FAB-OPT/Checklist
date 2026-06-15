@@ -1209,6 +1209,15 @@ input[type="time"].jd-form-input {
 .jd-section-name {
   font-size: 14px; font-weight: 800;
   letter-spacing: 0.2px;
+  display: flex; align-items: center; gap: 8px;
+}
+.sf-section-letter {
+  flex-shrink: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 26px; height: 26px;
+  background: rgba(255,255,255,0.22);
+  border-radius: 7px;
+  font-size: 14px; font-weight: 900;
 }
 .jd-section-progress {
   font-size: 12px; font-weight: 800;
@@ -4867,25 +4876,8 @@ html.fab-sso-pending #login-screen { display: none !important; }
 
     <!-- CHECKLIST SCREEN -->
     <div id="checklist-screen" style="display:none;">
-      <div class="progress-bar-container">
-        <div class="progress-info">
-          <span>ความคืบหน้า: <b id="progress-text">0 / 0</b></span>
-          <span id="progress-pct"><b>0%</b></span>
-        </div>
-        <div class="progress-bar"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
-      </div>
-
-      <div class="section-tabs" id="section-tabs"></div>
+      <div class="jd-section-tabs" id="section-tabs"></div>
       <div id="checklist-content"></div>
-
-      <div style="display:flex; gap:8px; margin-top:16px;">
-        <button class="btn btn-secondary" style="flex:1" onclick="prevSection()">
-          <span class="material-symbols-rounded">arrow_back</span> ก่อนหน้า
-        </button>
-        <button class="btn btn-primary" style="flex:1" onclick="nextSection()">
-          ถัดไป <span class="material-symbols-rounded">arrow_forward</span>
-        </button>
-      </div>
 
       <button class="btn btn-success btn-block btn-lg" style="margin-top:12px;" onclick="finishAudit()">
         <span class="material-symbols-rounded">save</span>
@@ -7118,77 +7110,147 @@ function goToChecklist() {
   hideAllScreens();
   document.getElementById('checklist-screen').style.display = 'block';
   setActiveNav('nav-new');
-  renderSectionTabs();
+  _currentSfViewSectionIdx = 0;
   renderChecklist();
+}
+
+// ชื่อย่อหมวดสำหรับแท็บ (ตัดส่วนหลัง ":" และวงเล็บออก ให้แท็บกระชับแบบ QSC)
+function sectionShortName(title) {
+  return (title.split(':')[0] || title).replace(/\s*\(.*\)\s*$/, '').trim() || title;
+}
+
+// นับความคืบหน้าของหมวด (ไม่นับข้อที่เป็น N/A-only)
+function _sectionProgress(sec) {
+  let total = 0, done = 0, fail = 0;
+  sec.subsections.forEach((sub, subIdx) => sub.items.forEach(item => {
+    if (item.possibility === 'N/A') return;
+    total++;
+    const a = currentAudit.answers[sec.letter + '|' + subIdx + '|' + item.num];
+    if (a && a.value) { done++; if (a.value === 'fail') fail++; }
+  }));
+  return { total, done, fail };
 }
 
 function renderSectionTabs() {
   const tabs = document.getElementById('section-tabs');
-  tabs.innerHTML = '';
-  SECTIONS.forEach((sec, idx) => {
-    const total = sec.subsections.reduce((s, sub) => s + sub.items.length, 0);
-    const tab = document.createElement('button');
-    tab.className = 'section-tab' + (idx === currentAudit.currentSectionIdx ? ' active' : '');
-    tab.innerHTML = sec.letter + ' <span class="badge">' + total + '</span>';
-    tab.title = sec.title;
-    tab.onclick = () => { currentAudit.currentSectionIdx = idx; renderSectionTabs(); renderChecklist(); window.scrollTo(0,0); };
-    tabs.appendChild(tab);
+  if (!tabs) return;
+  tabs.innerHTML = SECTIONS.map((sec, sIdx) => {
+    const { total, done, fail } = _sectionProgress(sec);
+    let cls = '';
+    if (fail > 0) cls = 'has-fail';
+    else if (total > 0 && done === total) cls = 'is-done';
+    if (sIdx === _currentSfViewSectionIdx) cls += ' is-active';
+    return '<button type="button" class="jd-section-tab ' + cls + '" data-section-idx="' + sIdx + '" title="' + escapeAttr(sec.title) + '" onclick="scrollToSfSection(' + sIdx + ')">' +
+      '<span>' + escapeHtml(sec.letter + '. ' + sectionShortName(sec.title)) + '</span>' +
+      '<span class="jd-section-tab-progress">' + done + '/' + total + (fail ? ' · ✗' + fail : '') + '</span>' +
+    '</button>';
+  }).join('');
+}
+
+// ───── Scroll-spy (เหมือนฟอร์ม QSC): แท็บไฮไลต์ตามหมวดที่กำลังเลื่อนดู ─────
+var _sfSectionObserver = null;
+var _currentSfViewSectionIdx = 0;
+function _setupSfSectionObserver() {
+  if (_sfSectionObserver) { _sfSectionObserver.disconnect(); _sfSectionObserver = null; }
+  if (!('IntersectionObserver' in window)) return;
+  const sections = document.querySelectorAll('#checklist-content .jd-section-card');
+  if (!sections.length) return;
+  _sfSectionObserver = new IntersectionObserver(entries => {
+    let topIdx = -1, topY = Infinity;
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        const idx = parseInt(e.target.id.replace('sf-section-', ''), 10);
+        const y = e.boundingClientRect.top;
+        if (y < topY) { topY = y; topIdx = idx; }
+      }
+    });
+    if (topIdx >= 0) _setActiveSfSection(topIdx);
+  }, { rootMargin: '-100px 0px -60% 0px', threshold: 0 });
+  sections.forEach(s => _sfSectionObserver.observe(s));
+}
+function _setActiveSfSection(idx) {
+  if (idx === _currentSfViewSectionIdx) return;
+  _currentSfViewSectionIdx = idx;
+  document.querySelectorAll('#section-tabs .jd-section-tab').forEach(btn => {
+    btn.classList.toggle('is-active', parseInt(btn.getAttribute('data-section-idx'), 10) === idx);
   });
+  const active = document.querySelector('#section-tabs .jd-section-tab[data-section-idx="' + idx + '"]');
+  if (active) active.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+}
+function scrollToSfSection(idx) {
+  const el = document.getElementById('sf-section-' + idx);
+  if (!el) return;
+  _setActiveSfSection(idx);
+  const headerOffset = 80;
+  const top = el.getBoundingClientRect().top + window.scrollY - headerOffset;
+  window.scrollTo({ top, behavior: 'smooth' });
 }
 
 function renderChecklist() {
-  const sec = SECTIONS[currentAudit.currentSectionIdx];
+  renderSectionTabs();
   const container = document.getElementById('checklist-content');
-  let html = '<div class="card">';
-  html += '<div class="card-header"><div style="width:36px;height:36px;border-radius:8px;background:var(--app-gradient);color:white;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:18px;box-shadow:0 2px 6px rgba(30,58,95,0.20);">'+sec.letter+'</div>';
-  html += '<h2 style="font-size:16px;">'+escapeHtml(sec.title)+'</h2></div>';
+  if (!container) return;
+  let html = '';
 
-  sec.subsections.forEach((sub, subIdx) => {
-    const needPhoto = subsectionRequiresPhoto(sec, sub);
-    if (sub.title) {
-      html += '<div class="subsection-title' + (needPhoto ? ' red' : '') + '">';
-      html += escapeHtml(sub.title);
-      if (needPhoto) html += '<span class="req-photo-badge">📷 ต้องแนบรูป</span>';
-      html += '</div>';
-    }
-    sub.items.forEach(item => {
-      const key = sec.letter + '|' + subIdx + '|' + item.num;
-      const ans = currentAudit.answers[key] || { value: null, note: '', photos: [] };
-      const itemClass = ans.value ? ('answered-' + ans.value) : '';
-      const isNAOnly = item.possibility === 'N/A';
-      html += '<div class="item ' + itemClass + '">';
-      html += '<div class="item-text">';
-      html += '<span class="item-num">'+item.num+'</span>';
-      html += '<div class="item-text-content">'+escapeHtml(item.text);
-      if (item.note) html += '<div class="item-note">📝 '+escapeHtml(item.note)+'</div>';
-      html += '</div></div>';
-      html += '<div class="item-actions">';
-      if (!isNAOnly) {
-        html += '<button class="choice-btn ' + (ans.value==='pass'?'active pass':'') + '" onclick="setAnswer(\'' + escapeAttr(key) + '\',\'pass\')"><span class="material-symbols-rounded" style="font-size:18px;">check_circle</span> ผ่าน</button>';
-        html += '<button class="choice-btn ' + (ans.value==='fail'?'active fail':'') + '" onclick="setAnswer(\'' + escapeAttr(key) + '\',\'fail\')"><span class="material-symbols-rounded" style="font-size:18px;">cancel</span> ไม่ผ่าน</button>';
-      }
-      html += '<button class="choice-btn ' + (ans.value==='na'?'active na':'') + '" onclick="setAnswer(\'' + escapeAttr(key) + '\',\'na\')">N/A</button>';
-      html += '</div>';
+  SECTIONS.forEach((sec, sIdx) => {
+    const prog = _sectionProgress(sec);
+    html += '<div class="jd-section-card" id="sf-section-' + sIdx + '">';
+    html += '<div class="jd-section-header">';
+    html += '<div class="jd-section-name"><span class="sf-section-letter">' + sec.letter + '</span> ' + escapeHtml(sec.title) + '</div>';
+    html += '<div class="jd-section-progress">' + prog.done + '/' + prog.total + (prog.fail ? ' · ✗' + prog.fail : '') + '</div>';
+    html += '</div>';
 
-      if (ans.value === 'fail') {
-        html += '<div class="photo-section">';
-        if (needPhoto) html += '<div class="photo-required-label"><span class="material-symbols-rounded" style="font-size:16px;">photo_camera</span> ต้องแนบรูปหลักฐาน</div>';
-        html += '<label class="photo-upload-btn"><span class="material-symbols-rounded" style="font-size:18px;">add_a_photo</span> แนบรูป<input type="file" accept="image/*" capture="environment" multiple style="display:none;" onchange="addPhotos(\'' + escapeAttr(key) + '\', this.files)"></label>';
-        html += '<div class="photo-preview">';
-        ans.photos.forEach((p, pi) => {
-          html += '<div class="photo-thumb"><img src="'+p+'"><button class="remove-btn" onclick="removePhoto(\'' + escapeAttr(key) + '\','+pi+')"><span class="material-symbols-rounded" style="font-size:14px;">close</span></button></div>';
-        });
-        html += '</div>';
-        html += '<textarea class="note-input" placeholder="รายละเอียดที่พบ / ข้อเสนอแนะ" oninput="setNote(\'' + escapeAttr(key) + '\', this.value)">'+escapeHtml(ans.note||'')+'</textarea>';
+    sec.subsections.forEach((sub, subIdx) => {
+      const needPhoto = subsectionRequiresPhoto(sec, sub);
+      if (sub.title) {
+        html += '<div class="subsection-title' + (needPhoto ? ' red' : '') + '">';
+        html += escapeHtml(sub.title);
+        if (needPhoto) html += '<span class="req-photo-badge">📷 ต้องแนบรูป</span>';
         html += '</div>';
       }
-      html += '</div>';
+      sub.items.forEach(item => {
+        const key = sec.letter + '|' + subIdx + '|' + item.num;
+        const ans = currentAudit.answers[key] || { value: null, note: '', photos: [] };
+        const isPass = ans.value === 'pass', isFail = ans.value === 'fail', isNA = ans.value === 'na';
+        const isNAOnly = item.possibility === 'N/A';
+        html += '<div class="jd-item ' + (isPass ? 'is-pass' : '') + ' ' + (isFail ? 'is-fail' : '') + ' ' + (isNA ? 'is-na' : '') + ' ' + ((needPhoto && isFail) ? 'is-required-photo' : '') + '">';
+        html += '<div class="jd-item-q">';
+        html += '<span class="jd-item-num">' + item.num + '</span>';
+        html += '<span class="jd-item-text">' + escapeHtml(item.text);
+        if (item.note) html += '<div class="item-note">📝 ' + escapeHtml(item.note) + '</div>';
+        html += '</span></div>';
+        html += '<div class="jd-item-actions">';
+        if (!isNAOnly) {
+          html += '<button type="button" class="jd-choice pass ' + (isPass ? 'active' : '') + '" onclick="setAnswer(\'' + escapeAttr(key) + '\',\'pass\')"><span class="material-symbols-rounded">check_circle</span><span>ผ่าน</span></button>';
+          html += '<button type="button" class="jd-choice fail ' + (isFail ? 'active' : '') + '" onclick="setAnswer(\'' + escapeAttr(key) + '\',\'fail\')"><span class="material-symbols-rounded">cancel</span><span>ไม่ผ่าน</span></button>';
+        }
+        html += '<button type="button" class="jd-choice na ' + (isNA ? 'active' : '') + '" onclick="setAnswer(\'' + escapeAttr(key) + '\',\'na\')"><span class="material-symbols-rounded">remove_circle</span><span>N/A</span></button>';
+        html += '</div>';
+
+        if (isFail) {
+          html += '<input type="text" class="jd-note-input' + ((ans.note || '').trim() ? '' : ' is-required') + '" placeholder="รายละเอียดที่พบ / ข้อเสนอแนะ" value="' + escapeAttr(ans.note || '') + '" oninput="setNote(\'' + escapeAttr(key) + '\', this.value)">';
+          html += '<div class="jd-photo-section">';
+          if (needPhoto) html += '<div class="photo-required-label"><span class="material-symbols-rounded" style="font-size:16px;">photo_camera</span> ต้องแนบรูปหลักฐาน</div>';
+          html += '<label class="jd-photo-upload-btn' + ((needPhoto && ans.photos.length === 0) ? ' is-required' : '') + '"><span class="material-symbols-rounded">add_a_photo</span> แนบรูป<input type="file" accept="image/*" capture="environment" multiple style="display:none;" onchange="addPhotos(\'' + escapeAttr(key) + '\', this.files)"></label>';
+          if (ans.photos.length) {
+            html += '<div class="jd-photo-preview">';
+            ans.photos.forEach((p, pi) => {
+              html += '<div class="jd-photo-thumb"><img src="' + p + '"><button class="jd-photo-remove" type="button" onclick="removePhoto(\'' + escapeAttr(key) + '\',' + pi + ')"><span class="material-symbols-rounded">close</span></button></div>';
+            });
+            html += '</div>';
+          }
+          html += '</div>';
+        }
+        html += '</div>';
+      });
     });
+
+    html += '</div>';
   });
 
-  html += '</div>';
   container.innerHTML = html;
   updateProgress();
+  setTimeout(_setupSfSectionObserver, 100);
 }
 
 function setAnswer(key, value) {
@@ -7261,9 +7323,9 @@ function nextSection() {
 function updateProgress() {
   const answered = Object.values(currentAudit.answers).filter(a => a.value !== null).length;
   const pct = TOTAL_ITEMS ? (answered/TOTAL_ITEMS*100) : 0;
-  document.getElementById('progress-text').textContent = answered + ' / ' + TOTAL_ITEMS;
-  document.getElementById('progress-pct').innerHTML = '<b>' + pct.toFixed(1) + '%</b>';
-  document.getElementById('progress-fill').style.width = pct + '%';
+  const t = document.getElementById('progress-text'); if (t) t.textContent = answered + ' / ' + TOTAL_ITEMS;
+  const p = document.getElementById('progress-pct'); if (p) p.innerHTML = '<b>' + pct.toFixed(1) + '%</b>';
+  const f = document.getElementById('progress-fill'); if (f) f.style.width = pct + '%';
 }
 
 function finishAudit() {
