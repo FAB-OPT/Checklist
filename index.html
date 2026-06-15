@@ -4717,6 +4717,31 @@ html.fab-sso-pending #login-screen { display: none !important; }
   <div class="container">
     <!-- DASHBOARD (admin/bzm) -->
     <div id="dashboard-screen" style="display:none;">
+      <!-- ▼ หน้าหลักสไตล์ Dashboard เจ๊แดง — ผล OSS ซ่อนไว้ก่อน (ดู #oss-results-disabled) ▼ -->
+      <div class="page-eyebrow">
+        <h2 class="page-eyebrow-title">แดชบอร์ด <span class="page-eyebrow-inline brand-eyebrow-label">ซานตาเฟ่</span></h2>
+      </div>
+      <div class="jd-dash-kpis" id="sf-dash-kpis"></div>
+      <div class="card">
+        <div class="card-header"><span class="material-symbols-rounded" style="color:#0E7490;">groups</span><h2>คะแนนเฉลี่ยต่อโซน</h2></div>
+        <div id="sf-dash-by-bzm"><div class="jd-dash-empty">⏳ อยู่ระหว่างจัดทำ — ผลตรวจ OSS จะกลับมาเร็ว ๆ นี้</div></div>
+      </div>
+      <div class="card">
+        <div class="card-header"><span class="material-symbols-rounded" style="color:var(--primary);">leaderboard</span><h2>คะแนนเฉลี่ยต่อสาขา</h2></div>
+        <div id="sf-dash-branches"><div class="jd-dash-empty">⏳ อยู่ระหว่างจัดทำ</div></div>
+      </div>
+      <div class="card">
+        <div class="card-header"><span class="material-symbols-rounded" style="color:var(--danger);">priority_high</span><h2>หัวข้อที่ตกบ่อย <span class="card-header-en">Top failed items</span></h2></div>
+        <div id="sf-dash-top-fails"><div class="jd-dash-empty">⏳ อยู่ระหว่างจัดทำ</div></div>
+      </div>
+      <div class="card">
+        <div class="card-header"><span class="material-symbols-rounded" style="color:var(--text-secondary);">history</span><h2>ผลตรวจล่าสุด</h2></div>
+        <div id="sf-dash-recent"><div class="jd-dash-empty">⏳ อยู่ระหว่างจัดทำ</div></div>
+      </div>
+      <!-- ▲ จบส่วนใหม่ ▲ -->
+
+      <!-- ═══ OSS RESULTS (ซ่อนไว้ชั่วคราว · เปิดคืน: ลบ style display:none ที่ wrapper นี้ + ลบ early-return ใน showDashboard) ═══ -->
+      <div id="oss-results-disabled" style="display:none;">
       <!-- Eyebrow row -->
       <div class="page-eyebrow">
         <h2 class="page-eyebrow-title" id="dashboard-title">
@@ -4802,6 +4827,7 @@ html.fab-sso-pending #login-screen { display: none !important; }
 
         <div class="audit-list" id="audit-list"></div>
       </div>
+      </div><!-- /#oss-results-disabled -->
     </div>
 
     <!-- BRANCH INFO SCREEN -->
@@ -6585,6 +6611,10 @@ function showDashboard() {
   hideAllScreens();
   document.getElementById('dashboard-screen').style.display = 'block';
   setActiveNav('nav-dash');
+  try { applyBrandHeader(); } catch (e) {}
+  // ═══ ผล OSS ซ่อนไว้ชั่วคราว (เอาผล OSS ออกไปก่อน) ═══
+  // เปิดคืน: ลบบรรทัด return ด้านล่างนี้ + เอา style display:none ออกจาก #oss-results-disabled ใน HTML
+  return;
 
   const audits = getVisibleAudits();
   const completed = audits.filter(a => a.status === 'completed');
