@@ -4717,26 +4717,31 @@ html.fab-sso-pending #login-screen { display: none !important; }
   <div class="container">
     <!-- DASHBOARD (admin/bzm) -->
     <div id="dashboard-screen" style="display:none;">
-      <!-- ▼ หน้าหลักสไตล์ Dashboard เจ๊แดง — ผล OSS ซ่อนไว้ก่อน (ดู #oss-results-disabled) ▼ -->
+      <!-- ▼ หน้าหลักสไตล์ Dashboard เจ๊แดง · ปุ่มสลับดูผล OSS แบบเดิม ▼ -->
       <div class="page-eyebrow">
         <h2 class="page-eyebrow-title">แดชบอร์ด <span class="page-eyebrow-inline brand-eyebrow-label">ซานตาเฟ่</span></h2>
       </div>
-      <div class="jd-dash-kpis" id="sf-dash-kpis"></div>
-      <div class="card">
-        <div class="card-header"><span class="material-symbols-rounded" style="color:#0E7490;">groups</span><h2>คะแนนเฉลี่ยต่อโซน</h2></div>
-        <div id="sf-dash-by-bzm"><div class="jd-dash-empty">⏳ อยู่ระหว่างจัดทำ — ผลตรวจ OSS จะกลับมาเร็ว ๆ นี้</div></div>
+      <div style="margin-bottom:14px;">
+        <button type="button" class="btn btn-secondary" id="sf-oss-toggle-btn" onclick="toggleSfOssView()"></button>
       </div>
-      <div class="card">
-        <div class="card-header"><span class="material-symbols-rounded" style="color:var(--primary);">leaderboard</span><h2>คะแนนเฉลี่ยต่อสาขา</h2></div>
-        <div id="sf-dash-branches"><div class="jd-dash-empty">⏳ อยู่ระหว่างจัดทำ</div></div>
-      </div>
-      <div class="card">
-        <div class="card-header"><span class="material-symbols-rounded" style="color:var(--danger);">priority_high</span><h2>หัวข้อที่ตกบ่อย <span class="card-header-en">Top failed items</span></h2></div>
-        <div id="sf-dash-top-fails"><div class="jd-dash-empty">⏳ อยู่ระหว่างจัดทำ</div></div>
-      </div>
-      <div class="card">
-        <div class="card-header"><span class="material-symbols-rounded" style="color:var(--text-secondary);">history</span><h2>ผลตรวจล่าสุด</h2></div>
-        <div id="sf-dash-recent"><div class="jd-dash-empty">⏳ อยู่ระหว่างจัดทำ</div></div>
+      <div id="sf-dash-new">
+        <div class="jd-dash-kpis" id="sf-dash-kpis"></div>
+        <div class="card" id="sf-dash-zone-card">
+          <div class="card-header"><span class="material-symbols-rounded" style="color:#0E7490;">groups</span><h2>คะแนนเฉลี่ยต่อโซน</h2></div>
+          <div id="sf-dash-by-bzm"><div class="jd-dash-empty">กำลังโหลด…</div></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><span class="material-symbols-rounded" style="color:var(--primary);">leaderboard</span><h2>คะแนนเฉลี่ยต่อสาขา</h2></div>
+          <div id="sf-dash-branches"><div class="jd-dash-empty">กำลังโหลด…</div></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><span class="material-symbols-rounded" style="color:var(--danger);">priority_high</span><h2>หัวข้อที่ตกบ่อย <span class="card-header-en">Top failed items</span></h2></div>
+          <div id="sf-dash-top-fails"><div class="jd-dash-empty">กำลังโหลด…</div></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><span class="material-symbols-rounded" style="color:var(--text-secondary);">history</span><h2>ผลตรวจล่าสุด — คลิกเพื่อดูรายละเอียด</h2></div>
+          <div id="sf-dash-recent"><div class="jd-dash-empty">กำลังโหลด…</div></div>
+        </div>
       </div>
       <!-- ▲ จบส่วนใหม่ ▲ -->
 
@@ -6607,15 +6612,32 @@ function getVisibleAudits() {
   }
 }
 
+var _sfDashView = 'new';   // 'new' = การ์ดสไตล์เจ๊แดง · 'oss' = ผลสรุปคะแนนแบบเดิม
+function toggleSfOssView() {
+  _sfDashView = (_sfDashView === 'oss') ? 'new' : 'oss';
+  showDashboard();
+  window.scrollTo(0, 0);
+}
+
 function showDashboard() {
   hideAllScreens();
   document.getElementById('dashboard-screen').style.display = 'block';
   setActiveNav('nav-dash');
   try { applyBrandHeader(); } catch (e) {}
-  // ═══ ผล OSS ซ่อนไว้ชั่วคราว (เอาผล OSS ออกไปก่อน) ═══
-  // เปิดคืน: ลบบรรทัด return ด้านล่างนี้ + เอา style display:none ออกจาก #oss-results-disabled ใน HTML
-  return;
+  const isOss = _sfDashView === 'oss';
+  const newEl = document.getElementById('sf-dash-new');
+  const ossEl = document.getElementById('oss-results-disabled');
+  if (newEl) newEl.style.display = isOss ? 'none' : '';
+  if (ossEl) ossEl.style.display = isOss ? 'block' : 'none';
+  const _tgl = document.getElementById('sf-oss-toggle-btn');
+  if (_tgl) _tgl.innerHTML = isOss
+    ? '<span class="material-symbols-rounded">arrow_back</span> กลับหน้าหลัก'
+    : '<span class="material-symbols-rounded">assessment</span> ดูผล OSS (สรุปคะแนนแบบเดิม)';
+  if (isOss) renderOssResults();
+  else renderSfDashboard();
+}
 
+function renderOssResults() {
   const audits = getVisibleAudits();
   const completed = audits.filter(a => a.status === 'completed');
 
@@ -6674,6 +6696,156 @@ function showDashboard() {
   }
 
   renderAuditList();
+}
+
+// ============ DASHBOARD ซานตาเฟ่ — การ์ดสไตล์เจ๊แดง (ดึงผล OSS จริง) ============
+// แปลงผลตรวจ OSS ให้อยู่ในรูปเดียวกับ record ของเจ๊แดง เพื่อ reuse _scoreRowHTML ฯลฯ
+function _sfNormalizeAudit(a) {
+  const sd = a.scoreData || {};
+  const secs = sd.sectionScores || [];
+  let pass = 0, fail = 0;
+  secs.forEach(s => { pass += s.passed || 0; fail += s.failed || 0; });
+  const br = BRANCHES.find(b => b.code === a.branchInfo.branchCode);
+  return {
+    id: a.id,
+    storeName: a.branchInfo.branch || '-',
+    branchCode: a.branchInfo.branchCode || '',
+    date: a.branchInfo.date || (a.completedAt ? a.completedAt.slice(0, 10) : ''),
+    time: a.branchInfo.time || '',
+    auditor: a.inspector || a.inspectorName || a.inspectorCode || '-',
+    bzm: a.branchInfo.bzm || (br ? br.manager : '') || 'ไม่ระบุ',
+    bzmNick: (br && br.managerNick) ? br.managerNick : (a.branchInfo.bzm || 'ไม่ระบุ'),
+    passPct: sd.grandTotal || 0,
+    passCount: pass,
+    failCount: fail,
+    items: Object.values(a.answers || {}).map(x => ({ status: x.value }))
+  };
+}
+
+// Top failed items ของ OSS — นับข้อที่ "ไม่ผ่าน" บ่อยสุด
+function _sfTopFailsHTML(completed) {
+  const counts = {};
+  completed.forEach(a => {
+    const ans = a.answers || {};
+    SECTIONS.forEach(sec => sec.subsections.forEach((sub, subIdx) => sub.items.forEach(item => {
+      const v = ans[sec.letter + '|' + subIdx + '|' + item.num];
+      if (v && v.value === 'fail') {
+        const ck = sec.letter + '|' + item.text;
+        if (!counts[ck]) counts[ck] = { text: item.text, letter: sec.letter, count: 0 };
+        counts[ck].count++;
+      }
+    })));
+  });
+  const arr = Object.values(counts).sort((a, b) => b.count - a.count).slice(0, 10);
+  if (!arr.length) return '<div class="jd-dash-empty">ไม่มีข้อที่ตก 🎉</div>';
+  const maxC = arr[0].count;
+  return arr.map((it, i) =>
+    '<div class="score-row tier-bad">' +
+      '<div class="score-row-top">' +
+        '<span class="score-rank is-bad">' + (i + 1) + '</span>' +
+        '<span class="score-name">[' + it.letter + '] ' + escapeHtml(it.text) + '</span>' +
+        '<span class="score-pct is-bad">' + it.count + '<small> ครั้ง</small></span>' +
+      '</div>' +
+      '<div class="score-bar"><div class="score-bar-fill bad" style="width:' + Math.round(it.count / maxC * 100) + '%"></div></div>' +
+    '</div>'
+  ).join('');
+}
+
+function renderSfDashboard() {
+  const completed = getVisibleAudits().filter(a => a.status === 'completed');
+  const records = completed.map(_sfNormalizeAudit);
+  const kpis = document.getElementById('sf-dash-kpis');
+  const branchesEl = document.getElementById('sf-dash-branches');
+  const topFailsEl = document.getElementById('sf-dash-top-fails');
+  const byBzmEl = document.getElementById('sf-dash-by-bzm');
+  const recentEl = document.getElementById('sf-dash-recent');
+  const zoneCard = document.getElementById('sf-dash-zone-card');
+
+  if (!records.length) {
+    if (kpis) kpis.innerHTML = '';
+    [branchesEl, topFailsEl, byBzmEl, recentEl].forEach(el => { if (el) el.innerHTML = '<div class="jd-dash-empty">ยังไม่มีข้อมูลการตรวจ</div>'; });
+    return;
+  }
+
+  // ── KPIs ──
+  const totalAudits = records.length;
+  const avgPct = records.reduce((s, r) => s + r.passPct, 0) / totalAudits;
+  const totalFails = records.reduce((s, r) => s + r.failCount, 0);
+  const distinctBranches = new Set(records.map(r => r.branchCode)).size;
+  const now = new Date();
+  const monthKey = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+  const thisMonth = records.filter(r => (r.date || '').startsWith(monthKey)).length;
+  const totalBranches = (currentUser.role === 'bzm')
+    ? BRANCHES.filter(b => b.manager === currentUser.name).length
+    : BRANCHES.length;
+  if (kpis) kpis.innerHTML =
+    '<div class="jd-kpi"><div class="jd-kpi-label">การตรวจทั้งหมด</div><div class="jd-kpi-value">' + totalAudits + '</div><div class="jd-kpi-sub">เดือนนี้ ' + thisMonth + ' ครั้ง</div></div>' +
+    '<div class="jd-kpi ' + (avgPct >= 90 ? 'is-success' : avgPct < 70 ? 'is-danger' : 'is-warn') + '"><div class="jd-kpi-label">คะแนนเฉลี่ย</div><div class="jd-kpi-value">' + avgPct.toFixed(1) + '<span style="font-size:14px;">%</span></div><div class="jd-kpi-sub">ผ่านเกณฑ์</div></div>' +
+    '<div class="jd-kpi is-danger"><div class="jd-kpi-label">รวมข้อไม่ผ่าน</div><div class="jd-kpi-value">' + totalFails + '</div><div class="jd-kpi-sub">ข้อ</div></div>' +
+    '<div class="jd-kpi"><div class="jd-kpi-label">สาขาที่ตรวจแล้ว</div><div class="jd-kpi-value">' + distinctBranches + '</div><div class="jd-kpi-sub">จาก ' + totalBranches + ' สาขา</div></div>';
+
+  // ── คะแนนเฉลี่ยต่อสาขา ──
+  const byBranch = {};
+  records.forEach(r => {
+    if (!byBranch[r.storeName]) byBranch[r.storeName] = { count: 0, sumPct: 0, fails: 0, records: [] };
+    const o = byBranch[r.storeName]; o.count++; o.sumPct += r.passPct; o.fails += r.failCount; o.records.push(r);
+  });
+  const branchList = Object.entries(byBranch)
+    .map(([name, s]) => ({ name, count: s.count, avg: s.sumPct / s.count, fails: s.fails, records: s.records }))
+    .sort((a, b) => b.avg - a.avg);
+  if (branchesEl) branchesEl.innerHTML = branchList.map((b, i) =>
+    _scoreRowHTML(i + 1, escapeHtml(b.name), b.avg, b.count, b.fails, b.records, 'branch')
+  ).join('');
+
+  // ── คะแนนเฉลี่ยต่อโซน (เฉพาะ vp/coo/admin) ──
+  const showZone = currentUser && ['vp', 'coo', 'admin'].includes(currentUser.role);
+  if (zoneCard) zoneCard.style.display = showZone ? '' : 'none';
+  if (showZone && byBzmEl) {
+    const byBzm = {};
+    records.forEach(r => {
+      const key = r.bzmNick || r.bzm || 'ไม่ระบุ';
+      if (!byBzm[key]) byBzm[key] = { count: 0, sumPct: 0, fails: 0, full: r.bzm, records: [] };
+      const o = byBzm[key]; o.count++; o.sumPct += r.passPct; o.fails += r.failCount; o.records.push(r);
+    });
+    const bzmList = Object.entries(byBzm)
+      .map(([nick, s]) => ({ nick, full: s.full, count: s.count, fails: s.fails, avg: s.sumPct / s.count, records: s.records }))
+      .sort((a, b) => b.avg - a.avg);
+    byBzmEl.innerHTML = bzmList.map((b, i) => {
+      const displayName = (b.full && b.full !== b.nick)
+        ? escapeHtml(b.full) + ' <span class="score-nick">(' + escapeHtml(b.nick) + ')</span>'
+        : escapeHtml(b.nick);
+      return _scoreRowHTML(i + 1, displayName, b.avg, b.count, b.fails, b.records, 'zone');
+    }).join('');
+  }
+
+  // ── หัวข้อที่ตกบ่อย ──
+  if (topFailsEl) topFailsEl.innerHTML = _sfTopFailsHTML(completed);
+
+  // ── ผลตรวจล่าสุด ──
+  if (recentEl) {
+    const recent = records.slice()
+      .sort((a, b) => ((b.date || '') + (b.time || '')).localeCompare((a.date || '') + (a.time || '')))
+      .slice(0, 6);
+    recentEl.innerHTML = recent.map(r => {
+      const pct = r.passPct;
+      const tier = pct >= 90 ? 'is-good' : pct < 70 ? 'is-bad' : 'is-warn';
+      const tierCls = pct >= 90 ? 'tier-good' : pct < 70 ? 'tier-bad' : 'tier-warn';
+      return '<div class="recent-card ' + tierCls + '" onclick="viewAudit(\'' + escapeAttr(r.id) + '\')">' +
+        '<div class="recent-card-main">' +
+          '<div class="recent-card-name">' + escapeHtml(r.storeName) + '</div>' +
+          '<div class="recent-card-subline">' + escapeHtml(fmtDateDMY(r.date)) + (r.time ? ' · ' + escapeHtml(r.time) : '') + ' · ' + escapeHtml(r.auditor) + '</div>' +
+          '<div class="recent-card-stats">' +
+            '<span class="recent-chip ok"><span class="material-symbols-rounded">check_circle</span> ผ่าน ' + r.passCount + '</span>' +
+            '<span class="recent-chip ' + (r.failCount > 0 ? 'fail' : 'ok') + '"><span class="material-symbols-rounded">' + (r.failCount > 0 ? 'cancel' : 'check') + '</span> ตก ' + r.failCount + '</span>' +
+          '</div>' +
+        '</div>' +
+        '<div class="recent-card-right">' +
+          '<div class="recent-card-pct ' + tier + '">' + pct.toFixed(1) + '<small>%</small></div>' +
+          '<div class="recent-card-tier ' + tier + '">' + _jdTierLabel(pct) + '</div>' +
+        '</div>' +
+      '</div>';
+    }).join('') || '<div class="jd-dash-empty">ยังไม่มีผลการตรวจ</div>';
+  }
 }
 
 function renderZoneList(completed) {
