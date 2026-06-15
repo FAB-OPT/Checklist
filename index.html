@@ -4617,6 +4617,25 @@ body:has(#login-screen.active) {
    the inline script below) — prevents the brand picker from flashing
    before the late bootstrap script runs. */
 html.fab-sso-pending #login-screen { display: none !important; }
+
+/* Dashboard ซานตาเฟ่ — เช็คลิสต์รายวัน แยกเปิด/ปิดร้าน */
+.sf-day-row { display:flex; align-items:center; gap:12px; padding:10px 0; border-bottom:1px dashed var(--border); }
+.sf-day-row:last-child { border-bottom:none; }
+.sf-day-date { flex:none; width:108px; display:flex; align-items:center; gap:6px; font-weight:800; font-size:13px; color:var(--text); }
+.sf-day-date .material-symbols-rounded { font-size:18px; color:var(--text-secondary); }
+.sf-day-sides { flex:1; display:grid; grid-template-columns:1fr 1fr; gap:8px; min-width:0; }
+.sf-day-side { border-radius:10px; padding:8px 10px; border:1.5px solid var(--border); background:var(--surface-2); }
+.sf-day-side-head { display:flex; align-items:center; gap:5px; font-weight:800; font-size:12px; margin-bottom:3px; }
+.sf-day-side-head .material-symbols-rounded { font-size:16px; }
+.sf-day-side-stat { font-size:12px; font-weight:700; color:var(--text-secondary); }
+.sf-day-side.sf-day-open .sf-day-side-head { color:#C2620F; }
+.sf-day-side.sf-day-close .sf-day-side-head { color:#4A5A99; }
+.sf-day-side.has-fail { border-color:var(--danger); background:var(--danger-bg); }
+.sf-day-side.has-fail .sf-day-side-stat { color:var(--danger); }
+.sf-day-side.all-ok { border-color:var(--success); background:var(--success-bg); }
+.sf-day-side.all-ok .sf-day-side-stat { color:#1E6B36; }
+.sf-day-side.is-empty { opacity:0.6; }
+@media (max-width:480px){ .sf-day-row{flex-direction:column;align-items:stretch;gap:6px;} .sf-day-date{width:auto;} }
 </style>
 <script>
 /* Runs in <head> before #login-screen paints. If a valid fab_session
@@ -4731,7 +4750,7 @@ html.fab-sso-pending #login-screen { display: none !important; }
           <div id="sf-dash-by-bzm"><div class="jd-dash-empty">กำลังโหลด…</div></div>
         </div>
         <div class="card">
-          <div class="card-header"><span class="material-symbols-rounded" style="color:var(--primary);">event</span><h2>คะแนนเฉลี่ยต่อวันที่ตรวจ</h2></div>
+          <div class="card-header"><span class="material-symbols-rounded" style="color:var(--primary);">event</span><h2>เช็คลิสต์รายวัน · เปิด/ปิดร้าน</h2></div>
           <div id="sf-dash-branches"><div class="jd-dash-empty">กำลังโหลด…</div></div>
         </div>
         <div class="card">
@@ -6798,6 +6817,43 @@ function _sfTopFailsHTML(completed) {
   return overview + cards;
 }
 
+// เช็คลิสต์รายวัน จัดตามวันที่ · แต่ละวันแยกซ้าย=เปิดร้าน / ขวา=ปิดร้าน
+function _sfDailyByDateHTML() {
+  const dailies = (typeof getVisibleDailyChecklists === 'function') ? getVisibleDailyChecklists() : [];
+  if (!dailies.length) return '<div class="jd-dash-empty">ยังไม่มีเช็คลิสต์รายวัน</div>';
+  const byDate = {};
+  dailies.forEach(d => {
+    const date = d.date || '-';
+    if (!byDate[date]) byDate[date] = { open: [], close: [] };
+    (d.shift === 'close' ? byDate[date].close : byDate[date].open).push(d);
+  });
+  const dates = Object.keys(byDate).sort((a, b) => b.localeCompare(a));   // ใหม่สุดก่อน
+
+  const side = (recs, shift) => {
+    const icon = shift === 'open' ? 'wb_sunny' : 'bedtime';
+    const label = shift === 'open' ? 'เปิดร้าน' : 'ปิดร้าน';
+    const cls = shift === 'open' ? 'sf-day-open' : 'sf-day-close';
+    if (!recs.length) {
+      return '<div class="sf-day-side ' + cls + ' is-empty">' +
+        '<div class="sf-day-side-head"><span class="material-symbols-rounded">' + icon + '</span> ' + label + '</div>' +
+        '<div class="sf-day-side-stat">ยังไม่ตรวจ</div></div>';
+    }
+    let fail = 0;
+    recs.forEach(r => (r.items || []).forEach(it => { if (it.status === 'fail') fail++; }));
+    const statusCls = fail > 0 ? 'has-fail' : 'all-ok';
+    return '<div class="sf-day-side ' + cls + ' ' + statusCls + '">' +
+      '<div class="sf-day-side-head"><span class="material-symbols-rounded">' + icon + '</span> ' + label + '</div>' +
+      '<div class="sf-day-side-stat">' + recs.length + ' รายการ · ' + (fail > 0 ? ('ตก ' + fail + ' ข้อ') : 'ผ่านครบ') + '</div></div>';
+  };
+
+  return dates.map(date =>
+    '<div class="sf-day-row">' +
+      '<div class="sf-day-date"><span class="material-symbols-rounded">event</span> ' + escapeHtml(fmtDateDMY(date)) + '</div>' +
+      '<div class="sf-day-sides">' + side(byDate[date].open, 'open') + side(byDate[date].close, 'close') + '</div>' +
+    '</div>'
+  ).join('');
+}
+
 function renderSfDashboard() {
   const completed = getVisibleAudits().filter(a => a.status === 'completed');
   const records = completed.map(_sfNormalizeAudit);
@@ -6831,19 +6887,8 @@ function renderSfDashboard() {
     '<div class="jd-kpi is-danger"><div class="jd-kpi-label">รวมข้อไม่ผ่าน</div><div class="jd-kpi-value">' + totalFails + '</div><div class="jd-kpi-sub">ข้อ</div></div>' +
     '<div class="jd-kpi"><div class="jd-kpi-label">สาขาที่ตรวจแล้ว</div><div class="jd-kpi-value">' + distinctBranches + '</div><div class="jd-kpi-sub">จาก ' + totalBranches + ' สาขา</div></div>';
 
-  // ── คะแนนเฉลี่ยต่อวันที่ตรวจ (จัดกลุ่มตามวันที่ · ใหม่สุดก่อน · กดขยายดูรายสาขา) ──
-  const byDate = {};
-  records.forEach(r => {
-    const d = r.date || '-';
-    if (!byDate[d]) byDate[d] = { count: 0, sumPct: 0, fails: 0, records: [] };
-    const o = byDate[d]; o.count++; o.sumPct += r.passPct; o.fails += r.failCount; o.records.push(r);
-  });
-  const dateList = Object.entries(byDate)
-    .map(([date, s]) => ({ date, count: s.count, avg: s.sumPct / s.count, fails: s.fails, records: s.records }))
-    .sort((a, b) => (b.date || '').localeCompare(a.date || ''));
-  if (branchesEl) branchesEl.innerHTML = dateList.map((d, i) =>
-    _scoreRowHTML(i + 1, escapeHtml(fmtDateDMY(d.date)), d.avg, d.count, d.fails, d.records, 'date')
-  ).join('');
+  // ── เช็คลิสต์รายวัน ต่อวันที่ตรวจ (ซ้าย=เปิดร้าน · ขวา=ปิดร้าน) ──
+  if (branchesEl) branchesEl.innerHTML = _sfDailyByDateHTML();
 
   // ── คะแนนเฉลี่ยต่อโซน (เฉพาะ vp/coo/admin) ──
   const showZone = currentUser && ['vp', 'coo', 'admin'].includes(currentUser.role);
