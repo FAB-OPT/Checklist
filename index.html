@@ -4910,72 +4910,67 @@ html.fab-sso-pending #login-screen { display: none !important; }
 
     <!-- BRANCH INFO SCREEN -->
     <div id="info-screen" style="display:none;">
-      <div class="card">
-        <div class="card-header">
-          <span class="material-symbols-rounded" style="color:var(--primary);">store</span>
-          <h2>เริ่มตรวจสาขา</h2>
-        </div>
-
-        <div class="form-group">
-          <label>สาขา <span class="req">*</span></label>
-          <select class="form-control" id="branch-select">
-            <option value="">— เลือกสาขา —</option>
-          </select>
-        </div>
-
-        <div class="form-group">
-          <label>BZM ประจำสาขา</label>
-          <input type="text" class="form-control" id="bzm-name" readonly>
-        </div>
-
-        <div class="form-row">
-          <div class="form-group">
-            <label>วันที่ตรวจ <span class="req">*</span></label>
-            <input type="date" class="form-control" id="audit-date">
-          </div>
-          <div class="form-group">
-            <label>เวลาเข้าตรวจ <span class="req">*</span></label>
-            <input type="time" class="form-control" id="audit-time">
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label>ผู้ตรวจ <span class="req">*</span></label>
-          <input type="text" class="form-control" id="inspector-name" readonly>
-        </div>
-
-        <div class="form-group">
-          <label>ผู้จัดการสาขา (ผู้รับการตรวจ)</label>
-          <input type="text" class="form-control" id="branch-manager" placeholder="ชื่อผู้จัดการสาขา">
-        </div>
-
-        <div class="form-row">
-          <div class="form-group">
-            <label>จำนวนทีมผู้จัดการ (คน)</label>
-            <input type="number" min="0" class="form-control" id="num-managers" placeholder="0">
-          </div>
-          <div class="form-group">
-            <label>จำนวนพนักงานบริการ (คน)</label>
-            <input type="number" min="0" class="form-control" id="num-service" placeholder="0">
-          </div>
-        </div>
-
-        <div class="form-row">
-          <div class="form-group">
-            <label>จำนวนพนักงานครัว (คน)</label>
-            <input type="number" min="0" class="form-control" id="num-kitchen" placeholder="0">
-          </div>
-          <div class="form-group">
-            <label>หมายเหตุ</label>
-            <input type="text" class="form-control" id="extra-note" placeholder="(ถ้ามี)">
-          </div>
-        </div>
-
-        <button class="btn btn-primary btn-block btn-lg" onclick="startAudit()">
-          <span class="material-symbols-rounded">arrow_forward</span>
-          เริ่มตรวจ
-        </button>
+      <div class="page-eyebrow page-eyebrow-section">
+        <h2 class="page-eyebrow-title">เริ่มตรวจสาขา <span class="page-eyebrow-inline brand-eyebrow-label">Operations Standard Skill</span></h2>
       </div>
+      <div class="card jd-form-head">
+        <div class="jd-form-grid2">
+          <div class="jd-form-head-row">
+            <label class="jd-form-label">สาขา <span class="req">*</span></label>
+            <select id="branch-select" class="jd-form-input">
+              <option value="">— เลือกสาขา —</option>
+            </select>
+          </div>
+          <div class="jd-form-head-row">
+            <label class="jd-form-label">BZM ประจำสาขา</label>
+            <input type="text" id="bzm-name" class="jd-form-input" readonly>
+          </div>
+        </div>
+        <div class="jd-form-grid2 jd-form-grid2-keep">
+          <div class="jd-form-head-row">
+            <label class="jd-form-label">วันที่ตรวจ <span class="req">*</span></label>
+            <input type="date" id="audit-date" class="jd-form-input">
+          </div>
+          <div class="jd-form-head-row">
+            <label class="jd-form-label">เวลาเข้าตรวจ <span class="req">*</span></label>
+            <input type="time" id="audit-time" class="jd-form-input">
+          </div>
+        </div>
+        <div class="jd-form-grid2">
+          <div class="jd-form-head-row">
+            <label class="jd-form-label">ผู้ตรวจ <span class="req">*</span></label>
+            <input type="text" id="inspector-name" class="jd-form-input" readonly>
+          </div>
+          <div class="jd-form-head-row">
+            <label class="jd-form-label">ผู้จัดการสาขา (ผู้รับการตรวจ)</label>
+            <input type="text" id="branch-manager" class="jd-form-input" placeholder="ชื่อผู้จัดการสาขา">
+          </div>
+        </div>
+        <div class="jd-form-grid2">
+          <div class="jd-form-head-row">
+            <label class="jd-form-label">จำนวนทีมผู้จัดการ (คน)</label>
+            <input type="number" min="0" id="num-managers" class="jd-form-input" placeholder="0">
+          </div>
+          <div class="jd-form-head-row">
+            <label class="jd-form-label">จำนวนพนักงานบริการ (คน)</label>
+            <input type="number" min="0" id="num-service" class="jd-form-input" placeholder="0">
+          </div>
+        </div>
+        <div class="jd-form-grid2">
+          <div class="jd-form-head-row">
+            <label class="jd-form-label">จำนวนพนักงานครัว (คน)</label>
+            <input type="number" min="0" id="num-kitchen" class="jd-form-input" placeholder="0">
+          </div>
+          <div class="jd-form-head-row">
+            <label class="jd-form-label">หมายเหตุ</label>
+            <input type="text" id="extra-note" class="jd-form-input" placeholder="(ถ้ามี)">
+          </div>
+        </div>
+      </div>
+      <button class="btn btn-primary btn-block btn-lg" style="margin-top:14px;" onclick="startAudit()">
+        <span class="material-symbols-rounded">arrow_forward</span>
+        เริ่มตรวจ
+      </button>
     </div>
 
     <!-- CHECKLIST SCREEN -->
