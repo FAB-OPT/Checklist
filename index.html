@@ -5033,7 +5033,7 @@ html.fab-sso-pending #login-screen { display: none !important; }
             <span class="material-symbols-rounded">download</span> Export
           </button>
           <button class="btn btn-secondary" style="flex:1;min-width:130px;" onclick="backToDashboard()">
-            <span class="material-symbols-rounded">home</span> หน้าหลัก
+            <span class="material-symbols-rounded">home</span> แดชบอร์ด
           </button>
         </div>
       </div>
@@ -5100,7 +5100,7 @@ html.fab-sso-pending #login-screen { display: none !important; }
         <span class="daily-form-branch-hidden" id="daily-form-bzm-chip" style="display:none;"></span>
         <div class="daily-form-input-row">
           <label class="daily-form-input-label">Manager on duty <span class="req">*</span></label>
-          <input type="text" class="form-control" id="daily-manager" placeholder="ชื่อผู้รับผิดชอบ shift">
+          <input type="text" class="jd-form-input" id="daily-manager" placeholder="ชื่อผู้รับผิดชอบ shift">
         </div>
       </div>
 
@@ -6612,7 +6612,7 @@ function renderBottomNav() {
     html += '<button class="bottom-nav-item nav-dash-btn active" id="nav-dash" onclick="showJaedaengDashboard()"><span class="material-symbols-rounded">dashboard</span><span>แดชบอร์ด</span></button>';
     html += '<button class="bottom-nav-item nav-audit-btn" id="nav-jd-hub" onclick="showJaedaengHub()"><span class="material-symbols-rounded">checklist</span><span>ตรวจร้าน</span></button>';
   } else {
-    html += '<button class="bottom-nav-item nav-dash-btn active" id="nav-dash" onclick="showDashboard()"><span class="material-symbols-rounded">dashboard</span><span>หน้าหลัก</span></button>';
+    html += '<button class="bottom-nav-item nav-dash-btn active" id="nav-dash" onclick="showDashboard()"><span class="material-symbols-rounded">dashboard</span><span>แดชบอร์ด</span></button>';
     // ตรวจสาขา is for branches' BZM only; VP / COO / Admin only review results.
     if (currentUser.role === 'bzm' && currentUser.brand === 'santafe') {
       html += '<button class="bottom-nav-item nav-audit-btn" id="nav-new" onclick="newAudit()"><span class="material-symbols-rounded">add_circle</span><span>ตรวจสาขา</span></button>';
