@@ -10495,32 +10495,19 @@ function _setupLoginUI() {
 }
 
 const _ssoLikely = _hasValidSessionSync();
-if (_ssoLikely) {
-  // Hide login-screen immediately — autoLoginFromSession() will reveal
-  // app-screen once data hydrates.
+// บังคับเข้าผ่าน Hub เท่านั้น — ซ่อนหน้า login (เลือกแบรนด์/PIN) ไว้เสมอ
+// มี session → autoLoginFromSession เข้าแอป · ไม่มี → เด้งไป Hub (ไม่โชว์หน้าเลือกแบรนด์)
+(function () {
   const _ls = document.getElementById('login-screen');
   if (_ls) _ls.classList.remove('active');
-} else {
-  _setupLoginUI();
-}
+})();
 
 (async function bootstrapLogin() {
-  // If a sibling FAB app already logged the user in, skip the PIN screen.
+  // If a sibling FAB app already logged the user in, skip straight into the app.
   const ok = await autoLoginFromSession();
   if (ok) return;
-  // SSO failed — reveal the login UI (the fab-sso-pending class on <html>
-  // was hiding it via CSS) and set it up before redirecting.
+  // ไม่มี session → บังคับเข้าผ่าน Hub เท่านั้น (เลิกใช้หน้าเลือกแบรนด์/PIN แบบ standalone)
   document.documentElement.classList.remove('fab-sso-pending');
-  const _ls = document.getElementById('login-screen');
-  if (_ls && !_ls.classList.contains('active')) {
-    _ls.classList.add('active');
-    _setupLoginUI();
-  }
-  // Default to bouncing the user to the Hub login so they only need to
-  // enter their PIN once across all FAB apps. Allow a ?pin=1 query string
-  // to opt out and use the local PIN entry as a fallback.
-  const params = new URLSearchParams(window.location.search);
-  if (params.get('pin') === '1') return;
   redirectToHubLogin();
 })();
 
