@@ -4776,34 +4776,8 @@ html.fab-sso-pending #login-screen { display: none !important; }
       <div class="page-eyebrow">
         <h2 class="page-eyebrow-title">แดชบอร์ด <span class="page-eyebrow-inline brand-eyebrow-label">ซานตาเฟ่</span></h2>
       </div>
-      <div class="sf-dash-tabs">
-        <button type="button" class="sf-dash-tab is-active" id="sf-tab-btn-oss" onclick="setSfDashTab('oss')">Operations Standard Skill</button>
-        <button type="button" class="sf-dash-tab" id="sf-tab-btn-checklist" onclick="setSfDashTab('checklist')">Operations Checklist</button>
-      </div>
-
-      <!-- TAB: Operations Standard Skill (ผล OSS audit) -->
-      <div id="sf-tab-oss">
-        <div class="jd-dash-kpis" id="sf-dash-kpis"></div>
-        <div class="card" id="sf-dash-zone-card">
-          <div class="card-header"><span class="material-symbols-rounded" style="color:#0E7490;">groups</span><h2>คะแนนเฉลี่ยต่อโซน</h2></div>
-          <div id="sf-dash-by-bzm"><div class="jd-dash-empty">กำลังโหลด…</div></div>
-        </div>
-        <div class="card">
-          <div class="card-header"><span class="material-symbols-rounded" style="color:var(--primary);">leaderboard</span><h2>คะแนนเฉลี่ยต่อสาขา</h2></div>
-          <div id="sf-dash-branches"><div class="jd-dash-empty">กำลังโหลด…</div></div>
-        </div>
-        <div class="card">
-          <div class="card-header"><span class="material-symbols-rounded" style="color:var(--danger);">priority_high</span><h2>หัวข้อที่ตกบ่อย <span class="card-header-en">Top failed items</span></h2></div>
-          <div id="sf-dash-top-fails"><div class="jd-dash-empty">กำลังโหลด…</div></div>
-        </div>
-        <div class="card">
-          <div class="card-header"><span class="material-symbols-rounded" style="color:var(--text-secondary);">history</span><h2>ผลตรวจล่าสุด — คลิกเพื่อดูรายละเอียด</h2></div>
-          <div id="sf-dash-recent"><div class="jd-dash-empty">กำลังโหลด…</div></div>
-        </div>
-      </div>
-
-      <!-- TAB: Operations Checklist (Daily เปิด-ปิดร้าน) -->
-      <div id="sf-tab-checklist" style="display:none;">
+      <!-- Operations Checklist (Daily เปิด-ปิดร้าน) — ระบบ OSS audit ถูกตัดออกแล้ว -->
+      <div id="sf-tab-checklist">
         <div class="card">
           <div class="card-header"><span class="material-symbols-rounded" style="color:var(--danger);">priority_high</span><h2>สรุปหมวดที่ตก <span class="card-header-en">รายวัน เปิด-ปิดร้าน</span></h2></div>
           <div id="sf-daily-topfails"><div class="jd-dash-empty">กำลังโหลด…</div></div>
@@ -6457,9 +6431,9 @@ function applyBrandHeader() {
   const view = currentView || (currentUser && currentUser.brand);
   let appTitle, appSub, eyebrow;
   if (view === 'santafe') {
-    appTitle = 'OSS & Operations Checklist';
+    appTitle = 'Operations Checklist';
     appSub   = 'Santa Fe Happy Steak';
-    eyebrow  = 'Operations Standard Skill';
+    eyebrow  = 'Operations Checklist';
   } else if (view === 'jaedaeng') {
     appTitle = 'QSC & Operations Checklist';
     appSub   = 'เจ๊แดงสามย่าน';
@@ -6613,10 +6587,7 @@ function renderBottomNav() {
     html += '<button class="bottom-nav-item nav-audit-btn" id="nav-jd-hub" onclick="showJaedaengHub()"><span class="material-symbols-rounded">checklist</span><span>ตรวจร้าน</span></button>';
   } else {
     html += '<button class="bottom-nav-item nav-dash-btn active" id="nav-dash" onclick="showDashboard()"><span class="material-symbols-rounded">dashboard</span><span>แดชบอร์ด</span></button>';
-    // ตรวจสาขา is for branches' BZM only; VP / COO / Admin only review results.
-    if (currentUser.role === 'bzm' && currentUser.brand === 'santafe') {
-      html += '<button class="bottom-nav-item nav-audit-btn" id="nav-new" onclick="newAudit()"><span class="material-symbols-rounded">add_circle</span><span>ตรวจสาขา</span></button>';
-    }
+    // ระบบ OSS audit (ตรวจสาขา) ถูกตัดออกแล้ว — เหลือเฉพาะ Operations Checklist (Daily)
     // Open-Close checklist is for branch logins only.
     if (currentUser.role === 'branch') {
       html += '<button class="bottom-nav-item nav-daily-btn" id="nav-daily" onclick="showDailyHub()"><span class="material-symbols-rounded">checklist</span><span>Open-Close</span></button>';
@@ -6692,21 +6663,8 @@ function showDashboard() {
   document.getElementById('dashboard-screen').style.display = 'block';
   setActiveNav('nav-dash');
   try { applyBrandHeader(); } catch (e) {}
-
-  const isCl = _sfDashTab === 'checklist';
-  const ossTab = document.getElementById('sf-tab-oss');
-  const clTab  = document.getElementById('sf-tab-checklist');
-  if (ossTab) ossTab.style.display = isCl ? 'none' : '';
-  if (clTab)  clTab.style.display  = isCl ? '' : 'none';
-  const bOss = document.getElementById('sf-tab-btn-oss');
-  const bCl  = document.getElementById('sf-tab-btn-checklist');
-  if (bOss) bOss.classList.toggle('is-active', !isCl);
-  if (bCl)  bCl.classList.toggle('is-active', isCl);
-  const ossOld = document.getElementById('oss-results-disabled');
-  if (ossOld) ossOld.style.display = 'none';
-
-  renderSfDashboard();      // แท็บ OSS
-  renderSfChecklistTab();   // แท็บ Operations Checklist (Daily)
+  // ระบบ OSS audit ถูกตัดออก → แดชบอร์ดแสดงเฉพาะ Operations Checklist (Daily)
+  renderSfChecklistTab();
 }
 
 function renderOssResults() {
