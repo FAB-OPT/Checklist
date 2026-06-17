@@ -4584,6 +4584,35 @@ html.fab-sso-pending #login-screen { display: none !important; }
 .sf-day-side-head { position:relative; }
 .sf-late-reason { font-size:11px; color:var(--danger); margin-top:4px; line-height:1.4; font-weight:600; }
 
+/* chip สาขาใน drill-down หมวดที่ตก */
+.sf-tf-branches { margin-top:5px; display:flex; flex-wrap:wrap; gap:5px; align-items:center; }
+.sf-tf-branches-label { font-size:11px; font-weight:700; color:var(--text-secondary); }
+.sf-tf-branch-chip { font-size:11px; font-weight:700; color:#7A1F10; background:var(--danger-bg); border:1px solid var(--danger); border-radius:999px; padding:2px 9px; }
+
+/* การ์ดเวลาการส่ง · เปิด/ปิดร้าน (รายสาขา) */
+.sf-time-day { margin-bottom:18px; }
+.sf-time-day:last-child { margin-bottom:0; }
+.sf-time-day-head { display:flex; align-items:center; gap:6px; font-weight:800; font-size:13px; color:var(--text-secondary); margin:0 0 10px; }
+.sf-time-day-head .material-symbols-rounded { font-size:18px; }
+.sf-time-branch { border:1px solid var(--border); border-radius:14px; padding:12px 14px; margin-bottom:10px; background:var(--surface); box-shadow:0 1px 2px rgba(15,23,42,.04); }
+.sf-time-branch:last-child { margin-bottom:0; }
+.sf-time-branch-name { display:flex; align-items:center; gap:7px; font-weight:800; font-size:14px; color:var(--text); margin-bottom:10px; }
+.sf-time-branch-name .material-symbols-rounded { font-size:19px; color:var(--primary); }
+.sf-time-boxes { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.sf-time-box { display:flex; align-items:flex-start; gap:9px; padding:10px 12px; border-radius:11px; border:1.5px solid var(--border); background:var(--surface-2); }
+.sf-time-box > .material-symbols-rounded { font-size:21px; flex:none; margin-top:1px; }
+.sf-time-box.sf-day-open > .material-symbols-rounded { color:#C2620F; }
+.sf-time-box.sf-day-close > .material-symbols-rounded { color:#4A5A99; }
+.sf-time-box.is-ok { border-color:var(--success); background:var(--success-bg); }
+.sf-time-box.is-late { border-color:var(--danger); background:var(--danger-bg); }
+.sf-time-box.is-empty { opacity:.55; }
+.sf-time-info { min-width:0; }
+.sf-time-label { font-weight:800; font-size:12.5px; color:var(--text); display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+.sf-time-val { font-size:12.5px; font-weight:700; color:var(--text-secondary); margin-top:2px; }
+.sf-time-box.is-ok .sf-time-val { color:#1E6B36; }
+.sf-time-box.is-late .sf-time-val { color:var(--danger); }
+@media (max-width:480px){ .sf-time-boxes { grid-template-columns:1fr; } }
+
 /* ── Polish แดชบอร์ดซานตาเฟ่ (scope #dashboard-screen — ไม่กระทบเจ๊แดง) ── */
 #dashboard-screen .jd-dash-kpis { gap:12px; }
 #dashboard-screen .sf-kpi {
@@ -6329,15 +6358,21 @@ function renderSfChecklistTab() {
 function _sfDailyTopFailsHTML(dailies) {
   if (!dailies.length) return '<div class="jd-dash-empty">ยังไม่มีเช็คลิสต์รายวัน</div>';
   const catStats = {}, itemStats = {};
-  dailies.forEach(d => (d.items || []).forEach(it => {
-    if (!it || (it.status !== 'fail' && it.status !== 'pass')) return;
-    const section = it.section || '-';
-    if (!catStats[section]) catStats[section] = { section, fail: 0, total: 0 };
-    const key = section + '||' + it.text;
-    if (!itemStats[key]) itemStats[key] = { text: it.text, section, fail: 0, total: 0 };
-    catStats[section].total++; itemStats[key].total++;
-    if (it.status === 'fail') { catStats[section].fail++; itemStats[key].fail++; }
-  }));
+  dailies.forEach(d => {
+    const bname = branchLabel(d.branchCode, d.branchName);
+    (d.items || []).forEach(it => {
+      if (!it || (it.status !== 'fail' && it.status !== 'pass')) return;
+      const section = it.section || '-';
+      if (!catStats[section]) catStats[section] = { section, fail: 0, total: 0 };
+      const key = section + '||' + it.text;
+      if (!itemStats[key]) itemStats[key] = { text: it.text, section, fail: 0, total: 0, branches: {} };
+      catStats[section].total++; itemStats[key].total++;
+      if (it.status === 'fail') {
+        catStats[section].fail++; itemStats[key].fail++;
+        itemStats[key].branches[bname] = (itemStats[key].branches[bname] || 0) + 1;
+      }
+    });
+  });
   const catTotalFails = Object.values(catStats).reduce((s, c) => s + c.fail, 0);
   const sortedCats = Object.values(catStats).filter(c => c.fail > 0).sort((a, b) => b.fail - a.fail);
   if (!sortedCats.length) return '<div class="jd-dash-empty">ยังไม่มีข้อไม่ผ่าน 🎉</div>';
@@ -6367,10 +6402,12 @@ function _sfDailyTopFailsHTML(dailies) {
         ${items.map((it, i) => {
           const itPct = it.total > 0 ? (it.fail / it.total * 100) : 0;
           const cls = itPct >= 50 ? 'bad' : (itPct >= 25 ? 'warn' : '');
+          const brHtml = Object.entries(it.branches || {}).sort((a, b) => b[1] - a[1]).map(([n, c]) => '<span class="sf-tf-branch-chip">' + escapeHtml(n) + (c > 1 ? ' ×' + c : '') + '</span>').join('');
           return `<div class="jd-dash-row" style="padding:8px 0;border-bottom:1px dashed var(--border);">
             <div>
               <div class="jd-dash-row-name" style="font-size:13px;">${i+1}. ${escapeHtml(it.text)}</div>
               <div class="jd-dash-row-meta">ตก ${it.fail} ครั้ง / จากการตรวจ ${it.total} ครั้ง</div>
+              ${brHtml ? `<div class="sf-tf-branches"><span class="sf-tf-branches-label">พบที่:</span> ${brHtml}</div>` : ''}
               <div class="jd-dash-bar"><div class="jd-dash-bar-fill ${cls}" style="width:${Math.min(100, itPct)}%"></div></div>
             </div>
             <div class="jd-dash-row-value is-bad">${itPct.toFixed(1)}%</div>
@@ -6382,45 +6419,52 @@ function _sfDailyTopFailsHTML(dailies) {
   return overview + cards;
 }
 
-// เวลาการส่ง · เปิด/ปิดร้าน — ต่อวันที่ (ใหม่สุดก่อน) · โชว์เวลาส่ง + ป้ายเกินเวลา + เหตุผล
+// เวลาการส่ง · เปิด/ปิดร้าน — จัดกลุ่มตามวันที่ → รายสาขา (ใหม่สุดก่อน)
 function _sfDailyTimesHTML(dailies) {
   if (!dailies.length) return '<div class="jd-dash-empty">ยังไม่มีเช็คลิสต์รายวัน</div>';
+  const fmtT = (iso) => { if (!iso) return null; const dd = new Date(iso); return String(dd.getHours()).padStart(2, '0') + ':' + String(dd.getMinutes()).padStart(2, '0'); };
+  // group: date → branch → {open, close}
   const byDate = {};
   dailies.forEach(d => {
     const date = d.date || '-';
-    if (!byDate[date]) byDate[date] = { open: [], close: [] };
-    (d.shift === 'close' ? byDate[date].close : byDate[date].open).push(d);
+    const bc = d.branchCode || d.branchName || '-';
+    if (!byDate[date]) byDate[date] = {};
+    if (!byDate[date][bc]) byDate[date][bc] = { name: branchLabel(d.branchCode, d.branchName), open: null, close: null };
+    byDate[date][bc][d.shift === 'close' ? 'close' : 'open'] = d;
   });
   const dates = Object.keys(byDate).sort((a, b) => b.localeCompare(a));
-  const fmtT = (iso) => { if (!iso) return null; const dd = new Date(iso); return String(dd.getHours()).padStart(2, '0') + ':' + String(dd.getMinutes()).padStart(2, '0'); };
 
-  const side = (recs, shift) => {
+  const box = (rec, shift) => {
     const icon = shift === 'open' ? 'wb_sunny' : 'bedtime';
     const label = shift === 'open' ? 'เปิดร้าน' : 'ปิดร้าน';
     const cls = shift === 'open' ? 'sf-day-open' : 'sf-day-close';
-    if (!recs.length) {
-      return '<div class="sf-day-side ' + cls + ' is-empty"><div class="sf-day-side-head"><span class="material-symbols-rounded">' + icon + '</span> ' + label + '</div><div class="sf-day-side-stat">ยังไม่ส่ง</div></div>';
+    if (!rec) {
+      return '<div class="sf-time-box ' + cls + ' is-empty"><span class="material-symbols-rounded">' + icon + '</span><div class="sf-time-info"><div class="sf-time-label">' + label + '</div><div class="sf-time-val">ยังไม่ส่ง</div></div></div>';
     }
-    const sent = recs.filter(r => r.submittedAt);
-    const t = sent.length ? fmtT(sent[0].submittedAt) : null;
-    const isLate = recs.some(r => r.late);
-    const lateRec = recs.find(r => r.late && r.lateReason);
-    const statusCls = isLate ? 'has-fail' : (t ? 'all-ok' : 'is-empty');
-    const lateBadge = isLate ? '<span class="sf-late-badge">เกินเวลา</span>' : '';
-    const multi = recs.length > 1 ? (' · ' + recs.length + ' สาขา') : '';
-    return '<div class="sf-day-side ' + cls + ' ' + statusCls + '">' +
-      '<div class="sf-day-side-head"><span class="material-symbols-rounded">' + icon + '</span> ' + label + lateBadge + '</div>' +
-      '<div class="sf-day-side-stat">' + (t ? ('ส่ง ' + t + ' น.') : 'ยังไม่ส่ง') + multi + '</div>' +
-      (lateRec ? '<div class="sf-late-reason">เหตุผล: ' + escapeHtml(lateRec.lateReason) + '</div>' : '') +
-      '</div>';
+    const t = fmtT(rec.submittedAt);
+    const late = !!rec.late;
+    const stateCls = late ? 'is-late' : (t ? 'is-ok' : 'is-empty');
+    return '<div class="sf-time-box ' + cls + ' ' + stateCls + '">' +
+      '<span class="material-symbols-rounded">' + icon + '</span>' +
+      '<div class="sf-time-info">' +
+        '<div class="sf-time-label">' + label + (late ? ' <span class="sf-late-badge">เกินเวลา</span>' : '') + '</div>' +
+        '<div class="sf-time-val">' + (t ? ('ส่ง ' + t + ' น.') : 'ยังไม่ส่ง') + '</div>' +
+        (late && rec.lateReason ? '<div class="sf-late-reason">เหตุผล: ' + escapeHtml(rec.lateReason) + '</div>' : '') +
+      '</div></div>';
   };
 
-  return dates.map(date =>
-    '<div class="sf-day-row">' +
-      '<div class="sf-day-date"><span class="material-symbols-rounded">event</span> ' + escapeHtml(fmtDateDMY(date)) + '</div>' +
-      '<div class="sf-day-sides">' + side(byDate[date].open, 'open') + side(byDate[date].close, 'close') + '</div>' +
-    '</div>'
-  ).join('');
+  return dates.map(date => {
+    const branches = Object.values(byDate[date]).sort((a, b) => a.name.localeCompare(b.name, 'th'));
+    return '<div class="sf-time-day">' +
+      '<div class="sf-time-day-head"><span class="material-symbols-rounded">event</span> ' + escapeHtml(fmtDateDMY(date)) + '</div>' +
+      branches.map(b =>
+        '<div class="sf-time-branch">' +
+          '<div class="sf-time-branch-name"><span class="material-symbols-rounded">storefront</span> ' + escapeHtml(b.name) + '</div>' +
+          '<div class="sf-time-boxes">' + box(b.open, 'open') + box(b.close, 'close') + '</div>' +
+        '</div>'
+      ).join('') +
+    '</div>';
+  }).join('');
 }
 
 function branchLabel(code, name) {
