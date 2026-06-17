@@ -4584,10 +4584,19 @@ html.fab-sso-pending #login-screen { display: none !important; }
 .sf-day-side-head { position:relative; }
 .sf-late-reason { font-size:11px; color:var(--danger); margin-top:4px; line-height:1.4; font-weight:600; }
 
-/* chip สาขาใน drill-down หมวดที่ตก */
-.sf-tf-branches { margin-top:5px; display:flex; flex-wrap:wrap; gap:5px; align-items:center; }
-.sf-tf-branches-label { font-size:11px; font-weight:700; color:var(--text-secondary); }
-.sf-tf-branch-chip { font-size:11px; font-weight:700; color:#7A1F10; background:var(--danger-bg); border:1px solid var(--danger); border-radius:999px; padding:2px 9px; }
+/* ไอคอน Material Symbols แบบเติมสี (สวยขึ้น) */
+.sf-ico-fill { font-variation-settings: 'FILL' 1, 'wght' 500, 'GRAD' 0, 'opsz' 24; }
+
+/* รายการข้อที่ตก (drill-down) — layout ใหม่ อ่านง่าย */
+.sf-fail-item { padding:11px 2px; border-bottom:1px dashed var(--border); }
+.sf-fail-item:last-child { border-bottom:none; }
+.sf-fail-item-top { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; }
+.sf-fail-item-name { font-size:13.5px; font-weight:700; color:var(--text); line-height:1.4; }
+.sf-fail-item-pct { flex:none; font-size:14px; font-weight:900; color:var(--danger); font-variant-numeric:tabular-nums; }
+.sf-fail-item-meta { font-size:11.5px; color:var(--text-secondary); font-weight:700; margin:2px 0 7px; }
+.sf-fail-branches { margin-top:8px; display:flex; flex-wrap:wrap; gap:6px; }
+.sf-tf-branch-chip { display:inline-flex; align-items:center; gap:4px; font-size:11.5px; font-weight:700; color:#7A1F10; background:var(--danger-bg); border:1px solid var(--danger); border-radius:999px; padding:3px 10px 3px 7px; }
+.sf-tf-branch-chip .material-symbols-rounded { font-size:14px; }
 
 /* การ์ดเวลาการส่ง · เปิด/ปิดร้าน (รายสาขา) */
 .sf-time-day { margin-bottom:18px; }
@@ -4611,6 +4620,9 @@ html.fab-sso-pending #login-screen { display: none !important; }
 .sf-time-val { font-size:12.5px; font-weight:700; color:var(--text-secondary); margin-top:2px; }
 .sf-time-box.is-ok .sf-time-val { color:#1E6B36; }
 .sf-time-box.is-late .sf-time-val { color:var(--danger); }
+.sf-time-day-head .material-symbols-rounded,
+.sf-time-branch-name .material-symbols-rounded,
+.sf-time-box > .material-symbols-rounded { font-variation-settings: 'FILL' 1, 'wght' 500, 'GRAD' 0, 'opsz' 24; }
 @media (max-width:480px){ .sf-time-boxes { grid-template-columns:1fr; } }
 
 /* ── Polish แดชบอร์ดซานตาเฟ่ (scope #dashboard-screen — ไม่กระทบเจ๊แดง) ── */
@@ -4635,6 +4647,8 @@ html.fab-sso-pending #login-screen { display: none !important; }
 #dashboard-screen .card { border-radius:18px; box-shadow:0 1px 3px rgba(15,23,42,.05); }
 #dashboard-screen .card > .card-header { padding-bottom:12px; margin-bottom:12px; border-bottom:1px solid var(--border); }
 #dashboard-screen .card > .card-header h2 { font-size:15px; }
+#dashboard-screen .card-header > .material-symbols-rounded,
+#dashboard-screen .sf-kpi-ico .material-symbols-rounded { font-variation-settings: 'FILL' 1, 'wght' 600, 'GRAD' 0, 'opsz' 24; }
 /* leaderboard rows — มน + hover */
 #dashboard-screen .score-row { border-radius:14px; transition:background .12s; }
 #dashboard-screen .score-row.is-clickable:hover { background:var(--surface-2); }
@@ -6402,15 +6416,15 @@ function _sfDailyTopFailsHTML(dailies) {
         ${items.map((it, i) => {
           const itPct = it.total > 0 ? (it.fail / it.total * 100) : 0;
           const cls = itPct >= 50 ? 'bad' : (itPct >= 25 ? 'warn' : '');
-          const brHtml = Object.entries(it.branches || {}).sort((a, b) => b[1] - a[1]).map(([n, c]) => '<span class="sf-tf-branch-chip">' + escapeHtml(n) + (c > 1 ? ' ×' + c : '') + '</span>').join('');
-          return `<div class="jd-dash-row" style="padding:8px 0;border-bottom:1px dashed var(--border);">
-            <div>
-              <div class="jd-dash-row-name" style="font-size:13px;">${i+1}. ${escapeHtml(it.text)}</div>
-              <div class="jd-dash-row-meta">ตก ${it.fail} ครั้ง / จากการตรวจ ${it.total} ครั้ง</div>
-              ${brHtml ? `<div class="sf-tf-branches"><span class="sf-tf-branches-label">พบที่:</span> ${brHtml}</div>` : ''}
-              <div class="jd-dash-bar"><div class="jd-dash-bar-fill ${cls}" style="width:${Math.min(100, itPct)}%"></div></div>
+          const brHtml = Object.entries(it.branches || {}).sort((a, b) => b[1] - a[1]).map(([n, c]) => '<span class="sf-tf-branch-chip"><span class="material-symbols-rounded sf-ico-fill">storefront</span>' + escapeHtml(n) + (c > 1 ? ' ×' + c : '') + '</span>').join('');
+          return `<div class="sf-fail-item">
+            <div class="sf-fail-item-top">
+              <span class="sf-fail-item-name">${i+1}. ${escapeHtml(it.text)}</span>
+              <span class="sf-fail-item-pct">${itPct.toFixed(0)}%</span>
             </div>
-            <div class="jd-dash-row-value is-bad">${itPct.toFixed(1)}%</div>
+            <div class="sf-fail-item-meta">ตก ${it.fail} / ${it.total} ครั้ง</div>
+            <div class="jd-dash-bar"><div class="jd-dash-bar-fill ${cls}" style="width:${Math.min(100, itPct)}%"></div></div>
+            ${brHtml ? `<div class="sf-fail-branches">${brHtml}</div>` : ''}
           </div>`;
         }).join('')}
       </div>` : ''}
