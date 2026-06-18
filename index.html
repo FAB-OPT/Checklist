@@ -4775,6 +4775,7 @@ html.fab-sso-pending #login-screen { display: none !important; }
       </div>
       <!-- Operations Checklist (Daily เปิด-ปิดร้าน) — ระบบ OSS audit ถูกตัดออกแล้ว -->
       <div id="sf-tab-checklist">
+        <div class="jd-dash-kpis" id="sf-cl-kpis"></div>
         <div class="card">
           <div class="card-header"><span class="material-symbols-rounded" style="color:var(--danger);">priority_high</span><h2>สรุปหมวดที่ตก <span class="card-header-en">รายวัน เปิด-ปิดร้าน</span></h2></div>
           <div id="sf-daily-topfails"><div class="jd-dash-empty">กำลังโหลด…</div></div>
@@ -6379,10 +6380,41 @@ function showDashboard() {
 
 function renderSfChecklistTab() {
   const dailies = (typeof getVisibleDailyChecklists === 'function') ? getVisibleDailyChecklists() : [];
+  const kEl  = document.getElementById('sf-cl-kpis');
   const tfEl = document.getElementById('sf-daily-topfails');
   const tEl  = document.getElementById('sf-daily-times');
+  if (kEl)  kEl.innerHTML  = _sfDailyKpisHTML(dailies);
   if (tfEl) tfEl.innerHTML = _sfDailyTopFailsHTML(dailies);
   if (tEl)  tEl.innerHTML  = _sfDailyTimesHTML(dailies);
+}
+
+// เกินเวลาไหม — รอบเปิด ≤ 11:00 · รอบปิด ≤ 22:00 (ใช้ธง late ถ้ามี · ไม่งั้นคำนวณจากเวลาจริง)
+function _isDailyLate(rec) {
+  if (!rec) return false;
+  if (rec.late) return true;
+  const iso = rec.startedAt || rec.submittedAt;
+  if (!iso) return false;
+  const dd = new Date(iso);
+  const cutoff = rec.shift === 'close' ? 22 : 11;
+  return dd.getHours() > cutoff || (dd.getHours() === cutoff && (dd.getMinutes() > 0 || dd.getSeconds() > 0));
+}
+
+// แถบ KPI สรุปด้านบนของแท็บ Operations Checklist
+function _sfDailyKpisHTML(dailies) {
+  const total = dailies.length;
+  const late = dailies.filter(_isDailyLate).length;
+  let fails = 0;
+  dailies.forEach(d => (d.items || []).forEach(it => { if (it.status === 'fail') fails++; }));
+  const branches = new Set(dailies.map(d => d.branchCode || d.branchName || '-')).size;
+  const tile = (tone, icon, label, val, sub) =>
+    '<div class="jd-kpi sf-kpi" data-tone="' + tone + '">' +
+      '<div class="sf-kpi-ico"><span class="material-symbols-rounded">' + icon + '</span></div>' +
+      '<div class="sf-kpi-body"><div class="jd-kpi-label">' + label + '</div><div class="jd-kpi-value">' + val + '</div><div class="jd-kpi-sub">' + sub + '</div></div>' +
+    '</div>';
+  return tile('neutral', 'fact_check', 'การส่งทั้งหมด', total, 'ครั้ง') +
+    tile(late > 0 ? 'danger' : 'good', 'schedule', 'ส่งเกินเวลา', late, 'ครั้ง') +
+    tile('danger', 'report', 'ข้อที่ตกรวม', fails, 'ข้อ') +
+    tile('neutral', 'storefront', 'สาขาที่ส่ง', branches, 'สาขา');
 }
 
 // สรุปหมวดที่ตก (รายวัน) — จัดกลุ่มตามหมวดของ Daily checklist (จุดเตรียมงาน/PASTA/STEAK…)
@@ -6471,7 +6503,7 @@ function _sfDailyTimesHTML(dailies) {
       return '<div class="sf-time-box ' + cls + ' is-empty"><span class="material-symbols-rounded">' + icon + '</span><div class="sf-time-info"><div class="sf-time-label">' + label + '</div><div class="sf-time-val">ยังไม่ส่ง</div></div></div>';
     }
     const t = fmtT(rec.submittedAt);
-    const late = !!rec.late;
+    const late = _isDailyLate(rec);
     const stateCls = late ? 'is-late' : (t ? 'is-ok' : 'is-empty');
     return '<div class="sf-time-box ' + cls + ' ' + stateCls + '">' +
       '<span class="material-symbols-rounded">' + icon + '</span>' +
