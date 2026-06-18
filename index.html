@@ -1671,6 +1671,13 @@ input[type="time"].jd-form-input {
 .sf-rank-label:first-child { margin-top:0; }
 .sf-rank-label.sf-rank-top { color:#1E6B36; }
 .sf-rank-label.sf-rank-bottom { color:var(--danger); }
+/* กระพริบข้อที่กดมาในหน้า detail */
+@keyframes detailFlash {
+  0% { background:rgba(245,158,11,.30); box-shadow:0 0 0 3px rgba(245,158,11,.95) inset; }
+  60% { background:rgba(245,158,11,.18); box-shadow:0 0 0 3px rgba(245,158,11,.5) inset; }
+  100% { background:transparent; box-shadow:0 0 0 0 transparent inset; }
+}
+.detail-item.is-flash { animation: detailFlash 2.4s ease; border-radius:10px; }
 .score-detail-item .sd-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
 .score-detail-item .sd-icon.ok { color: var(--success); }
 .score-detail-item .sd-icon.fail { color: var(--danger); }
@@ -6571,7 +6578,7 @@ function _sfDailyTopFailsHTML(dailies) {
           const occHtml = (it.occ || []).slice().sort((a, b) => (b.date || '').localeCompare(a.date || '')).map(o => {
             const sIcon = o.shift === 'close' ? 'bedtime' : 'wb_sunny';
             const sLabel = o.shift === 'close' ? 'รอบปิดร้าน' : 'รอบเปิดร้าน';
-            return `<div class="sf-occ-row${o.id ? ' sf-occ-clickable' : ''}"${o.id ? ` onclick="event.stopPropagation(); showDailyDetail('${escapeAttr(o.id)}')"` : ''}>
+            return `<div class="sf-occ-row${o.id ? ' sf-occ-clickable' : ''}"${o.id ? ` onclick="event.stopPropagation(); showDailyDetail('${escapeAttr(o.id)}','${escapeAttr(it.text)}')"` : ''}>
               <span class="sf-occ-branch"><span class="material-symbols-rounded sf-ico-fill">storefront</span> ${escapeHtml(o.branch)}</span>
               <span class="sf-occ-meta"><span class="material-symbols-rounded sf-ico-fill">event</span> ${escapeHtml(fmtDateDMY(o.date))} · <span class="material-symbols-rounded sf-ico-fill">${sIcon}</span> ${sLabel}</span>
               ${o.note ? `<span class="sf-occ-note">📝 ${escapeHtml(o.note)}</span>` : ''}
@@ -7187,7 +7194,7 @@ document.addEventListener('keydown', (e) => {
   else if (e.key === 'ArrowRight') lightboxNav(null, 1);
 });
 
-function showDailyDetail(id) {
+function showDailyDetail(id, targetText) {
   const d = allDailyChecklists.find(x => x.id === id);
   if (!d) return;
   hideAllScreens();
@@ -7288,7 +7295,7 @@ function showDailyDetail(id) {
           return `<button type="button" class="detail-photo-btn" onclick="openLightbox(${idx})"><img src="${p}" alt=""><span class="detail-photo-zoom"><span class="material-symbols-rounded">zoom_in</span></span></button>`;
         }).join('') + '</div>';
       }
-      html += `<div class="detail-item is-${status}">
+      html += `<div class="detail-item is-${status}" data-item-text="${escapeAttr(it.text)}">
         <span class="detail-status-pill">${pillLabel}</span>
         <div class="detail-item-body">
           <div class="detail-item-text"><b>${j+1}.</b> ${escapeHtml(it.text)}</div>
@@ -7301,6 +7308,7 @@ function showDailyDetail(id) {
     html += `</div>`;
   });
   document.getElementById('daily-detail-content').innerHTML = html;
+  if (targetText) _flashDetailItem('daily-detail-content', targetText);
 }
 
 // ============ JAE DAENG AUDIT ============
@@ -7736,7 +7744,7 @@ function renderJaedaengTopFails() {
           const itPct = it.total > 0 ? (it.fail / it.total * 100) : 0;
           const cls = itPct >= 50 ? 'bad' : (itPct >= 25 ? 'warn' : '');
           const occHtml = (it.occ || []).slice().sort((a, b) => (b.date || '').localeCompare(a.date || '')).map(o =>
-            `<div class="sf-occ-row${o.id ? ' sf-occ-clickable' : ''}"${o.id ? ` onclick="event.stopPropagation(); showJaedaengDetail('${escapeAttr(o.id)}')"` : ''}>
+            `<div class="sf-occ-row${o.id ? ' sf-occ-clickable' : ''}"${o.id ? ` onclick="event.stopPropagation(); showJaedaengDetail('${escapeAttr(o.id)}','${escapeAttr(it.text)}')"` : ''}>
               <span class="sf-occ-branch"><span class="material-symbols-rounded sf-ico-fill">storefront</span> ${escapeHtml(o.branch)}</span>
               <span class="sf-occ-meta"><span class="material-symbols-rounded sf-ico-fill">event</span> ${escapeHtml(fmtDateDMY(o.date))}${o.auditor ? ' · ' + escapeHtml(o.auditor) : ''}</span>
               ${o.note ? `<span class="sf-occ-note">📝 ${escapeHtml(o.note)}</span>` : ''}
@@ -8847,7 +8855,7 @@ async function deleteJaedaengFromList(ev, id, storeName) {
   if (ok) { if (currentJDDetailId === id) currentJDDetailId = null; renderJaedaengList(); }
 }
 
-function showJaedaengDetail(id) {
+function showJaedaengDetail(id, targetText) {
   const r = allJaedaengAudits.find(x => x.id === id);
   if (!r) return;
   currentJDDetailId = id;
@@ -8971,7 +8979,7 @@ function showJaedaengDetail(id) {
       }).join('') + '</div>' : (r.photosPurgedAt && (it.status === 'fail' || (r.requiredPhotos || []).map(i => (r.items||[])[i] && r.items[i].key).includes(it.key))
         ? '<div class="detail-item-note" style="background:var(--surface-2);color:var(--text-tertiary);border-color:var(--border);"><span class="material-symbols-rounded">photo_camera</span>รูปถูกลบหลังเก็บครบ 45 วัน</div>'
         : '');
-      html += `<div class="detail-item is-${status}">
+      html += `<div class="detail-item is-${status}" data-item-text="${escapeAttr(it.text)}">
         <span class="detail-status-pill">${pillLabel}</span>
         <div class="detail-item-body">
           <div class="detail-item-text"><b>${j+1}.</b> ${escapeHtml(it.text)}</div>
@@ -8983,6 +8991,21 @@ function showJaedaengDetail(id) {
     html += `</div>`;
   });
   document.getElementById('jd-detail-content').innerHTML = html;
+  if (targetText) _flashDetailItem('jd-detail-content', targetText);
+}
+
+// เลื่อนไปข้อที่ระบุในหน้า detail + กระพริบให้เห็นชัด
+function _flashDetailItem(containerId, text) {
+  setTimeout(() => {
+    const cont = document.getElementById(containerId);
+    if (!cont) return;
+    const el = Array.from(cont.querySelectorAll('.detail-item')).find(d => d.getAttribute('data-item-text') === text);
+    if (!el) return;
+    const top = el.getBoundingClientRect().top + window.scrollY - 90;
+    window.scrollTo({ top, behavior: 'smooth' });
+    el.classList.remove('is-flash'); void el.offsetWidth; el.classList.add('is-flash');
+    setTimeout(() => el.classList.remove('is-flash'), 2600);
+  }, 140);
 }
 
 // ============ SHARED SESSION (SSO across FAB Operations Hub) ==============
