@@ -1667,6 +1667,10 @@ input[type="time"].jd-form-input {
 .score-detail-item.is-clickable { cursor:pointer; border-radius:8px; padding:7px 8px; margin:0 -8px; transition:background .12s; }
 .score-detail-item.is-clickable:hover { background:var(--surface-2); }
 .score-detail-item .sd-go { margin-left:2px; color:var(--text-tertiary); font-size:18px; flex-shrink:0; align-self:center; }
+.sf-rank-label { font-size:12px; font-weight:800; letter-spacing:.3px; margin:12px 0 8px; padding-left:2px; }
+.sf-rank-label:first-child { margin-top:0; }
+.sf-rank-label.sf-rank-top { color:#1E6B36; }
+.sf-rank-label.sf-rank-bottom { color:var(--danger); }
 .score-detail-item .sd-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
 .score-detail-item .sd-icon.ok { color: var(--success); }
 .score-detail-item .sd-icon.fail { color: var(--danger); }
@@ -6533,7 +6537,7 @@ function _sfDailyTopFailsHTML(dailies) {
       if (it.status === 'fail') {
         catStats[section].fail++; itemStats[key].fail++;
         itemStats[key].branches[bname] = (itemStats[key].branches[bname] || 0) + 1;
-        itemStats[key].occ.push({ branch: bname, date: d.date || '', shift: d.shift || 'open', note: it.note || '' });
+        itemStats[key].occ.push({ id: d.id || '', branch: bname, date: d.date || '', shift: d.shift || 'open', note: it.note || '' });
       }
     });
   });
@@ -6567,10 +6571,11 @@ function _sfDailyTopFailsHTML(dailies) {
           const occHtml = (it.occ || []).slice().sort((a, b) => (b.date || '').localeCompare(a.date || '')).map(o => {
             const sIcon = o.shift === 'close' ? 'bedtime' : 'wb_sunny';
             const sLabel = o.shift === 'close' ? 'รอบปิดร้าน' : 'รอบเปิดร้าน';
-            return `<div class="sf-occ-row">
+            return `<div class="sf-occ-row${o.id ? ' sf-occ-clickable' : ''}"${o.id ? ` onclick="event.stopPropagation(); showDailyDetail('${escapeAttr(o.id)}')"` : ''}>
               <span class="sf-occ-branch"><span class="material-symbols-rounded sf-ico-fill">storefront</span> ${escapeHtml(o.branch)}</span>
               <span class="sf-occ-meta"><span class="material-symbols-rounded sf-ico-fill">event</span> ${escapeHtml(fmtDateDMY(o.date))} · <span class="material-symbols-rounded sf-ico-fill">${sIcon}</span> ${sLabel}</span>
               ${o.note ? `<span class="sf-occ-note">📝 ${escapeHtml(o.note)}</span>` : ''}
+              ${o.id ? '<span class="material-symbols-rounded sf-occ-go">chevron_right</span>' : ''}
             </div>`;
           }).join('');
           return `<div class="sf-fail-item sf-fail-clickable" onclick="this.classList.toggle('open')">
@@ -7811,9 +7816,19 @@ function renderJaedaengDashboard() {
   const branchList = Object.entries(byBranch)
     .map(([name, s]) => ({ name, count: s.count, avg: s.sumPct / s.count, fails: s.fails, records: s.records }))
     .sort((a, b) => b.avg - a.avg);
-  branchesEl.innerHTML = branchList.map((b, i) =>
-    _scoreRowHTML(i+1, escapeHtml(b.name), b.avg, b.count, b.fails, b.records, 'branch')
-  ).join('');
+  const _branchRow = (b, rank) => _scoreRowHTML(rank, escapeHtml(b.name), b.avg, b.count, b.fails, b.records, 'branch');
+  if (branchList.length > 10) {
+    // มากกว่า 10 สาขา → โชว์แค่ Top 5 + Bottom 5
+    const top = branchList.slice(0, 5);
+    const bottom = branchList.slice(-5);
+    branchesEl.innerHTML =
+      '<div class="sf-rank-label sf-rank-top">🏆 Top 5 · สูงสุด</div>' +
+      top.map((b, i) => _branchRow(b, i + 1)).join('') +
+      '<div class="sf-rank-label sf-rank-bottom">⚠️ Bottom 5 · ต่ำสุด</div>' +
+      bottom.map((b, i) => _branchRow(b, branchList.length - 5 + i + 1)).join('');
+  } else {
+    branchesEl.innerHTML = branchList.map((b, i) => _branchRow(b, i + 1)).join('');
+  }
 
   // Top failed items — group ตามหมวด + drill-down โซน/สาขา (แยกเป็นฟังก์ชัน)
   _jdTfRecords = records.slice();
