@@ -4620,6 +4620,9 @@ html.fab-sso-pending #login-screen { display: none !important; }
 .sf-occ-meta { color:var(--text-secondary); font-weight:700; display:inline-flex; align-items:center; gap:4px; }
 .sf-occ-meta .material-symbols-rounded { font-size:14px; }
 .sf-occ-note { width:100%; color:var(--danger); font-weight:600; font-size:11.5px; }
+.sf-occ-clickable { cursor:pointer; transition:border-color .12s, background .12s; }
+.sf-occ-clickable:hover { border-color:var(--primary); background:var(--surface-2); }
+.sf-occ-go { margin-left:auto; color:var(--text-tertiary); font-size:18px; flex:none; }
 .sf-fail-item-top { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; }
 .sf-fail-item-name { font-size:13.5px; font-weight:700; color:var(--text); line-height:1.4; }
 .sf-fail-item-pct { flex:none; font-size:14px; font-weight:900; color:var(--danger); font-variant-numeric:tabular-nums; }
@@ -4935,14 +4938,14 @@ html.fab-sso-pending #login-screen { display: none !important; }
       <div class="card" id="jd-dash-zone-card">
         <div class="card-header">
           <span class="material-symbols-rounded" style="color:#0E7490;">groups</span>
-          <h2>คะแนนเฉลี่ยต่อโซน</h2>
+          <h2>คะแนนเฉลี่ยต่อโซน <span class="card-header-en">Average score by zone</span></h2>
         </div>
         <div id="jd-dash-by-bzm"></div>
       </div>
       <div class="card">
         <div class="card-header">
           <span class="material-symbols-rounded" style="color:var(--primary);">leaderboard</span>
-          <h2>คะแนนเฉลี่ยต่อสาขา</h2>
+          <h2>คะแนนเฉลี่ยต่อสาขา <span class="card-header-en">Average score by branch</span></h2>
         </div>
         <div id="jd-dash-branches"></div>
       </div>
@@ -7668,7 +7671,7 @@ function renderJaedaengTopFails() {
         if (it.status === 'fail') {
           failItemStats[key].fail++;
           failCatStats[section].fail++;
-          failItemStats[key].occ.push({ branch: r.storeName || '-', date: r.date || '', auditor: r.auditor || '', note: it.note || '' });
+          failItemStats[key].occ.push({ id: r.id || '', branch: r.storeName || '-', date: r.date || '', auditor: r.auditor || '', note: it.note || '' });
         }
       }
     });
@@ -7722,10 +7725,11 @@ function renderJaedaengTopFails() {
           const itPct = it.total > 0 ? (it.fail / it.total * 100) : 0;
           const cls = itPct >= 50 ? 'bad' : (itPct >= 25 ? 'warn' : '');
           const occHtml = (it.occ || []).slice().sort((a, b) => (b.date || '').localeCompare(a.date || '')).map(o =>
-            `<div class="sf-occ-row">
+            `<div class="sf-occ-row${o.id ? ' sf-occ-clickable' : ''}"${o.id ? ` onclick="event.stopPropagation(); showJaedaengDetail('${escapeAttr(o.id)}')"` : ''}>
               <span class="sf-occ-branch"><span class="material-symbols-rounded sf-ico-fill">storefront</span> ${escapeHtml(o.branch)}</span>
               <span class="sf-occ-meta"><span class="material-symbols-rounded sf-ico-fill">event</span> ${escapeHtml(fmtDateDMY(o.date))}${o.auditor ? ' · ' + escapeHtml(o.auditor) : ''}</span>
               ${o.note ? `<span class="sf-occ-note">📝 ${escapeHtml(o.note)}</span>` : ''}
+              ${o.id ? '<span class="material-symbols-rounded sf-occ-go">chevron_right</span>' : ''}
             </div>`
           ).join('');
           return `<div class="sf-fail-item sf-fail-clickable" onclick="this.classList.toggle('open')">
