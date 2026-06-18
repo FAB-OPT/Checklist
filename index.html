@@ -4637,23 +4637,23 @@ html.fab-sso-pending #login-screen { display: none !important; }
 .sf-time-branch:last-child { margin-bottom:0; }
 .sf-time-branch-name { display:flex; align-items:center; gap:7px; font-weight:800; font-size:14px; color:var(--text); margin-bottom:10px; }
 .sf-time-branch-name .material-symbols-rounded { font-size:19px; color:var(--primary); }
-.sf-time-boxes { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
-.sf-time-box { display:flex; align-items:flex-start; gap:9px; padding:10px 12px; border-radius:11px; border:1.5px solid var(--border); background:var(--surface-2); }
-.sf-time-box > .material-symbols-rounded { font-size:21px; flex:none; margin-top:1px; }
-.sf-time-box.sf-day-open > .material-symbols-rounded { color:#C2620F; }
-.sf-time-box.sf-day-close > .material-symbols-rounded { color:#4A5A99; }
-.sf-time-box.is-ok { border-color:var(--success); background:var(--success-bg); }
-.sf-time-box.is-late { border-color:var(--danger); background:var(--danger-bg); }
-.sf-time-box.is-empty { opacity:.55; }
-.sf-time-info { min-width:0; }
-.sf-time-label { font-weight:800; font-size:12.5px; color:var(--text); display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
-.sf-time-val { font-size:12.5px; font-weight:700; color:var(--text-secondary); margin-top:2px; }
-.sf-time-box.is-ok .sf-time-val { color:#1E6B36; }
-.sf-time-box.is-late .sf-time-val { color:var(--danger); }
+.sf-tl-rows { display:flex; flex-direction:column; gap:6px; }
+.sf-tl-row { display:flex; align-items:center; gap:9px; padding:8px 12px; border-radius:10px; border:1px solid var(--border); background:var(--surface-2); font-size:13px; }
+.sf-tl-row > .material-symbols-rounded { font-size:18px; flex:none; }
+.sf-tl-row.sf-tl-open > .material-symbols-rounded { color:#C2620F; }
+.sf-tl-row.sf-tl-close > .material-symbols-rounded { color:#4A5A99; }
+.sf-tl-label { font-weight:800; color:var(--text); min-width:60px; }
+.sf-tl-time { font-weight:800; color:var(--text); font-variant-numeric:tabular-nums; }
+.sf-tl-status { color:var(--text-tertiary); font-weight:700; font-size:12px; }
+.sf-tl-ok { color:#1E6B36; font-weight:800; font-size:11px; background:var(--success-bg); border:1px solid var(--success); border-radius:999px; padding:1px 9px; }
+.sf-tl-reason { color:var(--danger); font-weight:600; font-size:11.5px; }
+.sf-tl-row.is-ok { border-color:var(--success); background:var(--success-bg); }
+.sf-tl-row.is-late { border-color:var(--danger); background:var(--danger-bg); }
+.sf-tl-row.is-late .sf-tl-time { color:var(--danger); }
+.sf-tl-row.is-empty { opacity:.6; }
 .sf-time-day-head .material-symbols-rounded,
 .sf-time-branch-name .material-symbols-rounded,
-.sf-time-box > .material-symbols-rounded { font-variation-settings: 'FILL' 1, 'wght' 500, 'GRAD' 0, 'opsz' 24; }
-@media (max-width:480px){ .sf-time-boxes { grid-template-columns:1fr; } }
+.sf-tl-row > .material-symbols-rounded { font-variation-settings: 'FILL' 1, 'wght' 500, 'GRAD' 0, 'opsz' 24; }
 
 /* ── Polish แดชบอร์ดซานตาเฟ่ (scope #dashboard-screen — ไม่กระทบเจ๊แดง) ── */
 #dashboard-screen .jd-dash-kpis { gap:12px; }
@@ -6595,33 +6595,34 @@ function _sfDailyTimesHTML(dailies) {
   });
   const dates = Object.keys(byDate).sort((a, b) => b.localeCompare(a));
 
-  const box = (rec, shift) => {
+  const row = (rec, shift) => {
     const icon = shift === 'open' ? 'wb_sunny' : 'bedtime';
     const label = shift === 'open' ? 'เปิดร้าน' : 'ปิดร้าน';
-    const cls = shift === 'open' ? 'sf-day-open' : 'sf-day-close';
+    const cls = shift === 'open' ? 'sf-tl-open' : 'sf-tl-close';
     if (!rec) {
-      return '<div class="sf-time-box ' + cls + ' is-empty"><span class="material-symbols-rounded">' + icon + '</span><div class="sf-time-info"><div class="sf-time-label">' + label + '</div><div class="sf-time-val">ยังไม่ส่ง</div></div></div>';
+      return '<div class="sf-tl-row ' + cls + ' is-empty"><span class="material-symbols-rounded sf-ico-fill">' + icon + '</span><span class="sf-tl-label">' + label + '</span><span class="sf-tl-status">ยังไม่ส่ง</span></div>';
     }
     const t = fmtT(rec.submittedAt);
     const late = _isDailyLate(rec);
     const stateCls = late ? 'is-late' : (t ? 'is-ok' : 'is-empty');
-    return '<div class="sf-time-box ' + cls + ' ' + stateCls + '">' +
-      '<span class="material-symbols-rounded">' + icon + '</span>' +
-      '<div class="sf-time-info">' +
-        '<div class="sf-time-label">' + label + (late ? ' <span class="sf-late-badge">เกินเวลา</span>' : '') + '</div>' +
-        '<div class="sf-time-val">' + (t ? ('ส่ง ' + t + ' น.') : 'ยังไม่ส่ง') + '</div>' +
-        (late && rec.lateReason ? '<div class="sf-late-reason">เหตุผล: ' + escapeHtml(rec.lateReason) + '</div>' : '') +
-      '</div></div>';
+    const status = late ? '<span class="sf-late-badge">เกินเวลา</span>' : (t ? '<span class="sf-tl-ok">ตรงเวลา</span>' : '<span class="sf-tl-status">ยังไม่ส่ง</span>');
+    return '<div class="sf-tl-row ' + cls + ' ' + stateCls + '">' +
+      '<span class="material-symbols-rounded sf-ico-fill">' + icon + '</span>' +
+      '<span class="sf-tl-label">' + label + '</span>' +
+      '<span class="sf-tl-time">' + (t ? (t + ' น.') : '—') + '</span>' +
+      status +
+      (late && rec.lateReason ? '<span class="sf-tl-reason">· ' + escapeHtml(rec.lateReason) + '</span>' : '') +
+    '</div>';
   };
 
   return dates.map(date => {
     const branches = Object.values(byDate[date]).sort((a, b) => a.name.localeCompare(b.name, 'th'));
     return '<div class="sf-time-day">' +
-      '<div class="sf-time-day-head"><span class="material-symbols-rounded">event</span> ' + escapeHtml(fmtDateDMY(date)) + '</div>' +
+      '<div class="sf-time-day-head"><span class="material-symbols-rounded sf-ico-fill">event</span> ' + escapeHtml(fmtDateDMY(date)) + '</div>' +
       branches.map(b =>
         '<div class="sf-time-branch">' +
-          '<div class="sf-time-branch-name"><span class="material-symbols-rounded">storefront</span> ' + escapeHtml(b.name) + '</div>' +
-          '<div class="sf-time-boxes">' + box(b.open, 'open') + box(b.close, 'close') + '</div>' +
+          '<div class="sf-time-branch-name"><span class="material-symbols-rounded sf-ico-fill">storefront</span> ' + escapeHtml(b.name) + '</div>' +
+          '<div class="sf-tl-rows">' + row(b.open, 'open') + row(b.close, 'close') + '</div>' +
         '</div>'
       ).join('') +
     '</div>';
