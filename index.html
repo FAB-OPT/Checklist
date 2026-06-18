@@ -4637,23 +4637,22 @@ html.fab-sso-pending #login-screen { display: none !important; }
 .sf-time-branch:last-child { margin-bottom:0; }
 .sf-time-branch-name { display:flex; align-items:center; gap:7px; font-weight:800; font-size:14px; color:var(--text); margin-bottom:10px; }
 .sf-time-branch-name .material-symbols-rounded { font-size:19px; color:var(--primary); }
-.sf-tl-rows { display:flex; flex-direction:column; gap:6px; }
-.sf-tl-row { display:flex; align-items:center; gap:9px; padding:8px 12px; border-radius:10px; border:1px solid var(--border); background:var(--surface-2); font-size:13px; }
-.sf-tl-row > .material-symbols-rounded { font-size:18px; flex:none; }
-.sf-tl-row.sf-tl-open > .material-symbols-rounded { color:#C2620F; }
-.sf-tl-row.sf-tl-close > .material-symbols-rounded { color:#4A5A99; }
-.sf-tl-label { font-weight:800; color:var(--text); min-width:60px; }
-.sf-tl-time { font-weight:800; color:var(--text); font-variant-numeric:tabular-nums; }
-.sf-tl-status { color:var(--text-tertiary); font-weight:700; font-size:12px; }
-.sf-tl-ok { color:#1E6B36; font-weight:800; font-size:11px; background:var(--success-bg); border:1px solid var(--success); border-radius:999px; padding:1px 9px; }
-.sf-tl-reason { color:var(--danger); font-weight:600; font-size:11.5px; }
-.sf-tl-row.is-ok { border-color:var(--success); background:var(--success-bg); }
-.sf-tl-row.is-late { border-color:var(--danger); background:var(--danger-bg); }
-.sf-tl-row.is-late .sf-tl-time { color:var(--danger); }
-.sf-tl-row.is-empty { opacity:.6; }
+/* เวลาส่ง — บรรทัดเดียว: สาขา + ชิปเปิด/ปิด วางต่อกัน */
+.sf-time-line { display:flex; flex-wrap:wrap; align-items:center; gap:8px 10px; padding:10px 13px; border:1px solid var(--border); border-radius:12px; background:var(--surface); margin-bottom:8px; box-shadow:0 1px 2px rgba(15,23,42,.04); }
+.sf-time-line:last-child { margin-bottom:0; }
+.sf-tline-branch { display:inline-flex; align-items:center; gap:6px; font-weight:800; font-size:13.5px; color:var(--text); margin-right:2px; }
+.sf-tline-branch .material-symbols-rounded { font-size:18px; color:var(--primary); }
+.sf-tchip { display:inline-flex; align-items:center; gap:5px; font-size:12.5px; font-weight:800; padding:4px 11px; border-radius:999px; border:1px solid var(--border); background:var(--surface-2); color:var(--text); font-variant-numeric:tabular-nums; }
+.sf-tchip > .material-symbols-rounded { font-size:16px; }
+.sf-tchip.sf-tl-open > .material-symbols-rounded { color:#C2620F; }
+.sf-tchip.sf-tl-close > .material-symbols-rounded { color:#4A5A99; }
+.sf-tchip.is-ok { border-color:var(--success); background:var(--success-bg); color:#1E6B36; }
+.sf-tchip.is-late { border-color:var(--danger); background:var(--danger-bg); color:var(--danger); }
+.sf-tchip.is-empty { opacity:.6; }
+.sf-tline-reason { width:100%; font-size:11.5px; color:var(--danger); font-weight:600; }
 .sf-time-day-head .material-symbols-rounded,
-.sf-time-branch-name .material-symbols-rounded,
-.sf-tl-row > .material-symbols-rounded { font-variation-settings: 'FILL' 1, 'wght' 500, 'GRAD' 0, 'opsz' 24; }
+.sf-tline-branch .material-symbols-rounded,
+.sf-tchip > .material-symbols-rounded { font-variation-settings: 'FILL' 1, 'wght' 500, 'GRAD' 0, 'opsz' 24; }
 
 /* ── Polish แดชบอร์ดซานตาเฟ่ (scope #dashboard-screen — ไม่กระทบเจ๊แดง) ── */
 #dashboard-screen .jd-dash-kpis { gap:12px; }
@@ -6595,36 +6594,35 @@ function _sfDailyTimesHTML(dailies) {
   });
   const dates = Object.keys(byDate).sort((a, b) => b.localeCompare(a));
 
-  const row = (rec, shift) => {
+  const chip = (rec, shift) => {
     const icon = shift === 'open' ? 'wb_sunny' : 'bedtime';
-    const label = shift === 'open' ? 'เปิดร้าน' : 'ปิดร้าน';
+    const label = shift === 'open' ? 'เปิด' : 'ปิด';
     const cls = shift === 'open' ? 'sf-tl-open' : 'sf-tl-close';
     if (!rec) {
-      return '<div class="sf-tl-row ' + cls + ' is-empty"><span class="material-symbols-rounded sf-ico-fill">' + icon + '</span><span class="sf-tl-label">' + label + '</span><span class="sf-tl-status">ยังไม่ส่ง</span></div>';
+      return '<span class="sf-tchip ' + cls + ' is-empty"><span class="material-symbols-rounded sf-ico-fill">' + icon + '</span>' + label + ' · ยังไม่ส่ง</span>';
     }
     const t = fmtT(rec.submittedAt);
     const late = _isDailyLate(rec);
     const stateCls = late ? 'is-late' : (t ? 'is-ok' : 'is-empty');
-    const status = late ? '<span class="sf-late-badge">เกินเวลา</span>' : (t ? '<span class="sf-tl-ok">ตรงเวลา</span>' : '<span class="sf-tl-status">ยังไม่ส่ง</span>');
-    return '<div class="sf-tl-row ' + cls + ' ' + stateCls + '">' +
+    return '<span class="sf-tchip ' + cls + ' ' + stateCls + '"' + (late && rec.lateReason ? ' title="เหตุผล: ' + escapeAttr(rec.lateReason) + '"' : '') + '>' +
       '<span class="material-symbols-rounded sf-ico-fill">' + icon + '</span>' +
-      '<span class="sf-tl-label">' + label + '</span>' +
-      '<span class="sf-tl-time">' + (t ? (t + ' น.') : '—') + '</span>' +
-      status +
-      (late && rec.lateReason ? '<span class="sf-tl-reason">· ' + escapeHtml(rec.lateReason) + '</span>' : '') +
-    '</div>';
+      label + ' ' + (t ? (t + ' น.') : '—') +
+      (late ? ' <span class="sf-late-badge">เกินเวลา</span>' : '') +
+    '</span>';
   };
 
   return dates.map(date => {
     const branches = Object.values(byDate[date]).sort((a, b) => a.name.localeCompare(b.name, 'th'));
     return '<div class="sf-time-day">' +
       '<div class="sf-time-day-head"><span class="material-symbols-rounded sf-ico-fill">event</span> ' + escapeHtml(fmtDateDMY(date)) + '</div>' +
-      branches.map(b =>
-        '<div class="sf-time-branch">' +
-          '<div class="sf-time-branch-name"><span class="material-symbols-rounded sf-ico-fill">storefront</span> ' + escapeHtml(b.name) + '</div>' +
-          '<div class="sf-tl-rows">' + row(b.open, 'open') + row(b.close, 'close') + '</div>' +
-        '</div>'
-      ).join('') +
+      branches.map(b => {
+        const reasons = [b.open, b.close].filter(r => r && _isDailyLate(r) && r.lateReason)
+          .map(r => '<span class="sf-tline-reason">📝 ' + (r.shift === 'close' ? 'ปิด' : 'เปิด') + ': ' + escapeHtml(r.lateReason) + '</span>').join('');
+        return '<div class="sf-time-line">' +
+          '<span class="sf-tline-branch"><span class="material-symbols-rounded sf-ico-fill">storefront</span> ' + escapeHtml(b.name) + '</span>' +
+          chip(b.open, 'open') + chip(b.close, 'close') + reasons +
+        '</div>';
+      }).join('') +
     '</div>';
   }).join('');
 }
