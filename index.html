@@ -7626,13 +7626,14 @@ function renderJaedaengTopFails() {
       const section = it.section || '-';
       if (!failCatStats[section]) failCatStats[section] = { section, fail: 0, total: 0 };
       const key = section + '||' + it.text;
-      if (!failItemStats[key]) failItemStats[key] = { text: it.text, section, fail: 0, total: 0 };
+      if (!failItemStats[key]) failItemStats[key] = { text: it.text, section, fail: 0, total: 0, occ: [] };
       if (it.status === 'fail' || it.status === 'pass') {
         failItemStats[key].total++;
         failCatStats[section].total++;
         if (it.status === 'fail') {
           failItemStats[key].fail++;
           failCatStats[section].fail++;
+          failItemStats[key].occ.push({ branch: r.storeName || '-', date: r.date || '', auditor: r.auditor || '', note: it.note || '' });
         }
       }
     });
@@ -7685,13 +7686,21 @@ function renderJaedaengTopFails() {
         ${items.map((it, i) => {
           const itPct = it.total > 0 ? (it.fail / it.total * 100) : 0;
           const cls = itPct >= 50 ? 'bad' : (itPct >= 25 ? 'warn' : '');
-          return `<div class="jd-dash-row" style="padding:8px 0;border-bottom:1px dashed var(--border);">
-            <div>
-              <div class="jd-dash-row-name" style="font-size:13px;">${i+1}. ${escapeHtml(it.text)}</div>
-              <div class="jd-dash-row-meta">ตก ${it.fail} ครั้ง / จากการตรวจ ${it.total} ครั้ง</div>
-              <div class="jd-dash-bar"><div class="jd-dash-bar-fill ${cls}" style="width:${Math.min(100, itPct)}%"></div></div>
+          const occHtml = (it.occ || []).slice().sort((a, b) => (b.date || '').localeCompare(a.date || '')).map(o =>
+            `<div class="sf-occ-row">
+              <span class="sf-occ-branch"><span class="material-symbols-rounded sf-ico-fill">storefront</span> ${escapeHtml(o.branch)}</span>
+              <span class="sf-occ-meta"><span class="material-symbols-rounded sf-ico-fill">event</span> ${escapeHtml(fmtDateDMY(o.date))}${o.auditor ? ' · ' + escapeHtml(o.auditor) : ''}</span>
+              ${o.note ? `<span class="sf-occ-note">📝 ${escapeHtml(o.note)}</span>` : ''}
+            </div>`
+          ).join('');
+          return `<div class="sf-fail-item sf-fail-clickable" onclick="this.classList.toggle('open')">
+            <div class="sf-fail-item-top">
+              <span class="sf-fail-item-name">${i+1}. ${escapeHtml(it.text)}</span>
+              <span class="sf-fail-item-pct">${itPct.toFixed(0)}%</span>
             </div>
-            <div class="jd-dash-row-value is-bad">${itPct.toFixed(1)}%</div>
+            <div class="sf-fail-item-meta">ตก ${it.fail} / ${it.total} ครั้ง · <span class="sf-fail-toggle">กดดูสาขา/วัน <span class="material-symbols-rounded sf-fail-chev">expand_more</span></span></div>
+            <div class="jd-dash-bar"><div class="jd-dash-bar-fill ${cls}" style="width:${Math.min(100, itPct)}%"></div></div>
+            <div class="sf-fail-occ">${occHtml}</div>
           </div>`;
         }).join('')}
       </div>` : ''}
