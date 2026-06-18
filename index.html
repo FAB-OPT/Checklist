@@ -1664,6 +1664,9 @@ input[type="time"].jd-form-input {
   border-bottom: 1px dotted var(--border);
 }
 .score-detail-item:last-child { border-bottom: none; }
+.score-detail-item.is-clickable { cursor:pointer; border-radius:8px; padding:7px 8px; margin:0 -8px; transition:background .12s; }
+.score-detail-item.is-clickable:hover { background:var(--surface-2); }
+.score-detail-item .sd-go { margin-left:2px; color:var(--text-tertiary); font-size:18px; flex-shrink:0; align-self:center; }
 .score-detail-item .sd-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
 .score-detail-item .sd-icon.ok { color: var(--success); }
 .score-detail-item .sd-icon.fail { color: var(--danger); }
@@ -7517,13 +7520,14 @@ function _scoreDetailZone(records) {
       const tier = pct >= 90 ? 'is-good' : pct < 70 ? 'is-bad' : 'is-warn';
       const f = r.failCount || 0;
       const valColor = pct >= 90 ? 'var(--success)' : pct < 70 ? 'var(--danger)' : '#B45309';
-      return `<div class="score-detail-item">
+      return `<div class="score-detail-item${r.id?' is-clickable':''}"${r.id?` onclick="event.stopPropagation(); showJaedaengDetail('${escapeAttr(r.id)}')"`:''}>
         <span class="material-symbols-rounded sd-icon ${f>0?'fail':'ok'}">${f>0?'error':'check_circle'}</span>
         <div style="flex:1;min-width:0;">
           <div class="score-detail-name">${escapeHtml(r.storeName||'-')}</div>
           <div class="score-detail-sub">${escapeHtml(fmtDateDMY(r.date))}${r.time?' · '+escapeHtml(r.time):''} · ${f>0?('ตก '+f+' ข้อ'):'ผ่านทุกข้อ'}</div>
         </div>
         <span class="score-detail-val" style="color:${valColor};">${pct.toFixed(1)}%</span>
+        ${r.id?'<span class="material-symbols-rounded sd-go">chevron_right</span>':''}
       </div>`;
     }).join('');
 }
@@ -7536,13 +7540,14 @@ function _scoreDetailDate(records) {
       const pct = r.passPct || 0;
       const f = r.failCount || 0;
       const valColor = pct >= 90 ? 'var(--success)' : pct < 70 ? 'var(--danger)' : '#B45309';
-      return `<div class="score-detail-item">
+      return `<div class="score-detail-item${r.id?' is-clickable':''}"${r.id?` onclick="event.stopPropagation(); showJaedaengDetail('${escapeAttr(r.id)}')"`:''}>
         <span class="material-symbols-rounded sd-icon ${f>0?'fail':'ok'}">${f>0?'error':'check_circle'}</span>
         <div style="flex:1;min-width:0;">
           <div class="score-detail-name">${escapeHtml(r.storeName||'-')}</div>
           <div class="score-detail-sub">${r.time?escapeHtml(r.time)+' · ':''}${f>0?('ตก '+f+' ข้อ'):'ผ่านทุกข้อ'} · ${escapeHtml(r.auditor||'-')}</div>
         </div>
         <span class="score-detail-val" style="color:${valColor};">${pct.toFixed(1)}%</span>
+        ${r.id?'<span class="material-symbols-rounded sd-go">chevron_right</span>':''}
       </div>`;
     }).join('');
 }
@@ -7557,13 +7562,14 @@ function _scoreDetailBranch(records) {
       const fail = items.filter(it => it && it.status === 'fail').length;
       const pct = r.passPct || 0;
       const valColor = pct >= 90 ? 'var(--success)' : pct < 70 ? 'var(--danger)' : '#B45309';
-      return `<div class="score-detail-item">
+      return `<div class="score-detail-item${r.id?' is-clickable':''}"${r.id?` onclick="event.stopPropagation(); showJaedaengDetail('${escapeAttr(r.id)}')"`:''}>
         <span class="material-symbols-rounded sd-icon ${fail>0?'fail':'ok'}">${fail>0?'error':'check_circle'}</span>
         <div style="flex:1;min-width:0;">
           <div class="score-detail-name">${escapeHtml(fmtDateDMY(r.date))}${r.time?' · '+escapeHtml(r.time):''}</div>
           <div class="score-detail-sub">ผ่าน ${pass} ข้อ · ตก ${fail} ข้อ</div>
         </div>
         <span class="score-detail-val" style="color:${valColor};">${pct.toFixed(1)}%</span>
+        ${r.id?'<span class="material-symbols-rounded sd-go">chevron_right</span>':''}
       </div>`;
     }).join('');
 }
