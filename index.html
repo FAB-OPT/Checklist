@@ -4818,6 +4818,12 @@ html.fab-sso-pending #login-screen { display: none !important; }
           </h2>
           <p class="daily-hub-sub">เลือก shift ที่จะเช็คสำหรับวันนี้</p>
         </div>
+        <div class="card" id="daily-branch-picker" style="display:none;margin-bottom:12px;">
+          <label class="jd-form-label" style="display:block;margin-bottom:6px;">เลือกสาขาที่จะตรวจ <span class="req">*</span></label>
+          <select id="daily-branch-select" class="jd-form-input" onchange="setDailyBranch(this.value)">
+            <option value="">— เลือกสาขา —</option>
+          </select>
+        </div>
         <div class="card daily-hub-actions">
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
             <button class="btn btn-primary btn-lg" onclick="startDailyShift('open')" style="padding:18px 12px;flex-direction:column;">
@@ -6339,10 +6345,8 @@ function renderBottomNav() {
   } else {
     html += '<button class="bottom-nav-item nav-dash-btn active" id="nav-dash" onclick="showDashboard()"><span class="material-symbols-rounded">dashboard</span><span>แดชบอร์ด</span></button>';
     // ระบบ OSS audit (ตรวจสาขา) ถูกตัดออกแล้ว — เหลือเฉพาะ Operations Checklist (Daily)
-    // Open-Close checklist is for branch logins only.
-    if (currentUser.role === 'branch') {
-      html += '<button class="bottom-nav-item nav-daily-btn" id="nav-daily" onclick="showDailyHub()"><span class="material-symbols-rounded">checklist</span><span>Open-Close</span></button>';
-    }
+    // เมนู "ตรวจร้าน" (Open-Close) แสดงให้ทุก role · role อื่นเลือกสาขาก่อนตรวจ
+    html += '<button class="bottom-nav-item nav-daily-btn" id="nav-daily" onclick="showDailyHub()"><span class="material-symbols-rounded">checklist</span><span>ตรวจร้าน</span></button>';
   }
   html += '<button class="bottom-nav-item nav-logout-btn" id="nav-logout" onclick="logout()"><span class="material-symbols-rounded">logout</span><span>ออกระบบ</span></button>';
   html += '</div>';
@@ -6705,26 +6709,57 @@ function showDailyHub() {
   setActiveNav('nav-daily');
 
   const branchActions = document.getElementById('daily-branch-actions');
-  if (currentUser.role === 'branch') {
-    branchActions.style.display = 'block';
-    document.getElementById('daily-today-label').textContent = fmtDateDMY(todayDateStr());
-    const today = todayDateStr();
-    const openDone = allDailyChecklists.find(d => d.branchCode === currentUser.branchCode && d.date === today && d.shift === 'open');
-    const closeDone = allDailyChecklists.find(d => d.branchCode === currentUser.branchCode && d.date === today && d.shift === 'close');
-    document.getElementById('daily-open-status').textContent = openDone ? '✓ บันทึกแล้ว' : 'ยังไม่ได้บันทึก';
-    document.getElementById('daily-close-status').textContent = closeDone ? '✓ บันทึกแล้ว' : 'ยังไม่ได้บันทึก';
-    document.getElementById('daily-open-label').textContent = openDone ? 'แก้ไข Open' : 'เช็ค Open';
-    document.getElementById('daily-close-label').textContent = closeDone ? 'แก้ไข Close' : 'เช็ค Close';
-  } else {
-    branchActions.style.display = 'none';
+  const picker = document.getElementById('daily-branch-picker');
+  const isBranch = currentUser.role === 'branch';
+  branchActions.style.display = 'block';   // ทุก role มีเมนูตรวจร้าน
+  document.getElementById('daily-today-label').textContent = fmtDateDMY(todayDateStr());
+  if (picker) {
+    if (isBranch) { picker.style.display = 'none'; }
+    else { picker.style.display = 'block'; _setupDailyBranchOptions(); }
   }
+  _refreshDailyActions();
 
   document.getElementById('daily-list-title').innerHTML = 'ประวัติ <span class="page-eyebrow-inline">Daily Open-Close Checklist</span>';
   // Branch users only see their own branch; the search field is useless to them
   const searchInput = document.getElementById('daily-filter-search');
-  if (searchInput) searchInput.style.display = currentUser.role === 'branch' ? 'none' : '';
+  if (searchInput) searchInput.style.display = isBranch ? 'none' : '';
 
   renderDailyList();
+}
+
+// สาขาเป้าหมายของการตรวจ daily — branch = สาขาตัวเอง · role อื่น = สาขาที่เลือก
+let _dailySelectedBranch = '';
+function _dailyTargetBranch() {
+  if (currentUser.role === 'branch') return { code: currentUser.branchCode, name: currentUser.branchName };
+  if (!_dailySelectedBranch) return null;
+  const b = BRANCHES.find(x => x.code === String(_dailySelectedBranch));
+  return { code: _dailySelectedBranch, name: b ? b.name : '' };
+}
+function _setupDailyBranchOptions() {
+  const sel = document.getElementById('daily-branch-select');
+  if (!sel) return;
+  let pool = BRANCHES;
+  if (currentUser.role === 'bzm') pool = BRANCHES.filter(b => b.manager === currentUser.name || b.managerNick === currentUser.nick);
+  sel.innerHTML = '<option value="">— เลือกสาขา —</option>' + pool.map(b => `<option value="${escapeAttr(b.code)}">${escapeHtml(b.code + ' ' + b.name)}</option>`).join('');
+  sel.value = _dailySelectedBranch || '';
+}
+function setDailyBranch(code) { _dailySelectedBranch = code; _refreshDailyActions(); }
+function _refreshDailyActions() {
+  const target = _dailyTargetBranch();
+  const today = todayDateStr();
+  const has = (shift) => target ? allDailyChecklists.find(d => d.branchCode === target.code && d.date === today && d.shift === shift) : null;
+  const openDone = has('open'), closeDone = has('close');
+  const oS = document.getElementById('daily-open-status'), cS = document.getElementById('daily-close-status');
+  const oL = document.getElementById('daily-open-label'), cL = document.getElementById('daily-close-label');
+  if (oS) oS.textContent = !target ? 'เลือกสาขาก่อน' : (openDone ? '✓ บันทึกแล้ว' : 'ยังไม่ได้บันทึก');
+  if (cS) cS.textContent = !target ? 'เลือกสาขาก่อน' : (closeDone ? '✓ บันทึกแล้ว' : 'ยังไม่ได้บันทึก');
+  if (oL) oL.textContent = openDone ? 'แก้ไข Open' : 'เช็ค Open';
+  if (cL) cL.textContent = closeDone ? 'แก้ไข Close' : 'เช็ค Close';
+  document.querySelectorAll('.daily-hub-actions .btn').forEach(b => {
+    const dis = !target;
+    b.style.opacity = dis ? '.45' : '';
+    b.style.pointerEvents = dis ? 'none' : '';
+  });
 }
 
 function renderDailyList() {
@@ -6812,9 +6847,10 @@ function renderDailyList() {
 }
 
 async function startDailyShift(shift) {
-  if (currentUser.role !== 'branch') return;
+  const _target = _dailyTargetBranch();
+  if (!_target || !_target.code) { showModal('เลือกสาขาก่อน', 'กรุณาเลือกสาขาที่จะตรวจก่อนเริ่ม'); return; }
   const today = todayDateStr();
-  const id = `${currentUser.branchCode}_${today}_${shift}`;
+  const id = `${_target.code}_${today}_${shift}`;
   const existing = allDailyChecklists.find(d => d.id === id);
 
   // ── กติกาเวลา (ตรวจเฉพาะตอนเริ่มครั้งแรก): รอบเปิด ≤ 11:00 · รอบปิด ≤ 22:00 ──
@@ -6878,11 +6914,12 @@ async function startDailyShift(shift) {
     requiredPhotos = pool.slice(0, count).sort((a, b) => a - b);
   }
 
+  const _brInfo = BRANCHES.find(x => x.code === String(_target.code));
   currentDaily = {
     id,
-    branchCode: currentUser.branchCode,
-    branchName: currentUser.branchName,
-    bzm: currentUser.bzm,
+    branchCode: _target.code,
+    branchName: _target.name,
+    bzm: (currentUser.role === 'branch') ? currentUser.bzm : (_brInfo ? (_brInfo.managerNick || _brInfo.manager || '') : ''),
     date: today,
     shift,
     manager: existing ? (existing.manager || '') : '',
@@ -6902,7 +6939,7 @@ async function startDailyShift(shift) {
   const shiftLabel = shift === 'open' ? 'Open' : 'Close';
   document.getElementById('daily-form-title').textContent = (isEdit ? 'แก้ไข ' : 'เช็ค ') + shiftLabel;
   document.getElementById('daily-form-icon').textContent = shift === 'open' ? 'wb_sunny' : 'bedtime';
-  document.getElementById('daily-form-branch').textContent = branchLabel(currentUser.branchCode, currentUser.branchName);
+  document.getElementById('daily-form-branch').textContent = branchLabel(_target.code, _target.name);
   document.getElementById('daily-form-date-chip').innerHTML = `<span class="material-symbols-rounded">calendar_today</span><span>${fmtDateDMY(today)}</span>`;
   document.getElementById('daily-form-head').className = 'card daily-form-head-card ' + (shift === 'open' ? 'is-open' : 'is-close');
   document.getElementById('daily-manager').value = currentDaily.manager;
