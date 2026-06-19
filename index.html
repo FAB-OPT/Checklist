@@ -788,6 +788,13 @@ body {
 body.in-audit #bottom-nav { display: none !important; }
 body.in-audit { padding-bottom: 0 !important; }
 @media (min-width: 1024px) { body.in-audit { padding-left: 0 !important; } }
+/* แถบปุ่มยกเลิก/บันทึก — ติดล่างเสมอ */
+.form-action-bar {
+  position: sticky; bottom: 0; z-index: 45;
+  margin-bottom: 0;
+  padding-bottom: calc(16px + env(safe-area-inset-bottom));
+  box-shadow: 0 -6px 16px -4px rgba(15,23,42,0.12);
+}
 .bottom-nav-item {
   flex: 1; display: flex; flex-direction: column; align-items: center;
   gap: 3px; padding: 8px 4px; font-size: 11px; font-weight: 600;
@@ -4916,7 +4923,7 @@ html.fab-sso-pending #login-screen { display: none !important; }
 
       <div id="daily-sections-container"></div>
 
-      <div class="card no-print">
+      <div class="card no-print form-action-bar">
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
           <button class="btn btn-secondary" style="flex:1;min-width:130px;" onclick="cancelDailyShift()">
             <span class="material-symbols-rounded">arrow_back</span> ยกเลิก
@@ -5052,7 +5059,7 @@ html.fab-sso-pending #login-screen { display: none !important; }
       </div>
       <div class="jd-section-tabs" id="jd-section-tabs"></div>
       <div id="jaedaeng-sections-container"></div>
-      <div class="card no-print">
+      <div class="card no-print form-action-bar">
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
           <button class="btn btn-secondary" style="flex:1;min-width:130px;" onclick="cancelJaedaengAudit()">
             <span class="material-symbols-rounded">arrow_back</span> ยกเลิก
