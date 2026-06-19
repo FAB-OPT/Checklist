@@ -4942,9 +4942,17 @@ html.fab-sso-pending #login-screen { display: none !important; }
       <div id="daily-detail-content"></div>
 
       <div class="card no-print">
-        <button class="btn btn-secondary btn-block" onclick="showDailyHub()">
-          <span class="material-symbols-rounded">arrow_back</span> กลับไปประวัติ
-        </button>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn btn-secondary" style="flex:1;min-width:120px;" onclick="showDailyHub()">
+            <span class="material-symbols-rounded">arrow_back</span> กลับไปประวัติ
+          </button>
+          <button class="btn btn-secondary" id="daily-detail-edit-btn" style="flex:1;min-width:120px;display:none;" onclick="editDailyChecklist(currentDailyDetailId)">
+            <span class="material-symbols-rounded">edit</span> แก้ไข
+          </button>
+          <button class="btn btn-secondary" id="daily-detail-del-btn" style="flex:1;min-width:120px;display:none;background:rgba(239,68,68,0.1);color:var(--danger);border-color:rgba(239,68,68,0.3);" onclick="deleteDailyChecklist(currentDailyDetailId)">
+            <span class="material-symbols-rounded">delete</span> ลบ
+          </button>
+        </div>
       </div>
     </div>
 
@@ -7212,11 +7220,53 @@ document.addEventListener('keydown', (e) => {
   else if (e.key === 'ArrowRight') lightboxNav(null, 1);
 });
 
+let currentDailyDetailId = null;
+
+// แก้ไขผล Daily (admin) — โหลด record เข้าฟอร์ม
+function editDailyChecklist(id) {
+  const d = allDailyChecklists.find(x => x.id === id);
+  if (!d) return;
+  currentDaily = JSON.parse(JSON.stringify(d));
+  hideAllScreens();
+  document.getElementById('daily-form-screen').style.display = 'block';
+  const shift = d.shift;
+  document.getElementById('daily-form-title').textContent = 'แก้ไข ' + (shift === 'open' ? 'Open' : 'Close');
+  document.getElementById('daily-form-icon').textContent = shift === 'open' ? 'wb_sunny' : 'bedtime';
+  document.getElementById('daily-form-branch').textContent = branchLabel(d.branchCode, d.branchName);
+  document.getElementById('daily-form-date-chip').innerHTML = `<span class="material-symbols-rounded">calendar_today</span><span>${fmtDateDMY(d.date)}</span>`;
+  document.getElementById('daily-form-head').className = 'card daily-form-head-card ' + (shift === 'open' ? 'is-open' : 'is-close');
+  document.getElementById('daily-manager').value = currentDaily.manager || '';
+  renderDailyForm();
+}
+
+// ลบผล Daily (admin)
+async function deleteDailyChecklist(id) {
+  const d = allDailyChecklists.find(x => x.id === id);
+  if (!d) return;
+  const ok = await showConfirm('ลบผลตรวจรายวัน?',
+    'ลบ <b>' + (d.shift === 'close' ? 'ปิดร้าน' : 'เปิดร้าน') + '</b> · ' + escapeHtml(branchLabel(d.branchCode, d.branchName)) + ' · ' + escapeHtml(fmtDateDMY(d.date)) + ' ออกถาวร?',
+    { okLabel: 'ลบ', cancelLabel: 'ยกเลิก', danger: true });
+  if (!ok) return;
+  allDailyChecklists = allDailyChecklists.filter(x => x.id !== id);
+  saveDailyLocal();
+  try { if (firebaseDb && !testMode) await firebaseDb.collection(DAILY_COLLECTION).doc(String(id)).delete(); }
+  catch (e) { console.warn('Daily delete failed', e); }
+  showModal('ลบแล้ว', 'ลบผลตรวจรายวันเรียบร้อย');
+  showDailyHub();
+}
+
 function showDailyDetail(id, targetText) {
   const d = allDailyChecklists.find(x => x.id === id);
   if (!d) return;
+  currentDailyDetailId = id;
   hideAllScreens();
   document.getElementById('daily-detail-screen').style.display = 'block';
+  // ปุ่มแก้ไข/ลบ — เฉพาะ admin
+  const _isAdmin = currentUser && currentUser.role === 'admin';
+  const _eb = document.getElementById('daily-detail-edit-btn');
+  const _db = document.getElementById('daily-detail-del-btn');
+  if (_eb) _eb.style.display = _isAdmin ? '' : 'none';
+  if (_db) _db.style.display = _isAdmin ? '' : 'none';
 
   // Stats first — needed for the hero percentage and tier badge
   const items = d.items || [];
