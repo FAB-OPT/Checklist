@@ -1105,12 +1105,12 @@ input[type="time"].jd-form-input {
   display: flex; gap: 8px;
   overflow-x: auto;
   padding: 10px 4px 12px;
-  margin-bottom: 8px;
-  position: sticky; top: 0; z-index: 40;
+  position: static;
   background: var(--bg);
   scrollbar-width: thin;
-  box-shadow: 0 6px 10px -6px rgba(0,0,0,0.08);
 }
+/* wrapper ที่ทำ sticky จริง (ไม่มี overflow → sticky ไม่พังบนมือถือ) */
+.sticky-tabs { position: sticky; top: 0; z-index: 50; background: var(--bg); margin-bottom: 10px; box-shadow: 0 6px 10px -6px rgba(0,0,0,0.10); }
 .jd-section-tab {
   flex-shrink: 0;
   display: inline-flex; flex-direction: column; align-items: center; gap: 2px;
@@ -3069,13 +3069,10 @@ input[type="time"].jd-form-input {
 
 /* Daily form section tabs */
 .daily-section-tabs {
-  position: sticky;
-  top: 0;
+  position: static;
   background: var(--bg);
-  z-index: 50;
   padding: 8px 16px;
-  margin-bottom: 14px;
-  box-shadow: 0 4px 8px rgba(20,15,10,0.04);
+  margin-bottom: 0;
 }
 .daily-section-chip {
   position: relative;
@@ -4919,7 +4916,7 @@ html.fab-sso-pending #login-screen { display: none !important; }
         </div>
       </div>
 
-      <div class="chip-row daily-section-tabs" id="daily-section-tabs"></div>
+      <div class="sticky-tabs"><div class="chip-row daily-section-tabs" id="daily-section-tabs"></div></div>
 
       <div id="daily-sections-container"></div>
 
@@ -5057,7 +5054,7 @@ html.fab-sso-pending #login-screen { display: none !important; }
           <div class="jd-form-static" id="jd-gps-display">—</div>
         </div>
       </div>
-      <div class="jd-section-tabs" id="jd-section-tabs"></div>
+      <div class="sticky-tabs"><div class="jd-section-tabs" id="jd-section-tabs"></div></div>
       <div id="jaedaeng-sections-container"></div>
       <div class="card no-print form-action-bar">
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
