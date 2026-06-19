@@ -4743,6 +4743,13 @@ html.fab-sso-pending #login-screen { display: none !important; }
 .sf-shift-box.is-ok.sf-shift-close { border-left-color:#4A5A99; }
 .sf-shift-box.is-late { border-color:var(--danger); background:var(--danger-bg); }
 .sf-shift-box.is-empty { opacity:.6; }
+.sf-shift-box.is-clickable { cursor:pointer; transition:transform .12s ease, box-shadow .12s ease; }
+.sf-shift-box.is-clickable:hover { box-shadow:0 3px 10px rgba(15,23,42,.12); }
+.sf-shift-box.is-clickable:active { transform:scale(.99); }
+.sf-box-go { font-size:18px; color:var(--text-tertiary); margin-left:auto; }
+.sf-box-reason { display:flex; align-items:flex-start; gap:5px; margin-top:7px; font-size:11.5px; font-weight:600; color:var(--danger); line-height:1.35; }
+.sf-box-reason .material-symbols-rounded { font-size:15px; flex-shrink:0; margin-top:1px; }
+.sf-box-reason b { font-weight:800; }
 .sf-shift-head { display:flex; align-items:center; gap:5px; font-weight:800; font-size:12.5px; color:var(--text); }
 .sf-shift-head .material-symbols-rounded { font-size:17px; }
 .sf-shift-open .sf-shift-head > .material-symbols-rounded { color:#C2620F; }
@@ -6743,9 +6750,15 @@ function _sfDailyTimesHTML(dailies) {
     const pct = (pass + fail) > 0 ? (pass / (pass + fail) * 100) : null;
     const sTier = pct == null ? '' : (pct >= 90 ? 'is-good' : pct < 70 ? 'is-bad' : 'is-warn');
     const scoreHtml = pct != null ? '<span class="sf-score-pill ' + sTier + '">' + pct.toFixed(0) + '%</span>' : '';
-    return '<div class="sf-shift-box ' + cls + ' ' + stateCls + '"' + (late && rec.lateReason ? ' title="เหตุผล: ' + escapeAttr(rec.lateReason) + '"' : '') + '>' +
-      '<div class="sf-shift-head"><span class="material-symbols-rounded sf-ico-fill">' + icon + '</span> ' + label + (late ? ' <span class="sf-late-badge">เกินเวลา</span>' : '') + '</div>' +
+    const reasonHtml = (late && (rec.lateReason || '').trim())
+      ? '<div class="sf-box-reason"><span class="material-symbols-rounded">schedule</span><span><b>เกินเวลา:</b> ' + escapeHtml(rec.lateReason) + '</span></div>'
+      : '';
+    const clickAttr = rec.id ? ' onclick="showDailyDetail(\'' + escapeAttr(rec.id) + '\')"' : '';
+    const clickCls = rec.id ? ' is-clickable' : '';
+    return '<div class="sf-shift-box ' + cls + ' ' + stateCls + clickCls + '"' + clickAttr + '>' +
+      '<div class="sf-shift-head"><span class="material-symbols-rounded sf-ico-fill">' + icon + '</span> ' + label + (late ? ' <span class="sf-late-badge">เกินเวลา</span>' : '') + (rec.id ? ' <span class="material-symbols-rounded sf-box-go">chevron_right</span>' : '') + '</div>' +
       '<div class="sf-shift-body"><span class="sf-shift-time">' + (t ? ('ส่ง ' + t + ' น.') : 'ยังไม่ส่ง') + '</span>' + scoreHtml + '</div>' +
+      reasonHtml +
     '</div>';
   };
 
