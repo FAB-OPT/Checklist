@@ -3737,6 +3737,8 @@ input[type="time"].jd-form-input {
   color: var(--text);
 }
 .daily-note-input:focus { outline: none; box-shadow: 0 0 0 4px rgba(199,50,35,0.15); }
+.daily-note-input.is-required { background: var(--danger-bg); border-color: var(--danger); }
+.photo-upload-btn.is-required { border-color: var(--danger); color: var(--danger); background: var(--danger-bg); }
 
 /* Daily Hub eyebrow heading (lives outside the action card) */
 .daily-hub-eyebrow .page-eyebrow-title {
@@ -5761,6 +5763,27 @@ function loadLocalDaily() {
   } catch (e) { return []; }
 }
 
+// ── Draft: เซฟคำตอบล่าสุดกรณีตรวจไม่เสร็จ ──
+const DAILY_DRAFT_KEY = 'daily_draft_v1';
+function _saveDailyDraft() {
+  if (!currentDaily) return;
+  try {
+    localStorage.setItem(DAILY_DRAFT_KEY, JSON.stringify(currentDaily));
+  } catch (e) {
+    // เกินโควต้า (รูป base64 เยอะ) → เซฟแบบไม่มีรูป
+    try {
+      const lite = { ...currentDaily, items: (currentDaily.items || []).map(it => ({ ...it, photos: [] })) };
+      localStorage.setItem(DAILY_DRAFT_KEY, JSON.stringify(lite));
+    } catch (_) {}
+  }
+}
+function _loadDailyDraft() {
+  try { const s = localStorage.getItem(DAILY_DRAFT_KEY); return s ? JSON.parse(s) : null; } catch (e) { return null; }
+}
+function _clearDailyDraft() {
+  try { localStorage.removeItem(DAILY_DRAFT_KEY); } catch (e) {}
+}
+
 function saveDailyLocal() {
   if (testMode) return;
   try { localStorage.setItem(DAILY_STORAGE_KEY, JSON.stringify(allDailyChecklists)); } catch (_) {}
@@ -6941,22 +6964,20 @@ async function startDailyShift(shift) {
     });
   });
 
-  // Randomly select 10 items per shift that REQUIRE a photo.
-  // The selection is recorded with the daily record so re-editing
-  // the same shift keeps the same required-photo items, but each
-  // new shift picks a different set so users can't recycle photos.
+  // สุ่ม "ต้องแนบรูป" 1 ข้อต่อ 1 หมวด (global index ของข้อที่สุ่มได้ในแต่ละหมวด)
+  // เก็บไว้กับเรคคอร์ด → แก้ไขรอบเดิมได้ข้อเดิม · รอบใหม่สุ่มใหม่ (กันใช้รูปซ้ำ)
   let requiredPhotos;
   if (existing && Array.isArray(existing.requiredPhotos) && existing.requiredPhotos.length) {
     requiredPhotos = existing.requiredPhotos.slice();
   } else {
-    const N = items.length;
-    const count = Math.min(10, N);
-    const pool = Array.from({ length: N }, (_, i) => i);
-    for (let i = pool.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [pool[i], pool[j]] = [pool[j], pool[i]];
-    }
-    requiredPhotos = pool.slice(0, count).sort((a, b) => a - b);
+    requiredPhotos = [];
+    let _gi = 0;
+    template.forEach(sec => {
+      const n = sec.items.length;
+      if (n > 0) requiredPhotos.push(_gi + Math.floor(Math.random() * n));
+      _gi += n;
+    });
+    requiredPhotos.sort((a, b) => a - b);
   }
 
   const _brInfo = BRANCHES.find(x => x.code === String(_target.code));
@@ -6977,6 +6998,12 @@ async function startDailyShift(shift) {
     late: _isLate,
     lateReason: _lateReason
   };
+
+  // กู้คำตอบที่ค้างไว้ (draft) ของรอบเดียวกัน
+  const _draft = _loadDailyDraft();
+  if (_draft && _draft.id === id && Array.isArray(_draft.items) && _draft.items.length === items.length) {
+    currentDaily = _draft;
+  }
 
   hideAllScreens();
   document.getElementById('daily-form-screen').style.display = 'block';
@@ -7048,17 +7075,20 @@ function renderDailyForm() {
       const isNA = item.status === 'na';
       const photos = item.photos || [];
       const isRequired = (currentDaily.requiredPhotos || []).includes(globalIdx);
-      const showPhotos = isRequired || isFail;
+      const showPhotos = isRequired || isFail;   // รูปบังคับ: ข้อสุ่ม + ข้อไม่ผ่าน
       let photosHtml = '';
       if (showPhotos) {
-        const missing = isRequired && photos.length === 0;
+        const missing = photos.length === 0;
+        const reqLabel = isFail ? 'ต้องถ่ายรูปหลักฐาน (ไม่ผ่าน)' : 'ต้องถ่ายรูปหลักฐาน';
         photosHtml = '<div class="photo-section ' + (missing ? 'is-missing' : '') + '" style="margin-top:10px;">' +
-          (isRequired ? '<div class="photo-required-label"><span class="material-symbols-rounded" style="font-size:16px;">photo_camera</span> ต้องแนบรูปหลักฐาน</div>' : '') +
-          '<label class="photo-upload-btn"><span class="material-symbols-rounded" style="font-size:18px;">add_a_photo</span> แนบรูป<input type="file" accept="image/*" capture="environment" multiple style="display:none;" onchange="addDailyPhotos(' + globalIdx + ', this.files)"></label>' +
+          '<div class="photo-required-label"><span class="material-symbols-rounded" style="font-size:16px;">photo_camera</span> ' + reqLabel + '</div>' +
+          '<button type="button" class="photo-upload-btn' + (missing ? ' is-required' : '') + '" onclick="openJDCamera(' + globalIdx + ',\'daily\')"><span class="material-symbols-rounded" style="font-size:18px;">photo_camera</span> ถ่ายรูป</button>' +
           '<div class="photo-preview">' +
           photos.map((p, pi) => '<div class="photo-thumb"><img src="'+p+'"><button class="remove-btn" onclick="removeDailyPhoto('+globalIdx+','+pi+')"><span class="material-symbols-rounded" style="font-size:14px;">close</span></button></div>').join('') +
           '</div></div>';
       }
+      const needNote = isFail || isNA;
+      const noteMissing = needNote && !(item.note || '').trim();
       html += `<div class="daily-item ${isPass?'is-pass':''} ${isFail?'is-fail':''} ${isNA?'is-na':''} ${isRequired?'is-required-photo':''}">
         <div class="daily-item-q">
           <span class="daily-item-num">${iIdx+1}</span>
@@ -7078,7 +7108,7 @@ function renderDailyForm() {
             <span>N/A</span>
           </button>
         </div>
-        <input type="text" class="daily-note-input" placeholder="หมายเหตุ / Action (กรณีไม่ผ่าน)" value="${escapeAttr(item.note || '')}" oninput="setDailyNote(${globalIdx}, this.value)" style="display:${isFail ? 'block' : 'none'};" id="daily-note-${globalIdx}">
+        <input type="text" class="daily-note-input${noteMissing ? ' is-required' : ''}" placeholder="${isNA ? 'ระบุเหตุผลที่ N/A (จำเป็น)' : 'ระบุเหตุผล / Action ที่ไม่ผ่าน (จำเป็น)'}" value="${escapeAttr(item.note || '')}" oninput="setDailyNote(${globalIdx}, this.value)" style="display:${needNote ? 'block' : 'none'};" id="daily-note-${globalIdx}">
         ${photosHtml}
       </div>`;
       globalIdx++;
@@ -7090,19 +7120,20 @@ function renderDailyForm() {
 
 function setDailyItem(idx, status) {
   if (!currentDaily) return;
-  currentDaily.items[idx].status = status;
+  const it = currentDaily.items[idx];
+  it.status = status;
   const isRequired = (currentDaily.requiredPhotos || []).includes(idx);
-  if (status !== 'fail') {
-    currentDaily.items[idx].note = '';
-    // Don't clear photos on required-photo items — they're mandatory regardless of pass/fail
-    if (!isRequired) currentDaily.items[idx].photos = [];
-  }
+  if (status === 'pass') { it.note = ''; if (!isRequired) it.photos = []; }
+  else if (status === 'na') { if (!isRequired) it.photos = []; }  // N/A เก็บเหตุผล · ลบรูปถ้าไม่ใช่ข้อบังคับ
+  // 'fail' เก็บทั้งเหตุผล + รูป
+  _saveDailyDraft();
   renderDailyForm();
 }
 
 function setDailyNote(idx, value) {
   if (!currentDaily) return;
   currentDaily.items[idx].note = value;
+  _saveDailyDraft();
 }
 
 function addDailyPhotos(idx, files) {
@@ -7135,6 +7166,7 @@ function removeDailyPhoto(idx, photoIdx) {
   const item = currentDaily.items[idx];
   if (!item.photos) return;
   item.photos.splice(photoIdx, 1);
+  _saveDailyDraft();
   renderDailyForm();
 }
 
@@ -7145,19 +7177,24 @@ async function submitDailyShift() {
     showModal('กรุณากรอก Manager on duty', 'ระบุชื่อผู้รับผิดชอบ shift ก่อนบันทึก');
     return;
   }
-  // Validate that all required-photo items have at least one photo
+  const items = currentDaily.items || [];
   const required = currentDaily.requiredPhotos || [];
-  const missingPhoto = required.filter(idx => {
-    const it = currentDaily.items[idx];
-    return !it || !it.photos || it.photos.length === 0;
-  });
-  if (missingPhoto.length > 0) {
-    showModal('แนบรูปไม่ครบ', `ยังมีข้อที่ต้องแนบรูปอีก ${missingPhoto.length} ข้อ ติ๊กที่ "📷 ต้องแนบรูป" แล้วถ่ายภาพให้ครบก่อนบันทึก`);
-    // Scroll to the first missing one
-    const target = document.querySelectorAll('.daily-item')[missingPhoto[0]];
+  const _scrollTo = (i, msgT, msgB) => {
+    showModal(msgT, msgB);
+    const target = document.querySelectorAll('.daily-item')[i];
     if (target) target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    return;
-  }
+  };
+  // 1) ต้องกรอกทุกข้อ
+  const unanswered = items.findIndex(it => !it || !it.status);
+  if (unanswered >= 0) { _scrollTo(unanswered, 'ตอบไม่ครบทุกข้อ', 'กรุณาเลือก ผ่าน/ไม่ผ่าน/N/A ให้ครบทุกข้อก่อนบันทึก'); return; }
+  // 2) ไม่ผ่าน → ต้องมีเหตุผล + รูป · N/A → ต้องมีเหตุผล
+  const badNote = items.findIndex(it => (it.status === 'fail' || it.status === 'na') && !(it.note || '').trim());
+  if (badNote >= 0) { _scrollTo(badNote, 'ระบุเหตุผลไม่ครบ', 'ข้อที่ "ไม่ผ่าน" หรือ "N/A" ต้องระบุเหตุผลก่อนบันทึก'); return; }
+  const failNoPhoto = items.findIndex(it => it.status === 'fail' && (!it.photos || it.photos.length === 0));
+  if (failNoPhoto >= 0) { _scrollTo(failNoPhoto, 'ถ่ายรูปไม่ครบ', 'ข้อที่ "ไม่ผ่าน" ต้องถ่ายรูปหลักฐานก่อนบันทึก'); return; }
+  // 3) ข้อสุ่มต้องมีรูป
+  const missingPhoto = required.filter(idx => { const it = items[idx]; return !it || !it.photos || it.photos.length === 0; });
+  if (missingPhoto.length > 0) { _scrollTo(missingPhoto[0], 'ถ่ายรูปไม่ครบ', `ยังมีข้อที่ต้องถ่ายรูปอีก ${missingPhoto.length} ข้อ`); return; }
   currentDaily.manager = manager;
   currentDaily.submittedAt = new Date().toISOString();
 
@@ -7167,6 +7204,7 @@ async function submitDailyShift() {
   saveDailyLocal();
 
   const wasEdit = !!(idx >= 0);
+  _clearDailyDraft();
   await saveDailyToBackend(currentDaily);
   showModal(wasEdit ? 'แก้ไขสำเร็จ' : 'บันทึกสำเร็จ', `${wasEdit ? 'แก้ไข' : 'บันทึก'} ${currentDaily.shift === 'open' ? 'Open' : 'Close'} shift วันที่ ${currentDaily.date} เรียบร้อยแล้ว`);
   currentDaily = null;
@@ -8565,7 +8603,16 @@ async function uploadJDPhotoToR2(blob) {
   return j.url;
 }
 
-async function openJDCamera(idx) {
+let _camCtx = 'jd';   // 'jd' = currentJDAudit · 'daily' = currentDaily
+function _camTargetItem(idx) {
+  return _camCtx === 'daily' ? (currentDaily && currentDaily.items[idx]) : (currentJDAudit && currentJDAudit.items[idx]);
+}
+function _camAfterCapture() {
+  if (_camCtx === 'daily') { _saveDailyDraft(); renderDailyForm(); }
+  else { _saveJDDraft(); renderJaedaengForm(); }
+}
+async function openJDCamera(idx, ctx) {
+  _camCtx = ctx || 'jd';
   jdCameraItemIdx = idx;
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
     // No camera API at all — fall back to the native file picker with the
@@ -8668,13 +8715,15 @@ async function handleJDPhotoFile(idx, file) {
       canvas.getContext('2d').drawImage(img, 0, 0, w, h);
       const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.6));
       const dataUrl = canvas.toDataURL('image/jpeg', 0.6);
-      const item = currentJDAudit.items[idx];
+      const ctx = _camCtx;
+      const item = _camTargetItem(idx);
+      if (!item) { jdCameraItemIdx = null; return; }
       if (!item.photos) item.photos = [];
       const localSlot = item.photos.length;
       item.photos.push(dataUrl);
-      _saveJDDraft();
       jdCameraItemIdx = null;
-      renderJaedaengForm();
+      _camAfterCapture();
+      if (ctx === 'daily') return;
       if (testMode || !blob) return;
       try {
         const url = await uploadJDPhotoToR2(blob);
@@ -8708,7 +8757,9 @@ async function switchJDCamera() {
 }
 
 async function captureJDPhoto() {
-  if (!currentJDAudit || jdCameraItemIdx == null) return;
+  if (jdCameraItemIdx == null) return;
+  const _tgtItem = _camTargetItem(jdCameraItemIdx);
+  if (!_tgtItem) return;
   const video = document.getElementById('jd-camera-video');
   const canvas = document.getElementById('jd-camera-canvas');
   // 800 px max + JPEG 0.6 — slightly bigger than the previous local-only
@@ -8725,14 +8776,16 @@ async function captureJDPhoto() {
   const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.6));
   const dataUrl = canvas.toDataURL('image/jpeg', 0.6); // immediate preview
   const itemIdx = jdCameraItemIdx;
-  const item = currentJDAudit.items[itemIdx];
+  const ctx = _camCtx;
+  const item = _tgtItem;
   if (!item.photos) item.photos = [];
   const localSlot = item.photos.length;
   item.photos.push(dataUrl);
-  _saveJDDraft();
+  _camAfterCapture();
   closeJDCamera();
-  renderJaedaengForm();
 
+  // Daily เก็บ base64 ในเรคคอร์ดเลย (ไม่อัป R2) · JD อัป R2
+  if (ctx === 'daily') return;
   // Skip cloud upload while Test Mode is on so test runs leave no R2 objects.
   if (testMode || !blob) return;
 
