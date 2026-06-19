@@ -4729,11 +4729,11 @@ html.fab-sso-pending #login-screen { display: none !important; }
 .sf-time-branch-name { display:flex; align-items:center; gap:7px; font-weight:800; font-size:14px; color:var(--text); margin-bottom:10px; }
 .sf-time-branch-name .material-symbols-rounded { font-size:19px; color:var(--primary); }
 /* เวลาส่ง — สาขา + กรอบรอบเปิด/ปิด แยกชัด */
-.sf-time-line { display:flex; flex-wrap:wrap; align-items:center; gap:10px; padding:11px 13px; border:1px solid var(--border); border-radius:14px; background:var(--surface); margin-bottom:8px; box-shadow:0 1px 2px rgba(15,23,42,.04); }
+.sf-time-line { display:flex; flex-direction:column; align-items:stretch; gap:9px; padding:11px 13px; border:1px solid var(--border); border-radius:14px; background:var(--surface); margin-bottom:8px; box-shadow:0 1px 2px rgba(15,23,42,.04); }
 .sf-time-line:last-child { margin-bottom:0; }
-.sf-tline-branch { display:inline-flex; align-items:center; gap:6px; font-weight:800; font-size:13.5px; color:var(--text); flex:0 0 auto; min-width:180px; }
+.sf-tline-branch { display:inline-flex; align-items:center; gap:6px; font-weight:800; font-size:13.5px; color:var(--text); align-self:flex-start; }
 .sf-tline-branch .material-symbols-rounded { font-size:18px; color:var(--primary); }
-.sf-shift-boxes { display:grid; grid-template-columns:1fr 1fr; gap:8px; flex:1; min-width:0; }
+.sf-shift-boxes { display:grid; grid-template-columns:1fr 1fr; gap:8px; min-width:0; }
 @media (max-width:600px){ .sf-shift-boxes { grid-template-columns:1fr; } }
 .sf-shift-box { min-width:0; border:1.5px solid var(--border); border-radius:11px; padding:8px 12px; background:var(--surface-2); }
 .sf-shift-box.sf-shift-open { border-left:4px solid #C2620F; }
