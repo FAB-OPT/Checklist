@@ -2494,16 +2494,28 @@ input[type="time"].jd-form-input {
   justify-content: center;
 }
 
-/* Score badge: Thai primary, English supplementary */
+/* Score badge: icon + Thai primary + English supplementary + count chip */
 .score-card-badge {
-  display: inline-flex; align-items: baseline; gap: 6px;
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 8px 8px 8px 13px;
+}
+.score-card-badge .badge-ico {
+  font-size: 19px; margin-right: -1px;
+  font-variation-settings: 'FILL' 1;
 }
 .score-card-badge .badge-main {
-  font-weight: 800; letter-spacing: 0.1px;
+  font-weight: 900; letter-spacing: 0.1px;
 }
 .score-card-badge .badge-en {
   font-weight: 700; font-size: 11px;
-  opacity: 0.6; letter-spacing: 0.3px;
+  opacity: 0.55; letter-spacing: 0.3px;
+}
+.score-card-badge .badge-count {
+  margin-left: 1px; padding: 3px 11px;
+  border-radius: 99px;
+  font-size: 12px; font-weight: 900;
+  background: rgba(0,0,0,0.10);
+  font-variant-numeric: tabular-nums;
 }
 
 /* Pass/Fail bar chart */
@@ -7367,20 +7379,24 @@ function showDailyDetail(id, targetText) {
   const denom = total - naN;
   const pct = denom > 0 ? (passN / denom * 100) : 0;
 
-  let tierClass, badgeText;
+  let tierClass, badgeIcon, badgeMain, badgeEn, badgeCount;
   if (failN > 0) {
-    tierClass = 'tier-breakdown';
-    badgeText = `เร่งด่วน Critical · ${failN} ไม่ผ่าน`;
+    tierClass = 'tier-breakdown'; badgeIcon = 'priority_high';
+    badgeMain = 'เร่งด่วน'; badgeEn = 'Critical'; badgeCount = `${failN} ไม่ผ่าน`;
   } else if (pendN > 0) {
-    tierClass = 'tier-improve';
-    badgeText = `รอ Pending · ${pendN} ยังไม่ตอบ`;
+    tierClass = 'tier-improve'; badgeIcon = 'hourglass_top';
+    badgeMain = 'รอตรวจ'; badgeEn = 'Pending'; badgeCount = `${pendN} ยังไม่ตอบ`;
   } else if (total === 0) {
-    tierClass = 'tier-empty';
-    badgeText = 'ยังไม่เริ่ม';
+    tierClass = 'tier-empty'; badgeIcon = 'remove';
+    badgeMain = 'ยังไม่เริ่ม'; badgeEn = 'Not started'; badgeCount = '';
   } else {
-    tierClass = 'tier-excellent';
-    badgeText = 'ครบ Complete · 100%';
+    tierClass = 'tier-excellent'; badgeIcon = 'check_circle';
+    badgeMain = 'ครบถ้วน'; badgeEn = 'Complete'; badgeCount = '100%';
   }
+  const badgeHtml = `<span class="material-symbols-rounded badge-ico">${badgeIcon}</span>`
+    + `<span class="badge-main">${badgeMain}</span>`
+    + `<span class="badge-en">${badgeEn}</span>`
+    + (badgeCount ? `<span class="badge-count">${badgeCount}</span>` : '');
 
   // Hero: kicker + big % + tier badge
   const head = document.getElementById('daily-detail-head');
@@ -7394,7 +7410,7 @@ function showDailyDetail(id, targetText) {
     `<span class="kicker-dot">·</span>` +
     `<span>${escapeHtml(fmtDateDMY(d.date))}</span>`;
   document.getElementById('daily-pass-pct').textContent = pct.toFixed(1);
-  document.getElementById('daily-status-badge').textContent = badgeText;
+  document.getElementById('daily-status-badge').innerHTML = badgeHtml;
 
   // Meta list — mirror audit summary layout
   const branchTxt = branchLabel(d.branchCode, d.branchName);
