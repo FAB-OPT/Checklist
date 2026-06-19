@@ -4790,6 +4790,11 @@ html.fab-sso-pending #login-screen { display: none !important; }
   #dashboard-screen #sf-cl-kpis .sf-kpi .jd-kpi-value { font-size:21px; }
   #dashboard-screen #sf-cl-kpis .sf-kpi .jd-kpi-sub { font-size:9.5px; }
 }
+/* เดสก์ท็อป: กล่อง KPI ยืดเต็มความกว้าง ขอบตรงกับกล่องอื่น (3 หรือ 4 กล่องก็เต็มแถว) */
+@media (min-width:720px){
+  #dashboard-screen #sf-cl-kpis { display:flex; gap:12px; }
+  #dashboard-screen #sf-cl-kpis .sf-kpi { flex:1 1 0; min-width:0; }
+}
 #dashboard-screen .sf-kpi {
   display:flex; align-items:center; gap:12px;
   border:1px solid var(--border); border-left:1px solid var(--border);
