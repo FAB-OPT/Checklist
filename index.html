@@ -7420,7 +7420,7 @@ function showDailyDetail(id, targetText) {
     { icon: 'badge',              label: 'Manager on duty', value: d.manager || '-' },
     { icon: 'supervisor_account', label: 'BZM',             value: d.bzm || '-' },
     { icon: 'person',             label: 'บันทึกโดย',       value: d.submittedByName || '-' },
-    { icon: 'fact_check',         label: 'สถานะรายการ',     value: `ผ่าน ${passN} · ไม่ผ่าน ${failN} · N/A ${naN} · รอ ${pendN} · ทั้งหมด ${total}` },
+    { icon: 'fact_check',         label: 'สถานะรายการ',     value: `ผ่าน ${passN} ข้อ - ไม่ผ่าน ${failN} ข้อ - N/A ${naN} ข้อ${pendN > 0 ? ` - รอ ${pendN} ข้อ` : ''} - ทั้งหมด ${total} ข้อ` },
   ];
   if (_isDailyLate(d) && (d.lateReason || '').trim()) {
     metaRows.push({ icon: 'schedule', label: 'เหตุผลที่ตรวจช้า (เกินเวลา)', value: d.lateReason, cls: 'span-all is-late-reason' });
