@@ -1405,15 +1405,12 @@ input[type="time"].jd-form-input {
   }
   .jd-section-tab-progress { font-size: 11px; }
 
-  /* Sticky bottom action bar (ยกเลิก / บันทึก) on the audit form */
+  /* Action bar (ยกเลิก / บันทึก) ท้ายฟอร์ม — เลื่อนปกติ ไม่ค้างล่าง */
   #jaedaeng-audit-screen > .card:last-child {
-    position: sticky;
-    bottom: 0;
+    position: static;
     margin: 16px -16px -16px;
     border-radius: 0;
     border-top: 1px solid var(--border);
-    box-shadow: 0 -6px 20px rgba(0,0,0,0.06);
-    z-index: 30;
   }
 
   /* Bigger touch target on history cards */
