@@ -1250,6 +1250,12 @@ input[type="time"].jd-form-input {
   100% { background: transparent; box-shadow: 0 0 0 0 transparent; }
 }
 @keyframes jd-spin { to { transform: rotate(360deg); } }
+.input-flash { animation: inputFlash 1.8s ease-out; }
+@keyframes inputFlash {
+  0%   { box-shadow: 0 0 0 3px rgba(214,54,34,0.55); border-color: var(--primary); }
+  60%  { box-shadow: 0 0 0 2px rgba(214,54,34,0.22); border-color: var(--primary); }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
 .jd-photo-section {
   margin-top: 10px;
   background: transparent;
@@ -7248,9 +7254,16 @@ function removeDailyPhoto(idx, photoIdx) {
 
 async function submitDailyShift() {
   if (!currentDaily) return;
-  const manager = document.getElementById('daily-manager').value.trim();
+  const managerInput = document.getElementById('daily-manager');
+  const manager = managerInput.value.trim();
   if (!manager) {
-    showModal('กรุณากรอก Manager on duty', 'ระบุชื่อผู้รับผิดชอบ shift ก่อนบันทึก');
+    showModal('กรุณากรอก Manager on duty', 'ระบุชื่อผู้รับผิดชอบ shift ก่อนบันทึก', () => {
+      managerInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      managerInput.focus({ preventScroll: true });
+      managerInput.classList.remove('input-flash'); void managerInput.offsetWidth;
+      managerInput.classList.add('input-flash');
+      setTimeout(() => managerInput.classList.remove('input-flash'), 1800);
+    });
     return;
   }
   const items = currentDaily.items || [];
