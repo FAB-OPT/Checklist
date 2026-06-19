@@ -4667,6 +4667,7 @@ html.fab-sso-pending #login-screen { display: none !important; }
 .sf-tchip.is-late { border-color:var(--danger); background:var(--danger-bg); color:var(--danger); }
 .sf-tchip.is-empty { opacity:.6; }
 .sf-tline-reason { width:100%; font-size:11.5px; color:var(--danger); font-weight:600; }
+.sf-tchip-score { font-weight:900; font-size:12px; background:rgba(15,23,42,.07); border-radius:999px; padding:1px 8px; margin-left:1px; }
 .sf-time-day-head .material-symbols-rounded,
 .sf-tline-branch .material-symbols-rounded,
 .sf-tchip > .material-symbols-rounded { font-variation-settings: 'FILL' 1, 'wght' 500, 'GRAD' 0, 'opsz' 24; }
@@ -6626,9 +6627,14 @@ function _sfDailyTimesHTML(dailies) {
     const t = fmtT(rec.submittedAt);
     const late = _isDailyLate(rec);
     const stateCls = late ? 'is-late' : (t ? 'is-ok' : 'is-empty');
+    const _it = rec.items || [];
+    const _pass = _it.filter(x => x.status === 'pass').length;
+    const _fail = _it.filter(x => x.status === 'fail').length;
+    const _pct = (_pass + _fail) > 0 ? (_pass / (_pass + _fail) * 100) : null;
+    const scoreHtml = (_pct != null) ? ' <span class="sf-tchip-score">' + _pct.toFixed(0) + '%</span>' : '';
     return '<span class="sf-tchip ' + cls + ' ' + stateCls + '"' + (late && rec.lateReason ? ' title="เหตุผล: ' + escapeAttr(rec.lateReason) + '"' : '') + '>' +
       '<span class="material-symbols-rounded sf-ico-fill">' + icon + '</span>' +
-      label + ' ' + (t ? (t + ' น.') : '—') +
+      label + ' ' + (t ? (t + ' น.') : '—') + scoreHtml +
       (late ? ' <span class="sf-late-badge">เกินเวลา</span>' : '') +
     '</span>';
   };
