@@ -3563,12 +3563,19 @@ input[type="time"].jd-form-input {
 .daily-history-card.is-pending .dhc-status { background: var(--warning-bg); color: #7A5818; }
 .daily-history-card.is-fail    .dhc-status { background: var(--danger-bg);  color: #7A1F10; }
 .dhc-branch {
-  font-size: 12px; font-weight: 700;
-  color: var(--text-secondary);
-  padding: 6px 10px;
+  display: flex; align-items: center; gap: 7px;
+  font-size: 15.5px; font-weight: 900;
+  color: var(--text); letter-spacing: -0.2px;
+  line-height: 1.25;
+  padding: 9px 12px;
   background: var(--surface-2);
+  border-left: 3px solid var(--primary);
   border-radius: var(--r-sm);
-  margin-bottom: 10px;
+  margin-bottom: 12px;
+}
+.dhc-branch .material-symbols-rounded {
+  font-size: 19px; color: var(--primary); flex-shrink: 0;
+  font-variation-settings: 'FILL' 1;
 }
 .dhc-stats {
   display: grid; grid-template-columns: 1fr 1fr 1fr;
@@ -6978,7 +6985,7 @@ function renderDailyList() {
           </div>
           <div class="dhc-status">${escapeHtml(status)}</div>
         </div>
-        ${!isBranch ? `<div class="dhc-branch">${escapeHtml(branchLabel(d.branchCode, d.branchName))}</div>` : ''}
+        ${!isBranch ? `<div class="dhc-branch"><span class="material-symbols-rounded">storefront</span><span>${escapeHtml(branchLabel(d.branchCode, d.branchName))}</span></div>` : ''}
         <div class="dhc-stats-card">
           <div class="dhc-scorebar">
             <div class="dhc-scorebar-head">
