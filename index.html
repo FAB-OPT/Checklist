@@ -4733,8 +4733,9 @@ html.fab-sso-pending #login-screen { display: none !important; }
 .sf-time-line:last-child { margin-bottom:0; }
 .sf-tline-branch { display:inline-flex; align-items:center; gap:6px; font-weight:800; font-size:13.5px; color:var(--text); flex:0 0 auto; min-width:180px; }
 .sf-tline-branch .material-symbols-rounded { font-size:18px; color:var(--primary); }
-.sf-shift-boxes { display:flex; flex-wrap:wrap; gap:8px; flex:1; min-width:0; }
-.sf-shift-box { flex:1; min-width:170px; border:1.5px solid var(--border); border-radius:11px; padding:8px 12px; background:var(--surface-2); }
+.sf-shift-boxes { display:grid; grid-template-columns:1fr 1fr; gap:8px; flex:1; min-width:0; }
+@media (max-width:600px){ .sf-shift-boxes { grid-template-columns:1fr; } }
+.sf-shift-box { min-width:0; border:1.5px solid var(--border); border-radius:11px; padding:8px 12px; background:var(--surface-2); }
 .sf-shift-box.sf-shift-open { border-left:4px solid #C2620F; }
 .sf-shift-box.sf-shift-close { border-left:4px solid #4A5A99; }
 .sf-shift-box.is-ok { border-color:var(--success); background:var(--success-bg); }
