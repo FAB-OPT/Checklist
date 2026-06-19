@@ -4654,26 +4654,36 @@ html.fab-sso-pending #login-screen { display: none !important; }
 .sf-time-branch:last-child { margin-bottom:0; }
 .sf-time-branch-name { display:flex; align-items:center; gap:7px; font-weight:800; font-size:14px; color:var(--text); margin-bottom:10px; }
 .sf-time-branch-name .material-symbols-rounded { font-size:19px; color:var(--primary); }
-/* เวลาส่ง — บรรทัดเดียว: สาขา + ชิปเปิด/ปิด วางต่อกัน */
-.sf-time-line { display:flex; flex-wrap:wrap; align-items:center; gap:8px 10px; padding:10px 13px; border:1px solid var(--border); border-radius:12px; background:var(--surface); margin-bottom:8px; box-shadow:0 1px 2px rgba(15,23,42,.04); }
+/* เวลาส่ง — สาขา + กรอบรอบเปิด/ปิด แยกชัด */
+.sf-time-line { display:flex; flex-wrap:wrap; align-items:center; gap:10px; padding:11px 13px; border:1px solid var(--border); border-radius:14px; background:var(--surface); margin-bottom:8px; box-shadow:0 1px 2px rgba(15,23,42,.04); }
 .sf-time-line:last-child { margin-bottom:0; }
-.sf-tline-branch { display:inline-flex; align-items:center; gap:6px; font-weight:800; font-size:13.5px; color:var(--text); margin-right:2px; }
+.sf-tline-branch { display:inline-flex; align-items:center; gap:6px; font-weight:800; font-size:13.5px; color:var(--text); flex:0 0 auto; min-width:180px; }
 .sf-tline-branch .material-symbols-rounded { font-size:18px; color:var(--primary); }
-.sf-tchip { display:inline-flex; align-items:center; gap:5px; font-size:12.5px; font-weight:800; padding:4px 11px; border-radius:999px; border:1px solid var(--border); background:var(--surface-2); color:var(--text); font-variant-numeric:tabular-nums; }
-.sf-tchip > .material-symbols-rounded { font-size:16px; }
-.sf-tchip.sf-tl-open > .material-symbols-rounded { color:#C2620F; }
-.sf-tchip.sf-tl-close > .material-symbols-rounded { color:#4A5A99; }
-.sf-tchip.is-ok { border-color:var(--success); background:var(--success-bg); color:#1E6B36; }
-.sf-tchip.is-late { border-color:var(--danger); background:var(--danger-bg); color:var(--danger); }
-.sf-tchip.is-empty { opacity:.6; }
+.sf-shift-boxes { display:flex; flex-wrap:wrap; gap:8px; flex:1; min-width:0; }
+.sf-shift-box { flex:1; min-width:170px; border:1.5px solid var(--border); border-radius:11px; padding:8px 12px; background:var(--surface-2); }
+.sf-shift-box.sf-shift-open { border-left:4px solid #C2620F; }
+.sf-shift-box.sf-shift-close { border-left:4px solid #4A5A99; }
+.sf-shift-box.is-ok { border-color:var(--success); background:var(--success-bg); }
+.sf-shift-box.is-ok.sf-shift-open { border-left-color:#C2620F; }
+.sf-shift-box.is-ok.sf-shift-close { border-left-color:#4A5A99; }
+.sf-shift-box.is-late { border-color:var(--danger); background:var(--danger-bg); }
+.sf-shift-box.is-empty { opacity:.6; }
+.sf-shift-head { display:flex; align-items:center; gap:5px; font-weight:800; font-size:12.5px; color:var(--text); }
+.sf-shift-head .material-symbols-rounded { font-size:17px; }
+.sf-shift-open .sf-shift-head > .material-symbols-rounded { color:#C2620F; }
+.sf-shift-close .sf-shift-head > .material-symbols-rounded { color:#4A5A99; }
+.sf-shift-body { display:flex; align-items:center; gap:8px; margin-top:5px; flex-wrap:wrap; }
+.sf-shift-time { font-size:12.5px; font-weight:700; color:var(--text-secondary); font-variant-numeric:tabular-nums; }
+.sf-shift-box.is-late .sf-shift-time { color:var(--danger); }
 .sf-tline-reason { width:100%; font-size:11.5px; color:var(--danger); font-weight:600; }
-.sf-score-pill { font-weight:900; font-size:12.5px; padding:3px 11px; border-radius:999px; border:1.5px solid var(--border); font-variant-numeric:tabular-nums; }
+.sf-score-pill { font-weight:900; font-size:12.5px; padding:2px 10px; border-radius:999px; border:1.5px solid var(--border); font-variant-numeric:tabular-nums; }
 .sf-score-pill.is-good { color:#1E6B36; background:var(--success-bg); border-color:var(--success); }
 .sf-score-pill.is-warn { color:#B45309; background:#FEF3C7; border-color:#F59E0B; }
 .sf-score-pill.is-bad { color:var(--danger); background:var(--danger-bg); border-color:var(--danger); }
 .sf-time-day-head .material-symbols-rounded,
 .sf-tline-branch .material-symbols-rounded,
-.sf-tchip > .material-symbols-rounded { font-variation-settings: 'FILL' 1, 'wght' 500, 'GRAD' 0, 'opsz' 24; }
+.sf-shift-head > .material-symbols-rounded { font-variation-settings: 'FILL' 1, 'wght' 500, 'GRAD' 0, 'opsz' 24; }
+@media (max-width:560px){ .sf-tline-branch { min-width:100%; } }
 
 /* ── Polish แดชบอร์ดซานตาเฟ่ (scope #dashboard-screen — ไม่กระทบเจ๊แดง) ── */
 #dashboard-screen .jd-dash-kpis { gap:12px; }
@@ -6620,47 +6630,39 @@ function _sfDailyTimesHTML(dailies) {
   });
   const dates = Object.keys(byDate).sort((a, b) => b.localeCompare(a));
 
-  const chip = (rec, shift) => {
+  // กรอบแต่ละรอบ (เปิด/ปิด) — แยกชัด มีหัว + เวลา + คะแนนสี
+  const shiftBox = (rec, shift) => {
     const icon = shift === 'open' ? 'wb_sunny' : 'bedtime';
-    const label = shift === 'open' ? 'เปิด' : 'ปิด';
-    const cls = shift === 'open' ? 'sf-tl-open' : 'sf-tl-close';
+    const label = shift === 'open' ? 'เปิดร้าน' : 'ปิดร้าน';
+    const cls = shift === 'open' ? 'sf-shift-open' : 'sf-shift-close';
     if (!rec) {
-      return '<span class="sf-tchip ' + cls + ' is-empty"><span class="material-symbols-rounded sf-ico-fill">' + icon + '</span>' + label + ' · ยังไม่ส่ง</span>';
+      return '<div class="sf-shift-box ' + cls + ' is-empty"><div class="sf-shift-head"><span class="material-symbols-rounded sf-ico-fill">' + icon + '</span> ' + label + '</div><div class="sf-shift-body"><span class="sf-shift-time">ยังไม่ส่ง</span></div></div>';
     }
     const t = fmtT(rec.submittedAt);
     const late = _isDailyLate(rec);
-    const stateCls = late ? 'is-late' : (t ? 'is-ok' : 'is-empty');
-    return '<span class="sf-tchip ' + cls + ' ' + stateCls + '"' + (late && rec.lateReason ? ' title="เหตุผล: ' + escapeAttr(rec.lateReason) + '"' : '') + '>' +
-      '<span class="material-symbols-rounded sf-ico-fill">' + icon + '</span>' +
-      label + ' ' + (t ? (t + ' น.') : '—') +
-      (late ? ' <span class="sf-late-badge">เกินเวลา</span>' : '') +
-    '</span>';
-  };
-
-  // คะแนน % ผ่าน แยกเป็น pill สีตามเกณฑ์
-  const scorePill = (rec) => {
-    if (!rec) return '';
+    const stateCls = late ? 'is-late' : (t ? 'is-ok' : '');
     const it = rec.items || [];
     const pass = it.filter(x => x.status === 'pass').length;
     const fail = it.filter(x => x.status === 'fail').length;
-    if (pass + fail === 0) return '';
-    const pct = pass / (pass + fail) * 100;
-    const tier = pct >= 90 ? 'is-good' : pct < 70 ? 'is-bad' : 'is-warn';
-    return '<span class="sf-score-pill ' + tier + '">' + pct.toFixed(0) + '%</span>';
+    const pct = (pass + fail) > 0 ? (pass / (pass + fail) * 100) : null;
+    const sTier = pct == null ? '' : (pct >= 90 ? 'is-good' : pct < 70 ? 'is-bad' : 'is-warn');
+    const scoreHtml = pct != null ? '<span class="sf-score-pill ' + sTier + '">' + pct.toFixed(0) + '%</span>' : '';
+    return '<div class="sf-shift-box ' + cls + ' ' + stateCls + '"' + (late && rec.lateReason ? ' title="เหตุผล: ' + escapeAttr(rec.lateReason) + '"' : '') + '>' +
+      '<div class="sf-shift-head"><span class="material-symbols-rounded sf-ico-fill">' + icon + '</span> ' + label + (late ? ' <span class="sf-late-badge">เกินเวลา</span>' : '') + '</div>' +
+      '<div class="sf-shift-body"><span class="sf-shift-time">' + (t ? ('ส่ง ' + t + ' น.') : 'ยังไม่ส่ง') + '</span>' + scoreHtml + '</div>' +
+    '</div>';
   };
 
   return dates.map(date => {
     const branches = Object.values(byDate[date]).sort((a, b) => a.name.localeCompare(b.name, 'th'));
     return '<div class="sf-time-day">' +
       '<div class="sf-time-day-head"><span class="material-symbols-rounded sf-ico-fill">event</span> ' + escapeHtml(fmtDateDMY(date)) + '</div>' +
-      branches.map(b => {
-        const reasons = [b.open, b.close].filter(r => r && _isDailyLate(r) && r.lateReason)
-          .map(r => '<span class="sf-tline-reason">📝 ' + (r.shift === 'close' ? 'ปิด' : 'เปิด') + ': ' + escapeHtml(r.lateReason) + '</span>').join('');
-        return '<div class="sf-time-line">' +
+      branches.map(b =>
+        '<div class="sf-time-line">' +
           '<span class="sf-tline-branch"><span class="material-symbols-rounded sf-ico-fill">storefront</span> ' + escapeHtml(b.name) + '</span>' +
-          chip(b.open, 'open') + scorePill(b.open) + chip(b.close, 'close') + scorePill(b.close) + reasons +
-        '</div>';
-      }).join('') +
+          '<div class="sf-shift-boxes">' + shiftBox(b.open, 'open') + shiftBox(b.close, 'close') + '</div>' +
+        '</div>'
+      ).join('') +
     '</div>';
   }).join('');
 }
