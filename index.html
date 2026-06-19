@@ -6269,7 +6269,7 @@ function showWelcomeModal() {
     const roleLabel = roleLabels[currentUser.role] || currentUser.role;
     const baseName = currentUser.name || currentUser.nick || '-';
     const nick = (currentUser.nick && currentUser.nick !== baseName) ? ' (' + escapeHtml(currentUser.nick) + ')' : '';
-    sub.innerHTML = `<b>${escapeHtml('คุณ ' + baseName)}${nick}</b> · ${escapeHtml(roleLabel)}`;
+    sub.innerHTML = `<b>${escapeHtml(baseName)}${nick}</b> ${escapeHtml(roleLabel)}`;
   }
   document.getElementById('welcome-modal').classList.add('show');
 }
