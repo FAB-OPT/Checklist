@@ -4780,6 +4780,11 @@ html.fab-sso-pending #login-screen { display: none !important; }
 
 /* ── Polish แดชบอร์ดซานตาเฟ่ (scope #dashboard-screen — ไม่กระทบเจ๊แดง) ── */
 #dashboard-screen .jd-dash-kpis { gap:12px; }
+/* มือถือ: กล่อง KPI เรียง 2 คอลัมน์ + กล่องที่เหลือ (เลขคี่) อยู่กึ่งกลาง */
+@media (max-width:719px){
+  #dashboard-screen #sf-cl-kpis { display:flex; flex-wrap:wrap; justify-content:center; }
+  #dashboard-screen #sf-cl-kpis .sf-kpi { flex:1 1 calc(50% - 6px); max-width:calc(50% - 6px); }
+}
 #dashboard-screen .sf-kpi {
   display:flex; align-items:center; gap:12px;
   border:1px solid var(--border); border-left:1px solid var(--border);
