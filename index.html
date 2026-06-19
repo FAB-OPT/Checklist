@@ -784,6 +784,10 @@ body {
   z-index: 100;
   box-shadow: 0 -4px 16px rgba(20,15,10,0.05);
 }
+/* เข้าฟอร์มตรวจ → ซ่อนเมนูล่าง + กันช่องว่าง */
+body.in-audit #bottom-nav { display: none !important; }
+body.in-audit { padding-bottom: 0 !important; }
+@media (min-width: 1024px) { body.in-audit { padding-left: 0 !important; } }
 .bottom-nav-item {
   flex: 1; display: flex; flex-direction: column; align-items: center;
   gap: 3px; padding: 8px 4px; font-size: 11px; font-weight: 600;
@@ -6442,6 +6446,7 @@ function hideAllScreens() {
     const el = document.getElementById(id);
     if (el) el.style.display = 'none';
   });
+  document.body.classList.remove('in-audit');  // ออกจากฟอร์มตรวจ → โชว์เมนูล่างปกติ
 }
 
 // ============ DASHBOARD ============
@@ -6998,6 +7003,7 @@ async function startDailyShift(shift) {
 
   hideAllScreens();
   document.getElementById('daily-form-screen').style.display = 'block';
+  document.body.classList.add('in-audit');
   const isEdit = !!existing;
   const shiftLabel = shift === 'open' ? 'Open' : 'Close';
   document.getElementById('daily-form-title').textContent = (isEdit ? 'แก้ไข ' : 'เช็ค ') + shiftLabel;
@@ -7259,6 +7265,7 @@ function editDailyChecklist(id) {
   currentDaily = JSON.parse(JSON.stringify(d));
   hideAllScreens();
   document.getElementById('daily-form-screen').style.display = 'block';
+  document.body.classList.add('in-audit');
   const shift = d.shift;
   document.getElementById('daily-form-title').textContent = 'แก้ไข ' + (shift === 'open' ? 'Open' : 'Close');
   document.getElementById('daily-form-icon').textContent = shift === 'open' ? 'wb_sunny' : 'bedtime';
@@ -7346,6 +7353,9 @@ function showDailyDetail(id, targetText) {
     { icon: 'person',             label: 'บันทึกโดย',       value: d.submittedByName || '-' },
     { icon: 'fact_check',         label: 'สถานะรายการ',     value: `ผ่าน ${passN} · ไม่ผ่าน ${failN} · N/A ${naN} · รอ ${pendN} · ทั้งหมด ${total}` },
   ];
+  if (_isDailyLate(d) && (d.lateReason || '').trim()) {
+    metaRows.push({ icon: 'schedule', label: 'เหตุผลที่ตรวจช้า (เกินเวลา)', value: d.lateReason, cls: 'span-all is-late-reason' });
+  }
   document.getElementById('daily-detail-meta').innerHTML = metaRows.map(m => `
     <div class="summary-meta-row ${m.cls || ''}" data-icon="${m.icon}">
       <span class="material-symbols-rounded">${m.icon}</span>
@@ -8193,6 +8203,7 @@ function _renderJDAuditScreen() {
   const a = currentJDAudit;
   hideAllScreens();
   document.getElementById('jaedaeng-audit-screen').style.display = 'block';
+  document.body.classList.add('in-audit');
   const select = document.getElementById('jd-store-name');
   const zones = {};
   const zoneOrder = [];
@@ -8254,6 +8265,7 @@ function editJaedaengAudit(id) {
 
   hideAllScreens();
   document.getElementById('jaedaeng-audit-screen').style.display = 'block';
+  document.body.classList.add('in-audit');
   // store dropdown
   const select = document.getElementById('jd-store-name');
   const zones = {}; const zoneOrder = [];
