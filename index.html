@@ -3557,21 +3557,31 @@ input[type="time"].jd-form-input {
   margin-top: 6px; letter-spacing: 0.4px;
   text-transform: uppercase;
 }
-.dhc-score {
-  display: flex; align-items: baseline; gap: 8px;
-  padding: 0 2px 10px; margin-bottom: 10px;
+.dhc-scorebar {
+  padding: 0 2px 12px; margin-bottom: 12px;
   border-bottom: 1px dashed var(--border);
 }
+.dhc-scorebar-head {
+  display: flex; align-items: baseline; gap: 8px;
+  margin-bottom: 9px;
+}
 .dhc-score-value {
-  font-size: 30px; font-weight: 900;
-  letter-spacing: -0.8px; line-height: 1;
+  font-size: 32px; font-weight: 900;
+  letter-spacing: -1px; line-height: 1;
   font-variant-numeric: tabular-nums;
 }
-.dhc-score-value small { font-size: 15px; font-weight: 800; margin-left: 1px; }
+.dhc-score-value small { font-size: 16px; font-weight: 800; margin-left: 1px; }
 .dhc-score-label {
-  font-size: 11px; font-weight: 800;
+  font-size: 12px; font-weight: 800;
   color: var(--text-tertiary);
-  letter-spacing: 0.4px; text-transform: uppercase;
+  letter-spacing: 0.3px; margin-left: auto;
+}
+.dhc-progress {
+  height: 7px; border-radius: 99px;
+  background: var(--surface-2); overflow: hidden;
+}
+.dhc-progress-fill {
+  height: 100%; border-radius: 99px;
 }
 .dhc-late {
   display: flex; align-items: flex-start; gap: 6px;
@@ -6722,7 +6732,9 @@ function _sfDailyTimesHTML(dailies) {
 function branchLabel(code, name) {
   if (!code && !name) return '';
   if (!name) return String(code);
-  return `${code} Santa Fe ${name}`;
+  const n = String(name).trim();
+  const prefix = /^santa\s*fe/i.test(n) ? '' : 'Santa Fe ';
+  return `${code} ${prefix}${n}`.replace(/\s+/g, ' ').trim();
 }
 
 function santaFeLogoSVG() {
@@ -6914,9 +6926,12 @@ function renderDailyList() {
         </div>
         ${!isBranch ? `<div class="dhc-branch">${escapeHtml(branchLabel(d.branchCode, d.branchName))}</div>` : ''}
         <div class="dhc-stats-card">
-          <div class="dhc-score">
-            <div class="dhc-score-value" style="color:${scoreColor};">${scorePct.toFixed(1)}<small>%</small></div>
-            <div class="dhc-score-label">คะแนนผ่านเกณฑ์</div>
+          <div class="dhc-scorebar">
+            <div class="dhc-scorebar-head">
+              <span class="dhc-score-value" style="color:${scoreColor};">${scorePct.toFixed(1)}<small>%</small></span>
+              <span class="dhc-score-label">คะแนนผ่านเกณฑ์</span>
+            </div>
+            <div class="dhc-progress"><div class="dhc-progress-fill" style="width:${Math.min(100, scorePct)}%;background:${scoreColor};"></div></div>
           </div>
           <div class="dhc-stats">
             <div class="dhc-stat is-pass">
