@@ -6,7 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#1E3A5F">
-<title>Quality Service Cleanliness & Operations Checklist</title>
+<title>Operations Checklist</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0&display=swap" rel="stylesheet">
@@ -4765,7 +4765,7 @@ html.fab-sso-pending #login-screen { display: none !important; }
       <div class="brand-logo">
         <img src="Screenshot 2026-05-18 092954.png" alt="Fab" id="login-brand-logo" />
       </div>
-      <h1 class="brand-title" id="login-title">Quality Service Cleanliness &amp; Operations Checklist</h1>
+      <h1 class="brand-title" id="login-title">Operations Checklist</h1>
       <p class="brand-subtitle" id="login-subtitle">ระบบตรวจสอบมาตรฐานการทำงาน</p>
 
       <div class="role-toggle" id="role-toggle">
@@ -4795,7 +4795,7 @@ html.fab-sso-pending #login-screen { display: none !important; }
   <div class="app-header">
     <div class="app-header-inner">
       <div class="app-header-stack">
-        <h1><span class="app-title-text" id="app-title-text">Quality Service Cleanliness &amp; Operations Checklist</span></h1>
+        <h1><span class="app-title-text" id="app-title-text">Operations Checklist</span></h1>
         <div class="app-user-line" id="app-user-line">—</div>
         <div class="subtitle" id="header-subtitle" style="display:none;">ระบบตรวจสอบมาตรฐานการทำงาน</div>
       </div>
@@ -6070,14 +6070,14 @@ function selectBrand(brand) {
     void loginStage.offsetWidth; // force reflow so the animation replays
     loginStage.classList.add('is-entering');
     if (brand === 'santafe') {
-      title.textContent = 'Operations Standard Skill & Operations Checklist';
+      title.textContent = 'Operations Checklist';
       subtitle.textContent = '';
       subtitle.style.display = 'none';
       if (logo) { logo.src = 'logo santafe.jpg'; logo.alt = 'Santa Fe'; }
       toggle.style.display = '';
       selectRole('branch');
     } else {
-      title.textContent = 'Quality Service Cleanliness & Operations Checklist';
+      title.textContent = 'Operations Checklist';
       subtitle.textContent = '';
       subtitle.style.display = 'none';
       if (logo) { logo.src = 'Logo-Jaedang_samyan.png'; logo.alt = 'เจ๊แดงสามย่าน'; }
@@ -6254,13 +6254,13 @@ function applyBrandHeader() {
     appSub   = 'Santa Fe Happy Steak';
     eyebrow  = 'Operations Checklist';
   } else if (view === 'jaedaeng') {
-    appTitle = 'QSC & Operations Checklist';
+    appTitle = 'Operations Checklist';
     appSub   = 'เจ๊แดงสามย่าน';
-    eyebrow  = 'Quality Service Cleanliness';
+    eyebrow  = 'Operations Checklist';
   } else {
-    appTitle = 'QSC & Operations Checklist';
+    appTitle = 'Operations Checklist';
     appSub   = 'ระบบตรวจสอบมาตรฐานการทำงาน';
-    eyebrow  = 'Quality Service Cleanliness';
+    eyebrow  = 'Operations Checklist';
   }
   // ชื่อระบบบรรทัดเดียว (wrap เองตามความกว้าง) · ชื่อผู้ใช้อยู่บรรทัดถัดไป (app-user-line)
   if (titleEl) titleEl.textContent = appTitle;
@@ -6387,8 +6387,8 @@ function renderBottomNav() {
   // title ย่อ ตาม brand — OSS/QSC + ขีดเส้นใต้ · บรรทัดถัดไป โลโก้ + ชื่อสาขา
   const _v = currentView || (currentUser && currentUser.brand);
   const _navTitle = _v === 'santafe'
-    ? 'OSS &amp; Operations Checklist'
-    : 'QSC &amp; Operations Checklist';
+    ? 'Operations Checklist'
+    : 'Operations Checklist';
   html += '<div class="nav-brand">' +
     '<div class="nav-app-name nav-app-name-underline">' + _navTitle + '</div>' +
     '<div class="nav-brand-branch">' +
