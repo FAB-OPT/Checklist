@@ -6653,7 +6653,7 @@ function _sfDailyKpisHTML(dailies) {
   return tile('neutral', 'fact_check', 'การส่งทั้งหมด', total, 'ครั้ง') +
     tile(late > 0 ? 'danger' : 'good', 'schedule', 'ส่งเกินเวลา', late, 'ครั้ง') +
     tile('danger', 'report', 'ข้อที่ตกรวม', fails, 'ข้อ') +
-    tile('neutral', 'storefront', 'สาขาที่ส่ง', branches, 'สาขา');
+    (currentUser.role === 'branch' ? '' : tile('neutral', 'storefront', 'สาขาที่ส่ง', branches, 'สาขา'));
 }
 
 // สรุปหมวดที่ตก (รายวัน) — จัดกลุ่มตามหมวดของ Daily checklist (จุดเตรียมงาน/PASTA/STEAK…)
