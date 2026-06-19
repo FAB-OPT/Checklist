@@ -793,6 +793,17 @@ body.in-audit { padding-bottom: 0 !important; }
   position: static;
   padding-bottom: calc(16px + env(safe-area-inset-bottom));
 }
+/* ปุ่มลอยเลื่อนไปล่างสุด — โผล่เฉพาะตอนเข้าฟอร์มตรวจบนมือถือ */
+#scroll-bottom-fab { display: none; }
+body.in-audit #scroll-bottom-fab {
+  display: flex; align-items: center; justify-content: center;
+  position: fixed; right: 14px; bottom: calc(16px + env(safe-area-inset-bottom));
+  width: 42px; height: 42px; border-radius: 50%;
+  background: var(--primary); color: #fff; border: none;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.28); z-index: 60; cursor: pointer;
+}
+body.in-audit #scroll-bottom-fab .material-symbols-rounded { font-size: 24px; }
+@media (min-width: 1024px) { body.in-audit #scroll-bottom-fab { display: none; } }
 .bottom-nav-item {
   flex: 1; display: flex; flex-direction: column; align-items: center;
   gap: 3px; padding: 8px 4px; font-size: 11px; font-weight: 600;
@@ -5194,6 +5205,12 @@ html.fab-sso-pending #login-screen { display: none !important; }
 
   <!-- Bottom Nav (rendered dynamically per role) -->
   <nav class="bottom-nav no-print" id="bottom-nav"></nav>
+
+  <!-- ปุ่มลอยเลื่อนไปล่างสุด (เฉพาะหน้าตรวจ บนมือถือ) -->
+  <button id="scroll-bottom-fab" class="no-print" type="button" title="เลื่อนไปล่างสุด" aria-label="เลื่อนไปล่างสุด"
+    onclick="window.scrollTo({top:document.documentElement.scrollHeight,behavior:'smooth'})">
+    <span class="material-symbols-rounded">keyboard_double_arrow_down</span>
+  </button>
 </div>
 
 
