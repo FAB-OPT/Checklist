@@ -2518,6 +2518,22 @@ input[type="time"].jd-form-input {
   font-variant-numeric: tabular-nums;
 }
 
+/* ── Mobile: ขยาย pill เร่งด่วน Critical / ผ่าน / ดีเยี่ยม ให้อ่านชัด ── */
+@media (max-width: 640px) {
+  .score-card-badge {
+    font-size: 16px;
+    padding: 10px 12px 10px 18px;
+    gap: 10px;
+    line-height: 1.2;
+  }
+  .score-card-badge .badge-ico { font-size: 24px; }
+  .score-card-badge .badge-en { font-size: 13px; }
+  .score-card-badge .badge-count {
+    font-size: 15px;
+    padding: 4px 13px;
+  }
+}
+
 /* Pass/Fail bar chart */
 .passfail-chart {
   background: var(--surface-2);
