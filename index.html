@@ -8378,12 +8378,15 @@ function _renderJDAuditScreen() {
   const gpsDisp = document.getElementById('jd-gps-display');
   if (gpsRow && gpsDisp && a.gps) {
     const g = a.gps;
+    // คำนวณใหม่สดจากพิกัดสาขาปัจจุบัน (ไม่ใช้ snapshot เก่าในเรคคอร์ด) → ผลตรวจเก่าตรงตามพิกัดใหม่
     let nearbyHtml = '';
-    if (g.nearby500 && g.nearby500.length > 0) {
+    const near = findJaedaengBranchesWithinRadius(g.lat, g.lng, 500);
+    if (near.length > 0) {
       nearbyHtml = '<div style="font-size:12px;margin-top:6px;color:var(--text-secondary);">สาขาในระยะ 500 ม.: ' +
-        g.nearby500.map(b => `<b>${escapeHtml(b.name)}</b> · ${fmtDistance(b.distance)}`).join(' · ') + '</div>';
-    } else if (g.nearestBranch) {
-      nearbyHtml = `<div style="font-size:12px;margin-top:6px;color:var(--text-secondary);">ใกล้สุด <b>${escapeHtml(g.nearestBranch)}</b> · ${fmtDistance(g.nearestDistance)} <span style="color:var(--warning);">(เกินรัศมี 500 ม.)</span></div>`;
+        near.map(b => `<b>${escapeHtml(b.name)}</b> · ${fmtDistance(b.distance)}`).join(' · ') + '</div>';
+    } else {
+      const nearest = findNearestJaedaengBranch(g.lat, g.lng);
+      if (nearest) nearbyHtml = `<div style="font-size:12px;margin-top:6px;color:var(--text-secondary);">ใกล้สุด <b>${escapeHtml(nearest.name)}</b> · ${fmtDistance(Math.round(nearest.distance))} <span style="color:var(--warning);">(เกินรัศมี 500 ม.)</span></div>`;
     }
     gpsDisp.innerHTML = `<a href="https://www.google.com/maps?q=${g.lat},${g.lng}" target="_blank" rel="noopener" style="color:var(--primary-dark);text-decoration:underline;">เปิด Google Maps</a> <span style="font-size:11px;color:var(--text-tertiary);">±${Math.round(g.accuracy || 0)} m</span>${nearbyHtml}`;
     gpsRow.style.display = '';
