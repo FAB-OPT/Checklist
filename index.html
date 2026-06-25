@@ -7346,6 +7346,27 @@ async function submitDailyShift() {
   currentDaily.manager = manager;
   currentDaily.submittedAt = new Date().toISOString();
 
+  // กันรูป base64 หลุดเข้า Firestore (เกินลิมิต 1MB) — อัปรูปที่ยังเป็น base64 ขึ้น R2 ก่อนเซฟ
+  if (!testMode) {
+    const _pending = items.reduce((n, it) => n + (it.photos || []).filter(p => typeof p === 'string' && p.startsWith('data:')).length, 0);
+    if (_pending > 0) {
+      showModal('กำลังบันทึก…', `กำลังอัปโหลดรูป ${_pending} รูป กรุณารอสักครู่`);
+      for (const it of items) {
+        if (!it.photos || !it.photos.length) continue;
+        for (let pi = 0; pi < it.photos.length; pi++) {
+          const p = it.photos[pi];
+          if (typeof p === 'string' && p.startsWith('data:')) {
+            try {
+              const blob = await (await fetch(p)).blob();
+              const url = await uploadJDPhotoToR2(blob);
+              if (url) it.photos[pi] = url;
+            } catch (e) { console.warn('R2 upload on submit failed for a photo:', e); }
+          }
+        }
+      }
+    }
+  }
+
   const idx = allDailyChecklists.findIndex(d => d.id === currentDaily.id);
   if (idx >= 0) allDailyChecklists[idx] = currentDaily;
   else allDailyChecklists.push(currentDaily);
@@ -8870,14 +8891,13 @@ async function handleJDPhotoFile(idx, file) {
       item.photos.push(dataUrl);
       jdCameraItemIdx = null;
       _camAfterCapture();
-      if (ctx === 'daily') return;
       if (testMode || !blob) return;
       try {
         const url = await uploadJDPhotoToR2(blob);
         if (item.photos[localSlot] === dataUrl) {
           item.photos[localSlot] = url;
-          _saveJDDraft();
-          renderJaedaengForm();
+          if (ctx === 'daily') { _saveDailyDraft(); renderDailyForm(); }
+          else { _saveJDDraft(); renderJaedaengForm(); }
         }
       } catch (e) { console.warn('R2 upload (native capture) failed:', e); }
     };
@@ -8931,9 +8951,8 @@ async function captureJDPhoto() {
   _camAfterCapture();
   closeJDCamera();
 
-  // Daily เก็บ base64 ในเรคคอร์ดเลย (ไม่อัป R2) · JD อัป R2
-  if (ctx === 'daily') return;
-  // Skip cloud upload while Test Mode is on so test runs leave no R2 objects.
+  // อัปขึ้น R2 ทั้ง Daily และ JD → เก็บแค่ URL ในเรคคอร์ด (กันชนลิมิต 1MB ของ Firestore)
+  // Test Mode: ไม่อัป (กันทิ้งไฟล์ขยะใน R2) — เก็บ base64 ชั่วคราวพอ
   if (testMode || !blob) return;
 
   try {
@@ -8941,8 +8960,8 @@ async function captureJDPhoto() {
     // Replace the inline preview with the R2 URL once the upload lands.
     if (item.photos[localSlot] === dataUrl) {
       item.photos[localSlot] = url;
-      _saveJDDraft();
-      renderJaedaengForm();
+      if (ctx === 'daily') { _saveDailyDraft(); renderDailyForm(); }
+      else { _saveJDDraft(); renderJaedaengForm(); }
     }
   } catch (e) {
     console.warn('R2 upload failed, keeping inline copy', e);
