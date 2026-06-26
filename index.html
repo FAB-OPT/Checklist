@@ -6920,7 +6920,15 @@ function getVisibleDailyChecklists() {
   if (currentUser.role === 'branch') {
     return allDailyChecklists.filter(d => d.branchCode === currentUser.branchCode);
   } else if (currentUser.role === 'bzm') {
-    return allDailyChecklists.filter(d => d.bzm === currentUser.name);
+    // หา branchCode ทุกสาขาที่ BZM คนนี้ดูแล (match ชื่อ/ชื่อเล่นจาก BRANCHES) — ทนทานกว่าการเทียบ d.bzm
+    const myCodes = new Set(
+      BRANCHES.filter(b => b.manager === currentUser.name || b.managerNick === currentUser.nick || b.managerNick === currentUser.name)
+              .map(b => String(b.code))
+    );
+    return allDailyChecklists.filter(d =>
+      myCodes.has(String(d.branchCode)) ||
+      d.bzm === currentUser.name || d.bzm === currentUser.nick   // เผื่อ record เก่า
+    );
   }
   return allDailyChecklists;
 }
@@ -7213,7 +7221,7 @@ async function startDailyShift(shift) {
     id,
     branchCode: _target.code,
     branchName: _target.name,
-    bzm: (currentUser.role === 'branch') ? currentUser.bzm : (_brInfo ? (_brInfo.managerNick || _brInfo.manager || '') : ''),
+    bzm: (currentUser.role === 'branch') ? (currentUser.bzm || '') : (_brInfo ? (_brInfo.manager || _brInfo.managerNick || '') : ''), // เก็บเป็นชื่อ (ไม่ใช่ชื่อเล่น) ให้ตรงกับ filter ของ BZM
     date: today,
     shift,
     manager: existing ? (existing.manager || '') : '',
