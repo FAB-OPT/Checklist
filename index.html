@@ -5001,6 +5001,7 @@ html.fab-sso-pending #login-screen { display: none !important; }
         <input type="date" id="daily-filter-date" onchange="renderDailyList()">
       </div>
       <div class="audit-list" id="daily-list"></div>
+      <div id="daily-history-more" style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:16px;"></div>
     </div>
 
     <!-- DAILY FORM SCREEN -->
@@ -5802,6 +5803,16 @@ const STORAGE_KEY = 'qa_audits_v1';
 const DAILY_STORAGE_KEY = 'qa_daily_v1';
 const AUDITS_COLLECTION = 'audits';
 const DAILY_COLLECTION = 'dailyChecklists';
+// ── Optimize การอ่าน Firestore: incremental sync + หน้าต่าง 90 วัน + branch scope ──
+const DAILY_SYNC_KEY = 'qa_daily_sync_v1';     // เวลา sync ล่าสุด (incremental)
+const DAILY_WINDOW_DAYS = 90;                   // โหลดแรกเอาแค่ N วันล่าสุด (admin)
+const DAILY_SYNC_BUFFER_MS = 10 * 60 * 1000;    // บัฟเฟอร์กันพลาด delta จาก clock skew
+function _daysAgoStr(n) {
+  const d = new Date(Date.now() - n * 86400000);
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${d.getFullYear()}-${m}-${day}`;
+}
 
 function loadLocalAudits() {
   try {
@@ -5814,37 +5825,8 @@ function loadLocalAudits() {
 }
 
 async function loadAudits() {
-  if (firebaseDb) {
-    try {
-      const snap = await firebaseDb.collection(AUDITS_COLLECTION).get();
-      const cloud = snap.docs.map(d => d.data());
-      const cloudIds = new Set(cloud.map(a => a.id));
-
-      // Migrate any localStorage-only audits up to Firestore
-      const local = loadLocalAudits();
-      const toMigrate = local.filter(a => a && a.id && !cloudIds.has(a.id));
-      if (toMigrate.length) {
-        console.log(`Migrating ${toMigrate.length} local audit(s) to Firestore...`);
-        const batch = firebaseDb.batch();
-        toMigrate.forEach(a => {
-          batch.set(firebaseDb.collection(AUDITS_COLLECTION).doc(String(a.id)), a);
-        });
-        try {
-          await batch.commit();
-          cloud.push(...toMigrate);
-          console.log('Migration complete');
-        } catch (e) {
-          console.warn('Migration failed', e);
-        }
-      }
-
-      allAudits = cloud;
-      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(allAudits)); } catch (_) {}
-      return;
-    } catch (e) {
-      console.warn('Firestore load failed, falling back to localStorage.', e);
-    }
-  }
+  // ระบบ OSS ถูกถอดออกแล้ว — ไม่มีหน้าจอไหนใช้ allAudits → ไม่ต้องอ่านจาก Firestore
+  // (ประหยัดการอ่านทั้ง collection ทุกครั้งที่เปิดแอป) ใช้ cache เครื่องพอ
   allAudits = loadLocalAudits();
 }
 
@@ -5902,22 +5884,78 @@ function saveDailyLocal() {
 }
 
 async function loadDailyChecklists() {
-  if (firebaseDb) {
+  const cache = loadLocalDaily();
+  allDailyChecklists = cache.filter(d => d && !d.deleted);
+  if (!firebaseDb) return;
+
+  const isBranch = currentUser && currentUser.role === 'branch';
+  const myBranch = isBranch ? String(currentUser.branchCode || '') : '';
+  const _advanceSync = () => {
+    try { localStorage.setItem(DAILY_SYNC_KEY, new Date(Date.now() - DAILY_SYNC_BUFFER_MS).toISOString()); } catch (_) {}
+  };
+  const _mergeFetched = (fetched) => {
+    const map = new Map(cache.map(d => [String(d.id), d]));
+    fetched.forEach(d => { if (d && d.id != null) map.set(String(d.id), d); });
+    allDailyChecklists = Array.from(map.values()).filter(d => d && !d.deleted);
+    saveDailyLocal();
+  };
+
+  try {
+    const lastSync = localStorage.getItem(DAILY_SYNC_KEY) || '';
+    let snap;
+    if (!lastSync || !cache.length) {
+      // โหลดแรก: จำกัดปริมาณ — สาขาเอาเฉพาะของตัวเอง · อื่นๆ เอา 90 วันล่าสุด
+      if (isBranch && myBranch) {
+        snap = await firebaseDb.collection(DAILY_COLLECTION).where('branchCode', '==', myBranch).get();
+      } else {
+        snap = await firebaseDb.collection(DAILY_COLLECTION).where('date', '>=', _daysAgoStr(DAILY_WINDOW_DAYS)).get();
+      }
+    } else {
+      // incremental: เฉพาะที่เปลี่ยนหลัง sync ล่าสุด (อ่านน้อยมาก)
+      snap = await firebaseDb.collection(DAILY_COLLECTION).where('updatedAt', '>', lastSync).get();
+    }
+    let fetched = snap.docs.map(d => d.data());
+    if (isBranch && myBranch) fetched = fetched.filter(d => String(d.branchCode) === myBranch); // กรองซ้ำ (เผื่อ incremental ดึงทุกสาขา)
+    _mergeFetched(fetched);
+    _advanceSync();
+  } catch (e) {
+    // กันพลาด: ถ้า query/ดัชนีมีปัญหา → ถอยไปโหลดทั้งหมดแบบเดิม (ยังทำงานได้)
+    console.warn('Daily incremental load failed, fallback to full get', e);
     try {
       const snap = await firebaseDb.collection(DAILY_COLLECTION).get();
-      allDailyChecklists = snap.docs.map(d => d.data());
+      let all = snap.docs.map(d => d.data()).filter(d => d && !d.deleted);
+      if (isBranch && myBranch) all = all.filter(d => String(d.branchCode) === myBranch);
+      allDailyChecklists = all;
       saveDailyLocal();
-      return;
-    } catch (e) {
-      console.warn('Daily load failed, using local cache', e);
+      _advanceSync();
+    } catch (e2) {
+      console.warn('Daily full load failed, using cache', e2);
     }
   }
-  allDailyChecklists = loadLocalDaily();
+}
+
+// ปุ่ม "ดูย้อนหลังทั้งหมด" — โหลดข้อมูลเก่ากว่าหน้าต่าง 90 วัน (เรียกตอนต้องใช้เท่านั้น)
+let _dailyFullLoaded = false;
+async function loadAllDailyHistory() {
+  if (!firebaseDb) return;
+  try {
+    const snap = await firebaseDb.collection(DAILY_COLLECTION).get();
+    const cache = loadLocalDaily();
+    const map = new Map(cache.map(d => [String(d.id), d]));
+    snap.docs.map(d => d.data()).forEach(d => { if (d && d.id != null) map.set(String(d.id), d); });
+    let all = Array.from(map.values()).filter(d => d && !d.deleted);
+    const isBranch = currentUser && currentUser.role === 'branch';
+    if (isBranch) all = all.filter(d => String(d.branchCode) === String(currentUser.branchCode || ''));
+    allDailyChecklists = all;
+    saveDailyLocal();
+    _dailyFullLoaded = true;
+  } catch (e) { console.warn('loadAllDailyHistory failed', e); }
 }
 
 async function saveDailyToBackend(daily) {
   if (testMode) return;
   if (!firebaseDb || !daily || !daily.id) return;
+  daily.updatedAt = new Date().toISOString(); // จำเป็นต่อ incremental sync
   try {
     await firebaseDb.collection(DAILY_COLLECTION).doc(String(daily.id)).set(daily);
   } catch (e) {
@@ -6974,6 +7012,7 @@ function renderDailyList() {
   const dates = Object.keys(byDate).sort((a, b) => b.localeCompare(a));
 
   const container = document.getElementById('daily-list');
+  _renderDailyMoreButtons();
   if (!dates.length) {
     container.innerHTML = '<div class="daily-empty"><span class="material-symbols-rounded">event_busy</span><div>ยังไม่มีประวัติ</div></div>';
     return;
@@ -7052,6 +7091,63 @@ function renderDailyList() {
       <div class="daily-history-cards">${cards}</div>
     </div>`;
   }).join('');
+}
+
+// ── ปุ่มท้ายหน้าประวัติ: ดูย้อนหลังทั้งหมด + Archive (admin) ──
+function _renderDailyMoreButtons() {
+  const el = document.getElementById('daily-history-more');
+  if (!el) return;
+  let html = '';
+  if (!_dailyFullLoaded && firebaseDb) {
+    html += `<button class="btn btn-secondary" onclick="_onLoadAllDaily(this)"><span class="material-symbols-rounded">history</span> ดูย้อนหลังทั้งหมด</button>`;
+  }
+  if (currentUser && currentUser.role === 'admin' && firebaseDb) {
+    html += `<button class="btn btn-secondary" onclick="archiveOldDaily()"><span class="material-symbols-rounded">archive</span> Archive ข้อมูลเก่า</button>`;
+  }
+  el.innerHTML = html;
+}
+async function _onLoadAllDaily(btn) {
+  if (btn) { btn.disabled = true; btn.innerHTML = 'กำลังโหลด…'; }
+  await loadAllDailyHistory();
+  renderDailyList();
+}
+
+// ── Archive: ย้ายผลตรวจเก่า (> 1 ปี) เป็นไฟล์ JSON แล้วลบออกจาก Firestore (กัน 1GB เต็ม) ──
+const DAILY_ARCHIVE_DAYS = 365;
+async function archiveOldDaily() {
+  if (!firebaseDb) { showModal('ยังไม่พร้อม', 'ยังไม่ได้เชื่อมต่อฐานข้อมูล'); return; }
+  if (!currentUser || currentUser.role !== 'admin') { showModal('ไม่มีสิทธิ์', 'เฉพาะ Admin เท่านั้น'); return; }
+  const cutoff = _daysAgoStr(DAILY_ARCHIVE_DAYS);
+  const ok = await showConfirm('Archive ข้อมูลเก่า?',
+    `ดึงผลตรวจที่เก่ากว่า <b>${cutoff}</b> มาเก็บเป็นไฟล์ JSON (ดาวน์โหลด) แล้วลบออกจากฐานข้อมูล<br>รูปยังอยู่ R2 ตามเดิม`,
+    { okLabel: 'ดำเนินการ', cancelLabel: 'ยกเลิก', danger: true });
+  if (!ok) return;
+  try {
+    showModal('กำลัง Archive…', 'กำลังดึงข้อมูลเก่า กรุณารอสักครู่');
+    const snap = await firebaseDb.collection(DAILY_COLLECTION).where('date', '<', cutoff).get();
+    const docs = snap.docs.map(d => d.data());
+    if (!docs.length) { showModal('ไม่มีข้อมูลเก่า', `ไม่พบผลตรวจที่เก่ากว่า ${cutoff}`); return; }
+    const blob = new Blob([JSON.stringify(docs, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `daily-archive-ก่อน-${cutoff}.json`; a.click();
+    URL.revokeObjectURL(url);
+    let i = 0;
+    while (i < snap.docs.length) {
+      const batch = firebaseDb.batch();
+      snap.docs.slice(i, i + 400).forEach(doc => batch.delete(doc.ref));
+      await batch.commit();
+      i += 400;
+    }
+    const archivedIds = new Set(docs.map(d => String(d.id)));
+    allDailyChecklists = allDailyChecklists.filter(d => !archivedIds.has(String(d.id)));
+    saveDailyLocal();
+    showModal('Archive สำเร็จ', `ดาวน์โหลด ${docs.length} รายการ และลบออกจากฐานข้อมูลแล้ว — เก็บไฟล์ JSON ไว้ให้ดีนะครับ`);
+    renderDailyList();
+  } catch (e) {
+    console.warn('archive failed', e);
+    showModal('ผิดพลาด', 'Archive ไม่สำเร็จ: ' + (e && e.message ? e.message : e));
+  }
 }
 
 async function startDailyShift(shift) {
@@ -7345,6 +7441,7 @@ async function submitDailyShift() {
   if (missingPhoto.length > 0) { _scrollTo(missingPhoto[0], 'ถ่ายรูปไม่ครบ', `ยังมีข้อที่ต้องถ่ายรูปอีก ${missingPhoto.length} ข้อ`); return; }
   currentDaily.manager = manager;
   currentDaily.submittedAt = new Date().toISOString();
+  currentDaily.updatedAt = currentDaily.submittedAt; // incremental sync
 
   // กันรูป base64 หลุดเข้า Firestore (เกินลิมิต 1MB) — อัปรูปที่ยังเป็น base64 ขึ้น R2 ก่อนเซฟ
   if (!testMode) {
@@ -7456,10 +7553,16 @@ async function deleteDailyChecklist(id) {
     'ลบ <b>' + (d.shift === 'close' ? 'ปิดร้าน' : 'เปิดร้าน') + '</b> · ' + escapeHtml(branchLabel(d.branchCode, d.branchName)) + ' · ' + escapeHtml(fmtDateDMY(d.date)) + ' ออกถาวร?',
     { okLabel: 'ลบ', cancelLabel: 'ยกเลิก', danger: true });
   if (!ok) return;
+  // soft-delete: ตั้ง deleted+updatedAt แล้วเขียนทับ → เครื่องอื่นจะ sync การลบผ่าน incremental
   allDailyChecklists = allDailyChecklists.filter(x => x.id !== id);
   saveDailyLocal();
-  try { if (firebaseDb && !testMode) await firebaseDb.collection(DAILY_COLLECTION).doc(String(id)).delete(); }
-  catch (e) { console.warn('Daily delete failed', e); }
+  try {
+    if (firebaseDb && !testMode) {
+      d.deleted = true;
+      d.updatedAt = new Date().toISOString();
+      await firebaseDb.collection(DAILY_COLLECTION).doc(String(id)).set(d);
+    }
+  } catch (e) { console.warn('Daily soft-delete failed', e); }
   showModal('ลบแล้ว', 'ลบผลตรวจรายวันเรียบร้อย');
   showDailyHub();
 }
