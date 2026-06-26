@@ -5884,56 +5884,19 @@ function saveDailyLocal() {
 }
 
 async function loadDailyChecklists() {
-  const cache = loadLocalDaily();
-  allDailyChecklists = cache.filter(d => d && !d.deleted);
-  if (!firebaseDb) return;
-
-  const isBranch = currentUser && currentUser.role === 'branch';
-  const myBranch = isBranch ? String(currentUser.branchCode || '') : '';
-  const _advanceSync = () => {
-    try { localStorage.setItem(DAILY_SYNC_KEY, new Date(Date.now() - DAILY_SYNC_BUFFER_MS).toISOString()); } catch (_) {}
-  };
-  const _mergeFetched = (fetched) => {
-    const map = new Map(cache.map(d => [String(d.id), d]));
-    fetched.forEach(d => { if (d && d.id != null) map.set(String(d.id), d); });
-    allDailyChecklists = Array.from(map.values()).filter(d => d && !d.deleted);
-    saveDailyLocal();
-  };
-
-  try {
-    const lastSync = localStorage.getItem(DAILY_SYNC_KEY) || '';
-    const firstLoad = (!lastSync || !cache.length);
-    let snap;
-    if (firstLoad) {
-      // โหลดแรก: กรองด้วย "วันที่" อย่างเดียว (field เชื่อถือได้ ไม่มีปัญหาชนิดข้อมูล) เอา 90 วันล่าสุด
-      snap = await firebaseDb.collection(DAILY_COLLECTION).where('date', '>=', _daysAgoStr(DAILY_WINDOW_DAYS)).get();
-    } else {
-      // incremental: เฉพาะที่เปลี่ยนหลัง sync ล่าสุด (อ่านน้อยมาก)
-      snap = await firebaseDb.collection(DAILY_COLLECTION).where('updatedAt', '>', lastSync).get();
-    }
-    let fetched = snap.docs.map(d => d.data());
-    // safety net: โหลดแรกแล้วได้ 0 รายการ → ดึงทั้งหมดกันข้อมูลหาย (เผื่อ field date ผิดรูป/ข้อมูลเก่ากว่า 90 วัน)
-    if (firstLoad && fetched.length === 0) {
-      const full = await firebaseDb.collection(DAILY_COLLECTION).get();
-      fetched = full.docs.map(d => d.data());
-    }
-    if (isBranch && myBranch) fetched = fetched.filter(d => String(d.branchCode) === myBranch); // กรองสาขาฝั่ง client (กันชนิดข้อมูลไม่ตรง)
-    _mergeFetched(fetched);
-    _advanceSync();
-  } catch (e) {
-    // กันพลาด: ถ้า query/ดัชนีมีปัญหา → ถอยไปโหลดทั้งหมดแบบเดิม (ยังทำงานได้)
-    console.warn('Daily incremental load failed, fallback to full get', e);
+  // โหลดทั้งหมด (เสถียร ทำงานได้ทุกเครื่อง) + กรอง soft-delete ออก
+  if (firebaseDb) {
     try {
       const snap = await firebaseDb.collection(DAILY_COLLECTION).get();
-      let all = snap.docs.map(d => d.data()).filter(d => d && !d.deleted);
-      if (isBranch && myBranch) all = all.filter(d => String(d.branchCode) === myBranch);
-      allDailyChecklists = all;
+      allDailyChecklists = snap.docs.map(d => d.data()).filter(d => d && !d.deleted);
       saveDailyLocal();
-      _advanceSync();
-    } catch (e2) {
-      console.warn('Daily full load failed, using cache', e2);
+      _dailyFullLoaded = true;
+      return;
+    } catch (e) {
+      console.warn('Daily load failed, using local cache', e);
     }
   }
+  allDailyChecklists = loadLocalDaily().filter(d => d && !d.deleted);
 }
 
 // ปุ่ม "ดูย้อนหลังทั้งหมด" — โหลดข้อมูลเก่ากว่าหน้าต่าง 90 วัน (เรียกตอนต้องใช้เท่านั้น)
