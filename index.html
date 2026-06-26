@@ -5884,19 +5884,46 @@ function saveDailyLocal() {
 }
 
 async function loadDailyChecklists() {
-  // โหลดทั้งหมด (เสถียร ทำงานได้ทุกเครื่อง) + กรอง soft-delete ออก
-  if (firebaseDb) {
-    try {
-      const snap = await firebaseDb.collection(DAILY_COLLECTION).get();
-      allDailyChecklists = snap.docs.map(d => d.data()).filter(d => d && !d.deleted);
-      saveDailyLocal();
-      _dailyFullLoaded = true;
-      return;
-    } catch (e) {
-      console.warn('Daily load failed, using local cache', e);
-    }
+  // MERGE: รวม cloud + local (ห้ามทับของในเครื่องด้วยของว่าง) — กันข้อมูลที่เซฟ cloud ไม่สำเร็จหาย
+  const local = loadLocalDaily().filter(d => d && !d.deleted);
+  allDailyChecklists = local; // แสดง local ก่อน กันจอว่างระหว่างโหลด
+  if (!firebaseDb) return;
+  try {
+    const snap = await firebaseDb.collection(DAILY_COLLECTION).get();
+    const cloud = snap.docs.map(d => d.data());
+    const cloudIds = new Set(cloud.map(d => String(d.id)));
+    const map = new Map(local.map(d => [String(d.id), d]));
+    cloud.forEach(d => { if (d && d.id != null) map.set(String(d.id), d); }); // cloud ทับ local ตาม id
+    allDailyChecklists = Array.from(map.values()).filter(d => d && !d.deleted);
+    saveDailyLocal();
+    _dailyFullLoaded = true;
+    // กู้ข้อมูลที่ค้างเฉพาะเครื่อง (เคยเซฟ cloud ไม่สำเร็จ เช่นรูป base64 ใหญ่) → ดันขึ้น cloud
+    const localOnly = local.filter(d => d && d.id != null && !cloudIds.has(String(d.id)) && !d.deleted);
+    if (localOnly.length) _resyncLocalOnlyDaily(localOnly);
+  } catch (e) {
+    console.warn('Daily load failed, using local cache', e);
   }
-  allDailyChecklists = loadLocalDaily().filter(d => d && !d.deleted);
+}
+
+// กู้/ดันผลตรวจที่อยู่แค่ในเครื่อง (เซฟ cloud ไม่สำเร็จ) ขึ้น Firestore — อัปรูป base64 → R2 ก่อนกันชน 1MB
+async function _resyncLocalOnlyDaily(records) {
+  for (const d of records) {
+    try {
+      if (!testMode) {
+        for (const it of (d.items || [])) {
+          if (!it || !it.photos) continue;
+          for (let i = 0; i < it.photos.length; i++) {
+            const p = it.photos[i];
+            if (typeof p === 'string' && p.startsWith('data:')) {
+              try { const blob = await (await fetch(p)).blob(); const url = await uploadJDPhotoToR2(blob); if (url) it.photos[i] = url; } catch (_) {}
+            }
+          }
+        }
+      }
+      await saveDailyToBackend(d);
+    } catch (e) { console.warn('resync daily failed', d && d.id, e); }
+  }
+  try { saveDailyLocal(); } catch (_) {}
 }
 
 // ปุ่ม "ดูย้อนหลังทั้งหมด" — โหลดข้อมูลเก่ากว่าหน้าต่าง 90 วัน (เรียกตอนต้องใช้เท่านั้น)
