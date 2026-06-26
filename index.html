@@ -5902,20 +5902,22 @@ async function loadDailyChecklists() {
 
   try {
     const lastSync = localStorage.getItem(DAILY_SYNC_KEY) || '';
+    const firstLoad = (!lastSync || !cache.length);
     let snap;
-    if (!lastSync || !cache.length) {
-      // โหลดแรก: จำกัดปริมาณ — สาขาเอาเฉพาะของตัวเอง · อื่นๆ เอา 90 วันล่าสุด
-      if (isBranch && myBranch) {
-        snap = await firebaseDb.collection(DAILY_COLLECTION).where('branchCode', '==', myBranch).get();
-      } else {
-        snap = await firebaseDb.collection(DAILY_COLLECTION).where('date', '>=', _daysAgoStr(DAILY_WINDOW_DAYS)).get();
-      }
+    if (firstLoad) {
+      // โหลดแรก: กรองด้วย "วันที่" อย่างเดียว (field เชื่อถือได้ ไม่มีปัญหาชนิดข้อมูล) เอา 90 วันล่าสุด
+      snap = await firebaseDb.collection(DAILY_COLLECTION).where('date', '>=', _daysAgoStr(DAILY_WINDOW_DAYS)).get();
     } else {
       // incremental: เฉพาะที่เปลี่ยนหลัง sync ล่าสุด (อ่านน้อยมาก)
       snap = await firebaseDb.collection(DAILY_COLLECTION).where('updatedAt', '>', lastSync).get();
     }
     let fetched = snap.docs.map(d => d.data());
-    if (isBranch && myBranch) fetched = fetched.filter(d => String(d.branchCode) === myBranch); // กรองซ้ำ (เผื่อ incremental ดึงทุกสาขา)
+    // safety net: โหลดแรกแล้วได้ 0 รายการ → ดึงทั้งหมดกันข้อมูลหาย (เผื่อ field date ผิดรูป/ข้อมูลเก่ากว่า 90 วัน)
+    if (firstLoad && fetched.length === 0) {
+      const full = await firebaseDb.collection(DAILY_COLLECTION).get();
+      fetched = full.docs.map(d => d.data());
+    }
+    if (isBranch && myBranch) fetched = fetched.filter(d => String(d.branchCode) === myBranch); // กรองสาขาฝั่ง client (กันชนิดข้อมูลไม่ตรง)
     _mergeFetched(fetched);
     _advanceSync();
   } catch (e) {
