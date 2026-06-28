@@ -6120,7 +6120,13 @@ async function loadJaedaengAudits() {
       // Try to re-upload local-only records in the background
       if (localOnly.length > 0) {
         console.warn(`Found ${localOnly.length} local-only Jae Daeng audits — re-syncing to Firestore`);
-        localOnly.forEach(r => saveJaedaengToBackend(r));
+        (async () => {
+          for (const r of localOnly) {
+            try { await _uploadItemBase64ToR2(r.items); } catch (_) {}   // อัปรูป base64 ค้าง→R2 ก่อน (กันเอกสารใหญ่เกิน 1MB)
+            saveJaedaengToBackend(r);
+          }
+          saveJaedaengLocal();
+        })();
       }
       pruneOldJaedaengPhotos();
       return;
@@ -8874,6 +8880,21 @@ async function uploadJDPhotoToR2(blob) {
   return j.url;
 }
 
+// อัปรูปที่ยังเป็น base64 ใน items ขึ้น R2 แล้วแทนที่ด้วย URL — กันเอกสารเกิน 1MB ตอนเซฟ Firestore
+async function _uploadItemBase64ToR2(items) {
+  if (testMode || !Array.isArray(items)) return;
+  for (const it of items) {
+    if (!it || !it.photos) continue;
+    for (let i = 0; i < it.photos.length; i++) {
+      const p = it.photos[i];
+      if (typeof p === 'string' && p.startsWith('data:')) {
+        try { const blob = await (await fetch(p)).blob(); const url = await uploadJDPhotoToR2(blob); if (url) it.photos[i] = url; }
+        catch (e) { console.warn('base64→R2 failed', e); }
+      }
+    }
+  }
+}
+
 let _camCtx = 'jd';   // 'jd' = currentJDAudit · 'daily' = currentDaily
 function _camTargetItem(idx) {
   return _camCtx === 'daily' ? (currentDaily && currentDaily.items[idx]) : (currentJDAudit && currentJDAudit.items[idx]);
@@ -9178,6 +9199,12 @@ async function submitJaedaengAudit() {
     const firstPendingIdx = items.findIndex(i => i.status !== 'pass' && i.status !== 'fail' && i.status !== 'na');
     showModal('ตอบไม่ครบทุกข้อ', `มี ${pending} ข้อที่ยังไม่ตอบ — กดตกลงเพื่อไปข้อแรกที่ยังไม่ตอบ`, () => scrollToJDItem(firstPendingIdx));
     return;
+  }
+  // กันรูป base64 หลุดเข้า Firestore (เกิน 1MB) — อัปขึ้น R2 ให้ครบก่อนเซฟ (เผื่อตอนถ่ายเน็ตหลุด)
+  const _pendingB64 = items.reduce((n, it) => n + ((it.photos || []).filter(p => typeof p === 'string' && p.startsWith('data:')).length), 0);
+  if (_pendingB64 > 0 && !testMode) {
+    showModal('กำลังบันทึก…', `กำลังอัปโหลดรูป ${_pendingB64} รูป กรุณารอสักครู่`);
+    await _uploadItemBase64ToR2(items);
   }
   const denom = totalCount - naCount;
   const passPct = denom > 0 ? (passCount / denom) * 100 : 0;
