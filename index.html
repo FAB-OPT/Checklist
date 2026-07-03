@@ -6205,6 +6205,45 @@ function notifyJDToTelegram(r) {
   } catch (e) {}
 }
 
+// URL Web App (Apps Script) ของกลุ่ม Telegram "ซานตาเฟ่" — แจ้งเตือนทันทีเมื่อสาขาส่ง Daily ที่มีข้อไม่ผ่าน
+// วาง URL /exec ที่ได้จาก Deploy → Web app (เว้นว่าง = ปิดการแจ้งเตือนทันที)
+const SF_TG_NOTIFY_URL = '';
+function notifyDailyToTelegram(r) {
+  if (!SF_TG_NOTIFY_URL || !r) return;
+  try {
+    const items = r.items || [];
+    const failed = items
+      .filter(it => it && it.status === 'fail')
+      .map(it => ({ section: it.section || '', num: it.num || '', text: it.text || '', note: it.note || '' }));
+    if (!failed.length) return; // แจ้งเฉพาะเมื่อมีข้อไม่ผ่าน
+    // รูปหลักฐานเฉพาะข้อที่ไม่ผ่าน (สูงสุด 10)
+    const failPhotos = [];
+    items.forEach(it => { if (it && it.status === 'fail') (it.photos || []).forEach(u => { if (typeof u === 'string' && u) failPhotos.push(u); }); });
+    const photos = [...new Set(failPhotos)].slice(0, 10);
+    const time = r.submittedAt ? new Date(r.submittedAt).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) : (r.time || '');
+    fetch(SF_TG_NOTIFY_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({
+        brand: 'santafe',
+        shift: r.shift || '',                      // 'open' | 'close'
+        branchCode: r.branchCode || '', branchName: r.branchName || '',
+        storeName: branchLabel(r.branchCode, r.branchName),
+        bzm: r.bzm || '', manager: r.manager || '',
+        submittedBy: r.submittedBy || '', submittedByName: r.submittedByName || '',
+        date: r.date || '', time: time,
+        late: !!r.late, lateReason: r.lateReason || '',
+        passCount: items.filter(it => it && it.status === 'pass').length,
+        failCount: failed.length,
+        naCount: items.filter(it => it && it.status === 'na').length,
+        totalCount: items.length,
+        failed: failed, photos: photos
+      })
+    });
+  } catch (e) {}
+}
+
 function selectBrand(brand) {
   // SSO admin who's just here to pick a brand — skip PIN and go to the app.
   if (pendingSessionUser) {
@@ -7502,6 +7541,7 @@ async function submitDailyShift() {
   saveDailyLocal();
   const okCloud = await saveDailyToBackend(currentDaily);
   if (okCloud) { delete currentDaily._pendingSync; saveDailyLocal(); }
+  if (!wasEdit) notifyDailyToTelegram(currentDaily); // แจ้ง Telegram ทันทีถ้ามีข้อไม่ผ่าน (ไม่แจ้งซ้ำตอนแก้ไข)
   showModal(wasEdit ? 'แก้ไขสำเร็จ' : 'บันทึกสำเร็จ', `${wasEdit ? 'แก้ไข' : 'บันทึก'} ${currentDaily.shift === 'open' ? 'Open' : 'Close'} shift วันที่ ${currentDaily.date} เรียบร้อยแล้ว`);
   currentDaily = null;
   showDailyHub();
