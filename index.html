@@ -5883,23 +5883,41 @@ function saveDailyLocal() {
   try { localStorage.setItem(DAILY_STORAGE_KEY, JSON.stringify(allDailyChecklists)); } catch (_) {}
 }
 
+// ── โหลดแบบประหยัดโควตา (incremental) เพื่อรองรับหลายสาขาในระยะยาว ──
+const DAILY_BACKFILL_DAYS = 90;                    // เครื่องใหม่/ล้างแคช: โหลดย้อนหลังกี่วัน (ครั้งเดียว)
+const DAILY_SYNC_OVERLAP_MS = 6 * 60 * 60 * 1000;  // เผื่อนาฬิกาเครื่องคลาดกัน 6 ชม. กันข้อมูลตกหล่น
+function _maxDailyUpdatedAt(list) {
+  let m = '';
+  for (const d of list) { if (d && d.updatedAt && d.updatedAt > m) m = d.updatedAt; }
+  return m;
+}
+
 async function loadDailyChecklists() {
   // MERGE: รวม cloud + local (ห้ามทับของในเครื่องด้วยของว่าง) — กันข้อมูลที่เซฟ cloud ไม่สำเร็จหาย
-  const local = loadLocalDaily().filter(d => d && !d.deleted);
-  allDailyChecklists = local; // แสดง local ก่อน กันจอว่างระหว่างโหลด
+  const local = loadLocalDaily();
+  allDailyChecklists = local.filter(d => d && !d.deleted); // แสดง local ก่อน กันจอว่างระหว่างโหลด
   if (!firebaseDb) return;
+  // แมพเก็บทุก record ในเครื่อง (รวม deleted) ตาม id ไว้ merge
+  const map = new Map(local.filter(d => d && d.id != null).map(d => [String(d.id), d]));
+  const cursor = _maxDailyUpdatedAt(local);
   try {
-    const snap = await firebaseDb.collection(DAILY_COLLECTION).get();
-    const cloud = snap.docs.map(d => d.data());
-    const cloudIds = new Set(cloud.map(d => String(d.id)));
-    const map = new Map(local.map(d => [String(d.id), d]));
-    cloud.forEach(d => { if (d && d.id != null) map.set(String(d.id), d); }); // cloud ทับ local ตาม id
+    let snap;
+    if (cursor) {
+      // เครื่องนี้มีแคชแล้ว → ดึงเฉพาะที่เปลี่ยนตั้งแต่ครั้งก่อน (incremental) + เผื่อ overlap กันตกหล่น
+      const since = new Date(new Date(cursor).getTime() - DAILY_SYNC_OVERLAP_MS).toISOString();
+      snap = await firebaseDb.collection(DAILY_COLLECTION).where('updatedAt', '>', since).get();
+    } else {
+      // เครื่องใหม่/ล้างแคช → โหลดย้อนหลัง N วันครั้งเดียว แทนดึงทั้งก้อน (คุมจำนวนอ่าน)
+      const since = _daysAgoStr(DAILY_BACKFILL_DAYS);
+      snap = await firebaseDb.collection(DAILY_COLLECTION).where('date', '>=', since).get();
+    }
+    snap.docs.map(d => d.data()).forEach(d => { if (d && d.id != null) map.set(String(d.id), d); }); // cloud ทับ local ตาม id
     allDailyChecklists = Array.from(map.values()).filter(d => d && !d.deleted);
     saveDailyLocal();
-    _dailyFullLoaded = true;
+    _dailyFullLoaded = false; // ยังโหลดไม่ครบทุกวัน → ปุ่ม "ดูย้อนหลังทั้งหมด" ยังใช้ได้
     // กู้ข้อมูลที่ค้างเฉพาะเครื่อง (เคยเซฟ cloud ไม่สำเร็จ เช่นรูป base64 ใหญ่) → ดันขึ้น cloud
-    const localOnly = local.filter(d => d && d.id != null && !cloudIds.has(String(d.id)) && !d.deleted);
-    if (localOnly.length) _resyncLocalOnlyDaily(localOnly);
+    const pending = local.filter(d => d && d.id != null && d._pendingSync && !d.deleted);
+    if (pending.length) _resyncLocalOnlyDaily(pending);
   } catch (e) {
     console.warn('Daily load failed, using local cache', e);
   }
@@ -5920,7 +5938,8 @@ async function _resyncLocalOnlyDaily(records) {
           }
         }
       }
-      await saveDailyToBackend(d);
+      const ok = await saveDailyToBackend(d);
+      if (ok) delete d._pendingSync;
     } catch (e) { console.warn('resync daily failed', d && d.id, e); }
   }
   try { saveDailyLocal(); } catch (_) {}
@@ -5945,13 +5964,15 @@ async function loadAllDailyHistory() {
 }
 
 async function saveDailyToBackend(daily) {
-  if (testMode) return;
-  if (!firebaseDb || !daily || !daily.id) return;
+  if (testMode) return true;
+  if (!firebaseDb || !daily || !daily.id) return false;
   daily.updatedAt = new Date().toISOString(); // จำเป็นต่อ incremental sync
   try {
     await firebaseDb.collection(DAILY_COLLECTION).doc(String(daily.id)).set(daily);
+    return true;
   } catch (e) {
     console.warn('Daily Firestore save failed', e);
+    return false;
   }
 }
 
@@ -7477,7 +7498,10 @@ async function submitDailyShift() {
 
   const wasEdit = !!(idx >= 0);
   _clearDailyDraft();
-  await saveDailyToBackend(currentDaily);
+  currentDaily._pendingSync = true; // ยังไม่ยืนยันขึ้น cloud — กันหายถ้าเน็ตหลุดตอนเซฟ
+  saveDailyLocal();
+  const okCloud = await saveDailyToBackend(currentDaily);
+  if (okCloud) { delete currentDaily._pendingSync; saveDailyLocal(); }
   showModal(wasEdit ? 'แก้ไขสำเร็จ' : 'บันทึกสำเร็จ', `${wasEdit ? 'แก้ไข' : 'บันทึก'} ${currentDaily.shift === 'open' ? 'Open' : 'Close'} shift วันที่ ${currentDaily.date} เรียบร้อยแล้ว`);
   currentDaily = null;
   showDailyHub();
