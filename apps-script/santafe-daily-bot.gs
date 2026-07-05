@@ -113,7 +113,7 @@ function buildRoundReport(shift) {
     if (f.length) fails.push({ code: d.branchCode, name: d.branchName, count: f.length, items: f });
   });
 
-  var head = shift === 'close' ? '🌙 <b>สรุปรอบปิดร้าน (Close)</b>' : '🌅 <b>สรุปรอบเปิดร้าน (Open)</b>';
+  var head = shift === 'close' ? '🌙 <b>สรุปเช็คลิสต์รอบปิด (Close)</b>' : '🌅 <b>สรุปเช็คลิสต์รอบเปิด (Open)</b>';
   var timeTxt = shift === 'close' ? '22:00' : '11:00';
   var L = [];
   L.push(head);
