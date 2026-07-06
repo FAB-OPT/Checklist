@@ -3,7 +3,7 @@
  *
  * ทำ 2 อย่าง:
  *   ①  doPost()  — รับข้อมูลจากแอปทันทีที่สาขาส่งผลตรวจที่ "มีข้อไม่ผ่าน" → ส่งเข้ากลุ่ม
- *   ②  reportOpen()/reportClose() — ตั้งเวลา 11:00 (เปิด) และ 22:00 (ปิด)
+ *   ②  reportOpen()/reportClose() — ตั้งเวลา 11:30 (เปิด) และ 22:00 (ปิด)
  *        อ่านผลตรวจวันนี้จาก Firestore แล้วสรุป:
  *          - รายชื่อสาขาที่ "ยังไม่ส่ง" รอบนั้น
  *          - สาขาที่ "มีข้อไม่ผ่าน" + จำนวนข้อ (พร้อมรายละเอียด)
@@ -18,7 +18,7 @@
  * 3) Deploy → New deployment → Web app
  *      Execute as = Me · Who has access = Anyone
  *      คัดลอก URL ที่ลงท้าย /exec ไปวางในตัวแปร SF_TG_NOTIFY_URL ใน index.html
- * 4) รันฟังก์ชัน setupTriggers() หนึ่งครั้ง (กดอนุญาตสิทธิ์) → สร้างทริกเกอร์ 11:00 และ 22:00 ให้อัตโนมัติ
+ * 4) รันฟังก์ชัน setupTriggers() หนึ่งครั้ง (กดอนุญาตสิทธิ์) → สร้างทริกเกอร์ 11:30 และ 22:00 ให้อัตโนมัติ
  * 5) ทดสอบ: รัน testReportOpen() / testReportClose() ดูว่าข้อความเข้ากลุ่มถูกต้อง
  * ─────────────────────────────────────────────────────────────────────
  */
@@ -87,7 +87,7 @@ function doPost(e) {
   }
 }
 
-// ───────────────────────── ② สรุปตามรอบเวลา (11:00 / 22:00) ─────────────────────────
+// ───────────────────────── ② สรุปตามรอบเวลา (11:30 / 22:00) ─────────────────────────
 function reportOpen()  { buildRoundReport('open'); }
 function reportClose() { buildRoundReport('close'); }
 
@@ -116,7 +116,7 @@ function buildRoundReport(shift) {
   // ── ข้อความสรุปหลัก: รายชื่อสาขาที่ยังไม่ส่ง + ยอดรวม ──
   var head = shift === 'close' ? '🌙 <b>สรุปเช็คลิสต์รอบปิด (Close)</b>' : '🌅 <b>สรุปเช็คลิสต์รอบเปิด (Open)</b>';
   var roundTxt = shift === 'close' ? 'รอบปิด' : 'รอบเปิด';
-  var timeTxt = shift === 'close' ? '22:00' : '11:00';
+  var timeTxt = shift === 'close' ? '22:00' : '11:30';
   var L = [];
   L.push(head);
   L.push('📅 ' + today + '   ⏰ ' + timeTxt + ' น.');
@@ -241,7 +241,7 @@ function setupTriggers() {
     var f = t.getHandlerFunction();
     if (f === 'reportOpen' || f === 'reportClose') ScriptApp.deleteTrigger(t);
   });
-  ScriptApp.newTrigger('reportOpen').timeBased().everyDays(1).atHour(11).nearMinute(0).create();
+  ScriptApp.newTrigger('reportOpen').timeBased().everyDays(1).atHour(11).nearMinute(30).create();
   ScriptApp.newTrigger('reportClose').timeBased().everyDays(1).atHour(22).nearMinute(0).create();
 }
 function testReportOpen()  { reportOpen(); }

@@ -6854,15 +6854,16 @@ function applySfClScopeFilter(records) {
   });
 }
 
-// เกินเวลาไหม — รอบเปิด ≤ 11:00 · รอบปิด ≤ 22:00 (ใช้ธง late ถ้ามี · ไม่งั้นคำนวณจากเวลาจริง)
+// เกินเวลาไหม — รอบเปิด ≤ 11:30 · รอบปิด ≤ 22:00 (ใช้ธง late ถ้ามี · ไม่งั้นคำนวณจากเวลาจริง)
 function _isDailyLate(rec) {
   if (!rec) return false;
   if (rec.late) return true;
   const iso = rec.startedAt || rec.submittedAt;
   if (!iso) return false;
   const dd = new Date(iso);
-  const cutoff = rec.shift === 'close' ? 22 : 11;
-  return dd.getHours() > cutoff || (dd.getHours() === cutoff && (dd.getMinutes() > 0 || dd.getSeconds() > 0));
+  const cutMin = rec.shift === 'close' ? (22 * 60) : (11 * 60 + 30);
+  const ddMin = dd.getHours() * 60 + dd.getMinutes();
+  return ddMin > cutMin || (ddMin === cutMin && dd.getSeconds() > 0);
 }
 
 // แถบ KPI สรุปด้านบนของแท็บ Operations Checklist
@@ -7323,21 +7324,23 @@ async function startDailyShift(shift) {
   const id = `${_target.code}_${today}_${shift}`;
   const existing = allDailyChecklists.find(d => d.id === id);
 
-  // ── กติกาเวลา (ตรวจเฉพาะตอนเริ่มครั้งแรก): รอบเปิด ≤ 11:00 · รอบปิด ≤ 22:00 ──
+  // ── กติกาเวลา (ตรวจเฉพาะตอนเริ่มครั้งแรก): รอบเปิด ≤ 11:30 · รอบปิด ≤ 22:00 ──
   //    เทียบกับเวลาจริงของเครื่องตอนกดเริ่มตรวจ · เกิน → ป็อปอัพเตือน + บังคับใส่เหตุผล
   const _now = new Date();
   let _isLate    = existing ? !!existing.late : false;
   let _lateReason = existing ? (existing.lateReason || '') : '';
   let _startedAt  = (existing && existing.startedAt) ? existing.startedAt : _now.toISOString();
   if (!existing) {
-    const _cutoffH = shift === 'open' ? 11 : 22;
-    _isLate = (_now.getHours() > _cutoffH) || (_now.getHours() === _cutoffH && (_now.getMinutes() > 0 || _now.getSeconds() > 0));
+    const _cutMin = shift === 'open' ? (11 * 60 + 30) : (22 * 60); // รอบเปิด ≤ 11:30 · รอบปิด ≤ 22:00
+    const _cutTxt = shift === 'open' ? '11:30' : '22:00';
+    const _nowMin = _now.getHours() * 60 + _now.getMinutes();
+    _isLate = (_nowMin > _cutMin) || (_nowMin === _cutMin && _now.getSeconds() > 0);
     if (_isLate) {
       const _shiftTxt = shift === 'open' ? 'เปิดร้าน' : 'ปิดร้าน';
       const _nowTxt = String(_now.getHours()).padStart(2, '0') + ':' + String(_now.getMinutes()).padStart(2, '0');
       const _ok = await showConfirm(
         '⚠️ ตรวจรอบ' + _shiftTxt + 'เกินเวลา',
-        'รอบ' + _shiftTxt + 'กำหนดให้ตรวจ<b>ไม่เกิน ' + _cutoffH + ':00 น.</b> แต่ขณะนี้เวลา <b>' + _nowTxt + ' น.</b><br><br>กรุณาระบุเหตุผลที่ตรวจช้า <b style="color:var(--danger)">(จำเป็น)</b>:' +
+        'รอบ' + _shiftTxt + 'กำหนดให้ตรวจ<b>ไม่เกิน ' + _cutTxt + ' น.</b> แต่ขณะนี้เวลา <b>' + _nowTxt + ' น.</b><br><br>กรุณาระบุเหตุผลที่ตรวจช้า <b style="color:var(--danger)">(จำเป็น)</b>:' +
         '<textarea id="late-reason-input" rows="3" style="width:100%;margin-top:8px;padding:10px;border:1.5px solid var(--border);border-radius:10px;font-family:inherit;font-size:14px;resize:vertical;box-sizing:border-box;" placeholder="เช่น ลูกค้าเยอะช่วงเช้า / พนักงานมาสาย ..."></textarea>',
         { okLabel: 'ยืนยันเริ่มตรวจ', cancelLabel: 'ยกเลิก' }
       );
