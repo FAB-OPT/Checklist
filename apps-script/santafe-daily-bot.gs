@@ -107,13 +107,15 @@ function buildRoundReport(shift) {
 
   var notSent = BRANCHES.filter(function (b) { return !submitted[b[0]]; });
 
-  var fails = [];                  // {code,name,count,items[]}
+  var fails = [];                  // {code,name,items[],date}
   docs.forEach(function (d) {
     var f = (d.items || []).filter(function (it) { return it && it.status === 'fail'; });
-    if (f.length) fails.push({ code: d.branchCode, name: d.branchName, count: f.length, items: f });
+    if (f.length) fails.push({ code: d.branchCode, name: d.branchName, items: f, date: d.date });
   });
 
+  // ── ข้อความสรุปหลัก: รายชื่อสาขาที่ยังไม่ส่ง + ยอดรวม ──
   var head = shift === 'close' ? '🌙 <b>สรุปเช็คลิสต์รอบปิด (Close)</b>' : '🌅 <b>สรุปเช็คลิสต์รอบเปิด (Open)</b>';
+  var roundTxt = shift === 'close' ? 'รอบปิด' : 'รอบเปิด';
   var timeTxt = shift === 'close' ? '22:00' : '11:00';
   var L = [];
   L.push(head);
@@ -123,21 +125,29 @@ function buildRoundReport(shift) {
   if (notSent.length) notSent.forEach(function (b) { L.push('• ' + b[0] + ' ' + esc(b[1])); });
   else L.push('🎉 ส่งครบทุกสาขา');
   L.push('');
-  L.push('⚠️ <b>สาขาที่มีข้อไม่ผ่าน (' + fails.length + ' สาขา)</b>');
-  if (fails.length) {
-    fails.forEach(function (fx) {
-      L.push('🏢 ' + fx.code + ' ' + esc(fx.name || '') + ' — <b>' + fx.count + '</b> ข้อ');
-      fx.items.forEach(function (it, i) {
-        L.push('   ' + (i + 1) + ') [' + esc(it.section || '') + '] ข้อ ' + (it.num || '') + ': ' + esc(it.text || ''));
-        if (it.note) L.push('      ↳ ' + esc(it.note));
-      });
-    });
-  } else {
-    L.push('✅ ไม่มีสาขาที่มีข้อไม่ผ่าน');
-  }
-  L.push('');
+  L.push('⚠️ <b>สาขาที่มีข้อไม่ผ่าน: ' + fails.length + ' สาขา</b>' + (fails.length ? ' (รายละเอียดแยกด้านล่าง 👇)' : ''));
   L.push('📊 ส่งแล้ว ' + docs.length + '/' + BRANCHES.length + ' สาขา');
   sendLong(L.join('\n'));
+
+  // ── แยกส่งรายสาขาที่มีข้อไม่ผ่าน เป็นข้อความละสาขา พร้อมรูปหลักฐาน ──
+  fails.forEach(function (fx) {
+    var C = [];
+    C.push('🏢 <b>' + fx.code + ' ' + esc(fx.name || '') + '</b>');
+    C.push((shift === 'close' ? '🌙 ' : '🌅 ') + roundTxt + ' · 📅 ' + esc(fx.date || today));
+    C.push('❌ ไม่ผ่าน <b>' + fx.items.length + '</b> ข้อ');
+    C.push('━━━━━━━━━━━━━━');
+    var photos = [];
+    fx.items.forEach(function (it, i) {
+      C.push((i + 1) + ') [' + esc(it.section || '') + '] ข้อ ' + (it.num || '') + ': ' + esc(it.text || ''));
+      if (it.note) C.push('   ↳ ' + esc(it.note));
+      (it.photos || []).forEach(function (u) { if (typeof u === 'string' && /^https?:\/\//.test(u)) photos.push(u); });
+    });
+    photos = photos.filter(function (u, i, a) { return a.indexOf(u) === i; }).slice(0, 10);
+    var caption = C.join('\n');
+    if (photos.length) sendPhotos(photos, caption);
+    else sendLong(caption);
+    Utilities.sleep(1200); // เว้นจังหวะกัน Telegram limit เมื่อมีหลายสาขา
+  });
 }
 
 // ───────────────────────── Firestore REST (อ่านอย่างเดียว) ─────────────────────────
@@ -204,15 +214,21 @@ function sendLong(text) {
 }
 // ส่งรูปหลักฐาน (สูงสุด 10) พร้อมแคปชั่นข้อความในรูปแรก
 function sendPhotos(urls, caption) {
-  var media = urls.slice(0, 10).map(function (u, i) {
-    var m = { type: 'photo', media: u };
-    if (i === 0) { m.caption = caption.slice(0, 1024); m.parse_mode = 'HTML'; }
-    return m;
-  });
-  var res = tg('sendMediaGroup', { chat_id: chatId(), media: media });
+  urls = urls.slice(0, 10);
+  var cap = caption.slice(0, 1024);
+  if (urls.length === 1) {
+    // รูปเดียว → sendPhoto (sendMediaGroup ต้องมีอย่างน้อย 2 รูป)
+    tg('sendPhoto', { chat_id: chatId(), photo: urls[0], caption: cap, parse_mode: 'HTML' });
+  } else {
+    var media = urls.map(function (u, i) {
+      var m = { type: 'photo', media: u };
+      if (i === 0) { m.caption = cap; m.parse_mode = 'HTML'; }
+      return m;
+    });
+    tg('sendMediaGroup', { chat_id: chatId(), media: media });
+  }
   // ถ้าแคปชั่นถูกตัด (เกิน 1024) ส่งข้อความเต็มตามอีกที
   if (caption.length > 1024) sendLong(caption);
-  return res;
 }
 function esc(s) {
   return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
