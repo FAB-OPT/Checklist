@@ -6259,8 +6259,14 @@ function _applyTestMode(on) {
   if (b) b.style.display = 'none';
   try { localStorage.removeItem('qa_testmode'); sessionStorage.removeItem('qa_testmode'); } catch (e) {}
 }
+// อ่าน/subscribe ข้อมูลเจ๊แดงเฉพาะผู้ใช้ที่เกี่ยวข้อง — สาขาซานตาเฟ่ (70 สาขา) ไม่ต้องอ่าน (ประหยัดโควตา Firestore)
+function _needsJaedaengData() {
+  if (!currentUser) return false;
+  return currentUser.crossBrand === true || currentUser.brand === 'jaedaeng' || currentView === 'jaedaeng';
+}
 function initRealtimeSync() {
   if (_jdRealtimeStarted) return;
+  if (!_needsJaedaengData()) return;  // ผู้ใช้ซานตาเฟ่ไม่ต้อง subscribe เจ๊แดง (ประหยัดโควตาอ่าน)
   _jdRealtimeStarted = true;
   _applyTestMode(false);  // กันค้างจากเวอร์ชันก่อน
   startJaedaengRealtime();
@@ -6268,6 +6274,7 @@ function initRealtimeSync() {
 
 async function loadJaedaengAudits() {
   const local = loadLocalJaedaeng();
+  if (!_needsJaedaengData()) { allJaedaengAudits = local; return; } // ซานตาเฟ่ไม่ใช้ข้อมูลเจ๊แดง → ไม่อ่าน Firestore (ประหยัดโควตา)
   if (firebaseDb) {
     try {
       const snap = await firebaseDb.collection(JAEDAENG_COLLECTION).get();
@@ -9119,8 +9126,13 @@ async function openJDCamera(idx, ctx) {
     overlay.classList.remove('show');
     const n = err && err.name;
     if (n === 'NotAllowedError' || n === 'SecurityError') {
-      showModal('คุณปฏิเสธสิทธิ์กล้อง', 'iOS: Settings > Safari > Camera > Allow\nAndroid: แตะไอคอน 🔒 ตรง URL > Camera > Allow แล้วลองอีกครั้ง');
-      jdCameraItemIdx = null;
+      // NotAllowedError ไม่ได้แปลว่าผู้ใช้กดปฏิเสธเสมอไป — เจอบ่อยมากจากกรณีที่
+      // เบราว์เซอร์บล็อกกล้อง "ระดับเว็บไซต์" (เช่น Samsung Internet / Chrome เผลอ
+      // กด Block ครั้งแรก) หรือเปิดผ่าน in-app browser (Line/FB/IG) — ทั้งสองเคส
+      // ตั้งค่าระดับ OS อนุญาตแล้วก็ไม่หาย และพนักงานแก้เองยากมาก. จึงตกไปเปิด
+      // กล้อง "ของระบบ" ผ่าน <input type=file capture> ซึ่งใช้คนละ permission
+      // path เปิดกล้องสดของเครื่องได้เกือบทุกเคส (ยังคงเจตนา "รูปจากกล้องสด").
+      openJDNativeCapture(idx);
       return;
     }
     if (n === 'NotReadableError') {
