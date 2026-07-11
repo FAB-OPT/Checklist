@@ -6074,20 +6074,17 @@ async function loadDailyChecklists() {
     }
     snap.docs.map(d => d.data()).forEach(d => {
       if (!d || d.id == null) return;
+      delete d._pendingSync; // ธงเฉพาะเครื่อง — ห้ามรับค่าจาก cloud (กันเข้าใจผิดว่าค้าง แล้ว resync วนไม่จบ = write/read storm)
       const ex = map.get(String(d.id));
-      if (ex) {
-        const exU = ex.updatedAt || '', dU = d.updatedAt || '';
-        // กันแก้ไขในเครื่องหาย: cloud เก่ากว่า → ไม่ทับ · เท่ากันแต่ในเครื่องยังค้าง sync → ไม่ทับ
-        if (dU < exU) return;
-        if (dU === exU && ex._pendingSync) return;
-      }
-      map.set(String(d.id), d); // ปกติ cloud (ใหม่กว่า) ทับ local ตาม id
+      // ในเครื่องใหม่กว่า (แก้ยังไม่ sync) → ไม่ทับ · ไม่งั้น cloud (sync แล้ว) ทับ = ล้างธงค้างไปในตัว
+      if (ex && ex.updatedAt && d.updatedAt && d.updatedAt < ex.updatedAt) return;
+      map.set(String(d.id), d);
     });
     allDailyChecklists = Array.from(map.values()).filter(d => d && !d.deleted);
     saveDailyLocal();
     _dailyFullLoaded = false; // ยังโหลดไม่ครบทุกวัน → ปุ่ม "ดูย้อนหลังทั้งหมด" ยังใช้ได้
-    // กู้ข้อมูลที่ค้างเฉพาะเครื่อง (เคยเซฟ cloud ไม่สำเร็จ เช่นรูป base64 ใหญ่) → ดันขึ้น cloud
-    const pending = local.filter(d => d && d.id != null && d._pendingSync && !d.deleted);
+    // ดันเฉพาะที่ยังค้างจริง (ในเครื่องยัง _pendingSync หลัง merge = cloud ไม่มีที่ใหม่กว่า) — ไม่ใช่ทุก record
+    const pending = allDailyChecklists.filter(d => d && d.id != null && d._pendingSync && !d.deleted);
     if (pending.length) _resyncLocalOnlyDaily(pending);
   } catch (e) {
     console.warn('Daily load failed, using local cache', e);
@@ -6126,8 +6123,9 @@ async function loadAllDailyHistory() {
     const map = new Map(cache.map(d => [String(d.id), d]));
     snap.docs.map(d => d.data()).forEach(d => {
       if (!d || d.id == null) return;
+      delete d._pendingSync; // ธงเฉพาะเครื่อง — ห้ามรับจาก cloud
       const ex = map.get(String(d.id));
-      if (ex && ex._pendingSync && !(d.updatedAt && ex.updatedAt && d.updatedAt > ex.updatedAt)) return; // กันแก้ไขที่ยังไม่ sync หาย
+      if (ex && ex.updatedAt && d.updatedAt && d.updatedAt < ex.updatedAt) return; // ในเครื่องใหม่กว่า → ไม่ทับ
       map.set(String(d.id), d);
     });
     let all = Array.from(map.values()).filter(d => d && !d.deleted);
@@ -6143,8 +6141,10 @@ async function saveDailyToBackend(daily) {
   if (testMode) return true;
   if (!firebaseDb || !daily || !daily.id) return false;
   daily.updatedAt = new Date().toISOString(); // จำเป็นต่อ incremental sync
+  const clean = Object.assign({}, daily);
+  delete clean._pendingSync; // ธงเฉพาะเครื่อง — ห้ามเขียนขึ้น cloud (กัน resync วนไม่จบ = write storm)
   try {
-    await firebaseDb.collection(DAILY_COLLECTION).doc(String(daily.id)).set(daily);
+    await firebaseDb.collection(DAILY_COLLECTION).doc(String(daily.id)).set(clean);
     return true;
   } catch (e) {
     console.warn('Daily Firestore save failed', e);
