@@ -6019,7 +6019,29 @@ function _clearDailyDraft() {
 
 function saveDailyLocal() {
   if (testMode) return;
-  try { localStorage.setItem(DAILY_STORAGE_KEY, JSON.stringify(allDailyChecklists)); } catch (_) {}
+  const isBranch = currentUser && currentUser.role === 'branch';
+  const bc = String((currentUser && currentUser.branchCode) || '');
+  // เลือกชุดข้อมูลที่จะเซฟ: คง record ที่ยังค้าง sync (_pendingSync) ไว้เสมอ + จำกัดหน้าต่างวัน/สาขา
+  const pick = (days, ownOnly) => {
+    const from = days ? _daysAgoStr(days) : null;
+    return allDailyChecklists.filter(d => d && (
+      d._pendingSync ||
+      ((!ownOnly || !isBranch || String(d.branchCode) === bc) && (!from || (d.date && d.date >= from)))
+    ));
+  };
+  // ลองเซฟชุดใหญ่ก่อน ถ้า localStorage เต็มค่อยลดขนาดลงทีละขั้น (กันเซฟไม่ลงแล้วแก้ไข/ผลตรวจหาย)
+  const sets = [
+    allDailyChecklists,
+    pick(90, true),
+    pick(30, true),
+    pick(14, true),
+    pick(3, true),
+    allDailyChecklists.filter(d => d && d._pendingSync), // ขั้นสุดท้าย: อย่างน้อยเก็บของที่ยังไม่ sync ให้ได้
+  ];
+  for (const set of sets) {
+    try { localStorage.setItem(DAILY_STORAGE_KEY, JSON.stringify(set)); return; }
+    catch (_) { /* เต็ม → ลองชุดที่เล็กลง */ }
+  }
 }
 
 // ── โหลดแบบประหยัดโควตา (incremental) เพื่อรองรับหลายสาขาในระยะยาว ──
@@ -6053,9 +6075,13 @@ async function loadDailyChecklists() {
     snap.docs.map(d => d.data()).forEach(d => {
       if (!d || d.id == null) return;
       const ex = map.get(String(d.id));
-      // กันแก้ไขในเครื่องที่ยังไม่ sync หาย: ถ้าของในเครื่องยังค้าง (_pendingSync) และ cloud ไม่ได้ใหม่กว่า → คงของในเครื่องไว้
-      if (ex && ex._pendingSync && !(d.updatedAt && ex.updatedAt && d.updatedAt > ex.updatedAt)) return;
-      map.set(String(d.id), d); // ปกติ cloud ทับ local ตาม id
+      if (ex) {
+        const exU = ex.updatedAt || '', dU = d.updatedAt || '';
+        // กันแก้ไขในเครื่องหาย: cloud เก่ากว่า → ไม่ทับ · เท่ากันแต่ในเครื่องยังค้าง sync → ไม่ทับ
+        if (dU < exU) return;
+        if (dU === exU && ex._pendingSync) return;
+      }
+      map.set(String(d.id), d); // ปกติ cloud (ใหม่กว่า) ทับ local ตาม id
     });
     allDailyChecklists = Array.from(map.values()).filter(d => d && !d.deleted);
     saveDailyLocal();
