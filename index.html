@@ -6247,6 +6247,13 @@ var _jdRealtimeStarted = false;
 var _jdUnsub = null;
 // flag: snapshot ตัวแรกเข้ามาแล้วหรือยัง — ใช้กันแสดงข้อมูล cache เก่าก่อน sync (กันกระพริบ)
 var _jdFirstSnapshotReceived = false;
+// Phase 3: realtime ดูแค่ N วันล่าสุด (ประหยัดโควตาอ่าน) · ของเก่ากว่านั้นโหลดตามคำขอ
+const JD_WINDOW_DAYS = 90;
+var _jdWindowStart = '';        // ต้นหน้าต่าง realtime (YYYY-MM-DD)
+var _jdOldestLoaded = '';       // วันเก่าสุดที่โหลด on-demand แล้ว (เริ่ม = _jdWindowStart)
+var _jdOlderAudits = [];        // ผลตรวจเก่ากว่าหน้าต่าง (โหลดตามคำขอ · ไม่เก็บลง cache)
+var _jdOlderAllLoaded = false;  // โหลดของเก่าครบแล้วหรือยัง
+var _jdLoadingOlder = false;
 function _rerenderJaedaengIfVisible() {
   const dash = document.getElementById('jaedaeng-dashboard-screen');
   const hub = document.getElementById('jaedaeng-hub-screen');
@@ -6260,7 +6267,10 @@ function _isJdConfigDoc(r) { return !r || !r.id || r.id === JD_TESTMODE_ID || r.
 function startJaedaengRealtime() {
   if (!firebaseDb || _jdUnsub) return;
   try {
-    _jdUnsub = firebaseDb.collection(JAEDAENG_COLLECTION).onSnapshot(function(snap){
+    _jdWindowStart = _daysAgoStr(JD_WINDOW_DAYS);
+    _jdOldestLoaded = _jdWindowStart;
+    // realtime ดูเฉพาะผลตรวจ 90 วันล่าสุด — ของเก่ากว่านั้นโหลดตามคำขอ (โหลดของเก่ากว่า 3 เดือน / เลือกช่วงวันที่เก่า)
+    _jdUnsub = firebaseDb.collection(JAEDAENG_COLLECTION).where('date', '>=', _jdWindowStart).onSnapshot(function(snap){
       let cfgOn = null;
       const remote = [];
       snap.docs.forEach(function(d){
@@ -6286,6 +6296,33 @@ function startJaedaengRealtime() {
       _rerenderJaedaengIfVisible();
     }, function(err){ console.warn('JD realtime error', err); _jdFirstSnapshotReceived = true; _rerenderJaedaengIfVisible(); });
   } catch (e) { console.warn('startJaedaengRealtime failed', e); }
+}
+
+// โหลดผลตรวจเจ๊แดงช่วง [fromStr, _jdOldestLoaded) มาเพิ่ม (เก่ากว่าหน้าต่าง realtime) — ครั้งเดียวต่อช่วง
+async function _ensureJaedaengLoadedFrom(fromStr) {
+  if (!firebaseDb || !fromStr || _jdLoadingOlder) return;
+  if (!_jdOldestLoaded || fromStr >= _jdOldestLoaded) return; // โหลดช่วงนี้ไปแล้ว
+  _jdLoadingOlder = true;
+  try {
+    const snap = await firebaseDb.collection(JAEDAENG_COLLECTION)
+      .where('date', '>=', fromStr).where('date', '<', _jdOldestLoaded).get();
+    const deleted = loadJdDeletedIds();
+    const have = new Set((_jdOlderAudits || []).map(r => String(r.id)));
+    snap.docs.map(d => d.data()).forEach(r => {
+      if (r && r.id != null && !_isJdConfigDoc(r) && !have.has(String(r.id)) && !deleted.has(String(r.id))) {
+        _jdOlderAudits.push(r); have.add(String(r.id));
+      }
+    });
+    _jdOldestLoaded = fromStr;
+  } catch (e) { console.warn('load older JD failed', e); }
+  _jdLoadingOlder = false;
+  _rerenderJaedaengIfVisible();
+}
+// ปุ่ม "โหลดของเก่ากว่า 3 เดือน" — ดึงผลตรวจเก่าทั้งหมดมาเพิ่ม
+function _loadOlderJaedaeng(btn) {
+  if (btn) { btn.disabled = true; btn.textContent = 'กำลังโหลด…'; }
+  _jdOlderAllLoaded = true;
+  _ensureJaedaengLoadedFrom('2000-01-01').then(function(){ setupJaedaengDashDateChips(); });
 }
 
 // ยกเลิกโหมดทดสอบแล้ว — บังคับปิดเสมอ + ล้างค่าที่ค้าง
@@ -7954,6 +7991,10 @@ function setupJaedaengDashDateChips() {
       <input type="date" id="jd-dash-date-to" value="${escapeAttr(jdDashDate.to || '')}" onchange="setJaedaengDashDateRange()">
     </div>`;
   }
+  // ปกติแสดง 90 วันล่าสุด — ปุ่มนี้ดึงผลตรวจเก่ากว่านั้นมาเพิ่ม (เรียกอ่าน cloud เฉพาะตอนกด)
+  if (!_jdOlderAllLoaded) {
+    html += `<button type="button" class="jd-dash-date-chip" onclick="_loadOlderJaedaeng(this)" title="ปกติแสดง 3 เดือนล่าสุด">📂 โหลดของเก่ากว่า 3 เดือน</button>`;
+  }
   host.innerHTML = html;
 }
 
@@ -7970,6 +8011,7 @@ function setJaedaengDashDate(type) {
 function setJaedaengDashDateRange() {
   jdDashDate.from = document.getElementById('jd-dash-date-from').value;
   jdDashDate.to = document.getElementById('jd-dash-date-to').value;
+  if (jdDashDate.from) _ensureJaedaengLoadedFrom(jdDashDate.from); // เลือกช่วงเก่ากว่าหน้าต่าง → โหลดเพิ่ม
   renderJaedaengDashboard();
 }
 
@@ -8004,7 +8046,12 @@ function applyJaedaengDateFilter(records) {
 // BZM sees the stores they manage AND any audit they personally conducted;
 // higher roles see everything.
 function getVisibleJaedaengAudits() {
-  const all = (allJaedaengAudits || []).slice();
+  // รวม realtime (90 วันล่าสุด) + ของเก่าที่โหลดตามคำขอ (dedup ตาม id)
+  const seen = new Set();
+  const all = [];
+  (allJaedaengAudits || []).concat(_jdOlderAudits || []).forEach(r => {
+    if (r && r.id != null && !seen.has(String(r.id))) { seen.add(String(r.id)); all.push(r); }
+  });
   if (!currentUser) return all;
   if (currentUser.role === 'bzm') {
     return all.filter(r =>
