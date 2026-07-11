@@ -7642,11 +7642,15 @@ async function submitDailyShift() {
 
   const wasEdit = !!(idx >= 0);
   _clearDailyDraft();
-  currentDaily._pendingSync = true; // ยังไม่ยืนยันขึ้น cloud — กันหายถ้าเน็ตหลุดตอนเซฟ
+  const _rec = currentDaily;
+  _rec._pendingSync = true; // ยังไม่ยืนยันขึ้น cloud — กันหายถ้าเน็ตหลุด/cloud ช้า
   saveDailyLocal();
-  const okCloud = await saveDailyToBackend(currentDaily);
-  if (okCloud) { delete currentDaily._pendingSync; saveDailyLocal(); }
-  showModal(wasEdit ? 'แก้ไขสำเร็จ' : 'บันทึกสำเร็จ', `${wasEdit ? 'แก้ไข' : 'บันทึก'} ${currentDaily.shift === 'open' ? 'Open' : 'Close'} shift วันที่ ${currentDaily.date} เรียบร้อยแล้ว`);
+  // เซฟขึ้น cloud แบบเบื้องหลัง — ห้าม await กัน UI ค้างถ้า Firestore ช้า/มีปัญหา
+  // (ข้อมูลอยู่ในเครื่องแล้ว + _pendingSync จะ resync ให้เองตอนโหลดครั้งถัดไป)
+  Promise.resolve(saveDailyToBackend(_rec))
+    .then(function (okCloud) { if (okCloud) { delete _rec._pendingSync; saveDailyLocal(); } })
+    .catch(function () {});
+  showModal(wasEdit ? 'แก้ไขสำเร็จ' : 'บันทึกสำเร็จ', `${wasEdit ? 'แก้ไข' : 'บันทึก'} ${_rec.shift === 'open' ? 'Open' : 'Close'} shift วันที่ ${_rec.date} เรียบร้อยแล้ว`);
   currentDaily = null;
   showDailyHub();
 }
