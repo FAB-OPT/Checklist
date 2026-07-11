@@ -7231,6 +7231,19 @@ function _refreshDailyActions() {
   });
 }
 
+// ป้ายเวลาที่ส่ง (จาก submittedAt) — แสดงบนการ์ดประวัติ
+function _dailySentLabel(d) {
+  const t = d && (d.submittedAt || d.updatedAt);
+  if (!t) return '';
+  try {
+    const dt = new Date(t);
+    if (isNaN(dt.getTime())) return '';
+    const hh = String(dt.getHours()).padStart(2, '0');
+    const mm = String(dt.getMinutes()).padStart(2, '0');
+    return ` · ส่ง ${hh}:${mm} น.`;
+  } catch (_) { return ''; }
+}
+
 function renderDailyList() {
   const search = document.getElementById('daily-filter-search').value.trim().toLowerCase();
   const shiftFilter = document.getElementById('daily-filter-shift').value;
@@ -7291,7 +7304,7 @@ function renderDailyList() {
           <div class="dhc-shift-icon"><span class="material-symbols-rounded">${shiftIcon}</span></div>
           <div class="dhc-titles">
             <div class="dhc-shift-name">${shiftName} <span class="dhc-shift-thai">· ${shiftThai}</span></div>
-            <div class="dhc-meta">ผู้บันทึก: <b>${escapeHtml(d.manager || '-')}</b></div>
+            <div class="dhc-meta">ผู้บันทึก: <b>${escapeHtml(d.manager || '-')}</b>${_dailySentLabel(d)}</div>
           </div>
           <div class="dhc-status">${escapeHtml(status)}</div>
         </div>
