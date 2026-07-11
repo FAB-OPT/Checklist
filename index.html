@@ -6050,7 +6050,13 @@ async function loadDailyChecklists() {
       const since = _daysAgoStr(DAILY_BACKFILL_DAYS);
       snap = await firebaseDb.collection(DAILY_COLLECTION).where('date', '>=', since).get();
     }
-    snap.docs.map(d => d.data()).forEach(d => { if (d && d.id != null) map.set(String(d.id), d); }); // cloud ทับ local ตาม id
+    snap.docs.map(d => d.data()).forEach(d => {
+      if (!d || d.id == null) return;
+      const ex = map.get(String(d.id));
+      // กันแก้ไขในเครื่องที่ยังไม่ sync หาย: ถ้าของในเครื่องยังค้าง (_pendingSync) และ cloud ไม่ได้ใหม่กว่า → คงของในเครื่องไว้
+      if (ex && ex._pendingSync && !(d.updatedAt && ex.updatedAt && d.updatedAt > ex.updatedAt)) return;
+      map.set(String(d.id), d); // ปกติ cloud ทับ local ตาม id
+    });
     allDailyChecklists = Array.from(map.values()).filter(d => d && !d.deleted);
     saveDailyLocal();
     _dailyFullLoaded = false; // ยังโหลดไม่ครบทุกวัน → ปุ่ม "ดูย้อนหลังทั้งหมด" ยังใช้ได้
@@ -6092,7 +6098,12 @@ async function loadAllDailyHistory() {
     const snap = await firebaseDb.collection(DAILY_COLLECTION).get();
     const cache = loadLocalDaily();
     const map = new Map(cache.map(d => [String(d.id), d]));
-    snap.docs.map(d => d.data()).forEach(d => { if (d && d.id != null) map.set(String(d.id), d); });
+    snap.docs.map(d => d.data()).forEach(d => {
+      if (!d || d.id == null) return;
+      const ex = map.get(String(d.id));
+      if (ex && ex._pendingSync && !(d.updatedAt && ex.updatedAt && d.updatedAt > ex.updatedAt)) return; // กันแก้ไขที่ยังไม่ sync หาย
+      map.set(String(d.id), d);
+    });
     let all = Array.from(map.values()).filter(d => d && !d.deleted);
     const isBranch = currentUser && currentUser.role === 'branch';
     if (isBranch) all = all.filter(d => String(d.branchCode) === String(currentUser.branchCode || ''));
