@@ -7729,6 +7729,9 @@ async function submitDailyShift() {
   Promise.resolve(saveDailyToBackend(_rec))
     .then(function (okCloud) { if (okCloud) { delete _rec._pendingSync; saveDailyLocal(); } })
     .catch(function () {});
+  // ดันข้อมูลอื่นที่ยังค้าง sync ขึ้น cloud ด้วย (เช่นรอบเปิดที่ส่งตอนระบบล่ม → พอส่งรอบปิดก็ตามขึ้นให้เอง)
+  const _otherPending = allDailyChecklists.filter(d => d && d._pendingSync && d.id !== _rec.id && !d.deleted);
+  if (_otherPending.length) _resyncLocalOnlyDaily(_otherPending);
   showModal(wasEdit ? 'แก้ไขสำเร็จ' : 'บันทึกสำเร็จ', `${wasEdit ? 'แก้ไข' : 'บันทึก'} ${_rec.shift === 'open' ? 'Open' : 'Close'} shift วันที่ ${_rec.date} เรียบร้อยแล้ว`);
   currentDaily = null;
   showDailyHub();
