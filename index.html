@@ -6310,20 +6310,16 @@ function initRealtimeSync() {
 }
 
 async function loadJaedaengAudits() {
+  // ข้อมูลสด cloud มาทาง realtime (startJaedaengRealtime/onSnapshot) แล้ว → ไม่ต้อง .get() ทั้ง collection ซ้ำ (ประหยัดโควตา)
   const local = loadLocalJaedaeng();
-  if (!_needsJaedaengData()) { allJaedaengAudits = local; return; } // ซานตาเฟ่ไม่ใช้ข้อมูลเจ๊แดง → ไม่อ่าน Firestore (ประหยัดโควตา)
-  if (firebaseDb) {
-    try {
-      const snap = await firebaseDb.collection(JAEDAENG_COLLECTION).get();
-      const remote = snap.docs.map(d => d.data());
-      // Smart merge: prefer Firestore (authoritative) + เก็บ local-only ที่ค้างอัปโหลด
-      // แต่กรอง id ที่ถูกลบ (tombstone) ออก — กัน record ที่ลบแล้วถูกดึงกลับ
-      const { merged, localOnly } = _mergeJaedaeng(remote, local);
-      allJaedaengAudits = merged;
-      saveJaedaengLocal();
-      // Try to re-upload local-only records in the background
-      if (localOnly.length > 0) {
-        console.warn(`Found ${localOnly.length} local-only Jae Daeng audits — re-syncing to Firestore`);
+  allJaedaengAudits = local;
+  if (!_needsJaedaengData()) return; // ซานตาเฟ่ไม่ใช้ข้อมูลเจ๊แดง
+  // ดันเฉพาะ record ที่ยังค้างอัปโหลด (จาก pending set) — ไม่ต้องอ่านทั้ง collection มาหา
+  if (firebaseDb && !testMode) {
+    const pend = loadJdPendingIds();
+    if (pend.size) {
+      const localOnly = local.filter(r => r && r.id && pend.has(String(r.id)));
+      if (localOnly.length) {
         (async () => {
           for (const r of localOnly) {
             try { await _uploadItemBase64ToR2(r.items); } catch (_) {}   // อัปรูป base64 ค้าง→R2 ก่อน (กันเอกสารใหญ่เกิน 1MB)
@@ -6332,13 +6328,8 @@ async function loadJaedaengAudits() {
           saveJaedaengLocal();
         })();
       }
-      pruneOldJaedaengPhotos();
-      return;
-    } catch (e) {
-      console.warn('Jae Daeng load failed, using local cache', e);
     }
   }
-  allJaedaengAudits = local;
   pruneOldJaedaengPhotos();
 }
 async function saveJaedaengToBackend(audit) {
@@ -7907,8 +7898,7 @@ function showJaedaengDashboard() {
   setupJaedaengDashFilter();
   setupJaedaengDashDateChips();
   renderJaedaengDashboard();
-  // auto อัปเดตจาก cloud เบื้องหลัง (เงียบ ไม่มี popup)
-  refreshJaedaengData(true);
+  // ข้อมูลสดมาทาง realtime (onSnapshot) แล้ว → ไม่ต้อง refresh (อ่านทั้ง collection) ทุกครั้งที่เปิด · กดปุ่มรีเฟรชเองได้
 }
 
 async function refreshJaedaengData(silent) {
