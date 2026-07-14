@@ -4792,20 +4792,22 @@ html.fab-sso-pending #login-screen { display: none !important; }
 /* ── ตารางการส่ง · เปิด/ปิดร้าน (รายสาขา + สาเหตุส่งช้า) ── */
 .sf-tbl-day { margin-bottom:18px; }
 .sf-tbl-day-head { display:flex; align-items:center; gap:6px; font-weight:800; color:var(--text); margin-bottom:8px; font-size:14px; }
-.sf-tbl-wrap { overflow-x:auto; border:1px solid var(--border); border-radius:12px; }
-.sf-send-table { width:100%; border-collapse:collapse; font-size:13px; min-width:440px; }
-.sf-send-table th { text-align:left; padding:10px 12px; background:var(--bg-strong); color:var(--text-secondary); font-weight:700; font-size:12px; white-space:nowrap; border-bottom:1px solid var(--border); }
-.sf-send-table td { padding:10px 12px; border-bottom:1px solid var(--border); vertical-align:top; }
+.sf-tbl-wrap { overflow-x:auto; border:1px solid var(--border); border-radius:14px; box-shadow:0 1px 3px rgba(0,0,0,.04); }
+.sf-send-table { width:100%; border-collapse:separate; border-spacing:0; font-size:13px; min-width:480px; table-layout:fixed; }
+.sf-send-table col.c-branch { width:44%; }
+.sf-send-table col.c-shift { width:28%; }
+.sf-send-table th { text-align:left; padding:11px 14px; background:var(--bg-strong); color:var(--text-secondary); font-weight:800; font-size:11.5px; letter-spacing:.02em; white-space:nowrap; border-bottom:2px solid var(--border); }
+.sf-send-table th:not(:first-child), .sf-send-table td:not(:first-child) { text-align:center; }
+.sf-send-table td { padding:11px 14px; border-bottom:1px solid var(--border); vertical-align:middle; }
 .sf-send-table tr:last-child td { border-bottom:none; }
-.sf-td-click { cursor:pointer; }
-.sf-td-click:hover { background:var(--bg-strong); }
-.sf-tbl-branch { font-weight:700; color:var(--text); white-space:nowrap; }
+.sf-td-click { cursor:pointer; transition:background .12s; }
+.sf-tbl-branch { font-weight:700; color:var(--text); white-space:normal; word-break:break-word; line-height:1.35; }
 .sf-tbl-time { font-weight:700; white-space:nowrap; }
 .sf-tbl-time.is-ok { color:var(--success); }
 .sf-tbl-time.is-late { color:var(--danger); }
 .sf-tbl-none { color:var(--text-tertiary); font-style:italic; }
 .sf-tbl-late { display:inline-block; background:var(--danger-bg); color:var(--danger); font-size:11px; font-weight:800; padding:1px 7px; border-radius:20px; margin-left:4px; white-space:nowrap; }
-.sf-tbl-reason { margin-top:5px; font-size:12px; color:var(--danger); background:var(--danger-bg); padding:4px 8px; border-radius:8px; line-height:1.4; }
+.sf-tbl-reason { margin-top:5px; font-size:11.5px; color:var(--danger); background:var(--danger-bg); padding:4px 8px; border-radius:8px; line-height:1.4; text-align:left; }
 .sf-tbl-controls { display:flex; align-items:center; gap:8px; margin-bottom:12px; flex-wrap:wrap; }
 .sf-tbl-nav { display:inline-flex; align-items:center; justify-content:center; width:34px; height:34px; border:1px solid var(--border); border-radius:9px; background:var(--bg); color:var(--text); cursor:pointer; padding:0; }
 .sf-tbl-nav:hover { background:var(--bg-strong); }
@@ -7113,6 +7115,7 @@ function _sfDailyTableHTML() {
     '<span class="sf-tbl-summary">🌅 ส่งแล้ว ' + openCount + '/' + total + ' · 🌙 ' + closeCount + '/' + total + '</span>' +
   '</div>';
   const table = '<div class="sf-tbl-wrap"><table class="sf-send-table">' +
+    '<colgroup><col class="c-branch"><col class="c-shift"><col class="c-shift"></colgroup>' +
     '<thead><tr><th>สาขา</th><th>🌅 เปิดร้าน</th><th>🌙 ปิดร้าน</th></tr></thead>' +
     '<tbody>' + rows + '</tbody></table></div>';
   return controls + table;
