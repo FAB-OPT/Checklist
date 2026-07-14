@@ -4806,6 +4806,15 @@ html.fab-sso-pending #login-screen { display: none !important; }
 .sf-tbl-none { color:var(--text-tertiary); font-style:italic; }
 .sf-tbl-late { display:inline-block; background:var(--danger-bg); color:var(--danger); font-size:11px; font-weight:800; padding:1px 7px; border-radius:20px; margin-left:4px; white-space:nowrap; }
 .sf-tbl-reason { margin-top:5px; font-size:12px; color:var(--danger); background:var(--danger-bg); padding:4px 8px; border-radius:8px; line-height:1.4; }
+.sf-tbl-controls { display:flex; align-items:center; gap:8px; margin-bottom:12px; flex-wrap:wrap; }
+.sf-tbl-nav { display:inline-flex; align-items:center; justify-content:center; width:34px; height:34px; border:1px solid var(--border); border-radius:9px; background:var(--bg); color:var(--text); cursor:pointer; padding:0; }
+.sf-tbl-nav:hover { background:var(--bg-strong); }
+.sf-tbl-nav .material-symbols-rounded { font-size:20px; }
+.sf-tbl-dateinput { padding:7px 10px; border:1px solid var(--border); border-radius:9px; background:var(--bg); color:var(--text); font-family:inherit; font-size:13px; }
+.sf-tbl-summary { margin-left:auto; font-weight:800; font-size:13px; color:var(--text-secondary); white-space:nowrap; }
+.sf-tbl-code { display:inline-block; background:var(--bg-strong); color:var(--text-secondary); font-weight:800; font-size:11px; padding:1px 6px; border-radius:6px; margin-right:6px; }
+.sf-send-table tbody tr:nth-child(even) td { background:rgba(127,127,127,.06); }
+.sf-send-table tbody tr:hover td { background:var(--bg-strong); }
 
 /* ── Polish แดชบอร์ดซานตาเฟ่ (scope #dashboard-screen — ไม่กระทบเจ๊แดง) ── */
 #dashboard-screen .jd-dash-kpis { gap:12px; }
@@ -6881,7 +6890,7 @@ function renderSfChecklistTab() {
   const tblEl = document.getElementById('sf-daily-table');
   if (kEl)  kEl.innerHTML  = _sfDailyKpisHTML(dailies);
   if (tfEl) tfEl.innerHTML = _sfDailyTopFailsHTML(dailies);
-  if (tblEl) tblEl.innerHTML = _sfDailyTableHTML(dailies);
+  if (tblEl) tblEl.innerHTML = _sfDailyTableHTML();
   if (tEl)  tEl.innerHTML  = _sfDailyTimesHTML(dailies);
 }
 
@@ -7053,21 +7062,33 @@ function _sfDailyTopFailsHTML(dailies) {
   return overview + cards;
 }
 
-// ตารางสรุปการส่ง · เปิด/ปิดร้าน รายสาขา + สาเหตุที่ส่งช้า (จัดกลุ่มตามวันที่ ใหม่สุดก่อน)
-function _sfDailyTableHTML(dailies) {
-  if (!dailies.length) return '<div class="jd-dash-empty">ยังไม่มีเช็คลิสต์รายวัน</div>';
-  const fmtT = (iso) => { if (!iso) return null; const dd = new Date(iso); return String(dd.getHours()).padStart(2, '0') + ':' + String(dd.getMinutes()).padStart(2, '0'); };
-  const byDate = {};
-  dailies.forEach(d => {
-    const date = d.date || '-';
-    const bc = d.branchCode || d.branchName || '-';
-    if (!byDate[date]) byDate[date] = {};
-    if (!byDate[date][bc]) byDate[date][bc] = { code: String(d.branchCode || ''), name: branchLabel(d.branchCode, d.branchName), open: null, close: null };
-    byDate[date][bc][d.shift === 'close' ? 'close' : 'open'] = d;
+// ── ตารางการส่ง · เปิด/ปิดร้าน — เลือกวันได้ · แสดงทุกสาขา (รหัสครบ) + สาเหตุส่งช้า ──
+let sfTableDate = todayDateStr();
+function _ymd(d) { const m = String(d.getMonth() + 1).padStart(2, '0'); const day = String(d.getDate()).padStart(2, '0'); return d.getFullYear() + '-' + m + '-' + day; }
+function _sfTableSetDate(v) { if (v) { sfTableDate = v; _renderSfTable(); } }
+function _sfTableDay(delta) { const d = new Date(sfTableDate); d.setDate(d.getDate() + delta); sfTableDate = _ymd(d); _renderSfTable(); }
+function _renderSfTable() { const el = document.getElementById('sf-daily-table'); if (el) el.innerHTML = _sfDailyTableHTML(); }
+// สาขาที่ผู้ใช้เห็น (admin/vp/coo=ทุกสาขา · bzm=สาขาที่ดูแล · branch=ของตัวเอง)
+function _visibleBranchRoster() {
+  if (!currentUser) return BRANCHES;
+  if (currentUser.role === 'branch') return BRANCHES.filter(b => String(b.code) === String(currentUser.branchCode || ''));
+  if (currentUser.role === 'bzm') return BRANCHES.filter(b => b.manager === currentUser.name || b.managerNick === currentUser.nick || b.managerNick === currentUser.name);
+  return BRANCHES;
+}
+function _sfDailyTableHTML() {
+  const roster = _visibleBranchRoster().slice().sort((a, b) => String(a.code).localeCompare(String(b.code)));
+  const day = sfTableDate;
+  const subs = {};
+  getVisibleDailyChecklists().filter(d => d && d.date === day).forEach(d => {
+    const bc = String(d.branchCode || '');
+    (subs[bc] = subs[bc] || { open: null, close: null })[d.shift === 'close' ? 'close' : 'open'] = d;
   });
-  const dates = Object.keys(byDate).sort((a, b) => b.localeCompare(a));
+  const fmtT = (iso) => { if (!iso) return null; const dd = new Date(iso); return String(dd.getHours()).padStart(2, '0') + ':' + String(dd.getMinutes()).padStart(2, '0'); };
+  let openCount = 0, closeCount = 0;
+  roster.forEach(b => { const s = subs[String(b.code)]; if (s && s.open) openCount++; if (s && s.close) closeCount++; });
+  const total = roster.length;
   const cell = (rec) => {
-    if (!rec) return '<span class="sf-tbl-none">ยังไม่ส่ง</span>';
+    if (!rec) return '<span class="sf-tbl-none">— ยังไม่ส่ง</span>';
     const t = fmtT(rec.submittedAt);
     const late = _isDailyLate(rec);
     const reason = (rec.lateReason || '').trim();
@@ -7081,19 +7102,20 @@ function _sfDailyTableHTML(dailies) {
   const td = (rec) => rec && rec.id
     ? '<td class="sf-td-click" onclick="showDailyDetail(\'' + escapeAttr(rec.id) + '\')">' + cell(rec) + '</td>'
     : '<td>' + cell(rec) + '</td>';
-  return dates.map(date => {
-    const branches = Object.values(byDate[date]).sort((a, b) => (a.code || a.name).localeCompare(b.code || b.name, 'th'));
-    const rows = branches.map(b =>
-      '<tr><td class="sf-tbl-branch">' + escapeHtml(b.name) + '</td>' + td(b.open) + td(b.close) + '</tr>'
-    ).join('');
-    return '<div class="sf-tbl-day">' +
-      '<div class="sf-tbl-day-head"><span class="material-symbols-rounded sf-ico-fill">event</span> ' + escapeHtml(fmtDateDMY(date)) + '</div>' +
-      '<div class="sf-tbl-wrap"><table class="sf-send-table">' +
-        '<thead><tr><th>สาขา</th><th>🌅 เปิดร้าน</th><th>🌙 ปิดร้าน</th></tr></thead>' +
-        '<tbody>' + rows + '</tbody>' +
-      '</table></div>' +
-    '</div>';
+  const rows = roster.map(b => {
+    const s = subs[String(b.code)] || {};
+    return '<tr><td class="sf-tbl-branch"><span class="sf-tbl-code">' + escapeHtml(String(b.code)) + '</span>' + escapeHtml(b.name) + '</td>' + td(s.open) + td(s.close) + '</tr>';
   }).join('');
+  const controls = '<div class="sf-tbl-controls">' +
+    '<button type="button" class="sf-tbl-nav" onclick="_sfTableDay(-1)" title="วันก่อนหน้า"><span class="material-symbols-rounded">chevron_left</span></button>' +
+    '<input type="date" class="sf-tbl-dateinput" value="' + escapeAttr(day) + '" onchange="_sfTableSetDate(this.value)">' +
+    '<button type="button" class="sf-tbl-nav" onclick="_sfTableDay(1)" title="วันถัดไป"><span class="material-symbols-rounded">chevron_right</span></button>' +
+    '<span class="sf-tbl-summary">🌅 ส่งแล้ว ' + openCount + '/' + total + ' · 🌙 ' + closeCount + '/' + total + '</span>' +
+  '</div>';
+  const table = '<div class="sf-tbl-wrap"><table class="sf-send-table">' +
+    '<thead><tr><th>สาขา</th><th>🌅 เปิดร้าน</th><th>🌙 ปิดร้าน</th></tr></thead>' +
+    '<tbody>' + rows + '</tbody></table></div>';
+  return controls + table;
 }
 
 // เวลาการส่ง · เปิด/ปิดร้าน — จัดกลุ่มตามวันที่ → รายสาขา (ใหม่สุดก่อน)
