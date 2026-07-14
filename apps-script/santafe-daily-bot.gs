@@ -106,7 +106,8 @@ function buildRoundReport(shift) {
   var submitted = {};              // branchCode → doc
   docs.forEach(function (d) { if (d.branchCode) submitted[String(d.branchCode)] = d; });
 
-  var notSent = BRANCHES.filter(function (b) { return !submitted[b[0]]; });
+  var roster = getBranchRoster();  // รายชื่อสาขาจาก Firestore (sync กับแอป) · fallback = ลิสต์ฝังในสคริปต์
+  var notSent = roster.filter(function (b) { return !submitted[b[0]]; });
 
   var fails = [];                  // {code,name,items[],date}
   docs.forEach(function (d) {
@@ -122,12 +123,12 @@ function buildRoundReport(shift) {
   L.push(head);
   L.push('📅 ' + today + '   ⏰ ' + timeTxt + ' น.');
   L.push('');
-  L.push('❌ <b>ยังไม่ส่ง (' + notSent.length + '/' + BRANCHES.length + ' สาขา)</b>');
+  L.push('❌ <b>ยังไม่ส่ง (' + notSent.length + '/' + roster.length + ' สาขา)</b>');
   if (notSent.length) notSent.forEach(function (b) { L.push('• ' + b[0] + ' ' + esc(b[1])); });
   else L.push('🎉 ส่งครบทุกสาขา');
   L.push('');
   L.push('⚠️ <b>สาขาที่มีข้อไม่ผ่าน: ' + fails.length + ' สาขา</b>' + (fails.length ? ' (รายละเอียดแยกด้านล่าง 👇)' : ''));
-  L.push('📊 ส่งแล้ว ' + docs.length + '/' + BRANCHES.length + ' สาขา');
+  L.push('📊 ส่งแล้ว ' + docs.length + '/' + roster.length + ' สาขา');
   sendLong(L.join('\n'));
 
   // ── แยกส่งรายสาขาที่มีข้อไม่ผ่าน เป็นข้อความละสาขา พร้อมรูปหลักฐาน ──
@@ -175,6 +176,25 @@ function queryDailyByDate(dateStr) {
     if (row && row.document) out.push(decodeDoc(row.document.fields));
   });
   return out;
+}
+
+// รายชื่อสาขาจาก Firestore (appConfig/sfBranches) — sync กับที่แอปจัดการ · fallback = BRANCHES ที่ฝังไว้
+function getBranchRoster() {
+  try {
+    var key = PropertiesService.getScriptProperties().getProperty('FIREBASE_API_KEY');
+    var url = 'https://firestore.googleapis.com/v1/projects/' + PROJECT_ID + '/databases/(default)/documents/appConfig/sfBranches?key=' + key;
+    var res = UrlFetchApp.fetch(url, { method: 'get', muteHttpExceptions: true });
+    if (res.getResponseCode() === 200) {
+      var doc = JSON.parse(res.getContentText());
+      if (doc && doc.fields) {
+        var d = decodeDoc(doc.fields);
+        if (d && Array.isArray(d.list) && d.list.length) {
+          return d.list.filter(function (b) { return b && b.code; }).map(function (b) { return [String(b.code), b.name || '']; });
+        }
+      }
+    }
+  } catch (e) {}
+  return BRANCHES; // ยังไม่มีใน cloud หรืออ่านไม่ได้ → ใช้ลิสต์ที่ฝังในสคริปต์
 }
 
 function decodeDoc(fields) {
