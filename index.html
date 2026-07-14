@@ -4817,6 +4817,28 @@ html.fab-sso-pending #login-screen { display: none !important; }
 .sf-tbl-code { display:inline-block; background:var(--bg-strong); color:var(--text-secondary); font-weight:800; font-size:11px; padding:1px 6px; border-radius:6px; margin-right:6px; }
 .sf-send-table tbody tr:nth-child(even) td { background:rgba(127,127,127,.06); }
 .sf-send-table tbody tr:hover td { background:var(--bg-strong); }
+.sf-tbl-manage { display:inline-flex; align-items:center; gap:4px; padding:7px 12px; border:1px solid var(--border); border-radius:9px; background:var(--bg); color:var(--text); cursor:pointer; font-family:inherit; font-size:12.5px; font-weight:700; }
+.sf-tbl-manage:hover { background:var(--bg-strong); }
+.sf-tbl-manage .material-symbols-rounded { font-size:18px; }
+/* modal จัดการสาขา */
+.sf-bm-overlay { position:fixed; inset:0; background:rgba(0,0,0,.5); display:none; align-items:flex-start; justify-content:center; z-index:9999; padding:40px 16px; overflow-y:auto; }
+.sf-bm-overlay.show { display:flex; }
+.sf-bm-box { background:var(--bg); border-radius:16px; width:100%; max-width:440px; box-shadow:0 20px 60px rgba(0,0,0,.3); overflow:hidden; }
+.sf-bm-head { display:flex; align-items:center; justify-content:space-between; padding:16px 18px; border-bottom:1px solid var(--border); }
+.sf-bm-head h3 { margin:0; font-size:16px; color:var(--text); }
+.sf-bm-count { font-size:12px; font-weight:700; color:var(--text-secondary); margin-left:6px; }
+.sf-bm-x { background:none; border:none; cursor:pointer; color:var(--text-secondary); display:flex; }
+.sf-bm-add { display:flex; gap:8px; padding:14px 18px; border-bottom:1px solid var(--border); flex-wrap:wrap; }
+.sf-bm-input { padding:9px 11px; border:1px solid var(--border); border-radius:9px; background:var(--bg); color:var(--text); font-family:inherit; font-size:13px; width:110px; }
+.sf-bm-input-name { flex:1; min-width:120px; width:auto; }
+.sf-bm-addbtn { display:inline-flex; align-items:center; gap:3px; padding:9px 14px; border:none; border-radius:9px; background:var(--primary); color:#fff; font-weight:700; cursor:pointer; font-family:inherit; font-size:13px; }
+.sf-bm-addbtn .material-symbols-rounded { font-size:18px; }
+.sf-bm-list { max-height:50vh; overflow-y:auto; padding:8px 0; }
+.sf-bm-row { display:flex; align-items:center; gap:10px; padding:9px 18px; border-bottom:1px solid var(--border); }
+.sf-bm-row:last-child { border-bottom:none; }
+.sf-bm-name { flex:1; color:var(--text); font-size:13.5px; }
+.sf-bm-del { background:none; border:none; cursor:pointer; color:var(--danger); display:flex; padding:4px; border-radius:6px; }
+.sf-bm-del:hover { background:var(--danger-bg); }
 
 /* ── Polish แดชบอร์ดซานตาเฟ่ (scope #dashboard-screen — ไม่กระทบเจ๊แดง) ── */
 #dashboard-screen .jd-dash-kpis { gap:12px; }
@@ -5326,7 +5348,9 @@ try {
 </script>
 
 <script>
-const BRANCHES = [{"code": "5001", "name": "แฟชั่น ไอส์แลนด์", "manager": "นพชัย", "managerNick": "พี่นพ"}, {"code": "5002", "name": "ซีคอนสแควร์ ศรีนครินทร์", "manager": "นพชัย", "managerNick": "พี่นพ"}, {"code": "5003", "name": "เดอะมอลล์ ท่าพระ", "manager": "พัทธดนย์", "managerNick": "พี่ปิ๊ก"}, {"code": "5004", "name": "เซ็นทรัล รัตนาธิเบศร์", "manager": "สีวิกา", "managerNick": "พี่เจี๊ยบ"}, {"code": "5005", "name": "เดอะมอลล์ บางกะปิ", "manager": "นิรุต", "managerNick": "พี่รุต"}, {"code": "5007", "name": "เซ็นทรัลพลาซา พระราม 2", "manager": "พัทธดนย์", "managerNick": "พี่ปิ๊ก"}, {"code": "5010", "name": "แพชชั่น ระยอง", "manager": "นิรุต", "managerNick": "พี่รุต"}, {"code": "5011", "name": "เดอะมอลล์ งามวงศ์วาน", "manager": "สีวิกา", "managerNick": "พี่เจี๊ยบ"}, {"code": "5012", "name": "โลตัส บางพลี", "manager": "อนุรักษ์", "managerNick": "พี่เอ็ม"}, {"code": "5013", "name": "แหลมทอง บางแสน", "manager": "ศุกร์แสง", "managerNick": "พี่หยี"}, {"code": "5014", "name": "บิ๊กซี พัทยากลาง", "manager": "ศุกร์แสง", "managerNick": "พี่หยี"}, {"code": "5015", "name": "แปซิฟิกพาร์ค ศรีราชา", "manager": "ศุกร์แสง", "managerNick": "พี่หยี"}, {"code": "5016", "name": "อิมพีเรียลเวิลด์ สำโรง", "manager": "นพชัย", "managerNick": "พี่นพ"}, {"code": "5017", "name": "ซีคอน บางแค", "manager": "พัทธดนย์", "managerNick": "พี่ปิ๊ก"}, {"code": "5018", "name": "เซ็นทรัล รามอินทรา", "manager": "อนุรักษ์", "managerNick": "พี่เอ็ม"}, {"code": "5019", "name": "เทอร์มินัล 21 อโศก", "manager": "นิรุต", "managerNick": "พี่รุต"}, {"code": "5021", "name": "เซ็นทรัล ปิ่นเกล้า", "manager": "พัทธดนย์", "managerNick": "พี่ปิ๊ก"}, {"code": "5023", "name": "บิ๊กซี พัทยาใต้", "manager": "ศุกร์แสง", "managerNick": "พี่หยี"}, {"code": "5024", "name": "เดอะมอลล์ บางแค", "manager": "พัทธดนย์", "managerNick": "พี่ปิ๊ก"}, {"code": "5026", "name": "IT หลักสี่", "manager": "อนุรักษ์", "managerNick": "พี่เอ็ม"}, {"code": "5027", "name": "เซ็นทรัล แจ้งวัฒนะ", "manager": "อนุรักษ์", "managerNick": "พี่เอ็ม"}, {"code": "5028", "name": "โลตัส ปทุมธานี", "manager": "สีวิกา", "managerNick": "พี่เจี๊ยบ"}, {"code": "5030", "name": "เพลินนารี่ มอลล์", "manager": "อนุรักษ์", "managerNick": "พี่เอ็ม"}, {"code": "5031", "name": "เซ็นทรัล ศาลายา", "manager": "พัทธดนย์", "managerNick": "พี่ปิ๊ก"}, {"code": "5033", "name": "โลตัส แจ้งวัฒนะ", "manager": "อนุรักษ์", "managerNick": "พี่เอ็ม"}, {"code": "5034", "name": "โลตัส ศาลายา", "manager": "พัทธดนย์", "managerNick": "พี่ปิ๊ก"}, {"code": "5035", "name": "เซ็นทรัลพัทยา บีช", "manager": "ศุกร์แสง", "managerNick": "พี่หยี"}, {"code": "5036", "name": "โลตัส บางปะกอก", "manager": "พัทธดนย์", "managerNick": "พี่ปิ๊ก"}, {"code": "5038", "name": "เซ็นทรัล ระยอง", "manager": "นิรุต", "managerNick": "พี่รุต"}, {"code": "5039", "name": "เซ็นทรัล ชลบุรี", "manager": "ศุกร์แสง", "managerNick": "พี่หยี"}, {"code": "5040", "name": "เซ็นทรัล Westgate", "manager": "พัทธดนย์", "managerNick": "พี่ปิ๊ก"}, {"code": "5041", "name": "เซ็นทรัล พระราม3", "manager": "นพชัย", "managerNick": "พี่นพ"}, {"code": "5042", "name": "ฟิวเจอร์ปาร์ค รังสิต", "manager": "สีวิกา", "managerNick": "พี่เจี๊ยบ"}, {"code": "5044", "name": "โลตัส ระยอง", "manager": "นิรุต", "managerNick": "พี่รุต"}, {"code": "5045", "name": "Promenade", "manager": "นพชัย", "managerNick": "พี่นพ"}, {"code": "5046", "name": "โลตัส บางกะปิ", "manager": "นิรุต", "managerNick": "พี่รุต"}, {"code": "5047", "name": "เซ็นทรัล East ville", "manager": "อนุรักษ์", "managerNick": "พี่เอ็ม"}, {"code": "5049", "name": "โลตัส ชลบุรี", "manager": "ศุกร์แสง", "managerNick": "พี่หยี"}, {"code": "5050", "name": "บิ๊กซี บางพลี", "manager": "อนุรักษ์", "managerNick": "พี่เอ็ม"}, {"code": "5052", "name": "โลตัส นวนคร", "manager": "สีวิกา", "managerNick": "พี่เจี๊ยบ"}, {"code": "5054", "name": "บิ๊กซี บางใหญ่", "manager": "พัทธดนย์", "managerNick": "พี่ปิ๊ก"}, {"code": "5055", "name": "โลตัส สุขาภิบาล 3", "manager": "นิรุต", "managerNick": "พี่รุต"}, {"code": "5057", "name": "โลตัส รังสิต", "manager": "สีวิกา", "managerNick": "พี่เจี๊ยบ"}, {"code": "5061", "name": "บิ๊กซี สัตหีบ", "manager": "ศุกร์แสง", "managerNick": "พี่หยี"}, {"code": "5062", "name": "โรบินสัน ชลบุรี", "manager": "ศุกร์แสง", "managerNick": "พี่หยี"}, {"code": "5063", "name": "โลตัส พนัสนิคม", "manager": "ศุกร์แสง", "managerNick": "พี่หยี"}, {"code": "5064", "name": "เทอร์มินอล พัทยา", "manager": "ศุกร์แสง", "managerNick": "พี่หยี"}, {"code": "5065", "name": "เกตเวย์ เอกมัย", "manager": "นิรุต", "managerNick": "พี่รุต"}, {"code": "5066", "name": "เกตเวย์ บางซื่อ", "manager": "สีวิกา", "managerNick": "พี่เจี๊ยบ"}, {"code": "5068", "name": "คอสโม บาร์ซา", "manager": "อนุรักษ์", "managerNick": "พี่เอ็ม"}, {"code": "5069", "name": "โลตัส พัฒนาการ", "manager": "นพชัย", "managerNick": "พี่นพ"}, {"code": "5070", "name": "พันทิพย์ งามวงศ์วาน", "manager": "สีวิกา", "managerNick": "พี่เจี๊ยบ"}, {"code": "5071", "name": "โลตัส จรัญสนิทวงศ์", "manager": "พัทธดนย์", "managerNick": "พี่ปิ๊ก"}, {"code": "5072", "name": "โลตัส สุขาภิบาล 1", "manager": "นพชัย", "managerNick": "พี่นพ"}, {"code": "5073", "name": "โลตัส ลาดพร้าว", "manager": "อนุรักษ์", "managerNick": "พี่เอ็ม"}, {"code": "5074", "name": "บิ๊กซี พระราม 4", "manager": "นิรุต", "managerNick": "พี่รุต"}, {"code": "5076", "name": "บิ๊กซี ติวานนท์", "manager": "สีวิกา", "managerNick": "พี่เจี๊ยบ"}, {"code": "5077", "name": "เทอมินัล โคราช", "manager": "ณธวรรท", "managerNick": "พี่บิ๊ก"}, {"code": "5078", "name": "เดอะมอลล์ โคราช", "manager": "ณธวรรท", "managerNick": "พี่บิ๊ก"}, {"code": "5079", "name": "เซ็นทรัล โคราช", "manager": "ณธวรรท", "managerNick": "พี่บิ๊ก"}, {"code": "5080", "name": "โลตัส แกลง ระยอง", "manager": "นิรุต", "managerNick": "พี่รุต"}, {"code": "5081", "name": "โลตัส ติวานนท์", "manager": "อนุรักษ์", "managerNick": "พี่เอ็ม"}, {"code": "5082", "name": "มาเก็ตเพลส วงศ์สว่างเซ็นเตอร์", "manager": "สีวิกา", "managerNick": "พี่เจี๊ยบ"}, {"code": "5084", "name": "เทอมินัล 21 พระราม 3", "manager": "นพชัย", "managerNick": "พี่นพ"}, {"code": "5085", "name": "ICS ไอคอนสยาม", "manager": "นพชัย", "managerNick": "พี่นพ"}, {"code": "5087", "name": "ศูนย์การประชุมแห่งชาติสิริกิติ์", "manager": "นพชัย", "managerNick": "พี่นพ"}, {"code": "5088", "name": "สยาม สแควร์", "manager": "นิรุต", "managerNick": "พี่รุต"}, {"code": "5089", "name": "FAB Avenue", "manager": "อนุรักษ์", "managerNick": "พี่เอ็ม"}, {"code": "5090", "name": "S Oasis", "manager": "อนุรักษ์", "managerNick": "พี่เอ็ม"}, {"code": "5091", "name": "ปตท.เกษรนวมินทร์", "manager": "นพชัย", "managerNick": "พี่นพ"}, {"code": "5504", "name": "โลตัสวังหิน", "manager": "อนุรักษ์", "managerNick": "พี่เอ็ม"}, {"code": "5505", "name": "โลตัสเลียบคลองสอง", "manager": "นพชัย", "managerNick": "พี่นพ"}, {"code": "5508", "name": "รพ.วชิระพยาบาล", "manager": "พัทธดนย์", "managerNick": "พี่ปิ๊ก"}, {"code": "5509", "name": "โลตัส นครอินทร์", "manager": "สีวิกา", "managerNick": "พี่เจี๊ยบ"}];
+let BRANCHES = [{"code": "5001", "name": "แฟชั่น ไอส์แลนด์", "manager": "นพชัย", "managerNick": "พี่นพ"}, {"code": "5002", "name": "ซีคอนสแควร์ ศรีนครินทร์", "manager": "นพชัย", "managerNick": "พี่นพ"}, {"code": "5003", "name": "เดอะมอลล์ ท่าพระ", "manager": "พัทธดนย์", "managerNick": "พี่ปิ๊ก"}, {"code": "5004", "name": "เซ็นทรัล รัตนาธิเบศร์", "manager": "สีวิกา", "managerNick": "พี่เจี๊ยบ"}, {"code": "5005", "name": "เดอะมอลล์ บางกะปิ", "manager": "นิรุต", "managerNick": "พี่รุต"}, {"code": "5007", "name": "เซ็นทรัลพลาซา พระราม 2", "manager": "พัทธดนย์", "managerNick": "พี่ปิ๊ก"}, {"code": "5010", "name": "แพชชั่น ระยอง", "manager": "นิรุต", "managerNick": "พี่รุต"}, {"code": "5011", "name": "เดอะมอลล์ งามวงศ์วาน", "manager": "สีวิกา", "managerNick": "พี่เจี๊ยบ"}, {"code": "5012", "name": "โลตัส บางพลี", "manager": "อนุรักษ์", "managerNick": "พี่เอ็ม"}, {"code": "5013", "name": "แหลมทอง บางแสน", "manager": "ศุกร์แสง", "managerNick": "พี่หยี"}, {"code": "5014", "name": "บิ๊กซี พัทยากลาง", "manager": "ศุกร์แสง", "managerNick": "พี่หยี"}, {"code": "5015", "name": "แปซิฟิกพาร์ค ศรีราชา", "manager": "ศุกร์แสง", "managerNick": "พี่หยี"}, {"code": "5016", "name": "อิมพีเรียลเวิลด์ สำโรง", "manager": "นพชัย", "managerNick": "พี่นพ"}, {"code": "5017", "name": "ซีคอน บางแค", "manager": "พัทธดนย์", "managerNick": "พี่ปิ๊ก"}, {"code": "5018", "name": "เซ็นทรัล รามอินทรา", "manager": "อนุรักษ์", "managerNick": "พี่เอ็ม"}, {"code": "5019", "name": "เทอร์มินัล 21 อโศก", "manager": "นิรุต", "managerNick": "พี่รุต"}, {"code": "5021", "name": "เซ็นทรัล ปิ่นเกล้า", "manager": "พัทธดนย์", "managerNick": "พี่ปิ๊ก"}, {"code": "5023", "name": "บิ๊กซี พัทยาใต้", "manager": "ศุกร์แสง", "managerNick": "พี่หยี"}, {"code": "5024", "name": "เดอะมอลล์ บางแค", "manager": "พัทธดนย์", "managerNick": "พี่ปิ๊ก"}, {"code": "5026", "name": "IT หลักสี่", "manager": "อนุรักษ์", "managerNick": "พี่เอ็ม"}, {"code": "5027", "name": "เซ็นทรัล แจ้งวัฒนะ", "manager": "อนุรักษ์", "managerNick": "พี่เอ็ม"}, {"code": "5028", "name": "โลตัส ปทุมธานี", "manager": "สีวิกา", "managerNick": "พี่เจี๊ยบ"}, {"code": "5030", "name": "เพลินนารี่ มอลล์", "manager": "อนุรักษ์", "managerNick": "พี่เอ็ม"}, {"code": "5031", "name": "เซ็นทรัล ศาลายา", "manager": "พัทธดนย์", "managerNick": "พี่ปิ๊ก"}, {"code": "5033", "name": "โลตัส แจ้งวัฒนะ", "manager": "อนุรักษ์", "managerNick": "พี่เอ็ม"}, {"code": "5034", "name": "โลตัส ศาลายา", "manager": "พัทธดนย์", "managerNick": "พี่ปิ๊ก"}, {"code": "5035", "name": "เซ็นทรัลพัทยา บีช", "manager": "ศุกร์แสง", "managerNick": "พี่หยี"}, {"code": "5036", "name": "โลตัส บางปะกอก", "manager": "พัทธดนย์", "managerNick": "พี่ปิ๊ก"}, {"code": "5038", "name": "เซ็นทรัล ระยอง", "manager": "นิรุต", "managerNick": "พี่รุต"}, {"code": "5039", "name": "เซ็นทรัล ชลบุรี", "manager": "ศุกร์แสง", "managerNick": "พี่หยี"}, {"code": "5040", "name": "เซ็นทรัล Westgate", "manager": "พัทธดนย์", "managerNick": "พี่ปิ๊ก"}, {"code": "5041", "name": "เซ็นทรัล พระราม3", "manager": "นพชัย", "managerNick": "พี่นพ"}, {"code": "5042", "name": "ฟิวเจอร์ปาร์ค รังสิต", "manager": "สีวิกา", "managerNick": "พี่เจี๊ยบ"}, {"code": "5044", "name": "โลตัส ระยอง", "manager": "นิรุต", "managerNick": "พี่รุต"}, {"code": "5045", "name": "Promenade", "manager": "นพชัย", "managerNick": "พี่นพ"}, {"code": "5046", "name": "โลตัส บางกะปิ", "manager": "นิรุต", "managerNick": "พี่รุต"}, {"code": "5047", "name": "เซ็นทรัล East ville", "manager": "อนุรักษ์", "managerNick": "พี่เอ็ม"}, {"code": "5049", "name": "โลตัส ชลบุรี", "manager": "ศุกร์แสง", "managerNick": "พี่หยี"}, {"code": "5050", "name": "บิ๊กซี บางพลี", "manager": "อนุรักษ์", "managerNick": "พี่เอ็ม"}, {"code": "5052", "name": "โลตัส นวนคร", "manager": "สีวิกา", "managerNick": "พี่เจี๊ยบ"}, {"code": "5054", "name": "บิ๊กซี บางใหญ่", "manager": "พัทธดนย์", "managerNick": "พี่ปิ๊ก"}, {"code": "5055", "name": "โลตัส สุขาภิบาล 3", "manager": "นิรุต", "managerNick": "พี่รุต"}, {"code": "5057", "name": "โลตัส รังสิต", "manager": "สีวิกา", "managerNick": "พี่เจี๊ยบ"}, {"code": "5061", "name": "บิ๊กซี สัตหีบ", "manager": "ศุกร์แสง", "managerNick": "พี่หยี"}, {"code": "5062", "name": "โรบินสัน ชลบุรี", "manager": "ศุกร์แสง", "managerNick": "พี่หยี"}, {"code": "5063", "name": "โลตัส พนัสนิคม", "manager": "ศุกร์แสง", "managerNick": "พี่หยี"}, {"code": "5064", "name": "เทอร์มินอล พัทยา", "manager": "ศุกร์แสง", "managerNick": "พี่หยี"}, {"code": "5065", "name": "เกตเวย์ เอกมัย", "manager": "นิรุต", "managerNick": "พี่รุต"}, {"code": "5066", "name": "เกตเวย์ บางซื่อ", "manager": "สีวิกา", "managerNick": "พี่เจี๊ยบ"}, {"code": "5068", "name": "คอสโม บาร์ซา", "manager": "อนุรักษ์", "managerNick": "พี่เอ็ม"}, {"code": "5069", "name": "โลตัส พัฒนาการ", "manager": "นพชัย", "managerNick": "พี่นพ"}, {"code": "5070", "name": "พันทิพย์ งามวงศ์วาน", "manager": "สีวิกา", "managerNick": "พี่เจี๊ยบ"}, {"code": "5071", "name": "โลตัส จรัญสนิทวงศ์", "manager": "พัทธดนย์", "managerNick": "พี่ปิ๊ก"}, {"code": "5072", "name": "โลตัส สุขาภิบาล 1", "manager": "นพชัย", "managerNick": "พี่นพ"}, {"code": "5073", "name": "โลตัส ลาดพร้าว", "manager": "อนุรักษ์", "managerNick": "พี่เอ็ม"}, {"code": "5074", "name": "บิ๊กซี พระราม 4", "manager": "นิรุต", "managerNick": "พี่รุต"}, {"code": "5076", "name": "บิ๊กซี ติวานนท์", "manager": "สีวิกา", "managerNick": "พี่เจี๊ยบ"}, {"code": "5077", "name": "เทอมินัล โคราช", "manager": "ณธวรรท", "managerNick": "พี่บิ๊ก"}, {"code": "5078", "name": "เดอะมอลล์ โคราช", "manager": "ณธวรรท", "managerNick": "พี่บิ๊ก"}, {"code": "5079", "name": "เซ็นทรัล โคราช", "manager": "ณธวรรท", "managerNick": "พี่บิ๊ก"}, {"code": "5080", "name": "โลตัส แกลง ระยอง", "manager": "นิรุต", "managerNick": "พี่รุต"}, {"code": "5081", "name": "โลตัส ติวานนท์", "manager": "อนุรักษ์", "managerNick": "พี่เอ็ม"}, {"code": "5082", "name": "มาเก็ตเพลส วงศ์สว่างเซ็นเตอร์", "manager": "สีวิกา", "managerNick": "พี่เจี๊ยบ"}, {"code": "5084", "name": "เทอมินัล 21 พระราม 3", "manager": "นพชัย", "managerNick": "พี่นพ"}, {"code": "5085", "name": "ICS ไอคอนสยาม", "manager": "นพชัย", "managerNick": "พี่นพ"}, {"code": "5087", "name": "ศูนย์การประชุมแห่งชาติสิริกิติ์", "manager": "นพชัย", "managerNick": "พี่นพ"}, {"code": "5088", "name": "สยาม สแควร์", "manager": "นิรุต", "managerNick": "พี่รุต"}, {"code": "5089", "name": "FAB Avenue", "manager": "อนุรักษ์", "managerNick": "พี่เอ็ม"}, {"code": "5090", "name": "S Oasis", "manager": "อนุรักษ์", "managerNick": "พี่เอ็ม"}, {"code": "5091", "name": "ปตท.เกษรนวมินทร์", "manager": "นพชัย", "managerNick": "พี่นพ"}, {"code": "5504", "name": "โลตัสวังหิน", "manager": "อนุรักษ์", "managerNick": "พี่เอ็ม"}, {"code": "5505", "name": "โลตัสเลียบคลองสอง", "manager": "นพชัย", "managerNick": "พี่นพ"}, {"code": "5508", "name": "รพ.วชิระพยาบาล", "manager": "พัทธดนย์", "managerNick": "พี่ปิ๊ก"}, {"code": "5509", "name": "โลตัส นครอินทร์", "manager": "สีวิกา", "managerNick": "พี่เจี๊ยบ"}];
+const DEFAULT_SF_BRANCHES = BRANCHES.slice();
+const SF_BRANCHES_KEY = 'sf_branches_v1';
 const USERS = {"490033": {"name": "นิรุต", "nick": "พี่รุต", "role": "bzm"}, "500759": {"name": "พัทธดนย์", "nick": "พี่ปิ๊ก", "role": "bzm"}, "510620": {"name": "สีวิกา", "nick": "พี่เจี๊ยบ", "role": "bzm"}, "520532": {"name": "ศุกร์แสง", "nick": "พี่หยี", "role": "bzm"}, "570998": {"name": "นพชัย", "nick": "พี่นพ", "role": "bzm"}, "582134": {"name": "ณธวรรท", "nick": "พี่บิ๊ก", "role": "bzm", "title": "นาย"}, "601338": {"name": "อนุรักษ์", "nick": "พี่เอ็ม", "role": "bzm"}, "601183": {"name": "Kantapon", "nick": "พี่กาย", "role": "admin", "crossBrand": true}, "480808": {"name": "อารียา", "nick": "พี่ก๊ะ", "role": "vp", "title": "นางสาว"}, "681201": {"name": "อังคณา", "nick": "พี่อิ๊ว", "role": "coo", "crossBrand": true}};
 // ============ STATE ============
 let currentUser = null; // {code, name, nick, role}
@@ -6087,6 +6111,7 @@ function _maxDailyUpdatedAt(list) {
 }
 
 async function loadDailyChecklists() {
+  loadSfBranches(); // โหลดรายชื่อสาขา (เพิ่ม/ลบ) จาก cloud — ครั้งเดียวต่อ session
   // MERGE: รวม cloud + local (ห้ามทับของในเครื่องด้วยของว่าง) — กันข้อมูลที่เซฟ cloud ไม่สำเร็จหาย
   const local = loadLocalDaily();
   allDailyChecklists = local.filter(d => d && !d.deleted); // แสดง local ก่อน กันจอว่างระหว่างโหลด
@@ -7064,6 +7089,76 @@ function _sfDailyTopFailsHTML(dailies) {
   return overview + cards;
 }
 
+// ── จัดการรายชื่อสาขา (เพิ่ม/ลบ) — sync ผ่าน cloud ให้ทุกเครื่องเห็นตรงกัน ──
+let _sfBranchesLoaded = false;
+function _applySfBranches(list) {
+  if (Array.isArray(list) && list.length) {
+    BRANCHES = list.filter(b => b && b.code).map(b => ({ code: String(b.code), name: b.name || '', manager: b.manager || '', managerNick: b.managerNick || '' }));
+  }
+}
+async function loadSfBranches() {
+  if (_sfBranchesLoaded) return;
+  _sfBranchesLoaded = true;
+  try { const a = JSON.parse(localStorage.getItem(SF_BRANCHES_KEY) || 'null'); if (Array.isArray(a) && a.length) _applySfBranches(a); } catch (_) {}
+  if (!firebaseDb) return;
+  try {
+    const doc = await firebaseDb.collection('appConfig').doc('sfBranches').get();
+    if (doc.exists) {
+      const d = doc.data();
+      if (d && Array.isArray(d.list) && d.list.length) {
+        _applySfBranches(d.list);
+        try { localStorage.setItem(SF_BRANCHES_KEY, JSON.stringify(BRANCHES)); } catch (_) {}
+        if (document.getElementById('sf-daily-table')) _renderSfTable();
+      }
+    }
+  } catch (e) { console.warn('loadSfBranches failed', e); }
+}
+async function saveSfBranches() {
+  try { localStorage.setItem(SF_BRANCHES_KEY, JSON.stringify(BRANCHES)); } catch (_) {}
+  if (firebaseDb) { try { await firebaseDb.collection('appConfig').doc('sfBranches').set({ list: BRANCHES, updatedAt: new Date().toISOString() }); } catch (e) { console.warn('saveSfBranches failed', e); } }
+}
+function _isSfAdmin() { return currentUser && ['admin', 'vp', 'coo'].indexOf(currentUser.role) >= 0; }
+function openSfBranchManager() {
+  if (!_isSfAdmin()) { showModal('ไม่มีสิทธิ์', 'เฉพาะผู้ดูแลระบบเท่านั้นที่จัดการสาขาได้'); return; }
+  let m = document.getElementById('sf-branch-modal');
+  if (!m) { m = document.createElement('div'); m.id = 'sf-branch-modal'; m.className = 'sf-bm-overlay'; m.onclick = (e) => { if (e.target === m) closeSfBranchManager(); }; document.body.appendChild(m); }
+  m.innerHTML = _sfBranchManagerHTML();
+  m.classList.add('show');
+}
+function closeSfBranchManager() { const m = document.getElementById('sf-branch-modal'); if (m) m.classList.remove('show'); }
+function _sfBranchManagerHTML() {
+  const rows = BRANCHES.slice().sort((a, b) => String(a.code).localeCompare(String(b.code))).map(b =>
+    '<div class="sf-bm-row"><span class="sf-tbl-code">' + escapeHtml(String(b.code)) + '</span><span class="sf-bm-name">' + escapeHtml(b.name || '') + '</span>' +
+    '<button type="button" class="sf-bm-del" onclick="deleteSfBranch(\'' + escapeAttr(String(b.code)) + '\')" title="ลบสาขา"><span class="material-symbols-rounded">delete</span></button></div>'
+  ).join('');
+  return '<div class="sf-bm-box">' +
+    '<div class="sf-bm-head"><h3>จัดการสาขา · Santa Fe <span class="sf-bm-count">' + BRANCHES.length + ' สาขา</span></h3><button type="button" class="sf-bm-x" onclick="closeSfBranchManager()"><span class="material-symbols-rounded">close</span></button></div>' +
+    '<div class="sf-bm-add"><input id="sf-bm-code" class="sf-bm-input" placeholder="รหัส (เช่น 5099)" maxlength="8"><input id="sf-bm-name" class="sf-bm-input sf-bm-input-name" placeholder="ชื่อสาขา"><button type="button" class="sf-bm-addbtn" onclick="addSfBranch()"><span class="material-symbols-rounded">add</span> เพิ่ม</button></div>' +
+    '<div class="sf-bm-list">' + rows + '</div>' +
+  '</div>';
+}
+function addSfBranch() {
+  const codeEl = document.getElementById('sf-bm-code'), nameEl = document.getElementById('sf-bm-name');
+  const code = (codeEl.value || '').trim(), name = (nameEl.value || '').trim();
+  if (!code) { codeEl.focus(); return; }
+  if (!name) { nameEl.focus(); return; }
+  if (BRANCHES.some(b => String(b.code) === code)) { showModal('รหัสซ้ำ', 'มีสาขารหัส ' + code + ' อยู่แล้ว'); return; }
+  BRANCHES.push({ code: code, name: name, manager: '', managerNick: '' });
+  saveSfBranches();
+  const m = document.getElementById('sf-branch-modal'); if (m) m.innerHTML = _sfBranchManagerHTML();
+  _renderSfTable();
+}
+async function deleteSfBranch(code) {
+  const b = BRANCHES.find(x => String(x.code) === String(code));
+  if (!b) return;
+  const ok = await showConfirm('ลบสาขา?', 'ลบ <b>' + escapeHtml(String(code) + ' ' + (b.name || '')) + '</b> ออกจากรายชื่อ?<br>(ผลตรวจเดิมของสาขานี้ยังอยู่ ไม่ถูกลบ)', { okLabel: 'ลบ', cancelLabel: 'ยกเลิก', danger: true });
+  if (!ok) return;
+  BRANCHES = BRANCHES.filter(x => String(x.code) !== String(code));
+  saveSfBranches();
+  const m = document.getElementById('sf-branch-modal'); if (m) m.innerHTML = _sfBranchManagerHTML();
+  _renderSfTable();
+}
+
 // ── ตารางการส่ง · เปิด/ปิดร้าน — เลือกวันได้ · แสดงทุกสาขา (รหัสครบ) + สาเหตุส่งช้า ──
 let sfTableDate = todayDateStr();
 function _ymd(d) { const m = String(d.getMonth() + 1).padStart(2, '0'); const day = String(d.getDate()).padStart(2, '0'); return d.getFullYear() + '-' + m + '-' + day; }
@@ -7112,6 +7207,7 @@ function _sfDailyTableHTML() {
     '<button type="button" class="sf-tbl-nav" onclick="_sfTableDay(-1)" title="วันก่อนหน้า"><span class="material-symbols-rounded">chevron_left</span></button>' +
     '<input type="date" class="sf-tbl-dateinput" value="' + escapeAttr(day) + '" onchange="_sfTableSetDate(this.value)">' +
     '<button type="button" class="sf-tbl-nav" onclick="_sfTableDay(1)" title="วันถัดไป"><span class="material-symbols-rounded">chevron_right</span></button>' +
+    (_isSfAdmin() ? '<button type="button" class="sf-tbl-manage" onclick="openSfBranchManager()"><span class="material-symbols-rounded">settings</span> จัดการสาขา</button>' : '') +
     '<span class="sf-tbl-summary">🌅 ส่งแล้ว ' + openCount + '/' + total + ' · 🌙 ' + closeCount + '/' + total + '</span>' +
   '</div>';
   const table = '<div class="sf-tbl-wrap"><table class="sf-send-table">' +
