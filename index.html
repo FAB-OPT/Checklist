@@ -1037,9 +1037,9 @@ body.in-audit #scroll-bottom-fab .material-symbols-rounded { font-size: 24px; }
   #jaedaeng-detail-screen .jd-status-chip { padding: 6px 4px !important; }
   #jaedaeng-detail-screen .jd-status-num { font-size: 15pt !important; }
 
-  /* ---- หมวด + ข้อ ---- */
-  .detail-section-card { margin-bottom: 10px !important; border: 1px solid #bbb !important; page-break-inside: avoid; break-inside: avoid; }
-  .detail-section-head { padding: 6px 12px !important; }
+  /* ---- หมวด + ข้อ (ไหลต่อกัน ไม่เว้นหน้าต่อหมวด) ---- */
+  .detail-section-card { margin-bottom: 10px !important; border: 1px solid #bbb !important; }
+  .detail-section-head { padding: 6px 12px !important; break-after: avoid; page-break-after: avoid; }
   .detail-section-name { font-size: 11pt !important; }
   .detail-item { padding: 6px 12px !important; page-break-inside: avoid; break-inside: avoid; }
   .detail-item-text { font-size: 10.5pt !important; line-height: 1.35 !important; }
