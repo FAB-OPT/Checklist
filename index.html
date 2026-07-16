@@ -9978,19 +9978,148 @@ function showJaedaengDetail(id, targetText) {
   if (targetText) _flashDetailItem('jd-detail-content', targetText);
 }
 
-// ออกรายงาน PDF รายสาขา — ใช้ระบบพิมพ์ของเบราว์เซอร์ (เลือก "บันทึกเป็น PDF")
-function printJaedaengDetail() {
+// สไตล์รายงาน (always-on ใน iframe พิมพ์ — ให้เลย์เอาต์ตอนแบ่งหน้าตรงกับตอนพิมพ์)
+const PDF_REPORT_CSS = `
+.pdf-report { font-size: 11pt; color:#111; background:#fff; max-width:none; width:100%; padding:0; margin:0; }
+.pdf-report .card { box-shadow:none !important; border-radius:0 !important; }
+.pdf-report .no-print, .pdf-report .print-footer { display:none !important; }
+.pdf-report .print-report-header { display:block; text-align:center; padding-bottom:8px; margin-bottom:14px; border-bottom:2.5px solid #D63622; }
+.pdf-report .prh-title { font-size:17pt; font-weight:900; color:#D63622; }
+.pdf-report .prh-sub { font-size:10pt; color:#444; margin-top:3px; }
+.pdf-report .summary-hero { display:grid !important; grid-template-columns:150px 1fr !important; gap:18px !important; align-items:center !important; padding:12px 16px !important; border:1.5px solid #333 !important; border-radius:8px !important; margin-bottom:14px !important; break-inside:avoid; }
+.pdf-report .summary-hero-score .score-card-pct { font-size:40pt !important; line-height:1 !important; }
+.pdf-report .score-card-pct-unit { font-size:9pt !important; }
+.pdf-report .summary-meta-list { grid-template-columns:1fr 1fr !important; gap:2px 16px !important; }
+.pdf-report .summary-meta-row { padding:5px 6px !important; }
+.pdf-report .summary-meta-row-label { font-size:8pt !important; }
+.pdf-report .summary-meta-row-value { font-size:10pt !important; }
+.pdf-report .jd-status-chip { padding:6px 4px !important; }
+.pdf-report .jd-status-num { font-size:15pt !important; }
+.pdf-report .detail-section-card { margin-bottom:10px !important; border:1px solid #bbb !important; }
+.pdf-report .detail-section-head { padding:6px 12px !important; break-after:avoid; }
+.pdf-report .detail-section-name { font-size:11pt !important; }
+.pdf-report .detail-item { padding:6px 12px !important; break-inside:avoid; }
+.pdf-report .detail-item-text { font-size:10.5pt !important; line-height:1.35 !important; }
+.pdf-report .detail-item-note { font-size:9pt !important; padding:4px 8px !important; margin-top:4px !important; }
+.pdf-report .detail-status-pill { font-size:8.5pt !important; min-width:48px !important; height:18px !important; }
+.pdf-report .detail-item .detail-photos { display:none !important; }
+.pdf-report a { text-decoration:none !important; color:#000 !important; }
+.pdf-report .print-only-photos { display:block !important; margin-top:14px; }
+.pdf-report .ppx-heading { font-size:13pt; font-weight:900; color:#D63622; border-top:2px solid #D63622; padding-top:8px; margin:8px 0 10px; break-after:avoid; }
+.pdf-report .ppx-group { margin-bottom:12px; break-inside:avoid; }
+.pdf-report .ppx-label { font-size:9.5pt; font-weight:700; color:#222; margin-bottom:5px; line-height:1.35; }
+.pdf-report .ppx-tag { display:inline-block; padding:1px 7px; border-radius:8px; font-size:8pt; font-weight:800; margin-right:4px; }
+.pdf-report .ppx-tag.is-pass { background:#DCF0E3; color:#1E6B36; }
+.pdf-report .ppx-tag.is-fail { background:#F7D9D4; color:#7A1F10; }
+.pdf-report .ppx-tag.is-na { background:#E9E9EC; color:#555; border:1px solid #ccc; }
+.pdf-report .ppx-photos { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+.pdf-report .ppx-photos img { width:100%; aspect-ratio:4/3; object-fit:cover; border:1px solid #ccc; border-radius:4px; }
+* { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+`;
+
+function _jdPrintFooterText() {
+  const d = new Date();
+  const pad = n => String(n).padStart(2, '0');
+  const who = (currentUser && (currentUser.name || currentUser.nick)) || '-';
+  const nick = (currentUser && currentUser.nick && currentUser.nick !== currentUser.name) ? ' (' + currentUser.nick + ')' : '';
+  const dateStr = `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`;
+  const timeStr = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  return `พิมพ์โดย ${who}${nick} · ${dateStr} ${timeStr} น.`;
+}
+
+// พิมพ์แบบเดิม (fallback ถ้า Paged.js โหลดไม่ได้/ออฟไลน์) — footer ต่อหน้าได้ แต่ไม่มีเลข X/Y ใน Chrome
+function _jdPlainPrint(footerText) {
   const foot = document.getElementById('jd-print-footer');
-  if (foot) {
-    const d = new Date();
-    const pad = n => String(n).padStart(2, '0');
-    const who = (currentUser && (currentUser.name || currentUser.nick)) || '-';
-    const nick = (currentUser && currentUser.nick && currentUser.nick !== currentUser.name) ? ' (' + currentUser.nick + ')' : '';
-    const dateStr = `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`;
-    const timeStr = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
-    foot.innerHTML = `<span class="pf-left">พิมพ์โดย ${escapeHtml(who)}${escapeHtml(nick)} · ${dateStr} ${timeStr} น.</span>`;
-  }
+  if (foot) foot.innerHTML = `<span class="pf-left">${escapeHtml(footerText)}</span>`;
   window.print();
+}
+
+// ออกรายงาน PDF รายสาขา — ใช้ Paged.js แบ่งหน้า + ใส่เลขหน้า X/Y และ footer ทุกหน้า (รันใน iframe แยก)
+async function printJaedaengDetail() {
+  if (window._jdPrinting) return;
+  window._jdPrinting = true;
+  const footerText = _jdPrintFooterText();
+  const screen = document.getElementById('jaedaeng-detail-screen');
+  if (!screen) { window._jdPrinting = false; _jdPlainPrint(footerText); return; }
+
+  // ตัวบอกสถานะระหว่างสร้าง PDF
+  const overlay = document.createElement('div');
+  overlay.id = 'jd-pdf-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.45);color:#fff;font-size:15px;font-weight:700;';
+  overlay.textContent = 'กำลังสร้าง PDF…';
+  document.body.appendChild(overlay);
+  const killOverlay = () => { const o = document.getElementById('jd-pdf-overlay'); if (o) o.remove(); window._jdPrinting = false; };
+
+  // เตรียมเนื้อหารายงาน (ตัดปุ่ม/footer เดิม + ลบ id กันซ้ำ)
+  const src = screen.cloneNode(true);
+  src.querySelectorAll('.no-print, .print-footer').forEach(e => e.remove());
+  src.querySelectorAll('[id]').forEach(e => e.removeAttribute('id'));
+
+  // สร้าง iframe พิมพ์แยก (ไม่กระทบ DOM/สไตล์แอป)
+  const old = document.getElementById('jd-pdf-frame');
+  if (old) old.remove();
+  const iframe = document.createElement('iframe');
+  iframe.id = 'jd-pdf-frame';
+  iframe.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;';
+  document.body.appendChild(iframe);
+  const doc = iframe.contentDocument;
+  doc.open();
+  doc.write('<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head><body></body></html>');
+  doc.close();
+
+  // ก๊อปฟอนต์ + สไตล์ของแอปเข้า iframe เพื่อให้รายงานหน้าตาเหมือนเดิม
+  document.querySelectorAll('link[rel="stylesheet"]').forEach(l => {
+    const nl = doc.createElement('link'); nl.rel = 'stylesheet'; nl.href = l.href; doc.head.appendChild(nl);
+  });
+  document.querySelectorAll('style').forEach(s => {
+    const ns = doc.createElement('style'); ns.textContent = s.textContent; doc.head.appendChild(ns);
+  });
+
+  // สไตล์รายงาน + @page (footer ซ้าย, เลขหน้า X/Y ขวา) — Paged.js polyfill ให้ครบทุกเบราว์เซอร์
+  const ft = footerText.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+  const extra = doc.createElement('style');
+  extra.textContent = PDF_REPORT_CSS +
+    `@page { size:A4 portrait; margin:14mm 12mm 16mm;` +
+    ` @bottom-left { content:"${ft}"; font-size:8pt; color:#555; }` +
+    ` @bottom-right { content:"หน้า " counter(page) " / " counter(pages); font-size:8pt; color:#666; } }`;
+  doc.head.appendChild(extra);
+
+  // เนื้อหารายงาน
+  const wrap = doc.createElement('div');
+  wrap.className = 'pdf-report container';
+  wrap.innerHTML = src.innerHTML;
+  doc.body.appendChild(wrap);
+
+  // เก็บกวาด iframe หลังพิมพ์เสร็จ/ยกเลิก
+  let cleaned = false;
+  const cleanup = () => { if (cleaned) return; cleaned = true; killOverlay(); setTimeout(() => { const f = document.getElementById('jd-pdf-frame'); if (f) f.remove(); }, 400); };
+  try { iframe.contentWindow.addEventListener('afterprint', cleanup); } catch (e) {}
+  // ปิด overlay เมื่อกล่องพิมพ์เปิด (พิมพ์เริ่มทำงาน)
+  try { iframe.contentWindow.addEventListener('beforeprint', killOverlay); } catch (e) {}
+  setTimeout(cleanup, 60000); // safety net
+
+  // รอรูป + ฟอนต์พร้อมก่อนแบ่งหน้า
+  try {
+    const imgs = Array.from(doc.images);
+    await Promise.race([
+      Promise.all(imgs.map(img => img.complete ? true : new Promise(res => { img.onload = img.onerror = res; }))),
+      new Promise(res => setTimeout(res, 5000))
+    ]);
+    if (doc.fonts && doc.fonts.ready) { await Promise.race([doc.fonts.ready, new Promise(res => setTimeout(res, 3000))]); }
+  } catch (e) {}
+
+  // ตั้งค่า Paged.js: auto + พิมพ์อัตโนมัติหลังแบ่งหน้าเสร็จ
+  const cfg = doc.createElement('script');
+  cfg.textContent = "window.PagedConfig={auto:true, after:function(){setTimeout(function(){try{window.focus();}catch(e){} window.print();},250);}};";
+  doc.head.appendChild(cfg);
+
+  // โหลด Paged.js เข้า iframe (auto รันเอง) — ถ้าโหลดไม่ได้ → fallback พิมพ์แบบเดิม
+  const pg = doc.createElement('script');
+  pg.src = 'https://unpkg.com/pagedjs/dist/paged.polyfill.js';
+  pg.onerror = () => { killOverlay(); const f = document.getElementById('jd-pdf-frame'); if (f) f.remove(); _jdPlainPrint(footerText); };
+  doc.body.appendChild(pg);
+  // เผื่อ Paged.js ไม่ยิง before/afterprint (บางเบราว์เซอร์) — ปิด overlay อัตโนมัติ
+  setTimeout(killOverlay, 8000);
 }
 
 // เลื่อนไปข้อที่ระบุในหน้า detail + กระพริบให้เห็นชัด
