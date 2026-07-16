@@ -989,8 +989,9 @@ body.in-audit #scroll-bottom-fab .material-symbols-rounded { font-size: 24px; }
   border-radius: var(--r-pill);
 }
 
-/* หัวรายงาน — โชว์เฉพาะตอนพิมพ์/ออก PDF */
+/* หัวรายงาน + ภาคผนวกรูป — โชว์เฉพาะตอนพิมพ์/ออก PDF */
 .print-report-header { display: none; }
+.print-only-photos { display: none; }
 
 @media print {
   @page { size: A4 portrait; margin: 14mm 12mm; }
@@ -1046,11 +1047,25 @@ body.in-audit #scroll-bottom-fab .material-symbols-rounded { font-size: 24px; }
   .detail-item-note { font-size: 9pt !important; padding: 4px 8px !important; margin-top: 4px !important; }
   .detail-status-pill { font-size: 8.5pt !important; min-width: 48px !important; height: 18px !important; }
 
-  /* ---- รูปหลักฐาน: 4 รูปต่อแถว ขนาดเท่ากัน ---- */
-  .detail-photos { grid-template-columns: repeat(4, 1fr) !important; gap: 6px !important; margin-top: 8px !important; }
-  .detail-photo-btn { aspect-ratio: 4/3 !important; border: 1px solid #ccc !important; page-break-inside: avoid; break-inside: avoid; }
-  .detail-photo-zoom { display: none !important; }
+  /* ---- ซ่อนรูปในแต่ละข้อ แล้วยกไปรวมท้ายรายงาน ---- */
+  .detail-item .detail-photos { display: none !important; }
   a { text-decoration: none !important; color: #000 !important; }
+
+  /* ---- ภาคผนวกรูปหลักฐาน (ท้ายรายงาน) ---- */
+  .print-only-photos { display: block !important; margin-top: 14px; }
+  .ppx-heading {
+    font-size: 13pt; font-weight: 900; color: #D63622;
+    border-top: 2px solid #D63622; padding-top: 8px; margin: 8px 0 10px;
+    break-before: page; page-break-before: always;
+  }
+  .ppx-group { margin-bottom: 12px; page-break-inside: avoid; break-inside: avoid; }
+  .ppx-label { font-size: 9.5pt; font-weight: 700; color: #222; margin-bottom: 5px; line-height: 1.35; }
+  .ppx-tag { display: inline-block; padding: 1px 7px; border-radius: 8px; font-size: 8pt; font-weight: 800; margin-right: 4px; }
+  .ppx-tag.is-pass { background: #DCF0E3; color: #1E6B36; }
+  .ppx-tag.is-fail { background: #F7D9D4; color: #7A1F10; }
+  .ppx-tag.is-na   { background: #E9E9EC; color: #555; border: 1px solid #ccc; }
+  .ppx-photos { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .ppx-photos img { width: 100%; aspect-ratio: 4/3; object-fit: cover; border: 1px solid #ccc; border-radius: 4px; }
 }
 
 /* Test mode banner + toggle */
@@ -5302,6 +5317,7 @@ html.fab-sso-pending #login-screen { display: none !important; }
         <div id="jd-detail-meta" class="summary-meta-list"></div>
       </div>
       <div id="jd-detail-content"></div>
+      <div class="print-only-photos" id="jd-print-photos"></div>
       <div class="card no-print">
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
           <button class="btn btn-secondary" style="flex:1;min-width:130px;" onclick="showJaedaengHub()">
@@ -9885,6 +9901,7 @@ function showJaedaengDetail(id, targetText) {
     bySection[it.section].push(it);
   });
   let html = '';
+  let photoApx = ''; // ภาคผนวกรูปหลักฐาน (ใช้เฉพาะตอนออก PDF)
   Object.keys(bySection).forEach(secName => {
     const items = bySection[secName];
     const secPass = items.filter(i => i.status === 'pass').length;
@@ -9901,6 +9918,12 @@ function showJaedaengDetail(id, targetText) {
       const status = it.status || 'pending';
       const pillLabel = status === 'pass' ? 'ผ่าน' : status === 'fail' ? 'ไม่ผ่าน' : status === 'na' ? 'N/A' : 'รอ';
       const photos = it.photos || [];
+      if (photos.length) {
+        photoApx += `<div class="ppx-group">
+          <div class="ppx-label"><span class="ppx-tag is-${status}">${pillLabel}</span> ${escapeHtml(secName)} · ข้อ ${j+1}. ${escapeHtml(it.text)}</div>
+          <div class="ppx-photos">${photos.map(p => `<img src="${p}" alt="">`).join('')}</div>
+        </div>`;
+      }
       const photosHtml = photos.length ? '<div class="detail-photos">' + photos.map(p => {
         const lbIdx = lightboxImages.indexOf(p);
         return `<button type="button" class="detail-photo-btn" onclick="openLightbox(${lbIdx})"><img src="${p}" alt=""><span class="detail-photo-zoom"><span class="material-symbols-rounded">zoom_in</span></span></button>`;
@@ -9919,6 +9942,13 @@ function showJaedaengDetail(id, targetText) {
     html += `</div>`;
   });
   document.getElementById('jd-detail-content').innerHTML = html;
+  // ภาคผนวกรูปหลักฐาน (โชว์เฉพาะตอนออก PDF)
+  const apx = document.getElementById('jd-print-photos');
+  if (apx) {
+    apx.innerHTML = photoApx
+      ? `<div class="ppx-heading">ภาคผนวก · รูปหลักฐาน</div>${photoApx}`
+      : '';
+  }
   // หัวรายงาน (โชว์เฉพาะตอนออก PDF)
   const prh = document.getElementById('jd-print-header');
   if (prh) {
