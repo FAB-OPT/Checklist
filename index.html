@@ -1061,7 +1061,7 @@ body.in-audit #scroll-bottom-fab .material-symbols-rounded { font-size: 24px; }
   .detail-section-card { margin-bottom: 10px !important; border: 1px solid #bbb !important; }
   .detail-section-head { padding: 6px 12px !important; break-after: avoid; page-break-after: avoid; }
   .detail-section-name { font-size: 11pt !important; }
-  .detail-item { padding: 6px 12px !important; page-break-inside: avoid; break-inside: avoid; }
+  .detail-item { padding: 6px 12px !important; }
   .detail-item-text { font-size: 10.5pt !important; line-height: 1.35 !important; }
   .detail-item-note { font-size: 9pt !important; padding: 4px 8px !important; margin-top: 4px !important; }
   .detail-status-pill { font-size: 8.5pt !important; min-width: 48px !important; height: 18px !important; }
@@ -1077,14 +1077,14 @@ body.in-audit #scroll-bottom-fab .material-symbols-rounded { font-size: 24px; }
     border-top: 2px solid #D63622; padding-top: 8px; margin: 8px 0 10px;
     break-after: avoid; page-break-after: avoid;
   }
-  .ppx-group { margin-bottom: 12px; page-break-inside: avoid; break-inside: avoid; }
+  .ppx-group { margin-bottom: 12px; }
   .ppx-label { font-size: 9.5pt; font-weight: 700; color: #222; margin-bottom: 5px; line-height: 1.35; }
   .ppx-tag { display: inline-block; padding: 1px 7px; border-radius: 8px; font-size: 8pt; font-weight: 800; margin-right: 4px; }
   .ppx-tag.is-pass { background: #DCF0E3; color: #1E6B36; }
   .ppx-tag.is-fail { background: #F7D9D4; color: #7A1F10; }
   .ppx-tag.is-na   { background: #E9E9EC; color: #555; border: 1px solid #ccc; }
   .ppx-photos { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-  .ppx-photos img { width: 100%; aspect-ratio: 4/3; object-fit: cover; border: 1px solid #ccc; border-radius: 4px; }
+  .ppx-photos img { width: 100%; aspect-ratio: 4/3; object-fit: cover; border: 1px solid #ccc; border-radius: 4px; break-inside: avoid; }
 }
 
 /* Test mode banner + toggle */
@@ -9998,7 +9998,7 @@ const PDF_REPORT_CSS = `
 .pdf-report .detail-section-card { margin-bottom:10px !important; border:1px solid #bbb !important; }
 .pdf-report .detail-section-head { padding:6px 12px !important; break-after:avoid; }
 .pdf-report .detail-section-name { font-size:11pt !important; }
-.pdf-report .detail-item { padding:6px 12px !important; break-inside:avoid; }
+.pdf-report .detail-item { padding:6px 12px !important; }
 .pdf-report .detail-item-text { font-size:10.5pt !important; line-height:1.35 !important; }
 .pdf-report .detail-item-note { font-size:9pt !important; padding:4px 8px !important; margin-top:4px !important; }
 .pdf-report .detail-status-pill { font-size:8.5pt !important; min-width:48px !important; height:18px !important; }
@@ -10006,14 +10006,14 @@ const PDF_REPORT_CSS = `
 .pdf-report a { text-decoration:none !important; color:#000 !important; }
 .pdf-report .print-only-photos { display:block !important; margin-top:14px; }
 .pdf-report .ppx-heading { font-size:13pt; font-weight:900; color:#D63622; border-top:2px solid #D63622; padding-top:8px; margin:8px 0 10px; break-after:avoid; }
-.pdf-report .ppx-group { margin-bottom:12px; break-inside:avoid; }
+.pdf-report .ppx-group { margin-bottom:12px; }
 .pdf-report .ppx-label { font-size:9.5pt; font-weight:700; color:#222; margin-bottom:5px; line-height:1.35; }
 .pdf-report .ppx-tag { display:inline-block; padding:1px 7px; border-radius:8px; font-size:8pt; font-weight:800; margin-right:4px; }
 .pdf-report .ppx-tag.is-pass { background:#DCF0E3; color:#1E6B36; }
 .pdf-report .ppx-tag.is-fail { background:#F7D9D4; color:#7A1F10; }
 .pdf-report .ppx-tag.is-na { background:#E9E9EC; color:#555; border:1px solid #ccc; }
 .pdf-report .ppx-photos { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
-.pdf-report .ppx-photos img { width:100%; aspect-ratio:4/3; object-fit:cover; border:1px solid #ccc; border-radius:4px; }
+.pdf-report .ppx-photos img { width:100%; aspect-ratio:4/3; object-fit:cover; border:1px solid #ccc; border-radius:4px; break-inside:avoid; }
 * { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
 `;
 
