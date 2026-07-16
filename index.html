@@ -9618,12 +9618,13 @@ async function submitJaedaengAudit() {
     showModal('ข้อไม่ผ่านต้องแนบรูป', `มี ${failsWithoutPhoto.length} ข้อที่ตอบ "ไม่ผ่าน" แต่ยังไม่ได้แนบรูปหลักฐาน — กดตกลงเพื่อไปข้อนั้น`, () => scrollToJDItem(failsWithoutPhotoIdx));
     return;
   }
-  // ทุกข้อที่ตอบ "ไม่ผ่าน" ต้องระบุหมายเหตุ
-  const failsWithoutNote = currentJDAudit.items.filter(it =>
+  // ทุกข้อที่ตอบ "ไม่ผ่าน" ต้องระบุหมายเหตุ — เด้ง+กระพริบไปข้อแรกที่ขาด
+  const failNoteFirstIdx = currentJDAudit.items.findIndex(it =>
     it.status === 'fail' && (!it.note || !it.note.trim())
   );
-  if (failsWithoutNote.length > 0) {
-    showModal('ข้อไม่ผ่านต้องระบุหมายเหตุ', `มี ${failsWithoutNote.length} ข้อที่ตอบ "ไม่ผ่าน" แต่ยังไม่ได้ระบุหมายเหตุ — กรอกหมายเหตุก่อนบันทึก`);
+  if (failNoteFirstIdx >= 0) {
+    const failCount = currentJDAudit.items.filter(it => it.status === 'fail' && (!it.note || !it.note.trim())).length;
+    showModal('ข้อไม่ผ่านต้องระบุหมายเหตุ', `มี ${failCount} ข้อที่ตอบ "ไม่ผ่าน" แต่ยังไม่ได้ระบุหมายเหตุ — กดตกลงเพื่อไปข้อนั้น`, () => scrollToJDItem(failNoteFirstIdx));
     return;
   }
   // ทุกข้อที่ตอบ N/A ต้องระบุเหตุผล — เด่งไปข้อแรกที่ขาด
@@ -9633,15 +9634,6 @@ async function submitJaedaengAudit() {
   if (naFirstIdx >= 0) {
     const naCount = currentJDAudit.items.filter(it => it.status === 'na' && (!it.note || !it.note.trim())).length;
     showModal('N/A ต้องระบุเหตุผล', `มี ${naCount} ข้อที่ตอบ "N/A" แต่ยังไม่ได้ระบุเหตุผล — กดตกลงเพื่อไปข้อนั้น`, () => scrollToJDItem(naFirstIdx));
-    return;
-  }
-  // ทุกข้อที่ตอบ "ไม่ผ่าน" ต้องระบุหมายเหตุด้วย
-  const failFirstIdx = currentJDAudit.items.findIndex(it =>
-    it.status === 'fail' && (!it.note || !it.note.trim())
-  );
-  if (failFirstIdx >= 0) {
-    const failCount = currentJDAudit.items.filter(it => it.status === 'fail' && (!it.note || !it.note.trim())).length;
-    showModal('ระบุหมายเหตุ', `มี ${failCount} ข้อที่ตอบ "ไม่ผ่าน" แต่ยังไม่ได้ระบุหมายเหตุ — กดตกลงเพื่อไปข้อนั้น`, () => scrollToJDItem(failFirstIdx));
     return;
   }
   const items = currentJDAudit.items;
