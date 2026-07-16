@@ -989,13 +989,32 @@ body.in-audit #scroll-bottom-fab .material-symbols-rounded { font-size: 24px; }
   border-radius: var(--r-pill);
 }
 
-/* หัวรายงาน + ภาคผนวกรูป — โชว์เฉพาะตอนพิมพ์/ออก PDF */
+/* หัวรายงาน + ภาคผนวกรูป + footer — โชว์เฉพาะตอนพิมพ์/ออก PDF */
 .print-report-header { display: none; }
 .print-only-photos { display: none; }
+.print-footer { display: none; }
 
 @media print {
-  @page { size: A4 portrait; margin: 14mm 12mm; }
+  @page {
+    size: A4 portrait;
+    margin: 14mm 12mm 20mm;
+    /* เลขหน้า X/Y — รองรับใน Firefox/บาง PDF engine (Chrome อาจต้องติ๊ก "หัว/ท้ายกระดาษ") */
+    @bottom-right { content: "หน้า " counter(page) " / " counter(pages); font-size: 8pt; color: #666; }
+  }
   html, body { background: #fff !important; }
+
+  /* footer ท้ายทุกหน้า — พิมพ์โดยใคร วันที่ เวลา */
+  .print-footer {
+    display: block !important;
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    background: #fff;
+    border-top: 1px solid #bbb;
+    padding-top: 3px;
+    font-size: 8pt; color: #555;
+    line-height: 1.3;
+  }
+  .print-footer .pf-right { float: right; }
   body { padding: 0 !important; margin: 0 !important; font-size: 11pt; }
   .bottom-nav, .section-tabs, .progress-bar-container, .no-print,
   #test-mode-banner, #scroll-bottom-fab, .lightbox { display: none !important; }
@@ -5308,6 +5327,7 @@ html.fab-sso-pending #login-screen { display: none !important; }
     <!-- JAE DAENG DETAIL -->
     <div id="jaedaeng-detail-screen" style="display:none;">
       <div class="print-report-header" id="jd-print-header"></div>
+      <div class="print-footer" id="jd-print-footer"></div>
       <div class="card summary-hero" id="jd-detail-head">
         <div class="summary-hero-score">
           <div class="score-card-pct" id="jd-detail-pct">0.0</div>
@@ -9960,6 +9980,16 @@ function showJaedaengDetail(id, targetText) {
 
 // ออกรายงาน PDF รายสาขา — ใช้ระบบพิมพ์ของเบราว์เซอร์ (เลือก "บันทึกเป็น PDF")
 function printJaedaengDetail() {
+  const foot = document.getElementById('jd-print-footer');
+  if (foot) {
+    const d = new Date();
+    const pad = n => String(n).padStart(2, '0');
+    const who = (currentUser && (currentUser.name || currentUser.nick)) || '-';
+    const nick = (currentUser && currentUser.nick && currentUser.nick !== currentUser.name) ? ' (' + currentUser.nick + ')' : '';
+    const dateStr = `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`;
+    const timeStr = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    foot.innerHTML = `<span class="pf-left">พิมพ์โดย ${escapeHtml(who)}${escapeHtml(nick)} · ${dateStr} ${timeStr} น.</span>`;
+  }
   window.print();
 }
 
