@@ -989,10 +989,36 @@ body.in-audit #scroll-bottom-fab .material-symbols-rounded { font-size: 24px; }
   border-radius: var(--r-pill);
 }
 
+/* หัวรายงาน — โชว์เฉพาะตอนพิมพ์/ออก PDF */
+.print-report-header { display: none; }
+
 @media print {
-  .bottom-nav, .section-tabs, .progress-bar-container, .no-print { display: none !important; }
-  body { padding-bottom: 0; }
-  .card { box-shadow: none; border: 1px solid #ccc; page-break-inside: avoid; }
+  @page { margin: 12mm 10mm; }
+  .bottom-nav, .section-tabs, .progress-bar-container, .no-print,
+  #test-mode-banner, #scroll-bottom-fab, .lightbox { display: none !important; }
+  body { padding: 0 !important; background: #fff !important; }
+  /* คงสีสถานะ/ป้ายให้ติดมากับ PDF */
+  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+  .card { box-shadow: none !important; }
+  .summary-hero, .detail-section-card, .card { border: 1px solid #ccc; }
+
+  /* หัวรายงาน */
+  .print-report-header {
+    display: block;
+    text-align: center;
+    padding-bottom: 10px;
+    margin-bottom: 12px;
+    border-bottom: 2px solid #D63622;
+  }
+  .print-report-header .prh-title { font-size: 18px; font-weight: 900; color: #D63622; }
+  .print-report-header .prh-sub { font-size: 12px; color: #555; margin-top: 2px; }
+
+  /* กันข้อ/หมวด/รูป ขาดกลางหน้า */
+  .detail-section-card { page-break-inside: avoid; break-inside: avoid; }
+  .detail-item { page-break-inside: avoid; break-inside: avoid; }
+  .detail-photo-btn img, .detail-photos img { max-height: 150px !important; }
+  .detail-photo-zoom { display: none !important; }
+  a { text-decoration: none !important; color: #000 !important; }
 }
 
 /* Test mode banner + toggle */
@@ -5234,6 +5260,7 @@ html.fab-sso-pending #login-screen { display: none !important; }
 
     <!-- JAE DAENG DETAIL -->
     <div id="jaedaeng-detail-screen" style="display:none;">
+      <div class="print-report-header" id="jd-print-header"></div>
       <div class="card summary-hero" id="jd-detail-head">
         <div class="summary-hero-score">
           <div class="score-card-pct" id="jd-detail-pct">0.0</div>
@@ -5247,6 +5274,9 @@ html.fab-sso-pending #login-screen { display: none !important; }
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
           <button class="btn btn-secondary" style="flex:1;min-width:130px;" onclick="showJaedaengHub()">
             <span class="material-symbols-rounded">arrow_back</span> กลับไปประวัติ
+          </button>
+          <button class="btn btn-primary" style="flex:1;min-width:130px;" onclick="printJaedaengDetail()">
+            <span class="material-symbols-rounded">picture_as_pdf</span> ออก PDF
           </button>
           <button class="btn btn-primary" id="jd-detail-edit-btn" style="flex:1;min-width:130px;display:none;" onclick="editJaedaengAudit(currentJDDetailId)">
             <span class="material-symbols-rounded">edit</span> แก้ไขผล
@@ -9857,7 +9887,18 @@ function showJaedaengDetail(id, targetText) {
     html += `</div>`;
   });
   document.getElementById('jd-detail-content').innerHTML = html;
+  // หัวรายงาน (โชว์เฉพาะตอนออก PDF)
+  const prh = document.getElementById('jd-print-header');
+  if (prh) {
+    prh.innerHTML = `<div class="prh-title">รายงานผลการตรวจสาขา · เจ๊แดง</div>
+      <div class="prh-sub">${escapeHtml(r.storeName || '—')} · ${escapeHtml(fmtDateDMY(r.date))}${r.time ? ' ' + escapeHtml(r.time) + ' น.' : ''} · ผู้ตรวจ ${escapeHtml(r.auditor || '—')}</div>`;
+  }
   if (targetText) _flashDetailItem('jd-detail-content', targetText);
+}
+
+// ออกรายงาน PDF รายสาขา — ใช้ระบบพิมพ์ของเบราว์เซอร์ (เลือก "บันทึกเป็น PDF")
+function printJaedaengDetail() {
+  window.print();
 }
 
 // เลื่อนไปข้อที่ระบุในหน้า detail + กระพริบให้เห็นชัด
