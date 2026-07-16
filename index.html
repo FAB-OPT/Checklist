@@ -993,30 +993,62 @@ body.in-audit #scroll-bottom-fab .material-symbols-rounded { font-size: 24px; }
 .print-report-header { display: none; }
 
 @media print {
-  @page { margin: 12mm 10mm; }
+  @page { size: A4 portrait; margin: 14mm 12mm; }
+  html, body { background: #fff !important; }
+  body { padding: 0 !important; margin: 0 !important; font-size: 11pt; }
   .bottom-nav, .section-tabs, .progress-bar-container, .no-print,
   #test-mode-banner, #scroll-bottom-fab, .lightbox { display: none !important; }
-  body { padding: 0 !important; background: #fff !important; }
-  /* คงสีสถานะ/ป้ายให้ติดมากับ PDF */
+  /* คงสีสถานะ/ป้าย/หัวหมวดให้ติดมากับ PDF */
   * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-  .card { box-shadow: none !important; }
-  .summary-hero, .detail-section-card, .card { border: 1px solid #ccc; }
 
-  /* หัวรายงาน */
+  /* ใช้เต็มความกว้าง A4 */
+  .container { max-width: none !important; width: 100% !important; padding: 0 !important; margin: 0 !important; }
+  .card { box-shadow: none !important; border-radius: 0 !important; }
+
+  /* ---- หัวรายงาน ---- */
   .print-report-header {
     display: block;
     text-align: center;
-    padding-bottom: 10px;
-    margin-bottom: 12px;
-    border-bottom: 2px solid #D63622;
+    padding-bottom: 8px;
+    margin-bottom: 14px;
+    border-bottom: 2.5px solid #D63622;
   }
-  .print-report-header .prh-title { font-size: 18px; font-weight: 900; color: #D63622; }
-  .print-report-header .prh-sub { font-size: 12px; color: #555; margin-top: 2px; }
+  .print-report-header .prh-title { font-size: 17pt; font-weight: 900; color: #D63622; letter-spacing: 0.3px; }
+  .print-report-header .prh-sub { font-size: 10pt; color: #444; margin-top: 3px; }
 
-  /* กันข้อ/หมวด/รูป ขาดกลางหน้า */
-  .detail-section-card { page-break-inside: avoid; break-inside: avoid; }
-  .detail-item { page-break-inside: avoid; break-inside: avoid; }
-  .detail-photo-btn img, .detail-photos img { max-height: 150px !important; }
+  /* ---- แถบสรุปคะแนน (compact) ---- */
+  #jaedaeng-detail-screen .summary-hero {
+    display: grid !important;
+    grid-template-columns: 150px 1fr !important;
+    gap: 18px !important;
+    align-items: center !important;
+    padding: 12px 16px !important;
+    border: 1.5px solid #333 !important;
+    border-radius: 8px !important;
+    margin-bottom: 14px !important;
+    page-break-inside: avoid; break-inside: avoid;
+  }
+  #jaedaeng-detail-screen .summary-hero-score .score-card-pct { font-size: 40pt !important; line-height: 1 !important; }
+  #jaedaeng-detail-screen .score-card-pct-unit { font-size: 9pt !important; }
+  #jaedaeng-detail-screen .summary-meta-list { grid-template-columns: 1fr 1fr !important; gap: 2px 16px !important; }
+  #jaedaeng-detail-screen .summary-meta-row { padding: 5px 6px !important; }
+  #jaedaeng-detail-screen .summary-meta-row-label { font-size: 8pt !important; }
+  #jaedaeng-detail-screen .summary-meta-row-value { font-size: 10pt !important; }
+  #jaedaeng-detail-screen .jd-status-chip { padding: 6px 4px !important; }
+  #jaedaeng-detail-screen .jd-status-num { font-size: 15pt !important; }
+
+  /* ---- หมวด + ข้อ ---- */
+  .detail-section-card { margin-bottom: 10px !important; border: 1px solid #bbb !important; page-break-inside: avoid; break-inside: avoid; }
+  .detail-section-head { padding: 6px 12px !important; }
+  .detail-section-name { font-size: 11pt !important; }
+  .detail-item { padding: 6px 12px !important; page-break-inside: avoid; break-inside: avoid; }
+  .detail-item-text { font-size: 10.5pt !important; line-height: 1.35 !important; }
+  .detail-item-note { font-size: 9pt !important; padding: 4px 8px !important; margin-top: 4px !important; }
+  .detail-status-pill { font-size: 8.5pt !important; min-width: 48px !important; height: 18px !important; }
+
+  /* ---- รูปหลักฐาน: 4 รูปต่อแถว ขนาดเท่ากัน ---- */
+  .detail-photos { grid-template-columns: repeat(4, 1fr) !important; gap: 6px !important; margin-top: 8px !important; }
+  .detail-photo-btn { aspect-ratio: 4/3 !important; border: 1px solid #ccc !important; page-break-inside: avoid; break-inside: avoid; }
   .detail-photo-zoom { display: none !important; }
   a { text-decoration: none !important; color: #000 !important; }
 }
