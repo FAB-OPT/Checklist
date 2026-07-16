@@ -1077,6 +1077,8 @@ body.in-audit #scroll-bottom-fab .material-symbols-rounded { font-size: 24px; }
   }
   .ppx-group { margin-bottom: 12px; }
   .ppx-label { font-size: 9.5pt; font-weight: 700; color: #222; margin-bottom: 5px; line-height: 1.35; }
+  .ppx-note { font-size: 9pt; color: #7A1F10; background: #F7D9D4; border-radius: 4px; padding: 4px 8px; margin-bottom: 6px; line-height: 1.35; }
+  .ppx-note b { font-weight: 800; }
   .ppx-tag { display: inline-block; padding: 1px 7px; border-radius: 8px; font-size: 8pt; font-weight: 800; margin-right: 4px; }
   .ppx-tag.is-pass { background: #DCF0E3; color: #1E6B36; }
   .ppx-tag.is-fail { background: #F7D9D4; color: #7A1F10; }
@@ -9937,8 +9939,12 @@ function showJaedaengDetail(id, targetText) {
       const pillLabel = status === 'pass' ? 'ผ่าน' : status === 'fail' ? 'ไม่ผ่าน' : status === 'na' ? 'N/A' : 'รอ';
       const photos = it.photos || [];
       if (photos.length) {
+        const apxNote = ((status === 'fail' || status === 'na') && it.note && it.note.trim())
+          ? `<div class="ppx-note"><b>${status === 'na' ? 'เหตุผล N/A' : 'หมายเหตุ'}:</b> ${escapeHtml(it.note)}</div>`
+          : '';
         photoApx += `<div class="ppx-group">
           <div class="ppx-label"><span class="ppx-tag is-${status}">${pillLabel}</span> ${escapeHtml(secName)} · ข้อ ${j+1}. ${escapeHtml(it.text)}</div>
+          ${apxNote}
           <div class="ppx-photos">${photos.map(p => `<img src="${p}" alt="">`).join('')}</div>
         </div>`;
       }
@@ -10006,6 +10012,8 @@ const PDF_REPORT_CSS = `
 .pdf-report .ppx-heading { font-size:13pt; font-weight:900; color:#D63622; border-top:2px solid #D63622; padding-top:8px; margin:8px 0 10px; }
 .pdf-report .ppx-group { margin-bottom:12px; }
 .pdf-report .ppx-label { font-size:9.5pt; font-weight:700; color:#222; margin-bottom:5px; line-height:1.35; }
+.pdf-report .ppx-note { font-size:9pt; color:#7A1F10; background:#F7D9D4; border-radius:4px; padding:4px 8px; margin-bottom:6px; line-height:1.35; }
+.pdf-report .ppx-note b { font-weight:800; }
 .pdf-report .ppx-tag { display:inline-block; padding:1px 7px; border-radius:8px; font-size:8pt; font-weight:800; margin-right:4px; }
 .pdf-report .ppx-tag.is-pass { background:#DCF0E3; color:#1E6B36; }
 .pdf-report .ppx-tag.is-fail { background:#F7D9D4; color:#7A1F10; }
