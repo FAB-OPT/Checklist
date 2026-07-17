@@ -7271,14 +7271,20 @@ function openSfBranchManager() {
   m.classList.add('show');
 }
 function closeSfBranchManager() { const m = document.getElementById('sf-branch-modal'); if (m) m.classList.remove('show'); }
+/* อ่านอย่างเดียว — สาขาย้ายไปจัดการที่ HUB (⚙️ → จัดการสาขา) เป็นแหล่งเดียวแล้ว
+   ปุ่มเพิ่ม/ลบเดิมเขียนลง Firestore ที่เลิกใช้ → กดแล้วไม่มีผลจริง (โดน HUB ทับตอนโหลดใหม่) จึงเอาออก */
 function _sfBranchManagerHTML() {
+  const open = BRANCHES.filter(b => !b.closed).length, closed = BRANCHES.length - open;
   const rows = BRANCHES.slice().sort((a, b) => String(a.code).localeCompare(String(b.code))).map(b =>
-    '<div class="sf-bm-row"><span class="sf-tbl-code">' + escapeHtml(String(b.code)) + '</span><span class="sf-bm-name">' + escapeHtml(b.name || '') + '</span>' +
-    '<button type="button" class="sf-bm-del" onclick="deleteSfBranch(\'' + escapeAttr(String(b.code)) + '\')" title="ลบสาขา"><span class="material-symbols-rounded">delete</span></button></div>'
+    '<div class="sf-bm-row"' + (b.closed ? ' style="opacity:.55"' : '') + '><span class="sf-tbl-code">' + escapeHtml(String(b.code)) + '</span><span class="sf-bm-name">' + escapeHtml(b.name || '') +
+    (b.closed ? ' <span style="font-size:11px;font-weight:700;color:#dc2626;background:rgba(239,68,68,.12);padding:1px 7px;border-radius:999px;margin-left:6px">ปิดแล้ว</span>' : '') +
+    '</span><span style="font-size:11.5px;color:#9ca3af">' + escapeHtml(b.managerNick || '—') + '</span></div>'
   ).join('');
   return '<div class="sf-bm-box">' +
-    '<div class="sf-bm-head"><h3>จัดการสาขา · Santa Fe <span class="sf-bm-count">' + BRANCHES.length + ' สาขา</span></h3><button type="button" class="sf-bm-x" onclick="closeSfBranchManager()"><span class="material-symbols-rounded">close</span></button></div>' +
-    '<div class="sf-bm-add"><input id="sf-bm-code" class="sf-bm-input" placeholder="รหัส (เช่น 5099)" maxlength="8"><input id="sf-bm-name" class="sf-bm-input sf-bm-input-name" placeholder="ชื่อสาขา"><button type="button" class="sf-bm-addbtn" onclick="addSfBranch()"><span class="material-symbols-rounded">add</span> เพิ่ม</button></div>' +
+    '<div class="sf-bm-head"><h3>สาขา · Santa Fe <span class="sf-bm-count">' + open + ' เปิด' + (closed ? ' · ' + closed + ' ปิด' : '') + '</span></h3><button type="button" class="sf-bm-x" onclick="closeSfBranchManager()"><span class="material-symbols-rounded">close</span></button></div>' +
+    '<div style="margin:0 0 10px;padding:10px 12px;background:#FEF3E7;border:1px solid #FBE0CC;border-radius:8px;font-size:12.5px;color:#9A4A0E;line-height:1.5">' +
+      '🔗 <b>สาขาจัดการที่ HUB แล้ว</b> — เพิ่ม / แก้ไข / ปิดสาขา ทำที่ <b>HUB → ⚙️ เครื่องมือผู้ดูแลระบบ → 🏪 จัดการสาขา</b><br>แก้ที่นั่นที่เดียว ทุกระบบเห็นตรงกัน (หน้านี้แสดงอย่างเดียว)' +
+    '</div>' +
     '<div class="sf-bm-list">' + rows + '</div>' +
   '</div>';
 }
