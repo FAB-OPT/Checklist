@@ -6210,6 +6210,7 @@ function _maxDailyUpdatedAt(list) {
 
 async function loadDailyChecklists() {
   loadSfBranches(); // โหลดรายชื่อสาขา (เพิ่ม/ลบ) จาก cloud — ครั้งเดียวต่อ session
+  loadCkPermsFromHub(); // โหลดสิทธิ์ปุ่มจาก HUB แล้ว applyCkPerms ให้เอง
   // MERGE: รวม cloud + local (ห้ามทับของในเครื่องด้วยของว่าง) — กันข้อมูลที่เซฟ cloud ไม่สำเร็จหาย
   const local = loadLocalDaily();
   allDailyChecklists = local.filter(d => d && !d.deleted); // แสดง local ก่อน กันจอว่างระหว่างโหลด
@@ -6939,13 +6940,13 @@ function renderBottomNav() {
   // ลำดับ: กลับเมนูหลัก → แดชบอร์ด → ตรวจร้าน → ออกจากระบบ
   html += '<button class="bottom-nav-item nav-back-hub-btn" id="nav-back-hub" onclick="backToHub()"><span class="material-symbols-rounded">arrow_back</span><span>กลับเมนูหลัก</span></button>';
   if (view === 'jaedaeng') {
-    html += '<button class="bottom-nav-item nav-dash-btn active" id="nav-dash" onclick="showJaedaengDashboard()"><span class="material-symbols-rounded">dashboard</span><span>แดชบอร์ด</span></button>';
-    html += '<button class="bottom-nav-item nav-audit-btn" id="nav-jd-hub" onclick="showJaedaengHub()"><span class="material-symbols-rounded">checklist</span><span>ตรวจร้าน</span></button>';
+    html += '<button class="bottom-nav-item nav-dash-btn active" id="nav-dash" data-ck-action="view-jd-dash" onclick="showJaedaengDashboard()"><span class="material-symbols-rounded">dashboard</span><span>แดชบอร์ด</span></button>';
+    html += '<button class="bottom-nav-item nav-audit-btn" id="nav-jd-hub" data-ck-action="view-jd-hub" onclick="showJaedaengHub()"><span class="material-symbols-rounded">checklist</span><span>ตรวจร้าน</span></button>';
   } else {
-    html += '<button class="bottom-nav-item nav-dash-btn active" id="nav-dash" onclick="showDashboard()"><span class="material-symbols-rounded">dashboard</span><span>แดชบอร์ด</span></button>';
+    html += '<button class="bottom-nav-item nav-dash-btn active" id="nav-dash" data-ck-action="view-dash" onclick="showDashboard()"><span class="material-symbols-rounded">dashboard</span><span>แดชบอร์ด</span></button>';
     // ระบบ OSS audit (ตรวจสาขา) ถูกตัดออกแล้ว — เหลือเฉพาะ Operations Checklist (Daily)
     // เมนู "ตรวจร้าน" (Open-Close) แสดงให้ทุก role · role อื่นเลือกสาขาก่อนตรวจ
-    html += '<button class="bottom-nav-item nav-daily-btn" id="nav-daily" onclick="showDailyHub()"><span class="material-symbols-rounded">checklist</span><span>ตรวจร้าน</span></button>';
+    html += '<button class="bottom-nav-item nav-daily-btn" id="nav-daily" data-ck-action="view-daily" onclick="showDailyHub()"><span class="material-symbols-rounded">checklist</span><span>ตรวจร้าน</span></button>';
     // ปุ่ม "จัดการสาขา" ถูกยกออก — สาขาจัดการที่ HUB (⚙️ → 🏪 จัดการสาขา) ที่เดียว · ระบบนี้อ่านอย่างเดียว
   }
   html += '<button class="bottom-nav-item nav-logout-btn" id="nav-logout" onclick="logout()"><span class="material-symbols-rounded">logout</span><span>ออกระบบ</span></button>';
@@ -6956,6 +6957,7 @@ function renderBottomNav() {
   nav.innerHTML = html;
   // ต้อง render หลัง innerHTML เพราะ #nav-tools เพิ่งถูกสร้าง
   renderHeaderTools(view);
+  applyCkPerms();   // ซ่อนเมนูตามสิทธิ์ที่ตั้งไว้ที่ HUB (ต้องหลัง innerHTML)
 }
 
 // HTML ของเครื่องมือ (สลับแบรนด์) — ใช้ทั้งใน header (มือถือ) และ sidebar (คอม)
@@ -7197,6 +7199,81 @@ function _applySfBranches(list) {
     BRANCHES = list.filter(b => b && b.code).map(b => ({ code: String(b.code), name: b.name || '', manager: b.manager || '', managerNick: b.managerNick || '', closed: !!b.closed }));
   }
 }
+/* ══════════ สิทธิ์ปุ่ม — ตั้งค่าที่ HUB (⚙️) เก็บใน Config.perms.checklist ══════════
+   โครงเดียวกับระบบผู้สัมผัสอาหาร: { actionId: { roles:[], allow:[code], deny:[code] } }
+   ลำดับตัดสิน: deny รายคน > allow รายคน > ตำแหน่ง
+   ยังไม่เคยตั้งบน HUB = ใช้ค่า default ด้านล่าง (ของเดิมไม่พัง) */
+const CK_ACTION_GROUPS = [
+  { id: 'menu',   label: 'เมนูหลัก · เข้าหน้าไหนได้บ้าง' },
+  { id: 'export', label: 'ออกรายงาน' },
+  { id: 'danger', label: 'ลบข้อมูล — ทำแล้วกู้คืนไม่ได้' },
+  { id: 'branch', label: 'ฝั่งสาขา' },
+];
+const CK_ACTIONS = [
+  { id: 'view-dash',     group: 'menu',   label: 'แดชบอร์ด (ซานตาเฟ่)',  roles: ['admin','coo','vp','bzm'] },
+  { id: 'view-daily',    group: 'menu',   label: 'ตรวจร้าน (ซานตาเฟ่)',  roles: ['admin','coo','vp','bzm','branch'] },
+  { id: 'view-jd-dash',  group: 'menu',   label: 'แดชบอร์ด (เจ๊แดง)',    roles: ['admin','coo','vp','bzm'] },
+  { id: 'view-jd-hub',   group: 'menu',   label: 'ตรวจร้าน (เจ๊แดง)',    roles: ['admin','coo','vp','bzm','branch'] },
+  { id: 'print-detail',  group: 'export', label: 'พิมพ์ผลตรวจ',          roles: ['admin','coo','vp','bzm'] },
+  { id: 'delete-daily',  group: 'danger', label: 'ลบผลตรวจ (ซานตาเฟ่)',  roles: ['admin'], danger: true },
+  { id: 'delete-jd',     group: 'danger', label: 'ลบผลตรวจ (เจ๊แดง)',    roles: ['admin'], danger: true },
+  { id: 'submit-check',  group: 'branch', label: 'ส่งผลตรวจ',            roles: ['branch','admin'] },
+];
+const CK_PERMS_KEY = 'ck_perms_v1';
+let CK_PERMS = {};
+function _ckDefaultPerms() {
+  const o = {};
+  CK_ACTIONS.forEach(a => { o[a.id] = { roles: a.roles.slice(), allow: [], deny: [] }; });
+  return o;
+}
+function _normalizeCkPerms(p) {
+  const out = _ckDefaultPerms();
+  if (p && typeof p === 'object') {
+    CK_ACTIONS.forEach(a => {
+      const src = p[a.id];
+      if (!src) return;
+      out[a.id] = {
+        roles: Array.isArray(src.roles) ? src.roles.slice() : a.roles.slice(),
+        allow: Array.isArray(src.allow) ? src.allow.map(String) : [],
+        deny:  Array.isArray(src.deny)  ? src.deny.map(String)  : [],
+      };
+    });
+  }
+  return out;
+}
+CK_PERMS = _normalizeCkPerms(null);
+try { CK_PERMS = _normalizeCkPerms(JSON.parse(localStorage.getItem(CK_PERMS_KEY) || 'null')); } catch (_) {}
+/* เช็คสิทธิ์ของผู้ใช้ปัจจุบัน */
+function ckCan(actionId) {
+  const p = CK_PERMS[actionId];
+  if (!p) return true;                                  // ไม่ได้กำหนด = ไม่คุม
+  if (!currentUser) return false;
+  const code = String(currentUser.code || '');
+  if (code && p.deny.indexOf(code) >= 0) return false;   // ห้ามรายคน ชนะเสมอ
+  if (code && p.allow.indexOf(code) >= 0) return true;   // อนุญาตรายคน แม้ตำแหน่งไม่ผ่าน
+  return p.roles.indexOf(currentUser.role) >= 0;
+}
+/* ซ่อน/แสดงปุ่มตามสิทธิ์ — เรียกซ้ำได้ทุกครั้งที่เรนเดอร์ใหม่ */
+function applyCkPerms() {
+  document.querySelectorAll('[data-ck-action]').forEach(el => {
+    el.style.display = ckCan(el.getAttribute('data-ck-action')) ? '' : 'none';
+  });
+}
+/* ดึงสิทธิ์จาก HUB (แหล่งกลาง) — ล้มเหลว/ยังไม่ตั้ง = ใช้ค่า default */
+async function loadCkPermsFromHub() {
+  try {
+    const res = await fetch(JD_BRANCH_CLOUD_URL + '?action=config&_=' + Date.now()).then(r => r.json());
+    if (res && res.ok && res.perms && res.perms.checklist) {
+      CK_PERMS = _normalizeCkPerms(res.perms.checklist);
+      try { localStorage.setItem(CK_PERMS_KEY, JSON.stringify(CK_PERMS)); } catch (_) {}
+      console.log('[perms] โหลดสิทธิ์ปุ่มจาก HUB แล้ว');
+    } else {
+      console.log('[perms] HUB ยังไม่ได้ตั้งสิทธิ์ Checklist — ใช้ค่าเริ่มต้น');
+    }
+  } catch (e) { console.warn('[perms] โหลดจาก HUB ไม่ได้ — ใช้ค่าเริ่มต้น', e); }
+  applyCkPerms();
+}
+
 /* ตัดคำนำหน้าออกจากชื่อ BZM แล้วเอาชื่อต้น — HUB เก็บ "นาย ณธวรรท ศิริเมธานณ"
    แต่ Checklist เทียบ manager กับ currentUser.name ที่เก็บชื่อต้น ("ณธวรรท") */
 function _firstNameOf(full) {
