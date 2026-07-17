@@ -7052,7 +7052,7 @@ function setupSfClScope() {
   if (currentUser && currentUser.role === 'branch') { row.style.display = 'none'; return; }
   row.style.display = '';
   if (currentUser && currentUser.role === 'bzm') {
-    const my = BRANCHES.filter(b => b.manager === currentUser.name || b.managerNick === currentUser.nick);
+    const my = _openBranches().filter(b => b.manager === currentUser.name || b.managerNick === currentUser.nick);
     let o = '<option value="all">ทุกสาขาของฉัน</option>';
     my.forEach(b => { o += `<option value="branch:${escapeAttr(b.code)}">${escapeHtml(b.code + ' ' + b.name)}</option>`; });
     select.innerHTML = o;
@@ -7060,11 +7060,11 @@ function setupSfClScope() {
     return;
   }
   const zones = []; const seen = new Set();
-  BRANCHES.forEach(b => { const key = b.managerNick || b.manager; if (seen.has(key)) return; seen.add(key); const label = (b.manager && b.managerNick) ? `โซน ${b.manager} (${b.managerNick})` : `โซน ${b.manager || b.managerNick}`; zones.push({ key, label }); });
+  _openBranches().forEach(b => { const key = b.managerNick || b.manager; if (seen.has(key)) return; seen.add(key); const label = (b.manager && b.managerNick) ? `โซน ${b.manager} (${b.managerNick})` : `โซน ${b.manager || b.managerNick}`; zones.push({ key, label }); });
   let o = '<option value="all">ดูทุกโซน · ทุกสาขา</option><optgroup label="แยกตามโซน">';
   zones.forEach(z => { o += `<option value="zone:${escapeAttr(z.key)}">${escapeHtml(z.label)}</option>`; });
   o += '</optgroup><optgroup label="แยกตามสาขา">';
-  BRANCHES.forEach(b => { o += `<option value="branch:${escapeAttr(b.code)}">${escapeHtml(b.code + ' ' + b.name)}</option>`; });
+  _openBranches().forEach(b => { o += `<option value="branch:${escapeAttr(b.code)}">${escapeHtml(b.code + ' ' + b.name)}</option>`; });
   o += '</optgroup>';
   select.innerHTML = o;
   if (sfClFilter.branch !== 'all') select.value = 'branch:' + sfClFilter.branch;
@@ -7192,13 +7192,59 @@ function _sfDailyTopFailsHTML(dailies) {
 let _sfBranchesLoaded = false;
 function _applySfBranches(list) {
   if (Array.isArray(list) && list.length) {
-    BRANCHES = list.filter(b => b && b.code).map(b => ({ code: String(b.code), name: b.name || '', manager: b.manager || '', managerNick: b.managerNick || '' }));
+    // เก็บ closed ไว้ด้วย — สาขาปิดต้องยังอยู่ใน BRANCHES ให้ค้นชื่อจากรหัสได้ (รายงานย้อนหลัง)
+    // การกรองไม่ให้เห็นในงานประจำ ทำที่ _visibleBranchRoster()
+    BRANCHES = list.filter(b => b && b.code).map(b => ({ code: String(b.code), name: b.name || '', manager: b.manager || '', managerNick: b.managerNick || '', closed: !!b.closed }));
   }
 }
+/* ตัดคำนำหน้าออกจากชื่อ BZM แล้วเอาชื่อต้น — HUB เก็บ "นาย ณธวรรท ศิริเมธานณ"
+   แต่ Checklist เทียบ manager กับ currentUser.name ที่เก็บชื่อต้น ("ณธวรรท") */
+function _firstNameOf(full) {
+  return String(full || '')
+    .replace(/^(นางสาว|นาย|นาง|น\.?ส\.?|ว่าที่\s*ร\.?\s*ต\.?|ดร\.?)\s*/, '')
+    .trim().split(/\s+/)[0] || '';
+}
+/* แปลงโครงสร้างสาขาของ HUB → รูปแบบที่ Checklist ใช้
+   HUB: { branches:{code→ชื่อ}, bzmMap:{code→นิค}, statusMap:{code→'closed'} } + users:[{name,nick,role}] */
+function _sfBranchesFromHub(res) {
+  if (!res || !res.ok) return [];
+  const b = res.branches;
+  if (!b || !b.branches || typeof b.branches !== 'object') return [];
+  const byNick = {};
+  (Array.isArray(res.users) ? res.users : []).forEach(u => { if (u && u.nick) byNick[u.nick] = u; });
+  const bzmMap = b.bzmMap || {}, stMap = b.statusMap || {};
+  return Object.keys(b.branches)
+    .filter(c => String(c).indexOf('40') !== 0)   // เจ๊แดงมีลิสต์แยก (jaedaengBranches)
+    .map(c => {
+      const nick = bzmMap[c] || '';
+      const u = byNick[nick];
+      return {
+        code: String(c), name: b.branches[c] || '',
+        manager: _firstNameOf(u && u.name), managerNick: nick,
+        closed: stMap[c] === 'closed'
+      };
+    });
+}
+/* ลำดับแหล่งข้อมูล: cache → HUB (ศูนย์กลาง) → Firestore (ของเดิม กันพัง)
+   ย้ายมาอ่านจาก HUB เพื่อให้แก้สาขาที่เดียว (⚙️ → 🏪 จัดการสาขา) แล้วทุกระบบเห็นตรงกัน */
 async function loadSfBranches() {
   if (_sfBranchesLoaded) return;
   _sfBranchesLoaded = true;
   try { const a = JSON.parse(localStorage.getItem(SF_BRANCHES_KEY) || 'null'); if (Array.isArray(a) && a.length) _applySfBranches(a); } catch (_) {}
+  // 1) HUB = แหล่งหลัก
+  try {
+    const res = await fetch(JD_BRANCH_CLOUD_URL + '?action=config&_=' + Date.now()).then(r => r.json());
+    const list = _sfBranchesFromHub(res);
+    if (list.length) {
+      _applySfBranches(list);
+      try { localStorage.setItem(SF_BRANCHES_KEY, JSON.stringify(BRANCHES)); } catch (_) {}
+      if (document.getElementById('sf-daily-table')) _renderSfTable();
+      console.log('[sfBranches] จาก HUB ' + list.length + ' สาขา (ปิด ' + list.filter(b => b.closed).length + ')');
+      return;
+    }
+    console.warn('[sfBranches] HUB ไม่มีข้อมูลสาขา — ใช้ Firestore ต่อ');
+  } catch (e) { console.warn('[sfBranches] โหลดจาก HUB ไม่ได้ — ใช้ Firestore ต่อ', e); }
+  // 2) fallback: Firestore ของเดิม
   if (!firebaseDb) return;
   try {
     const doc = await firebaseDb.collection('appConfig').doc('sfBranches').get();
@@ -7265,11 +7311,14 @@ function _sfTableSetDate(v) { if (v) { sfTableDate = v; _renderSfTable(); } }
 function _sfTableDay(delta) { const d = new Date(sfTableDate); d.setDate(d.getDate() + delta); sfTableDate = _ymd(d); _renderSfTable(); }
 function _renderSfTable() { const el = document.getElementById('sf-daily-table'); if (el) el.innerHTML = _sfDailyTableHTML(); }
 // สาขาที่ผู้ใช้เห็น (admin/vp/coo=ทุกสาขา · bzm=สาขาที่ดูแล · branch=ของตัวเอง)
+// ตัดสาขาที่ปิดแล้วออกจากงานประจำ — แต่ยังอยู่ใน BRANCHES ให้ค้นชื่อจากรหัสได้ (รายงานย้อนหลัง)
+function _openBranches() { return BRANCHES.filter(b => !b.closed); }
 function _visibleBranchRoster() {
-  if (!currentUser) return BRANCHES;
-  if (currentUser.role === 'branch') return BRANCHES.filter(b => String(b.code) === String(currentUser.branchCode || ''));
-  if (currentUser.role === 'bzm') return BRANCHES.filter(b => b.manager === currentUser.name || b.managerNick === currentUser.nick || b.managerNick === currentUser.name);
-  return BRANCHES;
+  const src = _openBranches();
+  if (!currentUser) return src;
+  if (currentUser.role === 'branch') return src.filter(b => String(b.code) === String(currentUser.branchCode || ''));
+  if (currentUser.role === 'bzm') return src.filter(b => b.manager === currentUser.name || b.managerNick === currentUser.nick || b.managerNick === currentUser.name);
+  return src;
 }
 function _sfDailyTableHTML() {
   const roster = _visibleBranchRoster().slice().sort((a, b) => String(a.code).localeCompare(String(b.code)));
@@ -7447,7 +7496,7 @@ function getVisibleDailyChecklists() {
   } else if (currentUser.role === 'bzm') {
     // หา branchCode ทุกสาขาที่ BZM คนนี้ดูแล (match ชื่อ/ชื่อเล่นจาก BRANCHES) — ทนทานกว่าการเทียบ d.bzm
     const myCodes = new Set(
-      BRANCHES.filter(b => b.manager === currentUser.name || b.managerNick === currentUser.nick || b.managerNick === currentUser.name)
+      _openBranches().filter(b => b.manager === currentUser.name || b.managerNick === currentUser.nick || b.managerNick === currentUser.name)
               .map(b => String(b.code))
     );
     return allDailyChecklists.filter(d =>
@@ -7494,7 +7543,7 @@ function _setupDailyBranchOptions() {
   const sel = document.getElementById('daily-branch-select');
   if (!sel) return;
   let pool = BRANCHES;
-  if (currentUser.role === 'bzm') pool = BRANCHES.filter(b => b.manager === currentUser.name || b.managerNick === currentUser.nick);
+  if (currentUser.role === 'bzm') pool = _openBranches().filter(b => b.manager === currentUser.name || b.managerNick === currentUser.nick);
   sel.innerHTML = '<option value="">— เลือกสาขา —</option>' + pool.map(b => `<option value="${escapeAttr(b.code)}">${escapeHtml(b.code + ' ' + b.name)}</option>`).join('');
   sel.value = _dailySelectedBranch || '';
 }
