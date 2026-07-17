@@ -6946,7 +6946,7 @@ function renderBottomNav() {
     // ระบบ OSS audit (ตรวจสาขา) ถูกตัดออกแล้ว — เหลือเฉพาะ Operations Checklist (Daily)
     // เมนู "ตรวจร้าน" (Open-Close) แสดงให้ทุก role · role อื่นเลือกสาขาก่อนตรวจ
     html += '<button class="bottom-nav-item nav-daily-btn" id="nav-daily" onclick="showDailyHub()"><span class="material-symbols-rounded">checklist</span><span>ตรวจร้าน</span></button>';
-    if (_isSfAdmin()) html += '<button class="bottom-nav-item nav-branches-btn" id="nav-branches" onclick="openSfBranchManager()"><span class="material-symbols-rounded">storefront</span><span>จัดการสาขา</span></button>';
+    // ปุ่ม "จัดการสาขา" ถูกยกออก — สาขาจัดการที่ HUB (⚙️ → 🏪 จัดการสาขา) ที่เดียว · ระบบนี้อ่านอย่างเดียว
   }
   html += '<button class="bottom-nav-item nav-logout-btn" id="nav-logout" onclick="logout()"><span class="material-symbols-rounded">logout</span><span>ออกระบบ</span></button>';
   html += '</div>';
@@ -7258,57 +7258,8 @@ async function loadSfBranches() {
     }
   } catch (e) { console.warn('loadSfBranches failed', e); }
 }
-async function saveSfBranches() {
-  try { localStorage.setItem(SF_BRANCHES_KEY, JSON.stringify(BRANCHES)); } catch (_) {}
-  if (firebaseDb) { try { await firebaseDb.collection('appConfig').doc('sfBranches').set({ list: BRANCHES, updatedAt: new Date().toISOString() }); } catch (e) { console.warn('saveSfBranches failed', e); } }
-}
-function _isSfAdmin() { return currentUser && ['admin', 'vp', 'coo'].indexOf(currentUser.role) >= 0; }
-function openSfBranchManager() {
-  if (!_isSfAdmin()) { showModal('ไม่มีสิทธิ์', 'เฉพาะผู้ดูแลระบบเท่านั้นที่จัดการสาขาได้'); return; }
-  let m = document.getElementById('sf-branch-modal');
-  if (!m) { m = document.createElement('div'); m.id = 'sf-branch-modal'; m.className = 'sf-bm-overlay'; m.onclick = (e) => { if (e.target === m) closeSfBranchManager(); }; document.body.appendChild(m); }
-  m.innerHTML = _sfBranchManagerHTML();
-  m.classList.add('show');
-}
-function closeSfBranchManager() { const m = document.getElementById('sf-branch-modal'); if (m) m.classList.remove('show'); }
-/* อ่านอย่างเดียว — สาขาย้ายไปจัดการที่ HUB (⚙️ → จัดการสาขา) เป็นแหล่งเดียวแล้ว
-   ปุ่มเพิ่ม/ลบเดิมเขียนลง Firestore ที่เลิกใช้ → กดแล้วไม่มีผลจริง (โดน HUB ทับตอนโหลดใหม่) จึงเอาออก */
-function _sfBranchManagerHTML() {
-  const open = BRANCHES.filter(b => !b.closed).length, closed = BRANCHES.length - open;
-  const rows = BRANCHES.slice().sort((a, b) => String(a.code).localeCompare(String(b.code))).map(b =>
-    '<div class="sf-bm-row"' + (b.closed ? ' style="opacity:.55"' : '') + '><span class="sf-tbl-code">' + escapeHtml(String(b.code)) + '</span><span class="sf-bm-name">' + escapeHtml(b.name || '') +
-    (b.closed ? ' <span style="font-size:11px;font-weight:700;color:#dc2626;background:rgba(239,68,68,.12);padding:1px 7px;border-radius:999px;margin-left:6px">ปิดแล้ว</span>' : '') +
-    '</span><span style="font-size:11.5px;color:#9ca3af">' + escapeHtml(b.managerNick || '—') + '</span></div>'
-  ).join('');
-  return '<div class="sf-bm-box">' +
-    '<div class="sf-bm-head"><h3>สาขา · Santa Fe <span class="sf-bm-count">' + open + ' เปิด' + (closed ? ' · ' + closed + ' ปิด' : '') + '</span></h3><button type="button" class="sf-bm-x" onclick="closeSfBranchManager()"><span class="material-symbols-rounded">close</span></button></div>' +
-    '<div style="margin:0 0 10px;padding:10px 12px;background:#FEF3E7;border:1px solid #FBE0CC;border-radius:8px;font-size:12.5px;color:#9A4A0E;line-height:1.5">' +
-      '🔗 <b>สาขาจัดการที่ HUB แล้ว</b> — เพิ่ม / แก้ไข / ปิดสาขา ทำที่ <b>HUB → ⚙️ เครื่องมือผู้ดูแลระบบ → 🏪 จัดการสาขา</b><br>แก้ที่นั่นที่เดียว ทุกระบบเห็นตรงกัน (หน้านี้แสดงอย่างเดียว)' +
-    '</div>' +
-    '<div class="sf-bm-list">' + rows + '</div>' +
-  '</div>';
-}
-function addSfBranch() {
-  const codeEl = document.getElementById('sf-bm-code'), nameEl = document.getElementById('sf-bm-name');
-  const code = (codeEl.value || '').trim(), name = (nameEl.value || '').trim();
-  if (!code) { codeEl.focus(); return; }
-  if (!name) { nameEl.focus(); return; }
-  if (BRANCHES.some(b => String(b.code) === code)) { showModal('รหัสซ้ำ', 'มีสาขารหัส ' + code + ' อยู่แล้ว'); return; }
-  BRANCHES.push({ code: code, name: name, manager: '', managerNick: '' });
-  saveSfBranches();
-  const m = document.getElementById('sf-branch-modal'); if (m) m.innerHTML = _sfBranchManagerHTML();
-  _renderSfTable();
-}
-async function deleteSfBranch(code) {
-  const b = BRANCHES.find(x => String(x.code) === String(code));
-  if (!b) return;
-  const ok = await showConfirm('ลบสาขา?', 'ลบ <b>' + escapeHtml(String(code) + ' ' + (b.name || '')) + '</b> ออกจากรายชื่อ?<br>(ผลตรวจเดิมของสาขานี้ยังอยู่ ไม่ถูกลบ)', { okLabel: 'ลบ', cancelLabel: 'ยกเลิก', danger: true });
-  if (!ok) return;
-  BRANCHES = BRANCHES.filter(x => String(x.code) !== String(code));
-  saveSfBranches();
-  const m = document.getElementById('sf-branch-modal'); if (m) m.innerHTML = _sfBranchManagerHTML();
-  _renderSfTable();
-}
+// หมายเหตุ: หน้าจัดการสาขาของ Checklist ถูกยกออก — สาขาจัดการที่ HUB (⚙️ → จัดการสาขา) ที่เดียว
+// ระบบนี้อ่านอย่างเดียวผ่าน loadSfBranches() ด้านบน
 
 // ── ตารางการส่ง · เปิด/ปิดร้าน — เลือกวันได้ · แสดงทุกสาขา (รหัสครบ) + สาเหตุส่งช้า ──
 let sfTableDate = todayDateStr();
