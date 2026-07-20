@@ -5191,6 +5191,8 @@ html.fab-sso-pending #login-screen { display: none !important; }
 
     <!-- DAILY DETAIL SCREEN -->
     <div id="daily-detail-screen" style="display:none;">
+      <div class="print-report-header" id="daily-print-header"></div>
+      <div class="print-footer" id="daily-print-footer"></div>
       <div class="card summary-hero daily-detail-hero" id="daily-detail-head">
         <div class="summary-hero-score">
           <div class="daily-shift-kicker" id="daily-detail-kicker"></div>
@@ -5200,13 +5202,17 @@ html.fab-sso-pending #login-screen { display: none !important; }
         <div id="daily-detail-meta" class="summary-meta-list"></div>
       </div>
 
-      <div class="chip-row detail-filter-chips" id="detail-filter-chips"></div>
+      <div class="chip-row detail-filter-chips no-print" id="detail-filter-chips"></div>
       <div id="daily-detail-content"></div>
+      <div class="print-only-photos" id="daily-print-photos"></div>
 
       <div class="card no-print">
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
           <button class="btn btn-secondary" style="flex:1;min-width:120px;" onclick="showDailyHub()">
             <span class="material-symbols-rounded">arrow_back</span> กลับไปประวัติ
+          </button>
+          <button class="btn btn-primary" style="flex:1;min-width:120px;" onclick="printDailyDetail()">
+            <span class="material-symbols-rounded">picture_as_pdf</span> ออก PDF
           </button>
           <button class="btn btn-secondary" id="daily-detail-edit-btn" style="flex:1;min-width:120px;display:none;" onclick="editDailyChecklist(currentDailyDetailId)">
             <span class="material-symbols-rounded">edit</span> แก้ไข
@@ -8271,6 +8277,7 @@ function showDailyDetail(id, targetText) {
   items.forEach(it => (it.photos || []).forEach(p => lightboxImages.push(p)));
 
   let html = '';
+  let photoApx = ''; // ภาคผนวกรูปหลักฐาน (ใช้เฉพาะตอนออก PDF)
   let photoCursor = 0;
   Object.keys(bySection).forEach(secName => {
     const secItems = bySection[secName];
@@ -8296,6 +8303,15 @@ function showDailyDetail(id, targetText) {
           const idx = photoCursor++;
           return `<button type="button" class="detail-photo-btn" onclick="openLightbox(${idx})"><img src="${p}" alt=""><span class="detail-photo-zoom"><span class="material-symbols-rounded">zoom_in</span></span></button>`;
         }).join('') + '</div>';
+        // ภาคผนวก PDF — กำกับหมวด/ข้อ + หมายเหตุ (ไม่ผ่าน/N/A)
+        const apxNote = ((status === 'fail' || status === 'na') && it.note && it.note.trim())
+          ? `<div class="ppx-note"><b>${status === 'na' ? 'เหตุผล N/A' : 'หมายเหตุ'}:</b> ${escapeHtml(it.note)}</div>`
+          : '';
+        photoApx += `<div class="ppx-group">
+          <div class="ppx-label"><span class="ppx-tag is-${status}">${pillLabel}</span> ${escapeHtml(secName)} · ข้อ ${j+1}. ${escapeHtml(it.text)}</div>
+          ${apxNote}
+          <div class="ppx-photos">${photos.map(p => `<img src="${p}" alt="">`).join('')}</div>
+        </div>`;
       }
       html += `<div class="detail-item is-${status}" data-item-text="${escapeAttr(it.text)}">
         <span class="detail-status-pill">${pillLabel}</span>
@@ -8310,6 +8326,15 @@ function showDailyDetail(id, targetText) {
     html += `</div>`;
   });
   document.getElementById('daily-detail-content').innerHTML = html;
+  // ภาคผนวกรูปหลักฐาน (โชว์เฉพาะตอนออก PDF)
+  const _apx = document.getElementById('daily-print-photos');
+  if (_apx) _apx.innerHTML = photoApx ? `<div class="ppx-heading">ภาคผนวก · รูปหลักฐาน</div>${photoApx}` : '';
+  // หัวรายงาน (โชว์เฉพาะตอนออก PDF)
+  const _prh = document.getElementById('daily-print-header');
+  if (_prh) {
+    _prh.innerHTML = `<div class="prh-title">รายงานเช็คลิสต์รายวัน · ${d.shift === 'open' ? 'Open Shift' : 'Close Shift'}</div>
+      <div class="prh-sub">${escapeHtml(branchTxt)} · ${escapeHtml(fmtDateDMY(d.date))} · บันทึกโดย ${escapeHtml(d.submittedByName || '-')}</div>`;
+  }
   if (targetText) _flashDetailItem('daily-detail-content', targetText);
 }
 
@@ -10117,19 +10142,23 @@ function _jdPrintFooterText() {
 }
 
 // พิมพ์แบบเดิม (fallback ถ้า Paged.js โหลดไม่ได้/ออฟไลน์) — footer ต่อหน้าได้ แต่ไม่มีเลข X/Y ใน Chrome
-function _jdPlainPrint(footerText) {
-  const foot = document.getElementById('jd-print-footer');
+function _jdPlainPrint(footerText, footerElId) {
+  const foot = document.getElementById(footerElId || 'jd-print-footer');
   if (foot) foot.innerHTML = `<span class="pf-left">${escapeHtml(footerText)}</span>`;
   window.print();
 }
 
 // ออกรายงาน PDF รายสาขา — ใช้ Paged.js แบ่งหน้า + ใส่เลขหน้า X/Y และ footer ทุกหน้า (รันใน iframe แยก)
-async function printJaedaengDetail() {
+// ออก PDF หน้ารายละเอียดเช็คลิสต์ (ใช้ร่วมกันทั้ง เจ๊แดง และ Daily ซานตาเฟ่)
+function printJaedaengDetail() { return _printDetailPDF('jaedaeng-detail-screen', 'jd-print-footer'); }
+function printDailyDetail()    { return _printDetailPDF('daily-detail-screen',    'daily-print-footer'); }
+
+async function _printDetailPDF(screenId, footerElId) {
   if (window._jdPrinting) return;
   window._jdPrinting = true;
   const footerText = _jdPrintFooterText();
-  const screen = document.getElementById('jaedaeng-detail-screen');
-  if (!screen) { window._jdPrinting = false; _jdPlainPrint(footerText); return; }
+  const screen = document.getElementById(screenId);
+  if (!screen) { window._jdPrinting = false; _jdPlainPrint(footerText, footerElId); return; }
 
   // ตัวบอกสถานะระหว่างสร้าง PDF
   const overlay = document.createElement('div');
@@ -10205,7 +10234,7 @@ async function printJaedaengDetail() {
   // โหลด Paged.js เข้า iframe (auto รันเอง) — ถ้าโหลดไม่ได้ → fallback พิมพ์แบบเดิม
   const pg = doc.createElement('script');
   pg.src = 'https://unpkg.com/pagedjs/dist/paged.polyfill.js';
-  pg.onerror = () => { killOverlay(); const f = document.getElementById('jd-pdf-frame'); if (f) f.remove(); _jdPlainPrint(footerText); };
+  pg.onerror = () => { killOverlay(); const f = document.getElementById('jd-pdf-frame'); if (f) f.remove(); _jdPlainPrint(footerText, footerElId); };
   doc.body.appendChild(pg);
   // เผื่อ Paged.js ไม่ยิง before/afterprint (บางเบราว์เซอร์) — ปิด overlay อัตโนมัติ
   setTimeout(killOverlay, 8000);
