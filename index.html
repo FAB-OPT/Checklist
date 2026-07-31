@@ -5554,12 +5554,16 @@ function _jdGroupByZone(branches) {
   return { zones, order };
 }
 /* สร้าง <optgroup> ต่อโซน (ใช้ร่วมทั้งหน้าตรวจใหม่และหน้าแก้ไข) */
+/* ตัดคำนำหน้า (นาย/นาง/นางสาว/ว่าที่ฯ) ออกจากชื่อที่แสดง */
+function _jdStripTitle(name) {
+  return String(name || '').replace(/^(ว่าที่\s*ร\.?\s*ต\.?|นางสาว|น\.ส\.|นาย|นาง)\s*/, '').trim();
+}
 function _jdBuildZoneOptions(branches) {
   const g = _jdGroupByZone(branches);
   let opts = '';
   g.order.forEach(k => {
     const z = g.zones[k];
-    const head = z.mgr || z.nick || 'อื่นๆ';
+    const head = _jdStripTitle(z.mgr) || z.nick || 'อื่นๆ';
     const label = z.nick ? `โซน ${head} (${z.nick})` : `โซน ${head}`;
     opts += `<optgroup label="${escapeAttr(label)}">`;
     z.items.forEach(b => { opts += `<option value="${escapeAttr(b.name)}">${escapeHtml(b.name)}</option>`; });
