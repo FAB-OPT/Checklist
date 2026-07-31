@@ -7112,7 +7112,7 @@ function setupSfClScope() {
     return;
   }
   const zones = []; const seen = new Set();
-  _openBranches().forEach(b => { const key = b.managerNick || b.manager; if (seen.has(key)) return; seen.add(key); const label = (b.manager && b.managerNick) ? `โซน ${b.manager} (${b.managerNick})` : `โซน ${b.manager || b.managerNick}`; zones.push({ key, label }); });
+  _openBranches().forEach(b => { const key = b.managerNick || b.manager; if (seen.has(key)) return; seen.add(key); const _m = _jdStripTitle(b.manager || ''); const label = (_m && b.managerNick) ? `โซน ${_m} (${b.managerNick})` : `โซน ${_m || b.managerNick}`; zones.push({ key, label }); });
   let o = '<option value="all">ดูทุกโซน · ทุกสาขา</option><optgroup label="แยกตามโซน">';
   zones.forEach(z => { o += `<option value="zone:${escapeAttr(z.key)}">${escapeHtml(z.label)}</option>`; });
   o += '</optgroup><optgroup label="แยกตามสาขา">';
@@ -8554,7 +8554,7 @@ function setupJaedaengDashFilter() {
     const key = b.managerNick || b.manager;
     if (seenZone.has(key)) return;
     seenZone.add(key);
-    const full = b.manager || '';
+    const full = _jdStripTitle(b.manager || '');   // ตัดคำนำหน้า (นางสาว/นาย/นาง) ออก
     const nick = b.managerNick || '';
     const label = full && nick ? `โซน คุณ ${full} (${nick})` : `โซน ${full || nick}`;
     zones.push({ key, label });
