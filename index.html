@@ -5528,6 +5528,46 @@ const JD_BRANCH_CLOUD_URL = 'https://script.google.com/macros/s/AKfycbyjGvhSuDrn
 const DEFAULT_JAEDAENG_BRANCHES = JAEDAENG_BRANCHES.slice();
 // Merge: พิกัด (lat/lng) ยึดจาก DEFAULT ในโค้ดเสมอ (source of truth) — match ด้วยชื่อ exact
 // cloud/localStorage จัดการได้แค่รายชื่อ/ผู้จัดการ/เพิ่มสาขาใหม่ · ค่า GPS ใช้ของในโค้ด 100%
+/* จัดกลุ่มสาขาตามโซน (ผู้จัดการ) — รวมผู้จัดการคนเดียวกันที่ชื่อเก็บต่างกันให้เป็นโซนเดียว
+   ต้นเหตุ: HUB เก็บชื่อผู้จัดการไม่สม่ำเสมอ บางสาขา "นางสาว พิมพ์พิชชา ชัชวาลย์" บางสาขา "พิมพ์พิชชา ชัชวาลย์"
+   → เดิม group ด้วยชื่อดิบเลยแตกเป็น 2 โซน · แก้: group ด้วยชื่อเล่น (เก็บตรงกัน) เป็นหลัก
+   ไม่มีนิค → ตัดคำนำหน้า (นาย/นาง/นางสาว/ว่าที่ฯ) + ช่องว่างออกก่อนเทียบ · โชว์ชื่อจริงที่สมบูรณ์สุด */
+function _jdZoneKey(b) {
+  const nick = String(b && b.managerNick || '').trim();
+  if (nick) return 'n:' + nick;
+  const mgr = String(b && b.manager || '')
+    .replace(/^(ว่าที่\s*ร\.?\s*ต\.?|นางสาว|น\.ส\.|นาย|นาง)\s*/, '')
+    .replace(/\s+/g, '');
+  return mgr ? 'm:' + mgr : 'x:';
+}
+function _jdGroupByZone(branches) {
+  const zones = {}, order = [];
+  (branches || []).forEach(b => {
+    const key = _jdZoneKey(b);
+    if (!zones[key]) { zones[key] = { items: [], nick: String(b.managerNick || '').trim(), mgr: String(b.manager || '').trim() }; order.push(key); }
+    const z = zones[key];
+    const m = String(b.manager || '').trim();
+    if (m.length > z.mgr.length) z.mgr = m;                      // เลือกชื่อที่สมบูรณ์สุดเป็นตัวแสดง
+    if (!z.nick) z.nick = String(b.managerNick || '').trim();
+    z.items.push(b);
+  });
+  return { zones, order };
+}
+/* สร้าง <optgroup> ต่อโซน (ใช้ร่วมทั้งหน้าตรวจใหม่และหน้าแก้ไข) */
+function _jdBuildZoneOptions(branches) {
+  const g = _jdGroupByZone(branches);
+  let opts = '';
+  g.order.forEach(k => {
+    const z = g.zones[k];
+    const head = z.mgr || z.nick || 'อื่นๆ';
+    const label = z.nick ? `โซน ${head} (${z.nick})` : `โซน ${head}`;
+    opts += `<optgroup label="${escapeAttr(label)}">`;
+    z.items.forEach(b => { opts += `<option value="${escapeAttr(b.name)}">${escapeHtml(b.name)}</option>`; });
+    opts += '</optgroup>';
+  });
+  return opts;
+}
+
 function _mergeJdBranches(arr) {
   if (!Array.isArray(arr)) return JAEDAENG_BRANCHES;
   return arr.map(e => {
@@ -9133,24 +9173,7 @@ function _renderJDAuditScreen() {
   document.getElementById('jaedaeng-audit-screen').style.display = 'block';
   document.body.classList.add('in-audit');
   const select = document.getElementById('jd-store-name');
-  const zones = {};
-  const zoneOrder = [];
-  JAEDAENG_BRANCHES.forEach(b => {
-    const key = b.manager || b.managerNick || 'อื่นๆ';
-    if (!zones[key]) { zones[key] = { items: [], nick: b.managerNick || '' }; zoneOrder.push(key); }
-    zones[key].items.push(b);
-  });
-  let opts = '<option value="">— เลือกสาขา —</option>';
-  zoneOrder.forEach(z => {
-    const zoneData = zones[z];
-    const label = zoneData.nick ? `โซน ${z} (${zoneData.nick})` : `โซน ${z}`;
-    opts += `<optgroup label="${escapeAttr(label)}">`;
-    zoneData.items.forEach(b => {
-      opts += `<option value="${escapeAttr(b.name)}">${escapeHtml(b.name)}</option>`;
-    });
-    opts += '</optgroup>';
-  });
-  select.innerHTML = opts;
+  select.innerHTML = '<option value="">— เลือกสาขา —</option>' + _jdBuildZoneOptions(JAEDAENG_BRANCHES);
   select.value = a.storeName || '';
   document.getElementById('jd-auditor-display').textContent = a.auditor || '-';
   document.getElementById('jd-date-display').textContent = fmtDateDMY(a.date || todayDateStr());
@@ -9199,21 +9222,7 @@ function editJaedaengAudit(id) {
   document.body.classList.add('in-audit');
   // store dropdown
   const select = document.getElementById('jd-store-name');
-  const zones = {}; const zoneOrder = [];
-  JAEDAENG_BRANCHES.forEach(b => {
-    const key = b.manager || b.managerNick || 'อื่นๆ';
-    if (!zones[key]) { zones[key] = { items: [], nick: b.managerNick || '' }; zoneOrder.push(key); }
-    zones[key].items.push(b);
-  });
-  let opts = '<option value="">— เลือกสาขา —</option>';
-  zoneOrder.forEach(z => {
-    const zd = zones[z];
-    const label = zd.nick ? `โซน ${z} (${zd.nick})` : `โซน ${z}`;
-    opts += `<optgroup label="${escapeAttr(label)}">`;
-    zd.items.forEach(b => { opts += `<option value="${escapeAttr(b.name)}">${escapeHtml(b.name)}</option>`; });
-    opts += '</optgroup>';
-  });
-  select.innerHTML = opts;
+  select.innerHTML = '<option value="">— เลือกสาขา —</option>' + _jdBuildZoneOptions(JAEDAENG_BRANCHES);
   select.value = currentJDAudit.storeName || '';
 
   document.getElementById('jd-auditor-display').textContent = currentJDAudit.auditor || '-';
