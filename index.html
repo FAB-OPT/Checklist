@@ -6455,7 +6455,7 @@ var _jdUnsub = null;
 // flag: snapshot ตัวแรกเข้ามาแล้วหรือยัง — ใช้กันแสดงข้อมูล cache เก่าก่อน sync (กันกระพริบ)
 var _jdFirstSnapshotReceived = false;
 // Phase 3: realtime ดูแค่ N วันล่าสุด (ประหยัดโควตาอ่าน) · ของเก่ากว่านั้นโหลดตามคำขอ
-const JD_WINDOW_DAYS = 90;
+const JD_WINDOW_DAYS = 45;   // ลดจาก 90 → ลดข้อมูลที่ realtime ดึงทุกครั้ง (ลดค่า egress) · ≥45 กันสถิติ "เดือนนี้" หาย · ของเก่ากว่านี้ยังกดโหลดได้
 var _jdWindowStart = '';        // ต้นหน้าต่าง realtime (YYYY-MM-DD)
 var _jdOldestLoaded = '';       // วันเก่าสุดที่โหลด on-demand แล้ว (เริ่ม = _jdWindowStart)
 var _jdOlderAudits = [];        // ผลตรวจเก่ากว่าหน้าต่าง (โหลดตามคำขอ · ไม่เก็บลง cache)
@@ -8132,6 +8132,9 @@ async function submitDailyShift() {
       }
     }
   }
+  // เซฟป้องกันขั้นสุดท้าย: ตัด base64 ที่อัป R2 ไม่ขึ้น ก่อนลง Firestore (กัน egress พุ่ง)
+  const _leftB64Daily = _dropBase64Photos(items);
+  if (_leftB64Daily > 0) console.warn('[Daily] ตัดรูป base64 ที่อัป R2 ไม่สำเร็จ ' + _leftB64Daily + ' รูป');
 
   const idx = allDailyChecklists.findIndex(d => d.id === currentDaily.id);
   if (idx >= 0) allDailyChecklists[idx] = currentDaily;
@@ -9551,6 +9554,20 @@ async function uploadJDPhotoToR2(blob) {
 }
 
 // อัปรูปที่ยังเป็น base64 ใน items ขึ้น R2 แล้วแทนที่ด้วย URL — กันเอกสารเกิน 1MB ตอนเซฟ Firestore
+/* กันรูป base64 หลุดลง Firestore — ถ้าอัป R2 ไม่สำเร็จรูปจะยังเป็น "data:..." ก้อนใหญ่
+   ค้างในเอกสาร → realtime ดึงซ้ำทุกครั้ง = ค่า egress พุ่ง (สาเหตุ ฿82/เดือน)
+   ตัดทิ้งก่อนเซฟ (ยอมเสียรูปที่อัปไม่ขึ้น ดีกว่าเอกสารบวม) · คืนจำนวนที่ตัด */
+function _dropBase64Photos(items) {
+  let dropped = 0;
+  (items || []).forEach(it => {
+    if (!it || !Array.isArray(it.photos)) return;
+    const before = it.photos.length;
+    it.photos = it.photos.filter(p => !(typeof p === 'string' && p.startsWith('data:')));
+    dropped += before - it.photos.length;
+  });
+  return dropped;
+}
+
 async function _uploadItemBase64ToR2(items) {
   if (testMode || !Array.isArray(items)) return;
   for (const it of items) {
@@ -9873,6 +9890,9 @@ async function submitJaedaengAudit() {
     showModal('กำลังบันทึก…', `กำลังอัปโหลดรูป ${_pendingB64} รูป กรุณารอสักครู่`);
     await _uploadItemBase64ToR2(items);
   }
+  // เซฟป้องกันขั้นสุดท้าย: ถ้ายังมี base64 ค้าง (R2 อัปไม่ขึ้น) ตัดทิ้งก่อนลง Firestore
+  const _leftB64 = _dropBase64Photos(items);
+  if (_leftB64 > 0) console.warn('[JD] ตัดรูป base64 ที่อัป R2 ไม่สำเร็จ ' + _leftB64 + ' รูป กัน egress พุ่ง');
   const denom = totalCount - naCount;
   const passPct = denom > 0 ? (passCount / denom) * 100 : 0;
   const record = {
