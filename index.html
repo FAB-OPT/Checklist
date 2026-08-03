@@ -6506,8 +6506,21 @@ function startJaedaengRealtime() {
       allJaedaengAudits = m.merged;
       // ตัดรูป base64 legacy ที่ค้างใน cloud/cache ทิ้ง — กันแรม+localStorage มือถือล้นจนแครช (เด้งออก)
       // (รูปจริงเก็บเป็น URL บน R2 อยู่แล้ว · base64 คือของหลุดที่ไม่ควรมี)
-      let _b64 = 0; allJaedaengAudits.forEach(function(r){ _b64 += _dropBase64Photos(r.items); });
-      if (_b64 > 0) console.warn('[JD] ตัด base64 legacy ออกจากข้อมูลที่โหลด ' + _b64 + ' รูป (กันมือถือแครช)');
+      // + เขียนเอกสารที่ตัดแล้ว "กลับขึ้น Firestore" ให้ doc เล็กลงถาวร → มือถือดาวน์โหลดแล้วไม่แครชอีก
+      //   (ทำจากเครื่องที่โหลดไหว เช่น คอมพิวเตอร์ · มือถือแครชก่อนถึงตรงนี้)
+      let _b64 = 0, _cleaned = 0;
+      allJaedaengAudits.forEach(function(r){
+        const d = _dropBase64Photos(r.items);
+        if (d > 0) {
+          _b64 += d;
+          if (r.id != null && !_jdB64CleanIds.has(String(r.id))) {
+            _jdB64CleanIds.add(String(r.id));
+            _silentResaveJaedaeng(r);   // เขียนกลับ cloud แบบเงียบ (ไม่ขึ้น modal)
+            _cleaned++;
+          }
+        }
+      });
+      if (_b64 > 0) console.warn('[JD] ตัด base64 ' + _b64 + ' รูป · ล้างขึ้น cloud ' + _cleaned + ' เอกสาร (กันมือถือแครช)');
       saveJaedaengLocal();
       _jdFirstSnapshotReceived = true;
       _rerenderJaedaengIfVisible();
@@ -9568,6 +9581,14 @@ async function uploadJDPhotoToR2(blob) {
 /* กันรูป base64 หลุดลง Firestore — ถ้าอัป R2 ไม่สำเร็จรูปจะยังเป็น "data:..." ก้อนใหญ่
    ค้างในเอกสาร → realtime ดึงซ้ำทุกครั้ง = ค่า egress พุ่ง (สาเหตุ ฿82/เดือน)
    ตัดทิ้งก่อนเซฟ (ยอมเสียรูปที่อัปไม่ขึ้น ดีกว่าเอกสารบวม) · คืนจำนวนที่ตัด */
+// id ที่ล้าง base64 ขึ้น cloud แล้วในเซสชันนี้ — กันเขียนซ้ำ (แต่ละ doc ล้างครั้งเดียวพอ)
+var _jdB64CleanIds = new Set();
+// เขียนเอกสาร (ที่ตัด base64 แล้ว) กลับ Firestore แบบเงียบ — ให้ doc เล็กลงถาวร มือถือจะไม่แครช
+function _silentResaveJaedaeng(audit) {
+  if (testMode || !firebaseDb || !audit || audit.id == null) return;
+  try { firebaseDb.collection(JAEDAENG_COLLECTION).doc(String(audit.id)).set(audit).catch(function(){}); } catch (e) {}
+}
+
 function _dropBase64Photos(items) {
   let dropped = 0;
   (items || []).forEach(it => {
