@@ -6557,7 +6557,9 @@ async function _ensureJaedaengLoadedFrom(fromStr) {
     const have = new Set((_jdOlderAudits || []).map(r => String(r.id)));
     snap.docs.map(d => d.data()).forEach(r => {
       if (r && r.id != null && !_isJdConfigDoc(r) && !have.has(String(r.id)) && !deleted.has(String(r.id))) {
-        _dropBase64Photos(r.items);   // ตัด base64 legacy กันมือถือแครช
+        // ตัด base64 legacy + ล้างขึ้น cloud (ของเก่า >45 วันมักไม่เคยถูกล้าง = ตัวทำมือถือแครชตอนโหลดประวัติ)
+        const _d = _dropBase64Photos(r.items);
+        if (_d > 0 && !_jdB64CleanIds.has(String(r.id))) { _jdB64CleanIds.add(String(r.id)); _silentResaveJaedaeng(r); }
         _jdOlderAudits.push(r); have.add(String(r.id));
       }
     });
