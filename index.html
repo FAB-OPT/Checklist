@@ -6197,7 +6197,9 @@ async function saveAuditToBackend(audit) {
 function loadLocalDaily() {
   try {
     const raw = localStorage.getItem(DAILY_STORAGE_KEY);
-    return raw ? JSON.parse(raw) : [];
+    const arr = raw ? JSON.parse(raw) : [];
+    arr.forEach(function(d){ if (d) _dropBase64Photos(d.items); });   // ตัด base64 legacy กันมือถือแครช
+    return arr;
   } catch (e) { return []; }
 }
 
@@ -6288,6 +6290,7 @@ async function loadDailyChecklists() {
       map.set(String(d.id), d);
     });
     allDailyChecklists = Array.from(map.values()).filter(d => d && !d.deleted);
+    allDailyChecklists.forEach(function(d){ _dropBase64Photos(d.items); });   // ตัด base64 legacy กันมือถือแครช
     saveDailyLocal();
     _dailyFullLoaded = false; // ยังโหลดไม่ครบทุกวัน → ปุ่ม "ดูย้อนหลังทั้งหมด" ยังใช้ได้
     // ดันเฉพาะที่ยังค้างจริง (ในเครื่องยัง _pendingSync หลัง merge = cloud ไม่มีที่ใหม่กว่า) — ไม่ใช่ทุก record
@@ -6336,6 +6339,7 @@ async function loadAllDailyHistory() {
       map.set(String(d.id), d);
     });
     let all = Array.from(map.values()).filter(d => d && !d.deleted);
+    all.forEach(function(d){ _dropBase64Photos(d.items); });   // ตัด base64 legacy กันมือถือแครช
     const isBranch = currentUser && currentUser.role === 'branch';
     if (isBranch) all = all.filter(d => String(d.branchCode) === String(currentUser.branchCode || ''));
     allDailyChecklists = all;
@@ -6366,6 +6370,8 @@ function loadLocalJaedaeng() {
   try {
     const raw = localStorage.getItem(JAEDAENG_STORAGE_KEY);
     const arr = raw ? JSON.parse(raw) : [];
+    // ตัด base64 legacy ออกตั้งแต่อ่าน cache — กันมือถือแครชก่อน realtime จะมาแทน
+    arr.forEach(function(r){ if (r) _dropBase64Photos(r.items); });
     // กรอง record ที่ถูกลบ (tombstone) ออกตั้งแต่อ่าน cache — กันกระพริบตอนเข้าใหม่
     const deleted = loadJdDeletedIds();
     return deleted.size ? arr.filter(r => r && !deleted.has(String(r.id))) : arr;
@@ -6498,6 +6504,10 @@ function startJaedaengRealtime() {
       const local = loadLocalJaedaeng();
       const m = _mergeJaedaeng(remote, local);
       allJaedaengAudits = m.merged;
+      // ตัดรูป base64 legacy ที่ค้างใน cloud/cache ทิ้ง — กันแรม+localStorage มือถือล้นจนแครช (เด้งออก)
+      // (รูปจริงเก็บเป็น URL บน R2 อยู่แล้ว · base64 คือของหลุดที่ไม่ควรมี)
+      let _b64 = 0; allJaedaengAudits.forEach(function(r){ _b64 += _dropBase64Photos(r.items); });
+      if (_b64 > 0) console.warn('[JD] ตัด base64 legacy ออกจากข้อมูลที่โหลด ' + _b64 + ' รูป (กันมือถือแครช)');
       saveJaedaengLocal();
       _jdFirstSnapshotReceived = true;
       _rerenderJaedaengIfVisible();
@@ -6517,6 +6527,7 @@ async function _ensureJaedaengLoadedFrom(fromStr) {
     const have = new Set((_jdOlderAudits || []).map(r => String(r.id)));
     snap.docs.map(d => d.data()).forEach(r => {
       if (r && r.id != null && !_isJdConfigDoc(r) && !have.has(String(r.id)) && !deleted.has(String(r.id))) {
+        _dropBase64Photos(r.items);   // ตัด base64 legacy กันมือถือแครช
         _jdOlderAudits.push(r); have.add(String(r.id));
       }
     });
