@@ -5726,7 +5726,6 @@ const DAILY_CLOSE = [
   ]},
   { name: "PASTA", items: [
     "การจัดเก็บสินค้าและวัตถุดิบสิ้นวัน  ถูกต้องตามมาตรฐาน",
-    "การทิ้งสินค้าหรือวัตถุดิบสิ้นวันถูกต้องตามมาตรฐาน",
     "ตู้เย็นพาสต้า  สะอาด  อุณหภูมิถูกต้องตามมาตรฐาน",
     "เตาไมโครเวฟ  หม้ออุ่นซุป  ปริ้นเตอร์  ได้รับการทำความสะอาด",
     "ภาชนะ  อุปกรณ์ ต่างๆ สะอาด  จัดเก็บเรียบร้อย",
@@ -5735,7 +5734,6 @@ const DAILY_CLOSE = [
   ]},
   { name: "STEAK", items: [
     "การจัดเก็บสินค้าและวัตถุดิบสิ้นวัน  ถูกต้องตามมาตรฐาน",
-    "การทิ้งสินค้าหรือวัตถุดิบสิ้นวันถูกต้องตามมาตรฐาน",
     "ตู้เย็นสเต๊ก  สะอาด  อุณหภูมิถูกต้องตามมาตรฐาน",
     "อุปกรณ์ต่างๆ เช่น เตาแม่เหล็กไฟฟ้า  วอร์มเมอซอส  ปริ้นเตอร์ หม้อหุงข้าว  ได้รับการทำความสะอาด",
     "ภาชนะ  อุปกรณ์ ต่างๆ สะอาด  จัดเก็บเรียบร้อย",
@@ -5855,7 +5853,6 @@ const DAILY_CLOSE_55 = [
   ]},
   { name: "PASTA", items: [
     "การจัดเก็บสินค้าและวัตถุดิบสิ้นวัน  ถูกต้องตามมาตรฐาน",
-    "การทิ้งสินค้าหรือวัตถุดิบสิ้นวันถูกต้องตามมาตรฐาน",
     "ตู้เย็นพาสต้า  สะอาด  อุณหภูมิถูกต้องตามมาตรฐาน",
     "เตาไมโครเวฟ  วอร์มเมอร์ซุป  ปริ้นเตอร์  ได้รับการทำความสะอาด และถอดปลั๊กเรียบร้อย",
     "ภาชนะ  อุปกรณ์ ต่างๆ สะอาด  จัดเก็บเรียบร้อย",
@@ -5864,7 +5861,6 @@ const DAILY_CLOSE_55 = [
   ]},
   { name: "STEAK", items: [
     "การจัดเก็บสินค้าและวัตถุดิบสิ้นวัน  ถูกต้องตามมาตรฐาน",
-    "การทิ้งสินค้าหรือวัตถุดิบสิ้นวันถูกต้องตามมาตรฐาน",
     "ตู้เย็นสเต๊ก  สะอาด  อุณหภูมิถูกต้องตามมาตรฐาน",
     "อุปกรณ์ต่างๆ เช่น เตาคอมบิ ตระแกรงเตา วอร์มเมอซอส  ปริ้นเตอร์ หม้อหุงข้าว  ได้รับการทำความสะอาด",
     "ภาชนะ  อุปกรณ์ ต่างๆ สะอาด  จัดเก็บเรียบร้อย",
@@ -6270,7 +6266,7 @@ function saveDailyLocal() {
 }
 
 // ── โหลดแบบประหยัดโควตา (incremental) เพื่อรองรับหลายสาขาในระยะยาว ──
-const DAILY_BACKFILL_DAYS = 90;                    // เครื่องใหม่/ล้างแคช: โหลดย้อนหลังกี่วัน (ครั้งเดียว)
+const DAILY_BACKFILL_DAYS = 45;                    // เครื่องใหม่/ล้างแคช: โหลดย้อนหลังกี่วัน (ครั้งเดียว) · ลดจาก 90 กันโหลดหนัก
 const DAILY_SYNC_OVERLAP_MS = 6 * 60 * 60 * 1000;  // เผื่อนาฬิกาเครื่องคลาดกัน 6 ชม. กันข้อมูลตกหล่น
 function _maxDailyUpdatedAt(list) {
   let m = '';
@@ -6290,7 +6286,12 @@ async function loadDailyChecklists() {
   const cursor = _maxDailyUpdatedAt(local);
   try {
     let snap;
-    if (cursor) {
+    const _isBr = currentUser && currentUser.role === 'branch';
+    const _bc = _isBr ? String(currentUser.branchCode || '') : '';
+    if (_isBr && _bc) {
+      // สาขา → ดึงเฉพาะของสาขาตัวเอง (ไม่กี่ร้อย record) แทนโหลดทุกสาขา (22MB) → มือถือไม่แครช
+      snap = await firebaseDb.collection(DAILY_COLLECTION).where('branchCode', '==', _bc).get();
+    } else if (cursor) {
       // เครื่องนี้มีแคชแล้ว → ดึงเฉพาะที่เปลี่ยนตั้งแต่ครั้งก่อน (incremental) + เผื่อ overlap กันตกหล่น
       const since = new Date(new Date(cursor).getTime() - DAILY_SYNC_OVERLAP_MS).toISOString();
       snap = await firebaseDb.collection(DAILY_COLLECTION).where('updatedAt', '>', since).get();
@@ -6346,7 +6347,12 @@ let _dailyFullLoaded = false;
 async function loadAllDailyHistory() {
   if (!firebaseDb) return;
   try {
-    const snap = await firebaseDb.collection(DAILY_COLLECTION).get();
+    // สาขา → ดึงเฉพาะสาขาตัวเอง (ไม่โหลดทั้ง collection 22MB ให้มือถือแครช)
+    const _isBr = currentUser && currentUser.role === 'branch';
+    const _bc = _isBr ? String(currentUser.branchCode || '') : '';
+    const snap = (_isBr && _bc)
+      ? await firebaseDb.collection(DAILY_COLLECTION).where('branchCode', '==', _bc).get()
+      : await firebaseDb.collection(DAILY_COLLECTION).get();
     const cache = loadLocalDaily();
     const map = new Map(cache.map(d => [String(d.id), d]));
     snap.docs.map(d => d.data()).forEach(d => {
@@ -8053,7 +8059,7 @@ function renderDailyForm() {
       const isNA = item.status === 'na';
       const photos = item.photos || [];
       const isRequired = (currentDaily.requiredPhotos || []).includes(globalIdx);
-      const showPhotos = isRequired || isFail;   // รูปบังคับ: ข้อสุ่ม + ข้อไม่ผ่าน
+      const showPhotos = (isRequired && !isNA) || isFail;   // รูปบังคับ: ข้อสุ่ม + ข้อไม่ผ่าน · N/A ไม่ต้องรูป
       let photosHtml = '';
       if (showPhotos) {
         const missing = photos.length === 0;
@@ -8070,7 +8076,7 @@ function renderDailyForm() {
       html += `<div class="daily-item ${isPass?'is-pass':''} ${isFail?'is-fail':''} ${isNA?'is-na':''} ${isRequired?'is-required-photo':''}">
         <div class="daily-item-q">
           <span class="daily-item-num">${iIdx+1}</span>
-          <span class="daily-item-text">${escapeHtml(text)}${isRequired ? '<span class="daily-item-photo-badge">📷 ต้องแนบรูป</span>' : ''}</span>
+          <span class="daily-item-text">${escapeHtml(text)}${(isRequired && !isNA) ? '<span class="daily-item-photo-badge">📷 ต้องแนบรูป</span>' : ''}</span>
         </div>
         <div class="daily-item-actions">
           <button type="button" class="daily-choice pass ${isPass ? 'active' : ''}" onclick="setDailyItem(${globalIdx},'pass')">
@@ -8176,8 +8182,8 @@ async function submitDailyShift() {
   if (badNote >= 0) { _scrollTo(badNote, 'ระบุเหตุผลไม่ครบ', 'ข้อที่ "ไม่ผ่าน" หรือ "N/A" ต้องระบุเหตุผลก่อนบันทึก'); return; }
   const failNoPhoto = items.findIndex(it => it.status === 'fail' && (!it.photos || it.photos.length === 0));
   if (failNoPhoto >= 0) { _scrollTo(failNoPhoto, 'ถ่ายรูปไม่ครบ', 'ข้อที่ "ไม่ผ่าน" ต้องถ่ายรูปหลักฐานก่อนบันทึก'); return; }
-  // 3) ข้อสุ่มต้องมีรูป
-  const missingPhoto = required.filter(idx => { const it = items[idx]; return !it || !it.photos || it.photos.length === 0; });
+  // 3) ข้อสุ่มต้องมีรูป — ยกเว้นข้อที่ตอบ N/A (ไม่ต้องแนบรูป)
+  const missingPhoto = required.filter(idx => { const it = items[idx]; if (it && it.status === 'na') return false; return !it || !it.photos || it.photos.length === 0; });
   if (missingPhoto.length > 0) { _scrollTo(missingPhoto[0], 'ถ่ายรูปไม่ครบ', `ยังมีข้อที่ต้องถ่ายรูปอีก ${missingPhoto.length} ข้อ`); return; }
   currentDaily.manager = manager;
   currentDaily.submittedAt = new Date().toISOString();
