@@ -6263,7 +6263,8 @@ function saveDailyLocal() {
     allDailyChecklists.filter(d => d && d._pendingSync), // ขั้นสุดท้าย: อย่างน้อยเก็บของที่ยังไม่ sync ให้ได้
   ];
   for (const set of sets) {
-    try { localStorage.setItem(DAILY_STORAGE_KEY, JSON.stringify(set)); return; }
+    // เซฟแบบตัด base64 เสมอ — กัน qa_daily_v1 บวมจนมือถือแครชตอนโหลด
+    try { localStorage.setItem(DAILY_STORAGE_KEY, JSON.stringify(_liteAuditsForCache(set))); return; }
     catch (_) { /* เต็ม → ลองชุดที่เล็กลง */ }
   }
 }
@@ -6394,9 +6395,24 @@ function loadLocalJaedaeng() {
     return deleted.size ? arr.filter(r => r && !deleted.has(String(r.id))) : arr;
   } catch (_) { return []; }
 }
+// คืน copy ของ audits ที่ตัด base64 ออก (สำหรับเซฟ localStorage — กัน cache บวม)
+function _liteAuditsForCache(arr) {
+  return (arr || []).map(function (r) {
+    if (!r || !Array.isArray(r.items)) return r;
+    return Object.assign({}, r, {
+      items: r.items.map(function (it) {
+        if (it && Array.isArray(it.photos) && it.photos.some(function (p) { return typeof p === 'string' && p.startsWith('data:'); })) {
+          return Object.assign({}, it, { photos: it.photos.filter(function (p) { return typeof p === 'string' && /^https?:/i.test(p); }) });
+        }
+        return it;
+      })
+    });
+  });
+}
 function saveJaedaengLocal() {
   if (testMode) return;
-  try { localStorage.setItem(JAEDAENG_STORAGE_KEY, JSON.stringify(allJaedaengAudits)); } catch (_) {}
+  // เซฟแบบตัด base64 เสมอ — กัน localStorage บวมจน มือถือแครชตอนโหลด
+  try { localStorage.setItem(JAEDAENG_STORAGE_KEY, JSON.stringify(_liteAuditsForCache(allJaedaengAudits))); } catch (_) {}
 }
 
 /* Tombstones — จำ id ที่ถูกลบ (กัน resync ดึงกลับในเครื่องที่ลบ) */
