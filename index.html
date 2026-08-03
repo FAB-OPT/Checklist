@@ -6529,7 +6529,7 @@ function startJaedaengRealtime() {
         _applyTestMode(cfgOn);
         if (wasOn && !cfgOn && currentUser) {
           currentAudit = null; currentDaily = null; currentJDAudit = null;
-          Promise.all([loadAudits(), loadDailyChecklists(), loadJaedaengAudits()])
+          loadBrandData()
             .then(() => { if (currentUser) routeByRole(); }).catch(()=>{});
           return;
         }
@@ -6610,6 +6610,18 @@ function initRealtimeSync() {
   _jdRealtimeStarted = true;
   _applyTestMode(false);  // กันค้างจากเวอร์ชันก่อน
   startJaedaengRealtime();
+}
+
+/* โหลดเฉพาะข้อมูลของแบรนด์ที่ใช้จริง — กันมือถือโหลด Daily (ซานตาเฟ่) 22MB
+   ทั้งที่เข้าใช้แค่เจ๊แดง (หรือกลับกัน) จนแรมพุ่งแครช · crossBrand (admin) โหลดทั้งคู่ */
+function loadBrandData() {
+  const cross = !!(currentUser && currentUser.crossBrand);
+  const wantJd = cross || !currentBrand || currentBrand === 'jaedaeng';
+  const wantSf = cross || !currentBrand || currentBrand === 'santafe';
+  const tasks = [];
+  if (wantSf) { tasks.push(loadAudits()); tasks.push(loadDailyChecklists()); }
+  if (wantJd) { tasks.push(loadJaedaengAudits()); }
+  return Promise.all(tasks);
 }
 
 async function loadJaedaengAudits() {
@@ -6861,11 +6873,11 @@ async function doLogin() {
     allAudits = cachedAudits;
     allDailyChecklists = cachedDaily;
     allJaedaengAudits = cachedJaedaeng;
-    Promise.all([loadAudits(), loadDailyChecklists(), loadJaedaengAudits()])
+    loadBrandData()
       .then(() => { if (currentUser) routeByRole(); })
       .catch(() => {});
   } else {
-    await Promise.all([loadAudits(), loadDailyChecklists(), loadJaedaengAudits()]);
+    await loadBrandData();
   }
   document.getElementById('login-screen').classList.remove('active');
   document.getElementById('app-screen').classList.add('active');
@@ -10422,7 +10434,7 @@ async function autoLoginFromSession() {
   allAudits = loadLocalAudits();
   allDailyChecklists = loadLocalDaily();
   allJaedaengAudits = loadLocalJaedaeng();
-  Promise.all([loadAudits(), loadDailyChecklists(), loadJaedaengAudits()])
+  loadBrandData()
     .then(() => { if (currentUser) routeByRole(); })
     .catch(() => {});
   document.getElementById('login-screen').classList.remove('active');
@@ -10447,7 +10459,7 @@ function finalizeBrandFromSession(brand) {
   allAudits = loadLocalAudits();
   allDailyChecklists = loadLocalDaily();
   allJaedaengAudits = loadLocalJaedaeng();
-  Promise.all([loadAudits(), loadDailyChecklists(), loadJaedaengAudits()])
+  loadBrandData()
     .then(() => { if (currentUser) routeByRole(); })
     .catch(() => {});
   document.getElementById('login-screen').classList.remove('active');
