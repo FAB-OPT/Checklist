@@ -6194,6 +6194,26 @@ async function saveAuditToBackend(audit) {
   }
 }
 
+/* SELF-HEAL: ล้าง localStorage key ที่บวมผิดปกติ (>2.5MB = รูป base64 หลุดค้าง)
+   ต้นเหตุมือถือแครช/เด้งออก: cache หรือ draft เก่าบวมในเครื่อง → โหลดแล้วแรมพุ่ง
+   → WebKit ฆ่าแท็บ "เกิดปัญหาตลอดเวลา" · ล้างทิ้งได้ปลอดภัยเพราะ sync ใหม่จาก cloud
+   รันทันทีตอนโหลดสคริปต์ (ก่อนแตะ cache/draft ใดๆ) */
+(function _healOversizedLocalStorage() {
+  try {
+    if (typeof localStorage === 'undefined') return;
+    const MAX = 2500000; // ~2.5MB · cache ปกติเป็น text ไม่กี่ร้อย KB
+    const kill = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      const v = k ? localStorage.getItem(k) : null;
+      if (v && v.length > MAX) kill.push(k);
+    }
+    kill.forEach(function (k) {
+      try { localStorage.removeItem(k); console.warn('[heal] ล้าง cache บวมผิดปกติ: ' + k); } catch (e) {}
+    });
+  } catch (e) {}
+})();
+
 function loadLocalDaily() {
   try {
     const raw = localStorage.getItem(DAILY_STORAGE_KEY);
@@ -6208,14 +6228,11 @@ const DAILY_DRAFT_KEY = 'daily_draft_v1';
 function _saveDailyDraft() {
   if (!currentDaily) return;
   try {
-    localStorage.setItem(DAILY_DRAFT_KEY, JSON.stringify(currentDaily));
-  } catch (e) {
-    // เกินโควต้า (รูป base64 เยอะ) → เซฟแบบไม่มีรูป
-    try {
-      const lite = { ...currentDaily, items: (currentDaily.items || []).map(it => ({ ...it, photos: [] })) };
-      localStorage.setItem(DAILY_DRAFT_KEY, JSON.stringify(lite));
-    } catch (_) {}
-  }
+    // เก็บเฉพาะรูป URL เสมอ (base64 เป็นของชั่วคราวก่อนอัป R2) — กัน draft บวมจนมือถือแครช
+    const lite = JSON.parse(JSON.stringify(currentDaily));
+    (lite.items || []).forEach(it => { if (Array.isArray(it.photos)) it.photos = it.photos.filter(p => typeof p === 'string' && /^https?:/i.test(p)); });
+    localStorage.setItem(DAILY_DRAFT_KEY, JSON.stringify(lite));
+  } catch (e) {}
 }
 function _loadDailyDraft() {
   try { const s = localStorage.getItem(DAILY_DRAFT_KEY); return s ? JSON.parse(s) : null; } catch (e) { return null; }
@@ -9180,15 +9197,12 @@ const JD_DRAFT_KEY = 'jd_audit_draft_v1';
 function _saveJDDraft() {
   try {
     if (!currentJDAudit || !currentJDAudit._draft) return;
-    localStorage.setItem(JD_DRAFT_KEY, JSON.stringify(currentJDAudit));
-  } catch (e) {
-    // เกิน quota (รูป base64 เยอะ) → เซฟแบบเก็บเฉพาะรูปที่เป็น URL
-    try {
-      const lite = JSON.parse(JSON.stringify(currentJDAudit));
-      (lite.items || []).forEach(it => { if (it.photos) it.photos = it.photos.filter(p => typeof p === 'string' && /^https?:/i.test(p)); });
-      localStorage.setItem(JD_DRAFT_KEY, JSON.stringify(lite));
-    } catch (e2) {}
-  }
+    // เก็บ draft แบบ "เฉพาะรูป URL" เสมอ (รูปอัป R2 ทันทีอยู่แล้ว · base64 เป็นของชั่วคราว)
+    // กัน draft บวมจน localStorage ล้น → มือถือแครชตอนโหลดครั้งถัดไป
+    const lite = JSON.parse(JSON.stringify(currentJDAudit));
+    (lite.items || []).forEach(it => { if (Array.isArray(it.photos)) it.photos = it.photos.filter(p => typeof p === 'string' && /^https?:/i.test(p)); });
+    localStorage.setItem(JD_DRAFT_KEY, JSON.stringify(lite));
+  } catch (e) {}
 }
 function _loadJDDraft() {
   try { const s = localStorage.getItem(JD_DRAFT_KEY); return s ? JSON.parse(s) : null; } catch (e) { return null; }
