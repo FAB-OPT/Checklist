@@ -6307,7 +6307,7 @@ async function loadDailyChecklists() {
       map.set(String(d.id), d);
     });
     allDailyChecklists = Array.from(map.values()).filter(d => d && !d.deleted);
-    allDailyChecklists.forEach(function(d){ _dropBase64Photos(d.items); });   // ตัด base64 legacy กันมือถือแครช
+    allDailyChecklists.forEach(function(d){ const _x = _dropBase64Photos(d.items); if (_x > 0 && d.id != null && !_dailyB64CleanIds.has(String(d.id))) { _dailyB64CleanIds.add(String(d.id)); _silentResaveDaily(d); } });   // ตัด base64 + ล้างขึ้น cloud
     saveDailyLocal();
     _dailyFullLoaded = false; // ยังโหลดไม่ครบทุกวัน → ปุ่ม "ดูย้อนหลังทั้งหมด" ยังใช้ได้
     // ดันเฉพาะที่ยังค้างจริง (ในเครื่องยัง _pendingSync หลัง merge = cloud ไม่มีที่ใหม่กว่า) — ไม่ใช่ทุก record
@@ -6356,7 +6356,7 @@ async function loadAllDailyHistory() {
       map.set(String(d.id), d);
     });
     let all = Array.from(map.values()).filter(d => d && !d.deleted);
-    all.forEach(function(d){ _dropBase64Photos(d.items); });   // ตัด base64 legacy กันมือถือแครช
+    all.forEach(function(d){ const _x = _dropBase64Photos(d.items); if (_x > 0 && d.id != null && !_dailyB64CleanIds.has(String(d.id))) { _dailyB64CleanIds.add(String(d.id)); _silentResaveDaily(d); } });   // ตัด base64 + ล้างขึ้น cloud
     const isBranch = currentUser && currentUser.role === 'branch';
     if (isBranch) all = all.filter(d => String(d.branchCode) === String(currentUser.branchCode || ''));
     allDailyChecklists = all;
@@ -9603,6 +9603,13 @@ var _jdB64CleanIds = new Set();
 function _silentResaveJaedaeng(audit) {
   if (testMode || !firebaseDb || !audit || audit.id == null) return;
   try { firebaseDb.collection(JAEDAENG_COLLECTION).doc(String(audit.id)).set(audit).catch(function(){}); } catch (e) {}
+}
+
+// เขียน daily (ที่ตัด base64 แล้ว) กลับ Firestore แบบเงียบ — ให้ doc เล็กลง กันมือถือแครช/บวมซ้ำ
+var _dailyB64CleanIds = new Set();
+function _silentResaveDaily(rec) {
+  if (testMode || !firebaseDb || !rec || rec.id == null) return;
+  try { firebaseDb.collection(DAILY_COLLECTION).doc(String(rec.id)).set(rec).catch(function(){}); } catch (e) {}
 }
 
 function _dropBase64Photos(items) {
