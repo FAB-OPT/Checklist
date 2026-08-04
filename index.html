@@ -5592,8 +5592,8 @@ try {
   }
 } catch (e) {}
 function loadJaedaengBranchesFromCloud() {
-  return fetch(JD_BRANCH_CLOUD_URL + '?action=config&_=' + Date.now())
-    .then(r => r.json())
+  // ใช้ config ก้อนเดียวกับสิทธิ์ปุ่ม/สาขาซานตาเฟ่ (fetchHubConfig) — ไม่ยิง Apps Script ซ้ำซ้อน
+  return fetchHubConfig()
     .then(res => {
       if (res && res.ok && Array.isArray(res.jaedaengBranches) && res.jaedaengBranches.length) {
         JAEDAENG_BRANCHES = _mergeJdBranches(res.jaedaengBranches);
@@ -6276,7 +6276,7 @@ function _maxDailyUpdatedAt(list) {
 
 async function loadDailyChecklists() {
   loadSfBranches(); // โหลดรายชื่อสาขา (เพิ่ม/ลบ) จาก cloud — ครั้งเดียวต่อ session
-  loadCkPermsFromHub(); // โหลดสิทธิ์ปุ่มจาก HUB แล้ว applyCkPerms ให้เอง
+  loadCkPermsFromHub(); // สิทธิ์ปุ่มจาก HUB (throttle) — ตัวหลักเรียกที่ renderBottomNav/visibilitychange
   // MERGE: รวม cloud + local (ห้ามทับของในเครื่องด้วยของว่าง) — กันข้อมูลที่เซฟ cloud ไม่สำเร็จหาย
   const local = loadLocalDaily();
   allDailyChecklists = local.filter(d => d && !d.deleted); // แสดง local ก่อน กันจอว่างระหว่างโหลด
@@ -7085,6 +7085,9 @@ function renderBottomNav() {
   // ต้อง render หลัง innerHTML เพราะ #nav-tools เพิ่งถูกสร้าง
   renderHeaderTools(view);
   applyCkPerms();   // ซ่อนเมนูตามสิทธิ์ที่ตั้งไว้ที่ HUB (ต้องหลัง innerHTML)
+  // ดึงสิทธิ์ล่าสุดจาก HUB ทุกครั้งที่เข้าแอป/สลับแบรนด์ (throttle 30 วิ)
+  // — ต้องอยู่ตรงนี้ ไม่ใช่ใน loadDailyChecklists() เพราะคนที่ใช้เจ๊แดงอย่างเดียวไม่เคยได้สิทธิ์จาก HUB
+  loadCkPermsFromHub();
 }
 
 // HTML ของเครื่องมือ (สลับแบรนด์) — ใช้ทั้งใน header (มือถือ) และ sidebar (คอม)
@@ -7386,12 +7389,49 @@ function applyCkPerms() {
     el.style.display = ckCan(el.getAttribute('data-ck-action')) ? '' : 'none';
   });
 }
-/* ดึงสิทธิ์จาก HUB (แหล่งกลาง) — ล้มเหลว/ยังไม่ตั้ง = ใช้ค่า default */
-async function loadCkPermsFromHub() {
+/* ══ ดึง config จาก HUB — รวมศูนย์ที่เดียว ══
+   เดิมทั้งสิทธิ์ปุ่มและรายชื่อสาขาต่างคนต่างยิง ?action=config พร้อมกัน → Apps Script
+   ตอบไม่ทัน/ทิ้งรีเควสต์ (เห็นเป็น "โหลดจาก HUB ไม่ได้") → สิทธิ์ใหม่ไม่ถึงเครื่องสาขา
+   ตอนนี้: รีเควสต์เดียว ใช้ร่วมกัน + retry 3 ครั้ง + cache 30 วิ */
+let _hubCfg = null, _hubCfgAt = 0, _hubCfgInflight = null;
+const HUB_CFG_TTL_MS = 30 * 1000;
+function fetchHubConfig(force) {
+  if (!force && _hubCfg && (Date.now() - _hubCfgAt) < HUB_CFG_TTL_MS) return Promise.resolve(_hubCfg);
+  if (_hubCfgInflight) return _hubCfgInflight;
+  _hubCfgInflight = (async () => {
+    let lastErr = null;
+    for (let i = 0; i < 3; i++) {
+      if (i) await new Promise(r => setTimeout(r, 700 * i));   // หน่วงก่อนลองใหม่
+      try {
+        const res = await fetch(JD_BRANCH_CLOUD_URL + '?action=config&_=' + Date.now()).then(r => r.json());
+        if (res && res.ok) { _hubCfg = res; _hubCfgAt = Date.now(); return res; }
+        lastErr = new Error('HUB ตอบไม่ ok');
+      } catch (e) { lastErr = e; }
+    }
+    throw lastErr || new Error('HUB config failed');
+  })().finally(() => { _hubCfgInflight = null; });
+  return _hubCfgInflight;
+}
+
+/* ดึงสิทธิ์จาก HUB (แหล่งกลาง) — ล้มเหลว/ยังไม่ตั้ง = ใช้ค่า default
+   ดึงซ้ำได้ (throttle 30 วิ) — ตั้งสิทธิ์ที่ HUB แล้วเครื่องที่เปิดแอปค้างไว้ต้องเห็นด้วย
+   ไม่งั้นสาขาต้องปิด-เปิดหน้าใหม่ทั้งหน้าถึงจะได้สิทธิ์ใหม่ */
+let _ckPermsFetchedAt = 0;
+let _ckPermsInflight = null;
+const CK_PERMS_TTL_MS = 30 * 1000;
+function loadCkPermsFromHub(force) {
+  if (!force && _ckPermsFetchedAt && (Date.now() - _ckPermsFetchedAt) < CK_PERMS_TTL_MS) { applyCkPerms(); return Promise.resolve(); }
+  // ยิงซ้อนกันหลายจุด (renderBottomNav + loadDailyChecklists + visibilitychange) → ใช้ตัวเดียวกัน
+  if (_ckPermsInflight) return _ckPermsInflight;
+  _ckPermsInflight = _fetchCkPermsFromHub(force).finally(() => { _ckPermsInflight = null; });
+  return _ckPermsInflight;
+}
+async function _fetchCkPermsFromHub(force) {
   try {
-    const res = await fetch(JD_BRANCH_CLOUD_URL + '?action=config&_=' + Date.now()).then(r => r.json());
+    const res = await fetchHubConfig(force);
     if (res && res.ok && res.perms && res.perms.checklist) {
       CK_PERMS = _normalizeCkPerms(res.perms.checklist);
+      _ckPermsFetchedAt = Date.now();
       try { localStorage.setItem(CK_PERMS_KEY, JSON.stringify(CK_PERMS)); } catch (_) {}
       console.log('[perms] โหลดสิทธิ์ปุ่มจาก HUB แล้ว');
     } else {
@@ -7400,6 +7440,11 @@ async function loadCkPermsFromHub() {
   } catch (e) { console.warn('[perms] โหลดจาก HUB ไม่ได้ — ใช้ค่าเริ่มต้น', e); }
   applyCkPerms();
 }
+/* กลับเข้าแอป (สลับแท็บ/ปลดล็อกจอ) → เช็คสิทธิ์ใหม่ให้เอง — แก้ที่ HUB แล้วเห็นผลใน ~ไม่กี่วิ */
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && currentUser) loadCkPermsFromHub();
+});
+window.addEventListener('pageshow', () => { if (currentUser) loadCkPermsFromHub(); });
 
 /* ตัดคำนำหน้าออกจากชื่อ BZM แล้วเอาชื่อต้น — HUB เก็บ "นาย ณธวรรท ศิริเมธานณ"
    แต่ Checklist เทียบ manager กับ currentUser.name ที่เก็บชื่อต้น ("ณธวรรท") */
@@ -7435,9 +7480,9 @@ async function loadSfBranches() {
   if (_sfBranchesLoaded) return;
   _sfBranchesLoaded = true;
   try { const a = JSON.parse(localStorage.getItem(SF_BRANCHES_KEY) || 'null'); if (Array.isArray(a) && a.length) _applySfBranches(a); } catch (_) {}
-  // 1) HUB = แหล่งหลัก
+  // 1) HUB = แหล่งหลัก (ใช้ config ก้อนเดียวกับสิทธิ์ปุ่ม — ไม่ยิงซ้ำ)
   try {
-    const res = await fetch(JD_BRANCH_CLOUD_URL + '?action=config&_=' + Date.now()).then(r => r.json());
+    const res = await fetchHubConfig();
     const list = _sfBranchesFromHub(res);
     if (list.length) {
       _applySfBranches(list);
