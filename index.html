@@ -8219,30 +8219,8 @@ function setDailyNote(idx, value) {
   _saveDailyDraft();
 }
 
-function addDailyPhotos(idx, files) {
-  if (!currentDaily || !files || !files.length) return;
-  const item = currentDaily.items[idx];
-  if (!item.photos) item.photos = [];
-  for (const f of files) {
-    const reader = new FileReader();
-    reader.onload = e => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const maxDim = 800;
-        let w = img.width, h = img.height;
-        if (w > h && w > maxDim) { h = h * maxDim / w; w = maxDim; }
-        else if (h > maxDim) { w = w * maxDim / h; h = maxDim; }
-        canvas.width = w; canvas.height = h;
-        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-        item.photos.push(canvas.toDataURL('image/jpeg', 0.7));
-        renderDailyForm();
-      };
-      img.src = e.target.result;
-    };
-    reader.readAsDataURL(f);
-  }
-}
+// (ยกเลิก addDailyPhotos — ช่องอัปโหลดไฟล์เก่า ไม่มีปุ่มไหนเรียกแล้ว
+//  และขัดกับกติกา "ต้องเป็นรูปที่ถ่ายสด" จึงถอดทิ้งกันเผลอเปิดช่องกลับมา)
 
 function removeDailyPhoto(idx, photoIdx) {
   if (!currentDaily) return;
@@ -9982,7 +9960,89 @@ async function _decodePhotoFile(file) {
   });
 }
 
+/* ══════ กันหยิบรูปเก่าในคลังมาส่ง ══════
+   เส้นทางกล้องของเครื่อง (<input capture>) บางเบราว์เซอร์ — โดยเฉพาะใน Line/Facebook —
+   ยังเปิดให้ "เลือกจากคลังภาพ" ได้ · เลยตรวจ "เวลาที่ถ่ายจริง" ก่อนรับรูป
+   ลำดับที่เชื่อถือ: EXIF DateTimeOriginal (กล้องมือถือใส่มาเกือบทุกเครื่อง แม้ iOS
+   แปลง HEIC→JPEG ตอนอัปโหลดก็ยังคง EXIF ไว้) → ถ้าไม่มีค่อยใช้ file.lastModified
+   เก่ากว่า PHOTO_FRESH_MIN นาที = ไม่รับ */
+const PHOTO_FRESH_MIN = 5;
+function _exifStrToMs(s) {
+  const m = /^(\d{4}):(\d{2}):(\d{2})[ T](\d{2}):(\d{2}):(\d{2})/.exec(String(s || '').trim());
+  if (!m) return 0;
+  const t = new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6]).getTime();  // เวลาท้องถิ่นของเครื่อง
+  return Number.isFinite(t) ? t : 0;
+}
+function _parseExifDate(dv, tiff) {
+  const le = dv.getUint16(tiff) === 0x4949;
+  const u16 = o => dv.getUint16(o, le), u32 = o => dv.getUint32(o, le);
+  if (u16(tiff + 2) !== 0x002A) return 0;
+  const ifd0 = tiff + u32(tiff + 4);
+  const find = (base, tag) => {
+    const n = u16(base);
+    for (let i = 0; i < n; i++) {
+      const e = base + 2 + i * 12;
+      if (u16(e) === tag) return { type: u16(e + 2), count: u32(e + 4), valOff: e + 8 };
+    }
+    return null;
+  };
+  const ascii = e => {
+    let p = e.count > 4 ? tiff + u32(e.valOff) : e.valOff, s = '';
+    for (let i = 0; i < e.count - 1; i++) s += String.fromCharCode(dv.getUint8(p + i));
+    return s;
+  };
+  const ptr = find(ifd0, 0x8769);                       // ExifIFDPointer
+  if (ptr) {
+    const exifIfd = tiff + u32(ptr.valOff);
+    for (const tag of [0x9003, 0x9004]) {               // DateTimeOriginal / DateTimeDigitized
+      const e = find(exifIfd, tag);
+      if (e && e.type === 2) { const t = _exifStrToMs(ascii(e)); if (t) return t; }
+    }
+  }
+  const dt = find(ifd0, 0x0132);                        // DateTime (แก้ไขล่าสุด)
+  return (dt && dt.type === 2) ? _exifStrToMs(ascii(dt)) : 0;
+}
+async function _exifTakenAt(file) {
+  try {
+    const head = file.slice(0, 256 * 1024);
+    const buf = head.arrayBuffer ? await head.arrayBuffer()
+      : await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsArrayBuffer(head); });
+    const dv = new DataView(buf);
+    if (dv.getUint16(0) !== 0xFFD8) return 0;           // ไม่ใช่ JPEG → อ่าน EXIF ไม่ได้
+    let off = 2;
+    while (off + 4 < dv.byteLength) {
+      if (dv.getUint8(off) !== 0xFF) break;
+      const marker = dv.getUint8(off + 1);
+      if (marker === 0xDA || marker === 0xD9) break;    // เริ่มข้อมูลภาพแล้ว
+      const size = dv.getUint16(off + 2);
+      if (marker === 0xE1 && dv.getUint32(off + 4) === 0x45786966) {   // APP1 "Exif"
+        return _parseExifDate(dv, off + 10);
+      }
+      off += 2 + size;
+    }
+  } catch (e) { console.warn('exif read failed:', e); }
+  return 0;
+}
+/* คืนค่า true ถ้าเป็นรูปที่เพิ่งถ่าย · false = รูปเก่า (ไม่รับ) */
+async function _isFreshPhoto(file) {
+  const exif = await _exifTakenAt(file);
+  const taken = exif || file.lastModified || 0;
+  if (!taken) return { ok: true, taken: 0, src: 'none' };            // อ่านไม่ได้เลย → ไม่ตัดสิน
+  const ageMin = (Date.now() - taken) / 60000;
+  return { ok: ageMin <= PHOTO_FRESH_MIN, taken, ageMin, src: exif ? 'exif' : 'file' };
+}
+
 async function handleJDPhotoFile(idx, file) {
+  // ต้องเป็นรูปที่ "ถ่ายเดี๋ยวนี้" เท่านั้น — กันเลือกรูปเก่าจากคลังภาพ
+  const fresh = await _isFreshPhoto(file);
+  if (!fresh.ok) {
+    const when = new Date(fresh.taken);
+    const hhmm = String(when.getHours()).padStart(2, '0') + ':' + String(when.getMinutes()).padStart(2, '0');
+    showModal('ต้องเป็นรูปที่ถ่ายสดเท่านั้น',
+      `รูปนี้ถ่ายไว้ตั้งแต่ ${fmtDateDMY(_ymd(when))} ${hhmm} น. — ไม่สามารถใช้รูปเก่าจากคลังภาพได้ กรุณากด "ถ่ายรูป" แล้วถ่ายใหม่`);
+    jdCameraItemIdx = null;
+    return;
+  }
   let src;
   try { src = await _decodePhotoFile(file); }
   catch (e) {
