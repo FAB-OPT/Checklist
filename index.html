@@ -9844,80 +9844,10 @@ function _camAfterCapture() {
   if (_camCtx === 'daily') { _saveDailyDraft(); renderDailyForm(); }
   else { _saveJDDraft(); renderJaedaengForm(); }
 }
-/* ══════ เปิดผ่านเบราว์เซอร์ในแอป (LINE/Facebook/IG) = ถ่ายรูปไม่ได้ ══════
-   แอปพวกนี้บล็อกกล้องของเว็บ (getUserMedia) และบางตัวไม่มีเมนู "ถ่ายรูป" ให้เลย
-   เหลือแค่ "เลือกจากคลังภาพ" → ตรวจร้านไม่ได้เลย
-   ทางแก้: พาออกไปเบราว์เซอร์จริง (LINE รองรับพารามิเตอร์ openExternalBrowser=1) */
-function _inAppBrowser() {
-  const ua = navigator.userAgent || '';
-  if (/\bLine\//i.test(ua)) return 'LINE';
-  if (/FBAN|FBAV|FB_IAB/i.test(ua)) return 'Facebook';
-  if (/Instagram/i.test(ua)) return 'Instagram';
-  if (/Messenger/i.test(ua)) return 'Messenger';
-  return '';
-}
-function _openInRealBrowser() {
-  try {
-    const u = new URL(location.href);
-    u.searchParams.set('openExternalBrowser', '1');   // LINE เห็นแล้วจะเปิดด้วยเบราว์เซอร์เครื่อง
-    location.href = u.toString();
-  } catch (_) {}
-}
-async function _copyAppLink(btn) {
-  const url = location.href.replace(/([?&])openExternalBrowser=1&?/, '$1').replace(/[?&]$/, '');
-  try { await navigator.clipboard.writeText(url); }
-  catch (_) {
-    const ta = document.createElement('textarea');
-    ta.value = url; ta.style.position = 'fixed'; ta.style.opacity = '0';
-    document.body.appendChild(ta); ta.select();
-    try { document.execCommand('copy'); } catch (__) {}
-    document.body.removeChild(ta);
-  }
-  if (btn) { const t = btn.textContent; btn.textContent = '✓ คัดลอกลิงก์แล้ว'; setTimeout(() => { btn.textContent = t; }, 1800); }
-}
-/* จอเตือน — ขึ้นตอนกด "ถ่ายรูป" ในเบราว์เซอร์ในแอป และตอนเปิดแอปครั้งแรก */
-function showInAppBrowserBlock(mode) {
-  const app = _inAppBrowser() || 'แอปนี้';
-  const tried = /[?&]openExternalBrowser=1/.test(location.search);
-  const isCamera = mode === 'camera';
-  let el = document.getElementById('inapp-block');
-  if (!el) {
-    el = document.createElement('div');
-    el.id = 'inapp-block';
-    document.body.appendChild(el);
-  }
-  el.setAttribute('style', 'position:fixed;inset:0;z-index:3000;background:rgba(15,23,42,.94);display:flex;align-items:center;justify-content:center;padding:22px;');
-  el.innerHTML =
-    '<div style="max-width:380px;width:100%;background:#fff;border-radius:20px;padding:22px 20px;text-align:center;font-family:inherit;">' +
-      '<div style="font-size:40px;line-height:1;margin-bottom:10px;">📷</div>' +
-      '<div style="font-size:17px;font-weight:800;color:#0f172a;margin-bottom:8px;">' +
-        (isCamera ? 'ถ่ายรูปในแอป ' + app + ' ไม่ได้' : 'กรุณาเปิดด้วยเบราว์เซอร์') + '</div>' +
-      '<div style="font-size:13.5px;line-height:1.65;color:#475569;margin-bottom:16px;">' +
-        'ตอนนี้เปิดผ่านเบราว์เซอร์ในแอป <b>' + app + '</b> ซึ่งใช้กล้องไม่ได้ ' +
-        'และการตรวจร้านต้องใช้รูปที่ถ่ายสดเท่านั้น<br>เปิดด้วย <b>Chrome</b> หรือ <b>Safari</b> แล้วเข้าใหม่' +
-        (tried ? '<br><br><b style="color:#b45309;">ถ้ากดปุ่มแล้วไม่เด้ง</b> ให้กดปุ่ม ⋯ (มุมขวาบน) แล้วเลือก “เปิดในเบราว์เซอร์”' : '') +
-      '</div>' +
-      '<button type="button" onclick="_openInRealBrowser()" style="width:100%;padding:13px;border:none;border-radius:999px;background:#D63622;color:#fff;font-size:15px;font-weight:800;font-family:inherit;cursor:pointer;">เปิดในเบราว์เซอร์</button>' +
-      '<button type="button" onclick="_copyAppLink(this)" style="width:100%;margin-top:8px;padding:12px;border:1.5px solid #cbd5e1;border-radius:999px;background:#fff;color:#0f172a;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer;">คัดลอกลิงก์ไปวางในเบราว์เซอร์</button>' +
-      '<button type="button" onclick="document.getElementById(\'inapp-block\').remove()" style="width:100%;margin-top:6px;padding:10px;border:none;background:none;color:#64748b;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;">' +
-        (isCamera ? 'ปิด' : 'ดูข้อมูลอย่างเดียว (ถ่ายรูปไม่ได้)') + '</button>' +
-    '</div>';
-}
-// เปิดแอปในเบราว์เซอร์ของ LINE/FB/IG → เตือนตั้งแต่แรก ก่อนเสียเวลากรอกฟอร์ม
-(function () {
-  if (!_inAppBrowser()) return;
-  const start = () => showInAppBrowserBlock('start');
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);
-  else start();
-})();
-
-/* ถ่ายรูป = กล้องในเว็บเท่านั้น (แนบรูปจากคลังไม่ได้ — ต้องเป็นภาพสด)
-   เปิดผ่าน LINE/FB/IG → กล้องใช้ไม่ได้ ให้จอเตือนพาไปเบราว์เซอร์จริงแทน */
+/* ถ่ายรูป = กล้องในเว็บ (กล้องสด ไม่มีช่องเลือกไฟล์)
+   ถ่ายแนวนอน: ตะแคงเครื่องถ่าย แล้วกด "หมุน" ในหน้ายืนยันก่อนกด "ใช้รูปนี้" */
 async function openJDCamera(idx, ctx) {
-  if (_inAppBrowser()) { showInAppBrowserBlock('camera'); return; }
-  return _openJDCameraLive(idx, ctx);
-}
-async function _openJDCameraLive(idx, ctx) {
+
   _camCtx = ctx || 'jd';
   jdCameraItemIdx = idx;
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -10030,89 +9960,7 @@ async function _decodePhotoFile(file) {
   });
 }
 
-/* ══════ กันหยิบรูปเก่าในคลังมาส่ง ══════
-   เส้นทางกล้องของเครื่อง (<input capture>) บางเบราว์เซอร์ — โดยเฉพาะใน Line/Facebook —
-   ยังเปิดให้ "เลือกจากคลังภาพ" ได้ · เลยตรวจ "เวลาที่ถ่ายจริง" ก่อนรับรูป
-   ลำดับที่เชื่อถือ: EXIF DateTimeOriginal (กล้องมือถือใส่มาเกือบทุกเครื่อง แม้ iOS
-   แปลง HEIC→JPEG ตอนอัปโหลดก็ยังคง EXIF ไว้) → ถ้าไม่มีค่อยใช้ file.lastModified
-   เก่ากว่า PHOTO_FRESH_MIN นาที = ไม่รับ */
-const PHOTO_FRESH_MIN = 5;
-function _exifStrToMs(s) {
-  const m = /^(\d{4}):(\d{2}):(\d{2})[ T](\d{2}):(\d{2}):(\d{2})/.exec(String(s || '').trim());
-  if (!m) return 0;
-  const t = new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6]).getTime();  // เวลาท้องถิ่นของเครื่อง
-  return Number.isFinite(t) ? t : 0;
-}
-function _parseExifDate(dv, tiff) {
-  const le = dv.getUint16(tiff) === 0x4949;
-  const u16 = o => dv.getUint16(o, le), u32 = o => dv.getUint32(o, le);
-  if (u16(tiff + 2) !== 0x002A) return 0;
-  const ifd0 = tiff + u32(tiff + 4);
-  const find = (base, tag) => {
-    const n = u16(base);
-    for (let i = 0; i < n; i++) {
-      const e = base + 2 + i * 12;
-      if (u16(e) === tag) return { type: u16(e + 2), count: u32(e + 4), valOff: e + 8 };
-    }
-    return null;
-  };
-  const ascii = e => {
-    let p = e.count > 4 ? tiff + u32(e.valOff) : e.valOff, s = '';
-    for (let i = 0; i < e.count - 1; i++) s += String.fromCharCode(dv.getUint8(p + i));
-    return s;
-  };
-  const ptr = find(ifd0, 0x8769);                       // ExifIFDPointer
-  if (ptr) {
-    const exifIfd = tiff + u32(ptr.valOff);
-    for (const tag of [0x9003, 0x9004]) {               // DateTimeOriginal / DateTimeDigitized
-      const e = find(exifIfd, tag);
-      if (e && e.type === 2) { const t = _exifStrToMs(ascii(e)); if (t) return t; }
-    }
-  }
-  const dt = find(ifd0, 0x0132);                        // DateTime (แก้ไขล่าสุด)
-  return (dt && dt.type === 2) ? _exifStrToMs(ascii(dt)) : 0;
-}
-async function _exifTakenAt(file) {
-  try {
-    const head = file.slice(0, 256 * 1024);
-    const buf = head.arrayBuffer ? await head.arrayBuffer()
-      : await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsArrayBuffer(head); });
-    const dv = new DataView(buf);
-    if (dv.getUint16(0) !== 0xFFD8) return 0;           // ไม่ใช่ JPEG → อ่าน EXIF ไม่ได้
-    let off = 2;
-    while (off + 4 < dv.byteLength) {
-      if (dv.getUint8(off) !== 0xFF) break;
-      const marker = dv.getUint8(off + 1);
-      if (marker === 0xDA || marker === 0xD9) break;    // เริ่มข้อมูลภาพแล้ว
-      const size = dv.getUint16(off + 2);
-      if (marker === 0xE1 && dv.getUint32(off + 4) === 0x45786966) {   // APP1 "Exif"
-        return _parseExifDate(dv, off + 10);
-      }
-      off += 2 + size;
-    }
-  } catch (e) { console.warn('exif read failed:', e); }
-  return 0;
-}
-/* คืนค่า true ถ้าเป็นรูปที่เพิ่งถ่าย · false = รูปเก่า (ไม่รับ) */
-async function _isFreshPhoto(file) {
-  const exif = await _exifTakenAt(file);
-  const taken = exif || file.lastModified || 0;
-  if (!taken) return { ok: true, taken: 0, src: 'none' };            // อ่านไม่ได้เลย → ไม่ตัดสิน
-  const ageMin = (Date.now() - taken) / 60000;
-  return { ok: ageMin <= PHOTO_FRESH_MIN, taken, ageMin, src: exif ? 'exif' : 'file' };
-}
-
 async function handleJDPhotoFile(idx, file) {
-  // ต้องเป็นรูปที่ "ถ่ายเดี๋ยวนี้" เท่านั้น — กันเลือกรูปเก่าจากคลังภาพ
-  const fresh = await _isFreshPhoto(file);
-  if (!fresh.ok) {
-    const when = new Date(fresh.taken);
-    const hhmm = String(when.getHours()).padStart(2, '0') + ':' + String(when.getMinutes()).padStart(2, '0');
-    showModal('ต้องเป็นรูปที่ถ่ายสดเท่านั้น',
-      `รูปนี้ถ่ายไว้ตั้งแต่ ${fmtDateDMY(_ymd(when))} ${hhmm} น. — ไม่สามารถใช้รูปเก่าจากคลังภาพได้ กรุณากด "ถ่ายรูป" แล้วถ่ายใหม่`);
-    jdCameraItemIdx = null;
-    return;
-  }
   let src;
   try { src = await _decodePhotoFile(file); }
   catch (e) {
