@@ -1427,6 +1427,17 @@ input[type="time"].jd-form-input {
   background: #000;
   transform: translate(-50%, -50%);
 }
+.jd-camera-btn.is-on { background: #fff; }
+.jd-camera-btn.is-on .material-symbols-rounded { color: #111; }
+.jd-cam-hint {
+  position: absolute; top: calc(env(safe-area-inset-top, 0px) + 14px); left: 50%;
+  transform: translateX(-50%);
+  max-width: 88%; text-align: center;
+  padding: 6px 14px; border-radius: 999px;
+  background: rgba(0,0,0,0.55); color: #fff;
+  font-size: 12px; font-weight: 700; line-height: 1.4;
+  pointer-events: none;
+}
 .jd-camera-bar {
   position: absolute; bottom: 0; left: 0; right: 0;
   padding: 18px 24px env(safe-area-inset-bottom, 18px);
@@ -5404,9 +5415,13 @@ html.fab-sso-pending #login-screen { display: none !important; }
   <div class="jd-cam-stage" id="jd-cam-stage">
     <video id="jd-camera-video" autoplay playsinline muted></video>
   </div>
+  <div class="jd-cam-hint" id="jd-cam-hint" style="display:none;">ถ่ายแนวนอน: ปิด "ล็อกหมุนจอ" ที่เครื่อง แล้วตะแคงเครื่อง</div>
   <div class="jd-camera-bar">
     <button type="button" class="jd-camera-btn close" onclick="closeJDCamera()" aria-label="ปิด">
       <span class="material-symbols-rounded">close</span>
+    </button>
+    <button type="button" class="jd-camera-btn rotate" id="jd-cam-rotate-btn" onclick="toggleJDCamOrientation()" aria-label="หมุนจอเป็นแนวนอน" style="display:none;">
+      <span class="material-symbols-rounded">screen_rotation</span>
     </button>
     <button type="button" class="jd-camera-shutter" onclick="captureJDPhoto()" aria-label="ถ่ายภาพ">
       <span class="material-symbols-rounded">photo_camera</span>
@@ -9737,6 +9752,59 @@ function _applyJDCamRotation() {
   if (ov && ov.classList.contains('show')) setTimeout(_applyJDCamRotation, 60);
 }));
 
+/* ══════ ปุ่ม "หมุนจอ" — ถ่ายแนวนอนแม้เครื่องล็อกหมุนจอไว้ ══════
+   เว็บสั่งหมุนจอได้เฉพาะตอนอยู่ในโหมดเต็มจอ (fullscreen + Screen Orientation API)
+   → กดปุ่ม = เข้าเต็มจอแล้วล็อกจอเป็นแนวนอน · สตรีมกล้องกลายเป็นแนวนอนตามจริง
+   รองรับ: Android (Chrome/Samsung Internet) · iPhone Safari ไม่รองรับ API นี้
+   → ซ่อนปุ่มบนเครื่องที่ไม่รองรับ แล้วบอกวิธีปิดล็อกหมุนจอที่เครื่องแทน */
+let _jdCamLandscape = false;
+function _canRotateScreen() {
+  const el = document.getElementById('jd-camera-overlay');
+  const touch = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;   // มือถือ/แท็บเล็ตเท่านั้น
+  return !!(touch && el && (el.requestFullscreen || el.webkitRequestFullscreen) &&
+            screen.orientation && typeof screen.orientation.lock === 'function');
+}
+function _updateRotateBtn() {
+  const btn = document.getElementById('jd-cam-rotate-btn');
+  if (!btn) return;
+  const ok = _canRotateScreen();
+  btn.style.display = ok ? '' : 'none';
+  btn.classList.toggle('is-on', _jdCamLandscape);
+  btn.setAttribute('aria-label', _jdCamLandscape ? 'กลับเป็นแนวตั้ง' : 'หมุนจอเป็นแนวนอน');
+  // มือถือที่สั่งหมุนจอเองไม่ได้ (iPhone) → บอกวิธีแทน · บนคอมไม่ต้องขึ้น
+  const touch = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+  const hint = document.getElementById('jd-cam-hint');
+  if (hint) hint.style.display = (touch && !ok) ? '' : 'none';
+}
+async function toggleJDCamOrientation() {
+  const ov = document.getElementById('jd-camera-overlay');
+  try {
+    if (!_jdCamLandscape) {
+      if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+        await (ov.requestFullscreen ? ov.requestFullscreen() : ov.webkitRequestFullscreen());
+      }
+      await screen.orientation.lock('landscape');
+      _jdCamLandscape = true;
+    } else {
+      await _exitJDCamLandscape();
+    }
+  } catch (e) {
+    console.warn('rotate screen failed:', e);
+    await _exitJDCamLandscape();
+    showModal('หมุนจอจากในแอปไม่ได้', 'เครื่องนี้ไม่รองรับ — ปิด "ล็อกหมุนจอ" ที่ศูนย์ควบคุมของเครื่อง แล้วตะแคงเครื่องแทน');
+  }
+  _updateRotateBtn();
+  setTimeout(_applyJDCamRotation, 120);
+}
+async function _exitJDCamLandscape() {
+  _jdCamLandscape = false;
+  try { if (screen.orientation && screen.orientation.unlock) screen.orientation.unlock(); } catch (_) {}
+  try {
+    if (document.fullscreenElement && document.exitFullscreen) await document.exitFullscreen();
+    else if (document.webkitFullscreenElement && document.webkitExitFullscreen) document.webkitExitFullscreen();
+  } catch (_) {}
+}
+
 let _camCtx = 'jd';   // 'jd' = currentJDAudit · 'daily' = currentDaily
 function _camTargetItem(idx) {
   return _camCtx === 'daily' ? (currentDaily && currentDaily.items[idx]) : (currentJDAudit && currentJDAudit.items[idx]);
@@ -9745,16 +9813,10 @@ function _camAfterCapture() {
   if (_camCtx === 'daily') { _saveDailyDraft(); renderDailyForm(); }
   else { _saveJDDraft(); renderJaedaengForm(); }
 }
-/* ถ่ายรูป = เปิด "กล้องของเครื่อง" (แอปกล้องระบบ) ผ่าน <input capture>
-   เหตุผล: กล้องในเว็บอิงการหมุนของหน้าจอ → เครื่องที่ล็อกหมุนจอถ่ายแนวนอนไม่ได้
-   กล้องของเครื่องจัดการแนวนอน/แนวตั้ง + โฟกัส + แฟลช + ความคมชัดเองครบ
-   (กล้องในเว็บ openJDCameraInApp ยังอยู่ในไฟล์ เผื่อย้อนกลับ แต่ไม่ถูกเรียกแล้ว) */
-function openJDCamera(idx, ctx) {
-  _camCtx = ctx || 'jd';
-  jdCameraItemIdx = idx;
-  openJDNativeCapture(idx);
-}
-async function openJDCameraInApp(idx, ctx) {
+/* ถ่ายรูป = กล้องในเว็บเท่านั้น (แนบรูปจากคลังไม่ได้ — ต้องเป็นภาพสด)
+   ถ่ายแนวนอน: ปุ่ม "หมุนจอ" ในแถบกล้องจะบังคับหน้าจอเป็นแนวนอนให้ แม้เครื่องล็อกหมุนจอไว้
+   (กล้องของเครื่องผ่าน <input capture> เหลือไว้เป็นทางสำรองเมื่อกล้องในเว็บใช้ไม่ได้) */
+async function openJDCamera(idx, ctx) {
   _camCtx = ctx || 'jd';
   jdCameraItemIdx = idx;
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -9775,6 +9837,7 @@ async function openJDCameraInApp(idx, ctx) {
   video.muted = true;
   video.playsInline = true;
   overlay.classList.add('show');
+  _updateRotateBtn();   // โชว์ปุ่มหมุนจอทันทีที่เปิดกล้อง (ไม่ต้องรอสตรีม)
 
   try {
     let stream;
@@ -9805,6 +9868,7 @@ async function openJDCameraInApp(idx, ctx) {
     });
     try { await video.play(); } catch (ePlay) { console.warn('video.play() rejected:', ePlay); }
     _applyJDCamRotation();   // กางพรีวิวให้พอดีจอ (หมุนเครื่อง = พรีวิวขยับตาม)
+    _updateRotateBtn();      // โชว์ปุ่มหมุนจอเฉพาะเครื่องที่สั่งได้
   } catch (err) {
     console.error('openJDCamera error:', err);
     overlay.classList.remove('show');
@@ -9973,6 +10037,7 @@ function closeJDCamera() {
     jdCameraStream.getTracks().forEach(t => t.stop());
     jdCameraStream = null;
   }
+  if (_jdCamLandscape) _exitJDCamLandscape();   // ปลดล็อกจอ + ออกจากเต็มจอ ก่อนกลับหน้าฟอร์ม
   document.getElementById('jd-camera-overlay').classList.remove('show');
   jdCameraItemIdx = null;
 }
