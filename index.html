@@ -9769,7 +9769,7 @@ function _applyJDCamRotation() {
    ถ่ายแนวนอน: ตะแคงเครื่องถ่ายตามปกติ แล้วกด "หมุน" ให้ภาพตั้งตรงก่อนกด "ใช้รูปนี้"
    ใช้ได้ทุกเครื่อง (รวม iPhone) ไม่ต้องพึ่งการปลดล็อกหมุนจอ
    _camShot = เฟรมที่เพิ่งถ่าย (ยังไม่หมุน) · _camShotRot = มุมที่ผู้ใช้เลือก */
-let _camShot = null, _camShotRot = 0, _camShotFromNative = false;
+let _camShot = null, _camShotRot = 0;
 function _drawRotated(dst, src, w, h, rot) {
   const swap = (rot === 90 || rot === 270);
   dst.width  = swap ? h : w;
@@ -9797,15 +9797,9 @@ function _openJDShotReview() {
   ov.classList.add('show', 'reviewing');
 }
 function retakeJDPhoto() {
-  const ov = document.getElementById('jd-camera-overlay');
-  ov.classList.remove('reviewing');
+  document.getElementById('jd-camera-overlay').classList.remove('reviewing');
   _camShot = null;
-  if (_camShotFromNative) {                 // มาจากกล้องของเครื่อง (ทางสำรอง) → เปิดกล้องเครื่องใหม่
-    ov.classList.remove('show');
-    openJDNativeCapture(jdCameraItemIdx);
-  } else {
-    setTimeout(_applyJDCamRotation, 60);    // กลับไปพรีวิวกล้องสด (สตรีมยังเปิดอยู่)
-  }
+  setTimeout(_applyJDCamRotation, 60);      // กลับไปพรีวิวกล้องสด (สตรีมยังเปิดอยู่)
 }
 /* กด "ใช้รูปนี้" → หมุนตามที่เลือก แล้วเข้ากระบวนการเดิม (อัป R2 · เก็บ URL) */
 async function confirmJDPhoto() {
@@ -9846,14 +9840,21 @@ function _camAfterCapture() {
 }
 /* ถ่ายรูป = กล้องในเว็บ (กล้องสด ไม่มีช่องเลือกไฟล์)
    ถ่ายแนวนอน: ตะแคงเครื่องถ่าย แล้วกด "หมุน" ในหน้ายืนยันก่อนกด "ใช้รูปนี้" */
+/* เปิดกล้องไม่ได้ = บอกวิธีแก้ · ไม่มีทางสำรองเป็นช่องเลือกไฟล์อีกแล้ว
+   (เดิมตกไป <input capture> ซึ่งใน LINE กลายเป็น "เลือกรูปจากคลัง" — ผิดเจตนา) */
+function _camUnavailable(msg) {
+  showModalHtml('เปิดกล้องไม่ได้',
+    (msg ? msg + '<br><br>' : '') +
+    'การตรวจร้านต้องใช้ <b>รูปจากกล้องสด</b> เท่านั้น แนบรูปจากคลังภาพไม่ได้<br><br>' +
+    '• เปิดจาก <b>LINE / Facebook</b> อยู่ → กดปุ่ม <b>⋯</b> มุมขวาบน แล้วเลือก <b>“เปิดในเบราว์เซอร์”</b> (Chrome / Safari) แล้วเข้าใหม่<br>' +
+    '• อยู่ใน Chrome / Safari แล้ว → กด <b>“อนุญาต”</b> ตอนระบบขอใช้กล้อง (ถ้าเคยกดปฏิเสธไว้ ให้ไปเปิดสิทธิ์กล้องของเว็บนี้ในตั้งค่าเบราว์เซอร์)');
+  jdCameraItemIdx = null;
+}
 async function openJDCamera(idx, ctx) {
-
   _camCtx = ctx || 'jd';
   jdCameraItemIdx = idx;
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-    // No camera API at all — fall back to the native file picker with the
-    // capture hint, which on iOS Safari opens the system camera UI.
-    openJDNativeCapture(idx);
+    _camUnavailable('เบราว์เซอร์นี้ไม่รองรับการเปิดกล้องจากเว็บ');
     return;
   }
 
@@ -9902,87 +9903,21 @@ async function openJDCamera(idx, ctx) {
     console.error('openJDCamera error:', err);
     overlay.classList.remove('show');
     const n = err && err.name;
-    if (n === 'NotAllowedError' || n === 'SecurityError') {
-      // NotAllowedError ไม่ได้แปลว่าผู้ใช้กดปฏิเสธเสมอไป — เจอบ่อยมากจากกรณีที่
-      // เบราว์เซอร์บล็อกกล้อง "ระดับเว็บไซต์" (เช่น Samsung Internet / Chrome เผลอ
-      // กด Block ครั้งแรก) หรือเปิดผ่าน in-app browser (Line/FB/IG) — ทั้งสองเคส
-      // ตั้งค่าระดับ OS อนุญาตแล้วก็ไม่หาย และพนักงานแก้เองยากมาก. จึงตกไปเปิด
-      // กล้อง "ของระบบ" ผ่าน <input type=file capture> ซึ่งใช้คนละ permission
-      // path เปิดกล้องสดของเครื่องได้เกือบทุกเคส (ยังคงเจตนา "รูปจากกล้องสด").
-      openJDNativeCapture(idx);
-      return;
-    }
     if (n === 'NotReadableError') {
       showModal('กล้องถูกใช้งานโดยแอปอื่น', 'ปิดแอปกล้องอื่น (Line/IG/Camera) แล้วลองใหม่');
       jdCameraItemIdx = null;
       return;
     }
-    // Any other failure (NotFoundError / Overconstrained / generic) — fall back
-    // to the native file picker so the user can still capture a photo.
-    openJDNativeCapture(idx);
+    // NotAllowedError/SecurityError = เบราว์เซอร์บล็อกกล้อง (เจอบ่อยใน LINE/FB)
+    // NotFound/Overconstrained/อื่น ๆ = เปิดกล้องไม่ได้เช่นกัน → บอกวิธีแก้ ไม่มีทางสำรอง
+    _camUnavailable(n === 'NotAllowedError' || n === 'SecurityError'
+      ? 'เบราว์เซอร์ที่ใช้อยู่บล็อกกล้องไว้' : 'ไม่พบกล้องที่ใช้งานได้');
   }
 }
 
-// เปิดกล้องของเครื่อง: hidden <input type="file" capture="environment">
-// → iOS/Android เปิดแอปกล้องให้ตรง ๆ (ถ่ายแนวนอนได้ ไม่สนใจล็อกหมุนจอ)
-function openJDNativeCapture(idx) {
-  const input = document.createElement('input');
-  input.type = 'file';
-  input.accept = 'image/*';
-  input.capture = 'environment';
-  input.setAttribute('capture', 'environment');
-  input.style.display = 'none';
-  document.body.appendChild(input);
-  input.onchange = async () => {
-    const file = input.files && input.files[0];
-    document.body.removeChild(input);
-    if (!file) { jdCameraItemIdx = null; return; }
-    await handleJDPhotoFile(idx, file);
-  };
-  input.click();
-}
-
-/* แปลงไฟล์รูปจากกล้องของเครื่อง (10 MP+) เป็นภาพที่วาดลง canvas ได้
-   - createImageBitmap + imageOrientation:'from-image' → หมุนตาม EXIF ให้ถูกต้อง
-     (รูปแนวนอนจากกล้องระบบจึงไม่ตะแคง) และไม่ต้องแปลงเป็น dataURL ก่อน = กินแรมน้อยกว่า
-   - เบราว์เซอร์เก่าที่ไม่มี createImageBitmap → ใช้ <img> + objectURL แทน */
-async function _decodePhotoFile(file) {
-  if (window.createImageBitmap) {
-    try { return await createImageBitmap(file, { imageOrientation: 'from-image' }); }
-    catch (_) { try { return await createImageBitmap(file); } catch (_) {} }
-  }
-  return await new Promise((resolve, reject) => {
-    const url = URL.createObjectURL(file);
-    const img = new Image();
-    img.onload = () => { resolve(img); setTimeout(() => URL.revokeObjectURL(url), 0); };
-    img.onerror = e => { URL.revokeObjectURL(url); reject(e); };
-    img.src = url;
-  });
-}
-
-async function handleJDPhotoFile(idx, file) {
-  let src;
-  try { src = await _decodePhotoFile(file); }
-  catch (e) {
-    console.warn('decode photo failed:', e);
-    showModal('เปิดรูปไม่ได้', 'ลองถ่ายใหม่อีกครั้ง');
-    jdCameraItemIdx = null;
-    return;
-  }
-  const canvas = document.createElement('canvas');
-  const maxDim = 800;
-  let w = src.width || src.naturalWidth, h = src.height || src.naturalHeight;
-  if (w > h && w > maxDim) { h = h * maxDim / w; w = maxDim; }
-  else if (h > maxDim) { w = w * maxDim / h; h = maxDim; }
-  canvas.width = w; canvas.height = h;
-  canvas.getContext('2d').drawImage(src, 0, 0, w, h);
-  if (src.close) src.close();                       // คืนแรมของ ImageBitmap ทันที
-  if (!_camTargetItem(idx)) { jdCameraItemIdx = null; return; }
-  jdCameraItemIdx = idx;
-  _camShot = canvas;
-  _camShotFromNative = true;
-  _openJDShotReview();                              // เข้าหน้ายืนยัน/หมุน เหมือนกล้องในเว็บ
-}
+// (ถอดทางสำรอง <input type=file capture> ออก — บางเบราว์เซอร์ในแอป เช่น LINE
+//  เปลี่ยนมันเป็น "เลือกรูปจากคลัง" ซึ่งขัดกับกติกา "ต้องถ่ายสด"
+//  ตอนนี้ทั้งระบบไม่มี <input type=file> เหลืออยู่เลย)
 
 async function switchJDCamera() {
   jdCameraFacing = jdCameraFacing === 'environment' ? 'user' : 'environment';
@@ -10020,7 +9955,6 @@ async function captureJDPhoto() {
   canvas.width = w; canvas.height = h;
   canvas.getContext('2d').drawImage(video, 0, 0, w, h);
   _camShot = canvas;
-  _camShotFromNative = false;
   _openJDShotReview();
 }
 
