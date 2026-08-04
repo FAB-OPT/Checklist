@@ -1427,17 +1427,44 @@ input[type="time"].jd-form-input {
   background: #000;
   transform: translate(-50%, -50%);
 }
-.jd-camera-btn.is-on { background: #fff; }
-.jd-camera-btn.is-on .material-symbols-rounded { color: #111; }
-.jd-cam-hint {
-  position: absolute; top: calc(env(safe-area-inset-top, 0px) + 14px); left: 50%;
-  transform: translateX(-50%);
-  max-width: 88%; text-align: center;
-  padding: 6px 14px; border-radius: 999px;
-  background: rgba(0,0,0,0.55); color: #fff;
-  font-size: 12px; font-weight: 700; line-height: 1.4;
-  pointer-events: none;
+/* หน้ายืนยันรูป (หลังกดชัตเตอร์) — ดูรูป · หมุน · ถ่ายใหม่ · ใช้รูปนี้ */
+.jd-cam-review {
+  position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+  display: none; align-items: center; justify-content: center;
+  background: #000; z-index: 2;
 }
+.jd-camera-overlay.reviewing .jd-cam-review { display: flex; }
+.jd-camera-overlay.reviewing .jd-cam-stage,
+.jd-camera-overlay.reviewing .jd-camera-bar { display: none; }
+.jd-cam-review canvas {
+  max-width: 100%; max-height: calc(100% - 108px);
+  object-fit: contain; display: block;
+}
+.jd-cam-review-bar {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  padding: 14px 14px env(safe-area-inset-bottom, 14px);
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  background: linear-gradient(transparent, rgba(0,0,0,0.65));
+}
+.jd-cam-review-btn {
+  flex: 1 1 0; min-width: 0;
+  display: inline-flex; align-items: center; justify-content: center; gap: 5px;
+  padding: 12px 8px; border-radius: 999px;
+  background: rgba(255,255,255,0.18); border: none;
+  color: #fff; font-family: inherit; font-size: 14px; font-weight: 800;
+  cursor: pointer;
+}
+.jd-cam-review-btn .material-symbols-rounded { font-size: 20px; }
+.jd-cam-review-btn:active { transform: scale(0.97); }
+.jd-cam-review-btn.primary { background: #fff; color: #111; }
+.jd-cam-review-btn.primary .material-symbols-rounded { color: #111; }
+.jd-cam-review-close {
+  position: absolute; top: calc(env(safe-area-inset-top, 0px) + 12px); left: 14px;
+  width: 42px; height: 42px; border-radius: 50%;
+  background: rgba(255,255,255,0.18); border: none; color: #fff;
+  display: inline-flex; align-items: center; justify-content: center; cursor: pointer;
+}
+.jd-cam-review-close .material-symbols-rounded { font-size: 24px; color: #fff; }
 .jd-camera-bar {
   position: absolute; bottom: 0; left: 0; right: 0;
   padding: 18px 24px env(safe-area-inset-bottom, 18px);
@@ -5415,13 +5442,9 @@ html.fab-sso-pending #login-screen { display: none !important; }
   <div class="jd-cam-stage" id="jd-cam-stage">
     <video id="jd-camera-video" autoplay playsinline muted></video>
   </div>
-  <div class="jd-cam-hint" id="jd-cam-hint" style="display:none;">ถ่ายแนวนอน: ปิด "ล็อกหมุนจอ" ที่เครื่อง แล้วตะแคงเครื่อง</div>
   <div class="jd-camera-bar">
     <button type="button" class="jd-camera-btn close" onclick="closeJDCamera()" aria-label="ปิด">
       <span class="material-symbols-rounded">close</span>
-    </button>
-    <button type="button" class="jd-camera-btn rotate" id="jd-cam-rotate-btn" onclick="toggleJDCamOrientation()" aria-label="หมุนจอเป็นแนวนอน" style="display:none;">
-      <span class="material-symbols-rounded">screen_rotation</span>
     </button>
     <button type="button" class="jd-camera-shutter" onclick="captureJDPhoto()" aria-label="ถ่ายภาพ">
       <span class="material-symbols-rounded">photo_camera</span>
@@ -5429,6 +5452,18 @@ html.fab-sso-pending #login-screen { display: none !important; }
     <button type="button" class="jd-camera-btn switch" onclick="switchJDCamera()" aria-label="สลับกล้อง">
       <span class="material-symbols-rounded">flip_camera_ios</span>
     </button>
+  </div>
+  <!-- ยืนยันรูปก่อนบันทึก — หมุนได้ (ถ่ายตะแคงแล้วหมุนให้ตรงก่อนใช้) -->
+  <div class="jd-cam-review" id="jd-cam-review">
+    <button type="button" class="jd-cam-review-close" onclick="closeJDCamera()" aria-label="ปิดกล้อง">
+      <span class="material-symbols-rounded">close</span>
+    </button>
+    <canvas id="jd-cam-review-canvas"></canvas>
+    <div class="jd-cam-review-bar">
+      <button type="button" class="jd-cam-review-btn" onclick="retakeJDPhoto()"><span class="material-symbols-rounded">refresh</span> ถ่ายใหม่</button>
+      <button type="button" class="jd-cam-review-btn" onclick="rotateJDShot()"><span class="material-symbols-rounded">rotate_right</span> หมุน</button>
+      <button type="button" class="jd-cam-review-btn primary" onclick="confirmJDPhoto()"><span class="material-symbols-rounded">check</span> ใช้รูปนี้</button>
+    </div>
   </div>
   <canvas id="jd-camera-canvas" style="display:none;"></canvas>
 </div>
@@ -9752,57 +9787,75 @@ function _applyJDCamRotation() {
   if (ov && ov.classList.contains('show')) setTimeout(_applyJDCamRotation, 60);
 }));
 
-/* ══════ ปุ่ม "หมุนจอ" — ถ่ายแนวนอนแม้เครื่องล็อกหมุนจอไว้ ══════
-   เว็บสั่งหมุนจอได้เฉพาะตอนอยู่ในโหมดเต็มจอ (fullscreen + Screen Orientation API)
-   → กดปุ่ม = เข้าเต็มจอแล้วล็อกจอเป็นแนวนอน · สตรีมกล้องกลายเป็นแนวนอนตามจริง
-   รองรับ: Android (Chrome/Samsung Internet) · iPhone Safari ไม่รองรับ API นี้
-   → ซ่อนปุ่มบนเครื่องที่ไม่รองรับ แล้วบอกวิธีปิดล็อกหมุนจอที่เครื่องแทน */
-let _jdCamLandscape = false;
-function _canRotateScreen() {
-  const el = document.getElementById('jd-camera-overlay');
-  const touch = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;   // มือถือ/แท็บเล็ตเท่านั้น
-  return !!(touch && el && (el.requestFullscreen || el.webkitRequestFullscreen) &&
-            screen.orientation && typeof screen.orientation.lock === 'function');
+/* ══════ ยืนยันรูปก่อนบันทึก — หมุนได้ ══════
+   ถ่ายแนวนอน: ตะแคงเครื่องถ่ายตามปกติ แล้วกด "หมุน" ให้ภาพตั้งตรงก่อนกด "ใช้รูปนี้"
+   ใช้ได้ทุกเครื่อง (รวม iPhone) ไม่ต้องพึ่งการปลดล็อกหมุนจอ
+   _camShot = เฟรมที่เพิ่งถ่าย (ยังไม่หมุน) · _camShotRot = มุมที่ผู้ใช้เลือก */
+let _camShot = null, _camShotRot = 0, _camShotFromNative = false;
+function _drawRotated(dst, src, w, h, rot) {
+  const swap = (rot === 90 || rot === 270);
+  dst.width  = swap ? h : w;
+  dst.height = swap ? w : h;
+  const c = dst.getContext('2d');
+  c.save();
+  c.translate(dst.width / 2, dst.height / 2);
+  c.rotate(rot * Math.PI / 180);
+  c.drawImage(src, -w / 2, -h / 2, w, h);
+  c.restore();
 }
-function _updateRotateBtn() {
-  const btn = document.getElementById('jd-cam-rotate-btn');
-  if (!btn) return;
-  const ok = _canRotateScreen();
-  btn.style.display = ok ? '' : 'none';
-  btn.classList.toggle('is-on', _jdCamLandscape);
-  btn.setAttribute('aria-label', _jdCamLandscape ? 'กลับเป็นแนวตั้ง' : 'หมุนจอเป็นแนวนอน');
-  // มือถือที่สั่งหมุนจอเองไม่ได้ (iPhone) → บอกวิธีแทน · บนคอมไม่ต้องขึ้น
-  const touch = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
-  const hint = document.getElementById('jd-cam-hint');
-  if (hint) hint.style.display = (touch && !ok) ? '' : 'none';
+function _renderJDShot() {
+  if (!_camShot) return;
+  const view = document.getElementById('jd-cam-review-canvas');
+  if (view) _drawRotated(view, _camShot, _camShot.width, _camShot.height, _camShotRot);
 }
-async function toggleJDCamOrientation() {
+function rotateJDShot() {
+  _camShotRot = (_camShotRot + 90) % 360;
+  _renderJDShot();
+}
+function _openJDShotReview() {
+  _camShotRot = 0;
+  _renderJDShot();
   const ov = document.getElementById('jd-camera-overlay');
-  try {
-    if (!_jdCamLandscape) {
-      if (!document.fullscreenElement && !document.webkitFullscreenElement) {
-        await (ov.requestFullscreen ? ov.requestFullscreen() : ov.webkitRequestFullscreen());
-      }
-      await screen.orientation.lock('landscape');
-      _jdCamLandscape = true;
-    } else {
-      await _exitJDCamLandscape();
-    }
-  } catch (e) {
-    console.warn('rotate screen failed:', e);
-    await _exitJDCamLandscape();
-    showModal('หมุนจอจากในแอปไม่ได้', 'เครื่องนี้ไม่รองรับ — ปิด "ล็อกหมุนจอ" ที่ศูนย์ควบคุมของเครื่อง แล้วตะแคงเครื่องแทน');
-  }
-  _updateRotateBtn();
-  setTimeout(_applyJDCamRotation, 120);
+  ov.classList.add('show', 'reviewing');
 }
-async function _exitJDCamLandscape() {
-  _jdCamLandscape = false;
-  try { if (screen.orientation && screen.orientation.unlock) screen.orientation.unlock(); } catch (_) {}
+function retakeJDPhoto() {
+  const ov = document.getElementById('jd-camera-overlay');
+  ov.classList.remove('reviewing');
+  _camShot = null;
+  if (_camShotFromNative) {                 // มาจากกล้องของเครื่อง (ทางสำรอง) → เปิดกล้องเครื่องใหม่
+    ov.classList.remove('show');
+    openJDNativeCapture(jdCameraItemIdx);
+  } else {
+    setTimeout(_applyJDCamRotation, 60);    // กลับไปพรีวิวกล้องสด (สตรีมยังเปิดอยู่)
+  }
+}
+/* กด "ใช้รูปนี้" → หมุนตามที่เลือก แล้วเข้ากระบวนการเดิม (อัป R2 · เก็บ URL) */
+async function confirmJDPhoto() {
+  if (!_camShot || jdCameraItemIdx == null) return;
+  const item = _camTargetItem(jdCameraItemIdx);
+  if (!item) { closeJDCamera(); return; }
+  const out = document.createElement('canvas');
+  _drawRotated(out, _camShot, _camShot.width, _camShot.height, _camShotRot);
+  _camShot = null;
+  const blob = await new Promise(r => out.toBlob(r, 'image/jpeg', 0.6));
+  const dataUrl = out.toDataURL('image/jpeg', 0.6);   // พรีวิวทันทีในฟอร์ม
+  const ctx = _camCtx;
+  if (!item.photos) item.photos = [];
+  const localSlot = item.photos.length;
+  item.photos.push(dataUrl);
+  _camAfterCapture();
+  closeJDCamera();
+  // อัปขึ้น R2 → เก็บแค่ URL ในเรคคอร์ด (กันชนลิมิต 1MB ของ Firestore)
+  // Test Mode: ไม่อัป (กันทิ้งไฟล์ขยะใน R2) — เก็บ base64 ชั่วคราวพอ
+  if (testMode || !blob) return;
   try {
-    if (document.fullscreenElement && document.exitFullscreen) await document.exitFullscreen();
-    else if (document.webkitFullscreenElement && document.webkitExitFullscreen) document.webkitExitFullscreen();
-  } catch (_) {}
+    const url = await uploadJDPhotoToR2(blob);
+    if (item.photos[localSlot] === dataUrl) {
+      item.photos[localSlot] = url;
+      if (ctx === 'daily') { _saveDailyDraft(); renderDailyForm(); }
+      else { _saveJDDraft(); renderJaedaengForm(); }
+    }
+  } catch (e) { console.warn('R2 upload failed, keeping inline copy', e); }
 }
 
 let _camCtx = 'jd';   // 'jd' = currentJDAudit · 'daily' = currentDaily
@@ -9837,7 +9890,6 @@ async function openJDCamera(idx, ctx) {
   video.muted = true;
   video.playsInline = true;
   overlay.classList.add('show');
-  _updateRotateBtn();   // โชว์ปุ่มหมุนจอทันทีที่เปิดกล้อง (ไม่ต้องรอสตรีม)
 
   try {
     let stream;
@@ -9868,7 +9920,6 @@ async function openJDCamera(idx, ctx) {
     });
     try { await video.play(); } catch (ePlay) { console.warn('video.play() rejected:', ePlay); }
     _applyJDCamRotation();   // กางพรีวิวให้พอดีจอ (หมุนเครื่อง = พรีวิวขยับตาม)
-    _updateRotateBtn();      // โชว์ปุ่มหมุนจอเฉพาะเครื่องที่สั่งได้
   } catch (err) {
     console.error('openJDCamera error:', err);
     overlay.classList.remove('show');
@@ -9948,25 +9999,11 @@ async function handleJDPhotoFile(idx, file) {
   canvas.width = w; canvas.height = h;
   canvas.getContext('2d').drawImage(src, 0, 0, w, h);
   if (src.close) src.close();                       // คืนแรมของ ImageBitmap ทันที
-  const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.6));
-  const dataUrl = canvas.toDataURL('image/jpeg', 0.6);
-  const ctx = _camCtx;
-  const item = _camTargetItem(idx);
-  if (!item) { jdCameraItemIdx = null; return; }
-  if (!item.photos) item.photos = [];
-  const localSlot = item.photos.length;
-  item.photos.push(dataUrl);
-  jdCameraItemIdx = null;
-  _camAfterCapture();
-  if (testMode || !blob) return;
-  try {
-    const url = await uploadJDPhotoToR2(blob);
-    if (item.photos[localSlot] === dataUrl) {
-      item.photos[localSlot] = url;
-      if (ctx === 'daily') { _saveDailyDraft(); renderDailyForm(); }
-      else { _saveJDDraft(); renderJaedaengForm(); }
-    }
-  } catch (e) { console.warn('R2 upload (native capture) failed:', e); }
+  if (!_camTargetItem(idx)) { jdCameraItemIdx = null; return; }
+  jdCameraItemIdx = idx;
+  _camShot = canvas;
+  _camShotFromNative = true;
+  _openJDShotReview();                              // เข้าหน้ายืนยัน/หมุน เหมือนกล้องในเว็บ
 }
 
 async function switchJDCamera() {
@@ -9986,6 +10023,8 @@ async function switchJDCamera() {
   }
 }
 
+/* กดชัตเตอร์ = เก็บเฟรมไว้ก่อน แล้วไปหน้ายืนยัน (หมุน/ถ่ายใหม่/ใช้รูปนี้)
+   ยังไม่บันทึกและยังไม่อัปโหลดจนกว่าจะกด "ใช้รูปนี้" */
 async function captureJDPhoto() {
   if (jdCameraItemIdx == null) return;
   const _tgtItem = _camTargetItem(jdCameraItemIdx);
@@ -10002,34 +10041,9 @@ async function captureJDPhoto() {
   else if (h > maxDim) { w = w * maxDim / h; h = maxDim; }
   canvas.width = w; canvas.height = h;
   canvas.getContext('2d').drawImage(video, 0, 0, w, h);
-
-  const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.6));
-  const dataUrl = canvas.toDataURL('image/jpeg', 0.6); // immediate preview
-  const itemIdx = jdCameraItemIdx;
-  const ctx = _camCtx;
-  const item = _tgtItem;
-  if (!item.photos) item.photos = [];
-  const localSlot = item.photos.length;
-  item.photos.push(dataUrl);
-  _camAfterCapture();
-  closeJDCamera();
-
-  // อัปขึ้น R2 ทั้ง Daily และ JD → เก็บแค่ URL ในเรคคอร์ด (กันชนลิมิต 1MB ของ Firestore)
-  // Test Mode: ไม่อัป (กันทิ้งไฟล์ขยะใน R2) — เก็บ base64 ชั่วคราวพอ
-  if (testMode || !blob) return;
-
-  try {
-    const url = await uploadJDPhotoToR2(blob);
-    // Replace the inline preview with the R2 URL once the upload lands.
-    if (item.photos[localSlot] === dataUrl) {
-      item.photos[localSlot] = url;
-      if (ctx === 'daily') { _saveDailyDraft(); renderDailyForm(); }
-      else { _saveJDDraft(); renderJaedaengForm(); }
-    }
-  } catch (e) {
-    console.warn('R2 upload failed, keeping inline copy', e);
-    // Leave the base64 in place — record still saves, photo is preserved.
-  }
+  _camShot = canvas;
+  _camShotFromNative = false;
+  _openJDShotReview();
 }
 
 function closeJDCamera() {
@@ -10037,8 +10051,10 @@ function closeJDCamera() {
     jdCameraStream.getTracks().forEach(t => t.stop());
     jdCameraStream = null;
   }
-  if (_jdCamLandscape) _exitJDCamLandscape();   // ปลดล็อกจอ + ออกจากเต็มจอ ก่อนกลับหน้าฟอร์ม
-  document.getElementById('jd-camera-overlay').classList.remove('show');
+  _camShot = null;
+  _camShotRot = 0;
+  const ov = document.getElementById('jd-camera-overlay');
+  ov.classList.remove('show', 'reviewing');
   jdCameraItemIdx = null;
 }
 
