@@ -4,13 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <script>
-/* เปิดผ่าน LINE บน Android → เด้งไปเปิดด้วย Chrome ให้เอง (ทำเหมือนกันที่ HUB)
-   LINE ฝั่ง Android ใช้ Android WebView ที่ไม่เปิดสิทธิ์กล้องให้หน้าเว็บ → ถ่ายรูปไม่ได้เลย
-   iPhone ไม่ต้องเด้ง (WKWebView ใช้กล้องได้ปกติ) · openExternalBrowser=1 เป็นของ LINE เอง */
+/* เปิดผ่าน LINE (ทั้ง iPhone และ Android) → เด้งไปเปิดด้วยเบราว์เซอร์ของเครื่อง
+   (ทำเหมือนกันที่ HUB) · Android ใน LINE ถ่ายรูปไม่ได้เลยเพราะ WebView ไม่ให้สิทธิ์กล้อง
+   iPhone พอถ่ายได้แต่บังคับให้เหมือนกัน จะได้ใช้งานแบบเดียวกันทั้งสองระบบ
+   openExternalBrowser=1 เป็นพารามิเตอร์ของ LINE เอง (เบราว์เซอร์อื่นไม่สนใจ) */
 (function () {
   try {
     var ua = navigator.userAgent || '';
-    if (!/\bLine\//i.test(ua) || !/Android/i.test(ua)) return;
+    if (!/\bLine\//i.test(ua)) return;
     if (/[?&]openExternalBrowser=1/.test(location.search)) return;   // ลองแล้ว — กันวนซ้ำ
     location.replace(location.href + (location.search ? '&' : '?') + 'openExternalBrowser=1');
   } catch (e) {}
