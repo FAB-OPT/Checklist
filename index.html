@@ -1418,11 +1418,26 @@ input[type="time"].jd-form-input {
   align-items: center; justify-content: center;
 }
 .jd-camera-overlay.show { display: flex !important; }
+/* เวทีกล้อง — วิดีโอวางกลางจอ หมุนได้ (ถ่ายแนวนอนบนมือถือที่ล็อกหมุนจอ)
+   object-fit:contain = เห็นเท่าไหร่ได้เท่านั้น (เดิม cover ทำให้พรีวิวไม่ตรงกับรูปที่ได้) */
+.jd-cam-stage { position: absolute; top: 0; left: 0; right: 0; bottom: 0; overflow: hidden; }
 .jd-camera-overlay video {
-  width: 100%; height: 100%;
-  object-fit: cover;
+  position: absolute; top: 50%; left: 50%;
+  object-fit: contain;
   background: #000;
+  transform-origin: center center;
+  transform: translate(-50%, -50%);
+  transition: transform .18s ease, width .18s ease, height .18s ease;
 }
+.jd-cam-rot-label {
+  position: absolute; top: calc(env(safe-area-inset-top, 0px) + 14px); left: 50%;
+  transform: translateX(-50%);
+  padding: 5px 12px; border-radius: 999px;
+  background: rgba(0,0,0,0.55); color: #fff;
+  font-size: 12px; font-weight: 700; letter-spacing: .2px;
+  pointer-events: none; opacity: 0; transition: opacity .2s;
+}
+.jd-cam-rot-label.show { opacity: 1; }
 .jd-camera-bar {
   position: absolute; bottom: 0; left: 0; right: 0;
   padding: 18px 24px env(safe-area-inset-bottom, 18px);
@@ -5397,10 +5412,16 @@ html.fab-sso-pending #login-screen { display: none !important; }
 
 <!-- Jae Daeng camera capture (audit photos must be from live camera, no gallery) -->
 <div class="jd-camera-overlay" id="jd-camera-overlay">
-  <video id="jd-camera-video" autoplay playsinline muted></video>
+  <div class="jd-cam-stage" id="jd-cam-stage">
+    <video id="jd-camera-video" autoplay playsinline muted></video>
+  </div>
+  <div class="jd-cam-rot-label" id="jd-cam-rot-label"></div>
   <div class="jd-camera-bar">
     <button type="button" class="jd-camera-btn close" onclick="closeJDCamera()" aria-label="ปิด">
       <span class="material-symbols-rounded">close</span>
+    </button>
+    <button type="button" class="jd-camera-btn rotate" onclick="rotateJDCamera()" aria-label="หมุนภาพ (ถ่ายแนวนอน)" title="หมุนภาพ — ถ่ายแนวนอนได้แม้ล็อกหมุนจอ">
+      <span class="material-symbols-rounded">screen_rotation</span>
     </button>
     <button type="button" class="jd-camera-shutter" onclick="captureJDPhoto()" aria-label="ถ่ายภาพ">
       <span class="material-symbols-rounded">photo_camera</span>
@@ -9715,6 +9736,67 @@ async function _uploadItemBase64ToR2(items) {
   }
 }
 
+/* ══════ หมุนภาพในกล้อง — ถ่ายแนวนอนได้ แม้มือถือล็อกหมุนจอ ══════
+   มือถือที่ "ล็อกหมุนจอ" ไว้ (เครื่องพนักงานส่วนใหญ่) ต่อให้ตะแคงเครื่องถ่าย
+   ภาพที่ได้ก็ยังเป็นแนวตั้งและโลกเอียง 90° เพราะกล้องอิงการหมุนของหน้าจอ
+   → ปุ่มนี้หมุนทั้ง "พรีวิว" และ "ไฟล์ที่บันทึก" ทีละ 90° (0→90→180→270)
+   ตะแคงเครื่อง กดจนภาพตั้งตรง = ได้รูปแนวนอนเต็มเฟรม · จำค่าไว้ใช้ครั้งต่อไป */
+let jdCamRotation = 0;
+try { const _r = parseInt(localStorage.getItem('jd_cam_rot') || '0', 10); if ([0, 90, 180, 270].includes(_r)) jdCamRotation = _r; } catch (_) {}
+function _applyJDCamRotation() {
+  const v = document.getElementById('jd-camera-video');
+  const stage = document.getElementById('jd-cam-stage');
+  if (!v || !stage) return;
+  const sw = stage.clientWidth || window.innerWidth;
+  const sh = stage.clientHeight || window.innerHeight;
+  const swap = (jdCamRotation === 90 || jdCamRotation === 270);
+  // หมุนแล้วต้องพอดีจอ → สลับ กว้าง/สูง ของกล่องวิดีโอก่อนหมุน
+  v.style.width  = (swap ? sh : sw) + 'px';
+  v.style.height = (swap ? sw : sh) + 'px';
+  v.style.transform = 'translate(-50%, -50%) rotate(' + jdCamRotation + 'deg)';
+}
+function _flashJDCamLabel(text, ms) {
+  const lb = document.getElementById('jd-cam-rot-label');
+  if (!lb) return;
+  lb.textContent = text;
+  lb.classList.add('show');
+  clearTimeout(lb._t);
+  lb._t = setTimeout(() => lb.classList.remove('show'), ms || 1600);
+}
+function rotateJDCamera() {
+  jdCamRotation = (jdCamRotation + 90) % 360;
+  try { localStorage.setItem('jd_cam_rot', String(jdCamRotation)); } catch (_) {}
+  _applyJDCamRotation();
+  const wide = (jdCamRotation === 90 || jdCamRotation === 270);
+  _flashJDCamLabel((wide ? 'แนวนอน' : 'แนวตั้ง') + ' · หมุน ' + jdCamRotation + '°');
+}
+/* บอกวิธีใช้ 3 ครั้งแรก — พนักงานจะได้รู้ว่ากดปุ่มหมุนแล้วถ่ายแนวนอนได้ */
+function _showJDCamHint() {
+  if (jdCamRotation !== 0) return;                       // ใช้เป็นแล้ว ไม่ต้องบอก
+  let n = 0;
+  try { n = parseInt(localStorage.getItem('jd_cam_hint') || '0', 10) || 0; } catch (_) {}
+  if (n >= 3) return;
+  try { localStorage.setItem('jd_cam_hint', String(n + 1)); } catch (_) {}
+  _flashJDCamLabel('ถ่ายแนวนอน: ตะแคงเครื่อง แล้วกดปุ่มหมุน ⟳', 3200);
+}
+// หมุนเครื่อง/เปลี่ยนขนาดจอระหว่างเปิดกล้อง → คำนวณขนาดพรีวิวใหม่
+['resize', 'orientationchange'].forEach(ev => window.addEventListener(ev, () => {
+  const ov = document.getElementById('jd-camera-overlay');
+  if (ov && ov.classList.contains('show')) setTimeout(_applyJDCamRotation, 60);
+}));
+/* วาดเฟรมลง canvas ตามมุมที่หมุนไว้ — ได้ไฟล์ตรงกับที่เห็นในพรีวิว */
+function _drawRotatedToCanvas(canvas, src, w, h) {
+  const swap = (jdCamRotation === 90 || jdCamRotation === 270);
+  canvas.width  = swap ? h : w;
+  canvas.height = swap ? w : h;
+  const c = canvas.getContext('2d');
+  c.save();
+  c.translate(canvas.width / 2, canvas.height / 2);
+  c.rotate(jdCamRotation * Math.PI / 180);
+  c.drawImage(src, -w / 2, -h / 2, w, h);
+  c.restore();
+}
+
 let _camCtx = 'jd';   // 'jd' = currentJDAudit · 'daily' = currentDaily
 function _camTargetItem(idx) {
   return _camCtx === 'daily' ? (currentDaily && currentDaily.items[idx]) : (currentJDAudit && currentJDAudit.items[idx]);
@@ -9773,6 +9855,10 @@ async function openJDCamera(idx, ctx) {
       setTimeout(() => { if (!done) { cleanup(); resolve(); } }, 2500);
     });
     try { await video.play(); } catch (ePlay) { console.warn('video.play() rejected:', ePlay); }
+    // จอตะแคงเองอยู่แล้ว (ไม่ได้ล็อกหมุนจอ) → ภาพเป็นแนวนอนโดยธรรมชาติ ไม่ต้องหมุนซ้ำ
+    if (window.innerWidth > window.innerHeight && (jdCamRotation === 90 || jdCamRotation === 270)) jdCamRotation = 0;
+    _applyJDCamRotation();   // กางพรีวิวตามมุมหมุนที่จำไว้ (ค่าเริ่มต้น 0° = แนวตั้งปกติ)
+    _showJDCamHint();        // บอกวิธีถ่ายแนวนอนครั้งแรก ๆ
   } catch (err) {
     console.error('openJDCamera error:', err);
     overlay.classList.remove('show');
@@ -9886,8 +9972,7 @@ async function captureJDPhoto() {
   let h = video.videoHeight || 600;
   if (w > h && w > maxDim) { h = h * maxDim / w; w = maxDim; }
   else if (h > maxDim) { w = w * maxDim / h; h = maxDim; }
-  canvas.width = w; canvas.height = h;
-  canvas.getContext('2d').drawImage(video, 0, 0, w, h);
+  _drawRotatedToCanvas(canvas, video, w, h);   // หมุนตามพรีวิว (แนวนอน/แนวตั้ง)
 
   const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.6));
   const dataUrl = canvas.toDataURL('image/jpeg', 0.6); // immediate preview
