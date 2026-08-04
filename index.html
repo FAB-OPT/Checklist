@@ -9745,7 +9745,16 @@ function _camAfterCapture() {
   if (_camCtx === 'daily') { _saveDailyDraft(); renderDailyForm(); }
   else { _saveJDDraft(); renderJaedaengForm(); }
 }
-async function openJDCamera(idx, ctx) {
+/* ถ่ายรูป = เปิด "กล้องของเครื่อง" (แอปกล้องระบบ) ผ่าน <input capture>
+   เหตุผล: กล้องในเว็บอิงการหมุนของหน้าจอ → เครื่องที่ล็อกหมุนจอถ่ายแนวนอนไม่ได้
+   กล้องของเครื่องจัดการแนวนอน/แนวตั้ง + โฟกัส + แฟลช + ความคมชัดเองครบ
+   (กล้องในเว็บ openJDCameraInApp ยังอยู่ในไฟล์ เผื่อย้อนกลับ แต่ไม่ถูกเรียกแล้ว) */
+function openJDCamera(idx, ctx) {
+  _camCtx = ctx || 'jd';
+  jdCameraItemIdx = idx;
+  openJDNativeCapture(idx);
+}
+async function openJDCameraInApp(idx, ctx) {
   _camCtx = ctx || 'jd';
   jdCameraItemIdx = idx;
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -9821,9 +9830,8 @@ async function openJDCamera(idx, ctx) {
   }
 }
 
-// Native fallback: hidden <input type="file" capture="environment"> opens the
-// iOS / Android camera UI when getUserMedia isn't available (e.g. inside Line
-// or Facebook in-app browsers, or older iOS builds).
+// เปิดกล้องของเครื่อง: hidden <input type="file" capture="environment">
+// → iOS/Android เปิดแอปกล้องให้ตรง ๆ (ถ่ายแนวนอนได้ ไม่สนใจล็อกหมุนจอ)
 function openJDNativeCapture(idx) {
   const input = document.createElement('input');
   input.type = 'file';
@@ -9841,41 +9849,60 @@ function openJDNativeCapture(idx) {
   input.click();
 }
 
-async function handleJDPhotoFile(idx, file) {
-  const reader = new FileReader();
-  reader.onload = async ev => {
+/* แปลงไฟล์รูปจากกล้องของเครื่อง (10 MP+) เป็นภาพที่วาดลง canvas ได้
+   - createImageBitmap + imageOrientation:'from-image' → หมุนตาม EXIF ให้ถูกต้อง
+     (รูปแนวนอนจากกล้องระบบจึงไม่ตะแคง) และไม่ต้องแปลงเป็น dataURL ก่อน = กินแรมน้อยกว่า
+   - เบราว์เซอร์เก่าที่ไม่มี createImageBitmap → ใช้ <img> + objectURL แทน */
+async function _decodePhotoFile(file) {
+  if (window.createImageBitmap) {
+    try { return await createImageBitmap(file, { imageOrientation: 'from-image' }); }
+    catch (_) { try { return await createImageBitmap(file); } catch (_) {} }
+  }
+  return await new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
     const img = new Image();
-    img.onload = async () => {
-      const canvas = document.createElement('canvas');
-      const maxDim = 800;
-      let w = img.naturalWidth || img.width, h = img.naturalHeight || img.height;
-      if (w > h && w > maxDim) { h = h * maxDim / w; w = maxDim; }
-      else if (h > maxDim) { w = w * maxDim / h; h = maxDim; }
-      canvas.width = w; canvas.height = h;
-      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-      const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.6));
-      const dataUrl = canvas.toDataURL('image/jpeg', 0.6);
-      const ctx = _camCtx;
-      const item = _camTargetItem(idx);
-      if (!item) { jdCameraItemIdx = null; return; }
-      if (!item.photos) item.photos = [];
-      const localSlot = item.photos.length;
-      item.photos.push(dataUrl);
-      jdCameraItemIdx = null;
-      _camAfterCapture();
-      if (testMode || !blob) return;
-      try {
-        const url = await uploadJDPhotoToR2(blob);
-        if (item.photos[localSlot] === dataUrl) {
-          item.photos[localSlot] = url;
-          if (ctx === 'daily') { _saveDailyDraft(); renderDailyForm(); }
-          else { _saveJDDraft(); renderJaedaengForm(); }
-        }
-      } catch (e) { console.warn('R2 upload (native capture) failed:', e); }
-    };
-    img.src = ev.target.result;
-  };
-  reader.readAsDataURL(file);
+    img.onload = () => { resolve(img); setTimeout(() => URL.revokeObjectURL(url), 0); };
+    img.onerror = e => { URL.revokeObjectURL(url); reject(e); };
+    img.src = url;
+  });
+}
+
+async function handleJDPhotoFile(idx, file) {
+  let src;
+  try { src = await _decodePhotoFile(file); }
+  catch (e) {
+    console.warn('decode photo failed:', e);
+    showModal('เปิดรูปไม่ได้', 'ลองถ่ายใหม่อีกครั้ง');
+    jdCameraItemIdx = null;
+    return;
+  }
+  const canvas = document.createElement('canvas');
+  const maxDim = 800;
+  let w = src.width || src.naturalWidth, h = src.height || src.naturalHeight;
+  if (w > h && w > maxDim) { h = h * maxDim / w; w = maxDim; }
+  else if (h > maxDim) { w = w * maxDim / h; h = maxDim; }
+  canvas.width = w; canvas.height = h;
+  canvas.getContext('2d').drawImage(src, 0, 0, w, h);
+  if (src.close) src.close();                       // คืนแรมของ ImageBitmap ทันที
+  const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.6));
+  const dataUrl = canvas.toDataURL('image/jpeg', 0.6);
+  const ctx = _camCtx;
+  const item = _camTargetItem(idx);
+  if (!item) { jdCameraItemIdx = null; return; }
+  if (!item.photos) item.photos = [];
+  const localSlot = item.photos.length;
+  item.photos.push(dataUrl);
+  jdCameraItemIdx = null;
+  _camAfterCapture();
+  if (testMode || !blob) return;
+  try {
+    const url = await uploadJDPhotoToR2(blob);
+    if (item.photos[localSlot] === dataUrl) {
+      item.photos[localSlot] = url;
+      if (ctx === 'daily') { _saveDailyDraft(); renderDailyForm(); }
+      else { _saveJDDraft(); renderJaedaengForm(); }
+    }
+  } catch (e) { console.warn('R2 upload (native capture) failed:', e); }
 }
 
 async function switchJDCamera() {
