@@ -5280,7 +5280,7 @@ html.fab-sso-pending #login-screen { display: none !important; }
           <button class="btn btn-secondary" style="flex:1;min-width:120px;" onclick="showDailyHub()">
             <span class="material-symbols-rounded">arrow_back</span> กลับไปประวัติ
           </button>
-          <button class="btn btn-primary" style="flex:1;min-width:120px;" onclick="printDailyDetail()">
+          <button class="btn btn-primary" data-ck-action="print-detail" style="flex:1;min-width:120px;" onclick="printDailyDetail()">
             <span class="material-symbols-rounded">picture_as_pdf</span> ออก PDF
           </button>
           <button class="btn btn-secondary" id="daily-detail-edit-btn" style="flex:1;min-width:120px;display:none;" onclick="editDailyChecklist(currentDailyDetailId)">
@@ -5418,7 +5418,7 @@ html.fab-sso-pending #login-screen { display: none !important; }
           <button class="btn btn-secondary" style="flex:1;min-width:130px;" onclick="showJaedaengHub()">
             <span class="material-symbols-rounded">arrow_back</span> กลับไปประวัติ
           </button>
-          <button class="btn btn-primary" style="flex:1;min-width:130px;" onclick="printJaedaengDetail()">
+          <button class="btn btn-primary" data-ck-action="print-detail" style="flex:1;min-width:130px;" onclick="printJaedaengDetail()">
             <span class="material-symbols-rounded">picture_as_pdf</span> ออก PDF
           </button>
           <button class="btn btn-primary" id="jd-detail-edit-btn" style="flex:1;min-width:130px;display:none;" onclick="editJaedaengAudit(currentJDDetailId)">
@@ -9201,7 +9201,7 @@ function renderJaedaengDashboard() {
       const delBtn = isAdmin
         ? `<div style="display:flex;gap:6px;margin-top:4px;">`
           + `<button type="button" class="recent-edit" title="แก้ไข" onclick="event.stopPropagation();editJaedaengAudit('${escapeAttr(r.id)}')"><span class="material-symbols-rounded">edit</span></button>`
-          + `<button type="button" class="recent-del" title="ลบ" onclick="deleteJaedaengFromList(event, '${escapeAttr(r.id)}', '${escapeAttr(r.storeName||'')}')"><span class="material-symbols-rounded">delete</span></button>`
+          + `<button type="button" class="recent-del" data-ck-action="delete-jd" title="ลบ" onclick="deleteJaedaengFromList(event, '${escapeAttr(r.id)}', '${escapeAttr(r.storeName||'')}')"><span class="material-symbols-rounded">delete</span></button>`
           + `</div>`
         : '';
       return `<div class="recent-card ${tierCls}" onclick="showJaedaengDetail('${escapeAttr(r.id)}')">
@@ -9221,6 +9221,7 @@ function renderJaedaengDashboard() {
       </div>`;
     }).join('') || '<div class="jd-dash-empty">ยังไม่มีผลการตรวจ</div>';
   }
+  applyCkPerms();   // ปุ่มลบวาดใหม่ทุกครั้ง — ต้องบังคับสิทธิ์ซ้ำ ไม่งั้นหลุดการควบคุม
 }
 
 function showJaedaengHub() {
@@ -9269,7 +9270,7 @@ function renderJaedaengList() {
     }
     const adminBtns = (currentUser && currentUser.role === 'admin')
       ? `<button type="button" class="jd-history-edit" title="แก้ไขผลตรวจ" onclick="event.stopPropagation();editJaedaengAudit('${escapeAttr(r.id)}')"><span class="material-symbols-rounded">edit</span></button>`
-        + `<button type="button" class="jd-history-del" title="ลบผลตรวจ" onclick="deleteJaedaengFromList(event, '${escapeAttr(r.id)}', '${escapeAttr(r.storeName||'')}')"><span class="material-symbols-rounded">delete</span></button>`
+        + `<button type="button" class="jd-history-del" data-ck-action="delete-jd" title="ลบผลตรวจ" onclick="deleteJaedaengFromList(event, '${escapeAttr(r.id)}', '${escapeAttr(r.storeName||'')}')"><span class="material-symbols-rounded">delete</span></button>`
       : '';
     return `<div class="jd-history-card ${tier}" onclick="showJaedaengDetail('${escapeAttr(r.id)}')">
       <div>
@@ -9283,6 +9284,7 @@ function renderJaedaengList() {
       </div>
     </div>`;
   }).join('');
+  applyCkPerms();   // ปุ่มลบวาดใหม่ทุกครั้ง — ต้องบังคับสิทธิ์ซ้ำ ไม่งั้นหลุดการควบคุม
 }
 
 async function startJaedaengAudit() {
