@@ -4927,6 +4927,16 @@ html.fab-sso-pending #login-screen { display: none !important; }
 .sf-box-reason { display:flex; align-items:flex-start; gap:5px; padding-top:8px; border-top:1px dashed rgba(214,54,34,.28); font-size:11.5px; font-weight:600; color:var(--danger); line-height:1.35; }
 .sf-box-reason .material-symbols-rounded { font-size:15px; flex-shrink:0; margin-top:1px; }
 .sf-box-reason b { font-weight:800; }
+
+/* หมายเหตุระบบ — บอกว่าที่ยังไม่ส่งเพราะระบบมีปัญหา ไม่ใช่สาขาไม่ทำ
+   ใช้สีน้ำเงินให้ต่างจากสีแดงของ "เกินเวลา" ซึ่งเป็นความผิดสาขา */
+.sf-shift-box.has-sysnote { border-color: rgba(59,130,246,0.45); background: rgba(59,130,246,0.05); }
+.sf-box-sysnote {
+  display:flex; align-items:flex-start; gap:5px; margin-top:8px; padding-top:8px;
+  border-top:1px dashed rgba(59,130,246,0.35);
+  font-size:11.5px; line-height:1.5; color:#1d4ed8; font-weight:600;
+}
+.sf-box-sysnote .material-symbols-rounded { font-size:15px; flex-shrink:0; margin-top:1px; }
 .sf-tline-reason { width:100%; font-size:11.5px; color:var(--danger); font-weight:600; }
 .sf-score-pill { font-weight:900; font-size:12px; padding:2px 9px; border-radius:999px; border:1.5px solid var(--border); background:var(--surface); font-variant-numeric:tabular-nums; }
 .sf-score-pill.is-good { color:#1E6B36; border-color:var(--success); }
@@ -5030,6 +5040,9 @@ html.fab-sso-pending #login-screen { display: none !important; }
 /* leaderboard rows — มน + hover */
 #dashboard-screen .score-row { border-radius:14px; transition:background .12s; }
 #dashboard-screen .score-row.is-clickable:hover { background:var(--surface-2); }
+
+/* ไม่มีสิทธิ์ใช้ปุ่มนี้ — ซ่อนแบบชนะทุกกรณี ไม่ยุ่งกับ inline style เดิมของปุ่ม */
+.ck-noperm { display: none !important; }
 </style>
 <script>
 /* Runs in <head> before #login-screen paints. If a valid fab_session
@@ -5238,7 +5251,7 @@ html.fab-sso-pending #login-screen { display: none !important; }
           <button class="btn btn-secondary" style="flex:1;min-width:130px;" onclick="cancelDailyShift()">
             <span class="material-symbols-rounded">arrow_back</span> ยกเลิก
           </button>
-          <button class="btn btn-success" style="flex:1;min-width:130px;" onclick="submitDailyShift()">
+          <button class="btn btn-success" data-ck-action="submit-check" style="flex:1;min-width:130px;" onclick="submitDailyShift()">
             <span class="material-symbols-rounded">save</span> บันทึก
           </button>
         </div>
@@ -5273,7 +5286,7 @@ html.fab-sso-pending #login-screen { display: none !important; }
           <button class="btn btn-secondary" id="daily-detail-edit-btn" style="flex:1;min-width:120px;display:none;" onclick="editDailyChecklist(currentDailyDetailId)">
             <span class="material-symbols-rounded">edit</span> แก้ไข
           </button>
-          <button class="btn btn-secondary" id="daily-detail-del-btn" style="flex:1;min-width:120px;display:none;background:rgba(239,68,68,0.1);color:var(--danger);border-color:rgba(239,68,68,0.3);" onclick="deleteDailyChecklist(currentDailyDetailId)">
+          <button class="btn btn-secondary" id="daily-detail-del-btn" data-ck-action="delete-daily" style="flex:1;min-width:120px;display:none;background:rgba(239,68,68,0.1);color:var(--danger);border-color:rgba(239,68,68,0.3);" onclick="deleteDailyChecklist(currentDailyDetailId)">
             <span class="material-symbols-rounded">delete</span> ลบ
           </button>
         </div>
@@ -5379,7 +5392,7 @@ html.fab-sso-pending #login-screen { display: none !important; }
           <button class="btn btn-secondary" style="flex:1;min-width:130px;" onclick="cancelJaedaengAudit()">
             <span class="material-symbols-rounded">arrow_back</span> ยกเลิก
           </button>
-          <button class="btn btn-success" style="flex:1;min-width:130px;" onclick="submitJaedaengAudit()">
+          <button class="btn btn-success" data-ck-action="submit-check" style="flex:1;min-width:130px;" onclick="submitJaedaengAudit()">
             <span class="material-symbols-rounded">save</span> บันทึก
           </button>
         </div>
@@ -5411,7 +5424,7 @@ html.fab-sso-pending #login-screen { display: none !important; }
           <button class="btn btn-primary" id="jd-detail-edit-btn" style="flex:1;min-width:130px;display:none;" onclick="editJaedaengAudit(currentJDDetailId)">
             <span class="material-symbols-rounded">edit</span> แก้ไขผล
           </button>
-          <button class="btn btn-danger" id="jd-detail-delete-btn" style="flex:1;min-width:130px;display:none;" onclick="deleteJaedaengAudit()">
+          <button class="btn btn-danger" id="jd-detail-delete-btn" data-ck-action="delete-jd" style="flex:1;min-width:130px;display:none;" onclick="deleteJaedaengAudit()">
             <span class="material-symbols-rounded">delete</span> ลบผลตรวจ
           </button>
         </div>
@@ -6344,6 +6357,7 @@ function _maxDailyUpdatedAt(list) {
 }
 
 async function loadDailyChecklists() {
+  loadCkSysNotes(); // หมายเหตุระบบรายวัน/รอบ (เช่น ระบบล่ม สาขาส่งไม่ได้)
   loadSfBranches(); // โหลดรายชื่อสาขา (เพิ่ม/ลบ) จาก cloud — ครั้งเดียวต่อ session
   loadCkPermsFromHub(); // สิทธิ์ปุ่มจาก HUB (throttle) — ตัวหลักเรียกที่ renderBottomNav/visibilitychange
   // MERGE: รวม cloud + local (ห้ามทับของในเครื่องด้วยของว่าง) — กันข้อมูลที่เซฟ cloud ไม่สำเร็จหาย
@@ -7453,9 +7467,13 @@ function ckCan(actionId) {
   return p.roles.indexOf(currentUser.role) >= 0;
 }
 /* ซ่อน/แสดงปุ่มตามสิทธิ์ — เรียกซ้ำได้ทุกครั้งที่เรนเดอร์ใหม่ */
+/* ใช้ class แทนการเซ็ต style.display ตรง ๆ
+   เดิม: ถ้ามีสิทธิ์จะสั่ง display='' ซึ่งไป "เปิด" ปุ่มที่ตั้งใจซ่อนไว้ด้วยเหตุอื่น
+         (เช่น ปุ่มลบที่ตั้ง display:none ไว้จนกว่าจะเลือกรายการ)
+   ใหม่: ไม่มีสิทธิ์ = ใส่ class ซ่อน · มีสิทธิ์ = ถอด class แล้วปล่อยให้ logic เดิมคุมเอง */
 function applyCkPerms() {
   document.querySelectorAll('[data-ck-action]').forEach(el => {
-    el.style.display = ckCan(el.getAttribute('data-ck-action')) ? '' : 'none';
+    el.classList.toggle('ck-noperm', !ckCan(el.getAttribute('data-ck-action')));
   });
 }
 /* ══ ดึง config จาก HUB — รวมศูนย์ที่เดียว ══
@@ -7576,6 +7594,52 @@ async function loadSfBranches() {
     }
   } catch (e) { console.warn('loadSfBranches failed', e); }
 }
+/* ══════════ หมายเหตุระบบรายวัน/รายรอบ ══════════
+   ใช้ตอนที่สาขาส่งผลตรวจไม่ได้เพราะ "ระบบมีปัญหา" ไม่ใช่เพราะสาขาไม่ทำ
+   สำคัญ: ไม่สร้างเรคคอร์ดผลตรวจปลอม — การ์ดยังขึ้น "ยังไม่ส่ง" ตามจริง
+          แค่แสดงเหตุผลเพิ่ม เพื่อไม่ให้ตัวเลขความครบถ้วนเพี้ยน
+   เก็บที่ Firestore appConfig/sysNotes → ทุกเครื่องเห็นตรงกัน
+   รูปแบบ: { "2026-08-06|close": "ระบบมีปัญหา ...", "2026-08-06|*": "..." }
+           ใช้ * แทนได้ทั้ง 2 รอบของวันนั้น */
+var CK_SYS_NOTES = {};
+var CK_SYS_NOTES_KEY = 'ck_sys_notes_v1';
+try { CK_SYS_NOTES = JSON.parse(localStorage.getItem(CK_SYS_NOTES_KEY) || '{}') || {}; } catch (e) { CK_SYS_NOTES = {}; }
+
+function ckSysNote(date, shift) {
+  if (!date) return '';
+  return CK_SYS_NOTES[date + '|' + shift] || CK_SYS_NOTES[date + '|*'] || '';
+}
+async function loadCkSysNotes() {
+  if (!firebaseDb) return;
+  try {
+    const doc = await firebaseDb.collection('appConfig').doc('sysNotes').get();
+    if (doc.exists) {
+      const d = doc.data() || {};
+      CK_SYS_NOTES = (d && typeof d.notes === 'object' && d.notes) ? d.notes : {};
+      try { localStorage.setItem(CK_SYS_NOTES_KEY, JSON.stringify(CK_SYS_NOTES)); } catch (_) {}
+      if (document.getElementById('sf-daily-table')) _renderSfTable();
+    }
+  } catch (e) { console.warn('[sysNotes] โหลดไม่ได้', e); }
+}
+/* ตั้ง/ลบหมายเหตุ — เรียกจาก console ได้
+   ckSetSysNote('2026-08-06','close','ระบบมีปัญหา ส่งไม่ได้')
+   ckSetSysNote('2026-08-06','close','')   ← ลบ */
+async function ckSetSysNote(date, shift, text) {
+  if (!date || !shift) { console.warn('ต้องระบุ date และ shift (open/close/*)'); return false; }
+  const key = date + '|' + shift;
+  if (text && String(text).trim()) CK_SYS_NOTES[key] = String(text).trim();
+  else delete CK_SYS_NOTES[key];
+  try { localStorage.setItem(CK_SYS_NOTES_KEY, JSON.stringify(CK_SYS_NOTES)); } catch (_) {}
+  if (document.getElementById('sf-daily-table')) _renderSfTable();
+  if (!firebaseDb) { console.warn('[sysNotes] ยังไม่ต่อ Firestore — บันทึกเฉพาะเครื่องนี้'); return false; }
+  try {
+    await firebaseDb.collection('appConfig').doc('sysNotes')
+      .set({ notes: CK_SYS_NOTES, updatedAt: new Date().toISOString() }, { merge: true });
+    console.log('[sysNotes] บันทึกขึ้นคลาวด์แล้ว — ทุกเครื่องเห็นตรงกัน');
+    return true;
+  } catch (e) { console.warn('[sysNotes] บันทึกขึ้นคลาวด์ไม่ได้', e); return false; }
+}
+
 // หมายเหตุ: หน้าจัดการสาขาของ Checklist ถูกยกออก — สาขาจัดการที่ HUB (⚙️ → จัดการสาขา) ที่เดียว
 // ระบบนี้อ่านอย่างเดียวผ่าน loadSfBranches() ด้านบน
 
@@ -7655,14 +7719,18 @@ function _sfDailyTimesHTML(dailies) {
   const dates = Object.keys(byDate).sort((a, b) => b.localeCompare(a));
 
   // กรอบแต่ละรอบ (เปิด/ปิด) — แยกชัด มีหัว + เวลา + คะแนนสี
-  const shiftBox = (rec, shift) => {
+  const shiftBox = (rec, shift, date) => {
     const icon = shift === 'open' ? 'wb_sunny' : 'bedtime';
     const label = shift === 'open' ? 'เปิดร้าน' : 'ปิดร้าน';
     const cls = shift === 'open' ? 'sf-shift-open' : 'sf-shift-close';
     if (!rec) {
-      return '<div class="sf-shift-box ' + cls + ' is-empty">' +
+      // มีหมายเหตุระบบของวัน+รอบนี้ไหม (เช่น ระบบล่ม สาขาส่งไม่ได้)
+      // ยังขึ้น "ยังไม่ส่ง" ตามจริง แค่บอกเหตุผลเพิ่ม — ไม่นับเป็นส่งแล้ว
+      const note = ckSysNote(date, shift);
+      return '<div class="sf-shift-box ' + cls + ' is-empty' + (note ? ' has-sysnote' : '') + '">' +
         '<div class="sf-shift-head"><span class="material-symbols-rounded sf-ico-fill">' + icon + '</span><span class="sf-shift-label">' + label + '</span></div>' +
         '<div class="sf-shift-body"><span class="sf-shift-time"><span class="material-symbols-rounded">schedule</span>ยังไม่ส่ง</span></div>' +
+        (note ? '<div class="sf-box-sysnote"><span class="material-symbols-rounded">info</span><span>' + escapeHtml(note) + '</span></div>' : '') +
       '</div>';
     }
     const t = fmtT(rec.submittedAt);
@@ -7693,7 +7761,7 @@ function _sfDailyTimesHTML(dailies) {
       branches.map(b =>
         '<div class="sf-time-line">' +
           '<span class="sf-tline-branch"><span class="material-symbols-rounded sf-ico-fill">storefront</span> ' + escapeHtml(b.name) + '</span>' +
-          '<div class="sf-shift-boxes">' + shiftBox(b.open, 'open') + shiftBox(b.close, 'close') + '</div>' +
+          '<div class="sf-shift-boxes">' + shiftBox(b.open, 'open', date) + shiftBox(b.close, 'close', date) + '</div>' +
         '</div>'
       ).join('') +
     '</div>';
