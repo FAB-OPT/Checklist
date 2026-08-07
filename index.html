@@ -5469,7 +5469,9 @@ html.fab-sso-pending #login-screen { display: none !important; }
           <button class="btn btn-secondary" style="flex:1;min-width:130px;" onclick="cancelJaedaengAudit()">
             <span class="material-symbols-rounded">arrow_back</span> ยกเลิก
           </button>
-          <button class="btn btn-success" data-ck-action="submit-check" style="flex:1;min-width:130px;" onclick="submitJaedaengAudit()">
+          <!-- ใช้สิทธิ์ submit-jd (คนละตัวกับซานตาเฟ่) — เดิมใช้ submit-check ร่วมกัน
+               ทำให้ ผจข. เปิดฟอร์มตรวจร้านเจ๊แดงได้แต่ไม่มีปุ่มบันทึก -->
+          <button class="btn btn-success" data-ck-action="submit-jd" style="flex:1;min-width:130px;" onclick="submitJaedaengAudit()">
             <span class="material-symbols-rounded">save</span> บันทึก
           </button>
         </div>
@@ -7507,7 +7509,10 @@ const CK_ACTIONS = [
   { id: 'print-detail',  group: 'export', label: 'พิมพ์ผลตรวจ',          roles: ['admin','coo','vp','bzm'] },
   { id: 'delete-daily',  group: 'danger', label: 'ลบผลตรวจ (ซานตาเฟ่)',  roles: ['admin'], danger: true },
   { id: 'delete-jd',     group: 'danger', label: 'ลบผลตรวจ (เจ๊แดง)',    roles: ['admin'], danger: true },
-  { id: 'submit-check',  group: 'branch', label: 'ส่งผลตรวจ',            roles: ['branch','admin'] },
+  /* ปุ่มบันทึกของสองระบบต้องแยกสิทธิ์กัน — ซานตาเฟ่สาขากรอกเอง ส่วนเจ๊แดงเป็นการตรวจร้าน
+     กติกา: ใครเปิดฟอร์มได้ต้องบันทึกได้ ไม่งั้นกรอกเสร็จแล้วไม่มีปุ่มเซฟ (roles ตรงกับ view-jd-hub) */
+  { id: 'submit-check',  group: 'branch', label: 'บันทึกผลตรวจ (ซานตาเฟ่)', roles: ['branch','admin'] },
+  { id: 'submit-jd',     group: 'branch', label: 'บันทึกผลตรวจ (เจ๊แดง)',   roles: ['admin','coo','vp','bzm','branch'] },
 ];
 const CK_PERMS_KEY = 'ck_perms_v1';
 let CK_PERMS = {};
