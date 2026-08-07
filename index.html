@@ -5043,6 +5043,62 @@ html.fab-sso-pending #login-screen { display: none !important; }
 
 /* ไม่มีสิทธิ์ใช้ปุ่มนี้ — ซ่อนแบบชนะทุกกรณี ไม่ยุ่งกับ inline style เดิมของปุ่ม */
 .ck-noperm { display: none !important; }
+
+/* ปุ่มหมายเหตุระบบ บนแถบควบคุมตาราง */
+.sf-tbl-note {
+  display:inline-flex; align-items:center; gap:5px; position:relative;
+  padding:6px 12px; border-radius:9px; cursor:pointer; font-family:inherit;
+  font-size:12.5px; font-weight:700; white-space:nowrap;
+  border:1px solid rgba(59,130,246,0.35); background:rgba(59,130,246,0.07); color:#1d4ed8;
+  transition:.15s;
+}
+.sf-tbl-note:hover { background:rgba(59,130,246,0.14); }
+.sf-tbl-note .material-symbols-rounded { font-size:17px; }
+.sf-tbl-note.has-note { border-color:#3b82f6; background:rgba(59,130,246,0.16); }
+.sf-note-dot { width:7px; height:7px; border-radius:50%; background:#ef4444; }
+
+/* หน้าต่างจัดการหมายเหตุ */
+.sysnote-overlay {
+  position:fixed; inset:0; z-index:9000; display:none;
+  align-items:center; justify-content:center; padding:16px;
+  background:rgba(15,23,42,0.5); backdrop-filter:blur(3px);
+}
+.sysnote-overlay.show { display:flex; }
+.sysnote-box {
+  background:var(--surface,#fff); border-radius:18px; width:100%; max-width:480px;
+  max-height:90vh; overflow:auto; box-shadow:0 24px 60px rgba(15,23,42,0.3);
+}
+.sysnote-head { display:flex; align-items:flex-start; gap:12px; padding:18px 20px 14px; border-bottom:1px solid var(--border,#e5e7eb); }
+.sysnote-title { font-size:17px; font-weight:800; }
+.sysnote-sub { font-size:12.5px; color:var(--muted,#6b7280); margin-top:2px; }
+.sysnote-x { margin-left:auto; border:0; background:transparent; font-size:19px; cursor:pointer; color:var(--muted,#6b7280); padding:2px 6px; border-radius:8px; }
+.sysnote-x:hover { background:rgba(15,23,42,0.06); }
+.sysnote-body { padding:16px 20px; }
+.sysnote-hint { font-size:12.5px; line-height:1.7; color:#1d4ed8; background:rgba(59,130,246,0.07);
+                border:1px solid rgba(59,130,246,0.25); border-radius:11px; padding:12px 14px; margin-bottom:14px; }
+.sysnote-presets { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:14px; }
+.sysnote-chip { border:1px solid var(--border,#e5e7eb); background:var(--surface-2,#f8fafc); border-radius:999px;
+                padding:5px 12px; font-size:12px; font-family:inherit; cursor:pointer; transition:.15s; }
+.sysnote-chip:hover { border-color:#3b82f6; color:#1d4ed8; background:rgba(59,130,246,0.07); }
+.sysnote-lb { display:block; font-size:12px; font-weight:700; color:var(--muted,#6b7280); margin:10px 0 5px; }
+.sysnote-in { width:100%; box-sizing:border-box; padding:11px 13px; border-radius:10px;
+              border:1.5px solid var(--border,#e5e7eb); font-family:inherit; font-size:13.5px; outline:none; }
+.sysnote-in:focus { border-color:#3b82f6; box-shadow:0 0 0 3px rgba(59,130,246,0.13); }
+.sysnote-msg:not(:empty) { margin-top:12px; font-size:12.5px; font-weight:600; }
+.sysnote-msg.ok { color:#047857; }
+.sysnote-msg.warn { color:#b45309; }
+.sysnote-foot { display:flex; gap:8px; padding:14px 20px 18px; border-top:1px solid var(--border,#e5e7eb); }
+.sysnote-btn { border:1px solid var(--border,#e5e7eb); background:var(--surface,#fff); border-radius:10px;
+               padding:9px 16px; font-family:inherit; font-size:13px; font-weight:700; cursor:pointer; transition:.15s; }
+.sysnote-btn:hover { background:var(--surface-2,#f8fafc); }
+.sysnote-btn.primary { margin-left:auto; background:#3b82f6; border-color:#3b82f6; color:#fff; }
+.sysnote-btn.primary:hover { background:#2563eb; }
+.sysnote-btn.danger { color:#b91c1c; border-color:rgba(220,38,38,0.3); }
+.sysnote-btn.danger:hover { background:rgba(220,38,38,0.07); }
+@media (max-width:520px) {
+  .sysnote-foot { flex-wrap:wrap; }
+  .sysnote-btn.primary { margin-left:0; flex:1; }
+}
 </style>
 <script>
 /* Runs in <head> before #login-screen paints. If a valid fab_session
@@ -7621,7 +7677,85 @@ async function loadCkSysNotes() {
     }
   } catch (e) { console.warn('[sysNotes] โหลดไม่ได้', e); }
 }
-/* ตั้ง/ลบหมายเหตุ — เรียกจาก console ได้
+function ckIsAdmin() {
+  try { return !!(currentUser && currentUser.role === 'admin'); } catch (e) { return false; }
+}
+/* วันนี้มีหมายเหตุอยู่ไหม (รอบใดรอบหนึ่งก็นับ) — ใช้ทำจุดแดงบนปุ่ม */
+function ckDayHasNote(date) {
+  return !!(ckSysNote(date, 'open') || ckSysNote(date, 'close'));
+}
+
+/* ── หน้าต่างจัดการหมายเหตุระบบ (เฉพาะ admin) ── */
+var _sysNoteDate = null;
+function openSysNoteModal(date) {
+  if (!ckIsAdmin()) return;
+  _sysNoteDate = date || todayDateStr();
+  let m = document.getElementById('sysNoteModal');
+  if (!m) {
+    m = document.createElement('div');
+    m.id = 'sysNoteModal';
+    m.className = 'sysnote-overlay';
+    m.onclick = e => { if (e.target === m) closeSysNoteModal(); };
+    document.body.appendChild(m);
+  }
+  const open = ckSysNote(_sysNoteDate, 'open');
+  const close = ckSysNote(_sysNoteDate, 'close');
+  const presets = ['ระบบมีปัญหา ส่งผลตรวจไม่ได้', 'ระบบปิดปรับปรุง', 'ไฟดับ/อินเทอร์เน็ตขัดข้อง', 'ร้านปิดทำการ'];
+  m.innerHTML =
+    '<div class="sysnote-box">' +
+      '<div class="sysnote-head">' +
+        '<div><div class="sysnote-title">📝 หมายเหตุระบบ</div>' +
+        '<div class="sysnote-sub">' + escapeHtml(fmtDateDMY(_sysNoteDate)) + '</div></div>' +
+        '<button class="sysnote-x" onclick="closeSysNoteModal()">✕</button>' +
+      '</div>' +
+      '<div class="sysnote-body">' +
+        '<div class="sysnote-hint">ใช้ตอนสาขาส่งผลตรวจไม่ได้เพราะ<b>ระบบมีปัญหา</b> ไม่ใช่เพราะสาขาไม่ทำ<br>' +
+          'การ์ดจะยังขึ้น "ยังไม่ส่ง" ตามจริง แค่เพิ่มเหตุผลให้คนอ่านเข้าใจ · <b>มีผลทุกสาขา</b></div>' +
+        '<div class="sysnote-presets">' + presets.map(p =>
+          '<button type="button" class="sysnote-chip" onclick="_sysNoteFill(\'' + escapeAttr(p) + '\')">' + escapeHtml(p) + '</button>').join('') +
+        '</div>' +
+        '<label class="sysnote-lb">🌅 รอบเปิดร้าน</label>' +
+        '<input id="sysNoteOpen" class="sysnote-in" value="' + escapeAttr(open) + '" placeholder="ว่างไว้ = ไม่แสดงหมายเหตุ">' +
+        '<label class="sysnote-lb">🌙 รอบปิดร้าน</label>' +
+        '<input id="sysNoteClose" class="sysnote-in" value="' + escapeAttr(close) + '" placeholder="ว่างไว้ = ไม่แสดงหมายเหตุ">' +
+        '<div id="sysNoteMsg" class="sysnote-msg"></div>' +
+      '</div>' +
+      '<div class="sysnote-foot">' +
+        '<button class="sysnote-btn" onclick="closeSysNoteModal()">ปิด</button>' +
+        '<button class="sysnote-btn danger" onclick="_sysNoteClear()">ลบหมายเหตุวันนี้</button>' +
+        '<button class="sysnote-btn primary" onclick="_sysNoteSave()">บันทึก</button>' +
+      '</div>' +
+    '</div>';
+  m.classList.add('show');
+}
+function closeSysNoteModal() {
+  const m = document.getElementById('sysNoteModal'); if (m) m.classList.remove('show');
+}
+/* กดชิปข้อความสำเร็จรูป → เติมช่องที่ยังว่าง (ไม่ทับของที่พิมพ์ไว้) */
+function _sysNoteFill(text) {
+  const o = document.getElementById('sysNoteOpen'), c = document.getElementById('sysNoteClose');
+  if (c && !c.value.trim()) c.value = text;
+  else if (o && !o.value.trim()) o.value = text;
+  else if (c) c.value = text;
+}
+async function _sysNoteSave() {
+  const msg = document.getElementById('sysNoteMsg');
+  const o = (document.getElementById('sysNoteOpen').value || '').trim();
+  const c = (document.getElementById('sysNoteClose').value || '').trim();
+  msg.textContent = 'กำลังบันทึก...'; msg.className = 'sysnote-msg';
+  const r1 = await ckSetSysNote(_sysNoteDate, 'open', o);
+  const r2 = await ckSetSysNote(_sysNoteDate, 'close', c);
+  if (r1 && r2) { msg.textContent = '✓ บันทึกแล้ว — ทุกสาขาเห็นตรงกัน'; msg.className = 'sysnote-msg ok'; }
+  else { msg.textContent = '⚠ บันทึกในเครื่องแล้ว แต่ขึ้นคลาวด์ไม่สำเร็จ — เครื่องอื่นจะยังไม่เห็น'; msg.className = 'sysnote-msg warn'; }
+  _renderSfTable();
+}
+async function _sysNoteClear() {
+  document.getElementById('sysNoteOpen').value = '';
+  document.getElementById('sysNoteClose').value = '';
+  await _sysNoteSave();
+}
+
+/* ตั้ง/ลบหมายเหตุ — เรียกจาก console ได้เช่นกัน
    ckSetSysNote('2026-08-06','close','ระบบมีปัญหา ส่งไม่ได้')
    ckSetSysNote('2026-08-06','close','')   ← ลบ */
 async function ckSetSysNote(date, shift, text) {
@@ -7695,6 +7829,13 @@ function _sfDailyTableHTML() {
     '<input type="date" class="sf-tbl-dateinput" value="' + escapeAttr(day) + '" onchange="_sfTableSetDate(this.value)">' +
     '<button type="button" class="sf-tbl-nav" onclick="_sfTableDay(1)" title="วันถัดไป"><span class="material-symbols-rounded">chevron_right</span></button>' +
     '<span class="sf-tbl-summary">🌅 ส่งแล้ว ' + openCount + '/' + total + ' · 🌙 ' + closeCount + '/' + total + '</span>' +
+    // ปุ่มหมายเหตุระบบ — เฉพาะ admin (ใช้ตอนระบบล่มจนสาขาส่งไม่ได้)
+    (ckIsAdmin()
+      ? '<button type="button" class="sf-tbl-note' + (ckDayHasNote(day) ? ' has-note' : '') + '"'
+        + ' onclick="openSysNoteModal(\'' + escapeAttr(day) + '\')" title="หมายเหตุระบบของวันนี้">'
+        + '<span class="material-symbols-rounded">edit_note</span>หมายเหตุระบบ'
+        + (ckDayHasNote(day) ? '<span class="sf-note-dot"></span>' : '') + '</button>'
+      : '') +
   '</div>';
   const table = '<div class="sf-tbl-wrap"><table class="sf-send-table">' +
     '<colgroup><col class="c-branch"><col class="c-shift"><col class="c-shift"></colgroup>' +
