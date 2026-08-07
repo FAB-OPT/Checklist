@@ -5057,47 +5057,68 @@ html.fab-sso-pending #login-screen { display: none !important; }
 .sf-tbl-note.has-note { border-color:#3b82f6; background:rgba(59,130,246,0.16); }
 .sf-note-dot { width:7px; height:7px; border-radius:50%; background:#ef4444; }
 
-/* หน้าต่างจัดการหมายเหตุ */
-.sysnote-overlay {
-  position:fixed; inset:0; z-index:9000; display:none;
-  align-items:center; justify-content:center; padding:16px;
-  background:rgba(15,23,42,0.5); backdrop-filter:blur(3px);
-}
-.sysnote-overlay.show { display:flex; }
-.sysnote-box {
-  background:var(--surface,#fff); border-radius:18px; width:100%; max-width:480px;
-  max-height:90vh; overflow:auto; box-shadow:0 24px 60px rgba(15,23,42,0.3);
-}
-.sysnote-head { display:flex; align-items:flex-start; gap:12px; padding:18px 20px 14px; border-bottom:1px solid var(--border,#e5e7eb); }
-.sysnote-title { font-size:17px; font-weight:800; }
-.sysnote-sub { font-size:12.5px; color:var(--muted,#6b7280); margin-top:2px; }
-.sysnote-x { margin-left:auto; border:0; background:transparent; font-size:19px; cursor:pointer; color:var(--muted,#6b7280); padding:2px 6px; border-radius:8px; }
-.sysnote-x:hover { background:rgba(15,23,42,0.06); }
-.sysnote-body { padding:16px 20px; }
-.sysnote-hint { font-size:12.5px; line-height:1.7; color:#1d4ed8; background:rgba(59,130,246,0.07);
-                border:1px solid rgba(59,130,246,0.25); border-radius:11px; padding:12px 14px; margin-bottom:14px; }
-.sysnote-presets { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:14px; }
-.sysnote-chip { border:1px solid var(--border,#e5e7eb); background:var(--surface-2,#f8fafc); border-radius:999px;
-                padding:5px 12px; font-size:12px; font-family:inherit; cursor:pointer; transition:.15s; }
-.sysnote-chip:hover { border-color:#3b82f6; color:#1d4ed8; background:rgba(59,130,246,0.07); }
-.sysnote-lb { display:block; font-size:12px; font-weight:700; color:var(--muted,#6b7280); margin:10px 0 5px; }
-.sysnote-in { width:100%; box-sizing:border-box; padding:11px 13px; border-radius:10px;
-              border:1.5px solid var(--border,#e5e7eb); font-family:inherit; font-size:13.5px; outline:none; }
-.sysnote-in:focus { border-color:#3b82f6; box-shadow:0 0 0 3px rgba(59,130,246,0.13); }
-.sysnote-msg:not(:empty) { margin-top:12px; font-size:12.5px; font-weight:600; }
-.sysnote-msg.ok { color:#047857; }
-.sysnote-msg.warn { color:#b45309; }
-.sysnote-foot { display:flex; gap:8px; padding:14px 20px 18px; border-top:1px solid var(--border,#e5e7eb); }
-.sysnote-btn { border:1px solid var(--border,#e5e7eb); background:var(--surface,#fff); border-radius:10px;
-               padding:9px 16px; font-family:inherit; font-size:13px; font-weight:700; cursor:pointer; transition:.15s; }
-.sysnote-btn:hover { background:var(--surface-2,#f8fafc); }
-.sysnote-btn.primary { margin-left:auto; background:#3b82f6; border-color:#3b82f6; color:#fff; }
-.sysnote-btn.primary:hover { background:#2563eb; }
-.sysnote-btn.danger { color:#b91c1c; border-color:rgba(220,38,38,0.3); }
-.sysnote-btn.danger:hover { background:rgba(220,38,38,0.07); }
-@media (max-width:520px) {
-  .sysnote-foot { flex-wrap:wrap; }
-  .sysnote-btn.primary { margin-left:0; flex:1; }
+/* หน้าต่างจัดการหมายเหตุระบบ */
+.sysnote-overlay{position:fixed;inset:0;z-index:9000;display:none;align-items:center;justify-content:center;
+  padding:16px;background:rgba(15,23,42,.55);backdrop-filter:blur(4px)}
+.sysnote-overlay.show{display:flex}
+.sysnote-box{background:var(--surface,#fff);border-radius:20px;width:100%;max-width:460px;max-height:92vh;
+  overflow:auto;box-shadow:0 26px 70px rgba(15,23,42,.32);animation:snPop .16s ease}
+@keyframes snPop{from{opacity:0;transform:translateY(10px) scale(.985)}to{opacity:1;transform:none}}
+
+.sn-head{display:flex;align-items:flex-start;gap:12px;padding:20px 22px 14px}
+.sn-head-txt{min-width:0}
+.sn-title{font-size:17px;font-weight:800;letter-spacing:-.2px}
+.sn-date{font-size:12.5px;color:var(--muted,#6b7280);margin-top:3px;font-weight:600}
+.sn-x{margin-left:auto;border:0;background:transparent;font-size:17px;line-height:1;cursor:pointer;
+  color:var(--muted,#9ca3af);padding:5px 8px;border-radius:9px;font-family:inherit;transition:.15s}
+.sn-x:hover{background:rgba(15,23,42,.07);color:var(--text,#111)}
+
+.sn-body{padding:0 22px 4px}
+.sn-lead{margin:0 0 18px;font-size:13px;line-height:1.65}
+.sn-dim{color:var(--muted,#6b7280)}
+
+.sn-label{font-size:11px;font-weight:700;letter-spacing:.4px;color:var(--muted,#9ca3af);margin:0 0 8px}
+.sn-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:18px}
+.sn-chip{border:1px solid var(--border,#e5e7eb);background:transparent;border-radius:999px;padding:6px 13px;
+  font-size:12px;font-family:inherit;cursor:pointer;transition:.15s;color:var(--text,#111)}
+.sn-chip:hover{border-color:#3b82f6;color:#1d4ed8;background:rgba(59,130,246,.07)}
+
+.sn-row{margin-bottom:14px}
+.sn-row-head{display:flex;align-items:center;gap:7px;margin-bottom:6px;font-size:12.5px;font-weight:700}
+.sn-ico{font-size:14px}
+.sn-clear{margin-left:auto;border:0;background:transparent;color:var(--muted,#9ca3af);font-size:11.5px;
+  font-family:inherit;cursor:pointer;padding:2px 7px;border-radius:7px;transition:.15s}
+.sn-clear:hover{background:rgba(15,23,42,.06);color:var(--text,#111)}
+.sn-in{width:100%;box-sizing:border-box;padding:11px 13px;border-radius:11px;border:1.5px solid var(--border,#e5e7eb);
+  font-family:inherit;font-size:13.5px;outline:none;transition:.15s;background:var(--surface,#fff);color:var(--text,#111)}
+.sn-in:focus{border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,.13)}
+
+/* ตัวอย่างการ์ดที่สาขาจะเห็น */
+.sn-preview{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:4px}
+.sn-pv-card{border:1px solid var(--border,#e5e7eb);border-radius:12px;padding:10px 11px;background:var(--surface-2,#f8fafc)}
+.sn-pv-card.has{border-color:rgba(59,130,246,.45);background:rgba(59,130,246,.05)}
+.sn-pv-top{font-size:12.5px}
+.sn-pv-sub{font-size:11.5px;color:var(--muted,#9ca3af);margin-top:3px;font-style:italic}
+.sn-pv-note{margin-top:7px;padding-top:7px;border-top:1px dashed rgba(59,130,246,.35);
+  font-size:11.5px;line-height:1.45;color:#1d4ed8;font-weight:600}
+
+.sn-msg{min-height:18px;margin-top:12px;font-size:12.5px;font-weight:600;color:var(--muted,#6b7280)}
+.sn-msg.ok{color:#047857}
+.sn-msg.warn{color:#b45309}
+
+.sn-foot{display:flex;gap:8px;padding:14px 22px 20px}
+.sn-btn{border-radius:11px;padding:10px 18px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;transition:.15s;border:1px solid transparent}
+.sn-btn.ghost{background:transparent;border-color:var(--border,#e5e7eb);color:var(--text,#111)}
+.sn-btn.ghost:hover{background:var(--surface-2,#f8fafc)}
+.sn-btn.ghost.danger{color:#b91c1c;border-color:rgba(220,38,38,.28)}
+.sn-btn.ghost.danger:hover{background:rgba(220,38,38,.06)}
+.sn-btn.primary{margin-left:auto;background:#3b82f6;color:#fff}
+.sn-btn.primary:hover{background:#2563eb}
+@media (max-width:520px){
+  .sn-preview{grid-template-columns:1fr}
+  .sn-foot{flex-wrap:wrap}
+  .sn-btn.primary{margin-left:0;flex:1 1 100%;order:-1;margin-bottom:8px}
+  .sn-btn.ghost{flex:1}
 }
 </style>
 <script>
@@ -7700,33 +7721,73 @@ function openSysNoteModal(date) {
   }
   const open = ckSysNote(_sysNoteDate, 'open');
   const close = ckSysNote(_sysNoteDate, 'close');
-  const presets = ['ระบบมีปัญหา ส่งผลตรวจไม่ได้', 'ระบบปิดปรับปรุง', 'ไฟดับ/อินเทอร์เน็ตขัดข้อง', 'ร้านปิดทำการ'];
+  const hasAny = !!(open || close);
+  const presets = ['ระบบมีปัญหา ส่งผลตรวจไม่ได้', 'ระบบปิดปรับปรุง', 'ไฟดับ / เน็ตขัดข้อง', 'ร้านปิดทำการ'];
+
+  // แถวกรอกของแต่ละรอบ — พร้อมปุ่มล้างเฉพาะรอบนั้น
+  const row = (id, ico, name, val) =>
+    '<div class="sn-row">' +
+      '<div class="sn-row-head"><span class="sn-ico">' + ico + '</span><span>' + name + '</span>' +
+        '<button type="button" class="sn-clear" onclick="_sysNoteClearOne(\'' + id + '\')" title="ล้างช่องนี้">ล้าง</button>' +
+      '</div>' +
+      '<input id="' + id + '" class="sn-in" value="' + escapeAttr(val) + '" ' +
+        'oninput="_sysNotePreview()" placeholder="ปล่อยว่าง = ไม่แสดงหมายเหตุ">' +
+    '</div>';
+
   m.innerHTML =
     '<div class="sysnote-box">' +
-      '<div class="sysnote-head">' +
-        '<div><div class="sysnote-title">📝 หมายเหตุระบบ</div>' +
-        '<div class="sysnote-sub">' + escapeHtml(fmtDateDMY(_sysNoteDate)) + '</div></div>' +
-        '<button class="sysnote-x" onclick="closeSysNoteModal()">✕</button>' +
-      '</div>' +
-      '<div class="sysnote-body">' +
-        '<div class="sysnote-hint">ใช้ตอนสาขาส่งผลตรวจไม่ได้เพราะ<b>ระบบมีปัญหา</b> ไม่ใช่เพราะสาขาไม่ทำ<br>' +
-          'การ์ดจะยังขึ้น "ยังไม่ส่ง" ตามจริง แค่เพิ่มเหตุผลให้คนอ่านเข้าใจ · <b>มีผลทุกสาขา</b></div>' +
-        '<div class="sysnote-presets">' + presets.map(p =>
-          '<button type="button" class="sysnote-chip" onclick="_sysNoteFill(\'' + escapeAttr(p) + '\')">' + escapeHtml(p) + '</button>').join('') +
+      '<div class="sn-head">' +
+        '<div class="sn-head-txt">' +
+          '<div class="sn-title">หมายเหตุระบบ</div>' +
+          '<div class="sn-date">' + escapeHtml(fmtDateThaiShort(_sysNoteDate)) + '</div>' +
         '</div>' +
-        '<label class="sysnote-lb">🌅 รอบเปิดร้าน</label>' +
-        '<input id="sysNoteOpen" class="sysnote-in" value="' + escapeAttr(open) + '" placeholder="ว่างไว้ = ไม่แสดงหมายเหตุ">' +
-        '<label class="sysnote-lb">🌙 รอบปิดร้าน</label>' +
-        '<input id="sysNoteClose" class="sysnote-in" value="' + escapeAttr(close) + '" placeholder="ว่างไว้ = ไม่แสดงหมายเหตุ">' +
-        '<div id="sysNoteMsg" class="sysnote-msg"></div>' +
+        '<button class="sn-x" onclick="closeSysNoteModal()" title="ปิด">✕</button>' +
       '</div>' +
-      '<div class="sysnote-foot">' +
-        '<button class="sysnote-btn" onclick="closeSysNoteModal()">ปิด</button>' +
-        '<button class="sysnote-btn danger" onclick="_sysNoteClear()">ลบหมายเหตุวันนี้</button>' +
-        '<button class="sysnote-btn primary" onclick="_sysNoteSave()">บันทึก</button>' +
+
+      '<div class="sn-body">' +
+        '<p class="sn-lead">บอกเหตุผลว่าทำไมสาขายังไม่ส่ง — ใช้ตอนที่<b>ไม่ใช่ความผิดสาขา</b><br>' +
+          '<span class="sn-dim">การ์ดยังขึ้น “ยังไม่ส่ง” ตามจริง และมีผลกับทุกสาขาพร้อมกัน</span></p>' +
+
+        '<div class="sn-label">เลือกข้อความสำเร็จรูป</div>' +
+        '<div class="sn-chips">' + presets.map(p =>
+          '<button type="button" class="sn-chip" onclick="_sysNoteFill(\'' + escapeAttr(p) + '\')">' + escapeHtml(p) + '</button>').join('') +
+        '</div>' +
+
+        row('sysNoteOpen', '🌤', 'รอบเปิดร้าน', open) +
+        row('sysNoteClose', '🌙', 'รอบปิดร้าน', close) +
+
+        '<div class="sn-label">ตัวอย่างที่สาขาจะเห็น</div>' +
+        '<div id="sysNotePreview" class="sn-preview"></div>' +
+
+        '<div id="sysNoteMsg" class="sn-msg"></div>' +
+      '</div>' +
+
+      '<div class="sn-foot">' +
+        (hasAny ? '<button class="sn-btn ghost danger" onclick="_sysNoteClear()">ลบทั้งวัน</button>' : '') +
+        '<button class="sn-btn ghost" onclick="closeSysNoteModal()">ยกเลิก</button>' +
+        '<button class="sn-btn primary" onclick="_sysNoteSave()">บันทึก</button>' +
       '</div>' +
     '</div>';
   m.classList.add('show');
+  _sysNotePreview();
+}
+
+/* ตัวอย่างการ์ดที่สาขาจะเห็นจริง — อัปเดตทุกครั้งที่พิมพ์ */
+function _sysNotePreview() {
+  const box = document.getElementById('sysNotePreview'); if (!box) return;
+  const pairs = [['🌤', 'เปิดร้าน', (document.getElementById('sysNoteOpen') || {}).value],
+                 ['🌙', 'ปิดร้าน', (document.getElementById('sysNoteClose') || {}).value]];
+  box.innerHTML = pairs.map(([ico, name, v]) => {
+    const t = (v || '').trim();
+    return '<div class="sn-pv-card' + (t ? ' has' : '') + '">' +
+      '<div class="sn-pv-top">' + ico + ' <b>' + name + '</b></div>' +
+      '<div class="sn-pv-sub">🕐 ยังไม่ส่ง</div>' +
+      (t ? '<div class="sn-pv-note">ℹ️ ' + escapeHtml(t) + '</div>' : '') +
+    '</div>';
+  }).join('');
+}
+function _sysNoteClearOne(id) {
+  const el = document.getElementById(id); if (el) { el.value = ''; _sysNotePreview(); }
 }
 function closeSysNoteModal() {
   const m = document.getElementById('sysNoteModal'); if (m) m.classList.remove('show');
@@ -7737,21 +7798,24 @@ function _sysNoteFill(text) {
   if (c && !c.value.trim()) c.value = text;
   else if (o && !o.value.trim()) o.value = text;
   else if (c) c.value = text;
+  _sysNotePreview();
 }
 async function _sysNoteSave() {
   const msg = document.getElementById('sysNoteMsg');
   const o = (document.getElementById('sysNoteOpen').value || '').trim();
   const c = (document.getElementById('sysNoteClose').value || '').trim();
-  msg.textContent = 'กำลังบันทึก...'; msg.className = 'sysnote-msg';
+  msg.textContent = 'กำลังบันทึก…'; msg.className = 'sn-msg';
   const r1 = await ckSetSysNote(_sysNoteDate, 'open', o);
   const r2 = await ckSetSysNote(_sysNoteDate, 'close', c);
-  if (r1 && r2) { msg.textContent = '✓ บันทึกแล้ว — ทุกสาขาเห็นตรงกัน'; msg.className = 'sysnote-msg ok'; }
-  else { msg.textContent = '⚠ บันทึกในเครื่องแล้ว แต่ขึ้นคลาวด์ไม่สำเร็จ — เครื่องอื่นจะยังไม่เห็น'; msg.className = 'sysnote-msg warn'; }
+  if (r1 && r2) { msg.textContent = '✓ บันทึกแล้ว — ทุกสาขาเห็นตรงกัน'; msg.className = 'sn-msg ok'; }
+  else { msg.textContent = '⚠ บันทึกในเครื่องนี้แล้ว แต่ขึ้นคลาวด์ไม่สำเร็จ — เครื่องอื่นยังไม่เห็น'; msg.className = 'sn-msg warn'; }
   _renderSfTable();
+  _sysNotePreview();
 }
 async function _sysNoteClear() {
   document.getElementById('sysNoteOpen').value = '';
   document.getElementById('sysNoteClose').value = '';
+  _sysNotePreview();
   await _sysNoteSave();
 }
 
