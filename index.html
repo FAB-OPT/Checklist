@@ -5031,6 +5031,73 @@ html.fab-sso-pending #login-screen { display: none !important; }
 #dashboard-screen .sf-kpi[data-tone="good"]    .sf-kpi-ico { background:var(--success-bg); color:var(--success); }
 #dashboard-screen .sf-kpi[data-tone="warn"]    .sf-kpi-ico { background:#FEF3C7; color:#B45309; }
 #dashboard-screen .sf-kpi[data-tone="danger"]  .sf-kpi-ico { background:var(--danger-bg); color:var(--danger); }
+/* ══ การ์ด "สถานะวันนี้" — เรื่องเดียวที่ต้องเห็นทันทีตอนเปิดหน้า ══ */
+#dashboard-screen .sft-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 18px; padding: 16px 18px 14px; margin-bottom: 14px;
+  box-shadow: 0 1px 3px rgba(15,23,42,.05);
+  border-left: 5px solid var(--success);
+}
+#dashboard-screen .sft-card[data-tone="warn"] { border-left-color: #E5A348; }
+#dashboard-screen .sft-card[data-tone="bad"]  { border-left-color: var(--danger); }
+#dashboard-screen .sft-head { display:flex; align-items:flex-end; gap:12px; margin-bottom:10px; }
+#dashboard-screen .sft-title {
+  font-size:16px; font-weight:900; color:var(--text); letter-spacing:-.2px;
+  display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; min-width:0;
+}
+#dashboard-screen .sft-date { font-size:12px; font-weight:700; color:var(--text-tertiary); }
+#dashboard-screen .sft-score { margin-left:auto; white-space:nowrap; font-variant-numeric:tabular-nums; }
+#dashboard-screen .sft-score b { font-size:26px; font-weight:900; color:var(--text); letter-spacing:-.5px; }
+#dashboard-screen .sft-score span { font-size:12px; font-weight:700; color:var(--text-tertiary); margin-left:4px; }
+#dashboard-screen .sft-bar {
+  height:8px; border-radius:999px; background:rgba(15,23,42,.08); overflow:hidden;
+}
+#dashboard-screen .sft-bar-fill { height:100%; border-radius:999px; background:var(--success); transition:width .3s; }
+#dashboard-screen .sft-card[data-tone="warn"] .sft-bar-fill { background:#E5A348; }
+#dashboard-screen .sft-card[data-tone="bad"]  .sft-bar-fill { background:var(--danger); }
+#dashboard-screen .sft-legend { display:flex; flex-wrap:wrap; gap:6px 16px; margin-top:9px; }
+#dashboard-screen .sft-l {
+  display:inline-flex; align-items:center; gap:6px;
+  font-size:12px; font-weight:700; color:var(--text-secondary);
+}
+#dashboard-screen .sft-l i { width:8px; height:8px; border-radius:50%; display:inline-block; }
+#dashboard-screen .sft-l.ok i   { background:var(--success); }
+#dashboard-screen .sft-l.warn i { background:#E5A348; }
+#dashboard-screen .sft-l.miss i { background:rgba(15,23,42,.22); }
+
+/* รายชื่อสาขาที่ยังไม่ส่ง — พับเก็บได้ ถ้าเยอะจะได้ไม่ดันเนื้อหาอื่นตกจอ */
+#dashboard-screen .sft-miss { margin-top:12px; border-top:1px solid var(--border); padding-top:10px; }
+#dashboard-screen .sft-miss > summary {
+  cursor:pointer; list-style:none; display:flex; align-items:center; gap:6px;
+  font-size:13px; font-weight:800; color:var(--danger);
+}
+#dashboard-screen .sft-miss > summary::-webkit-details-marker { display:none; }
+#dashboard-screen .sft-miss > summary b { font-size:15px; }
+#dashboard-screen .sft-chev { font-size:20px; transition:transform .2s; margin-left:auto; color:var(--text-tertiary); }
+#dashboard-screen .sft-miss[open] .sft-chev { transform:rotate(180deg); }
+#dashboard-screen .sft-chips { display:flex; flex-wrap:wrap; gap:7px; margin-top:10px; }
+#dashboard-screen .sft-chip {
+  display:inline-flex; align-items:center; gap:6px;
+  padding:7px 12px; border-radius:999px;
+  background:var(--danger-bg); border:1px solid rgba(199,50,35,.20);
+  font-size:12px; font-weight:700; color:var(--text);
+}
+#dashboard-screen .sft-chip .material-symbols-rounded { font-size:15px; color:var(--danger); }
+#dashboard-screen .sft-chip b { font-weight:800; color:var(--danger); font-size:11.5px; }
+#dashboard-screen .sft-done {
+  display:flex; align-items:center; gap:8px; margin-top:12px;
+  font-size:13px; font-weight:800; color:var(--success);
+}
+#dashboard-screen .sf-kpi-unit { font-size:13px; font-weight:800; color:var(--text-tertiary); margin-left:2px; }
+
+@media (max-width:520px) {
+  #dashboard-screen .sft-card { padding:14px 14px 12px; }
+  #dashboard-screen .sft-title { font-size:15px; }
+  #dashboard-screen .sft-score b { font-size:22px; }
+  #dashboard-screen .sft-chip { width:100%; justify-content:flex-start; border-radius:12px; }
+  #dashboard-screen .sft-chip b { margin-left:auto; }
+}
+
 /* การ์ดเนื้อหา — เงานุ่ม + หัวการ์ดมีเส้นคั่นบาง */
 #dashboard-screen .card { border-radius:18px; box-shadow:0 1px 3px rgba(15,23,42,.05); }
 #dashboard-screen .card > .card-header { padding-bottom:12px; margin-bottom:12px; border-bottom:1px solid var(--border); }
@@ -5222,6 +5289,9 @@ html.fab-sso-pending #login-screen { display: none !important; }
     <div id="dashboard-screen" style="display:none;">
       <!-- Operations Checklist (Daily เปิด-ปิดร้าน) -->
       <div id="sf-tab-checklist">
+        <!-- สถานะวันนี้ — เรื่องเดียวที่ต้องรู้ทันทีตอนเปิดหน้า: ใครยังไม่ส่ง
+             ของเดิมบอกแต่ "ส่งไปแล้วกี่ครั้ง" ซึ่งตอบไม่ได้ว่าขาดใครบ้าง -->
+        <div id="sf-today-status"></div>
         <div class="jd-dash-date-filter" id="sf-cl-date-chips"></div>
         <div class="jd-dash-filter" id="sf-cl-filter" style="display:none;margin-bottom:14px;">
           <select id="sf-cl-scope-select" class="jd-form-input" onchange="setSfClScope(this.value)">
@@ -7304,6 +7374,8 @@ function renderSfChecklistTab() {
   setupSfClScope();
   dailies = applySfClScopeFilter(dailies);
   dailies = applySfClDateFilter(dailies);
+  const stEl = document.getElementById('sf-today-status');
+  if (stEl) stEl.innerHTML = _sfTodayStatusHTML();
   const kEl  = document.getElementById('sf-cl-kpis');
   const tfEl = document.getElementById('sf-daily-topfails');
   const tEl  = document.getElementById('sf-daily-times');
@@ -7391,22 +7463,140 @@ function _isDailyLate(rec) {
   return ddMin > cutMin || (ddMin === cutMin && dd.getSeconds() > 0);
 }
 
+// ═══════════ สถานะการส่ง "วันนี้" — ใครยังไม่ส่ง ═══════════
+/* คำถามแรกของคนเปิดแดชบอร์ดรายวันคือ "วันนี้ใครยังไม่ส่ง" ไม่ใช่ "ส่งไปแล้วกี่ครั้ง"
+   ของเดิมมีแต่ยอดรวมของสิ่งที่ส่งมาแล้ว ซึ่งตอบไม่ได้เลยว่าขาดใคร
+   ตัวหารคือทะเบียนสาขาที่ผู้ใช้คนนี้ดูแล (เปิดอยู่) × 2 รอบ (เปิด-ปิด) */
+function _sfTodayScopeRoster() {
+  var roster = (typeof _visibleBranchRoster === 'function') ? _visibleBranchRoster() : [];
+  return roster.filter(function (b) {
+    if (sfClFilter.branch !== 'all') return String(b.code) === String(sfClFilter.branch);
+    if (sfClFilter.zone !== 'all') return _sfBranchZone(b.code) === sfClFilter.zone;
+    return true;
+  });
+}
+function _sfTodayStatus() {
+  var today = todayDateStr();
+  var roster = _sfTodayScopeRoster();
+  var all = (typeof getVisibleDailyChecklists === 'function') ? getVisibleDailyChecklists() : [];
+  var mine = {};
+  all.forEach(function (d) {
+    if (!d || d.date !== today) return;
+    var k = String(d.branchCode) + '|' + (d.shift || 'open');
+    /* เก็บอันที่ "ส่งแล้ว" ไว้ก่อน ถ้ามีทั้งร่างและตัวส่งจริงของรอบเดียวกัน */
+    if (!mine[k] || (!mine[k].submittedAt && d.submittedAt)) mine[k] = d;
+  });
+  var rows = roster.map(function (b) {
+    var o = mine[String(b.code) + '|open'];
+    var c = mine[String(b.code) + '|close'];
+    var st = function (rec) {
+      if (!rec || !rec.submittedAt) return 'none';
+      return _isDailyLate(rec) ? 'late' : 'ontime';
+    };
+    return { code: b.code, name: b.name, open: st(o), close: st(c), openRec: o, closeRec: c };
+  });
+  var done = 0, late = 0, miss = 0;
+  rows.forEach(function (r) {
+    [r.open, r.close].forEach(function (v) {
+      if (v === 'none') miss++; else { done++; if (v === 'late') late++; }
+    });
+  });
+  return { today: today, rows: rows, expected: roster.length * 2, done: done, late: late, miss: miss };
+}
+function _sfTodayStatusHTML() {
+  var st = _sfTodayStatus();
+  if (!st.expected) return '';
+  var pct = Math.round(st.done / st.expected * 100);
+  var tone = pct >= 100 ? 'good' : (pct >= 70 ? 'warn' : 'bad');
+  var missRows = st.rows.filter(function (r) { return r.open === 'none' || r.close === 'none'; });
+
+  var chip = function (r) {
+    var need = [];
+    if (r.open === 'none') need.push('เปิด');
+    if (r.close === 'none') need.push('ปิด');
+    return '<span class="sft-chip"><span class="material-symbols-rounded">storefront</span>'
+      + escapeHtml(branchLabel(r.code, r.name))
+      + '<b>ยังไม่ส่งรอบ' + need.join('/') + '</b></span>';
+  };
+
+  return '<div class="sft-card" data-tone="' + tone + '">'
+    + '<div class="sft-head">'
+    +   '<div class="sft-title">สถานะวันนี้'
+    +     '<span class="sft-date">' + escapeHtml(fmtDateThaiShort(st.today)) + '</span></div>'
+    +   '<div class="sft-score"><b>' + st.done + '</b><span>/ ' + st.expected + ' รอบ</span></div>'
+    + '</div>'
+    + '<div class="sft-bar"><div class="sft-bar-fill" style="width:' + Math.min(100, pct) + '%"></div></div>'
+    + '<div class="sft-legend">'
+    +   '<span class="sft-l ok"><i></i>ตรงเวลา ' + (st.done - st.late) + '</span>'
+    +   '<span class="sft-l warn"><i></i>เกินเวลา ' + st.late + '</span>'
+    +   '<span class="sft-l miss"><i></i>ยังไม่ส่ง ' + st.miss + '</span>'
+    + '</div>'
+    + (missRows.length
+        ? '<details class="sft-miss"' + (missRows.length <= 6 ? ' open' : '') + '>'
+          + '<summary>ยังไม่ส่ง <b>' + missRows.length + '</b> สาขา'
+          + '<span class="material-symbols-rounded sft-chev">expand_more</span></summary>'
+          + '<div class="sft-chips">' + missRows.map(chip).join('') + '</div></details>'
+        : '<div class="sft-done"><span class="material-symbols-rounded">task_alt</span> ส่งครบทุกสาขาแล้ววันนี้</div>')
+    + '</div>';
+}
+
 // แถบ KPI สรุปด้านบนของแท็บ Operations Checklist
+/* เปลี่ยนจาก "จำนวนดิบ" เป็น "อัตราส่วน + ตัวหาร"
+   ของเดิมบอกว่า "ข้อที่ตก 42 ข้อ" ซึ่งเทียบข้ามช่วงเวลาไม่ได้เลย
+   42 ข้อจาก 100 กับ 42 ข้อจาก 5,000 คนละเรื่องกัน */
 function _sfDailyKpisHTML(dailies) {
-  const total = dailies.length;
-  const late = dailies.filter(_isDailyLate).length;
-  let fails = 0;
-  dailies.forEach(d => (d.items || []).forEach(it => { if (it.status === 'fail') fails++; }));
-  const branches = new Set(dailies.map(d => d.branchCode || d.branchName || '-')).size;
-  const tile = (tone, icon, label, val, sub) =>
-    '<div class="jd-kpi sf-kpi" data-tone="' + tone + '">' +
-      '<div class="sf-kpi-ico"><span class="material-symbols-rounded">' + icon + '</span></div>' +
-      '<div class="sf-kpi-body"><div class="jd-kpi-label">' + label + '</div><div class="jd-kpi-value">' + val + '</div><div class="jd-kpi-sub">' + sub + '</div></div>' +
-    '</div>';
-  return tile('neutral', 'fact_check', 'การส่งทั้งหมด', total, 'ครั้ง') +
-    tile(late > 0 ? 'danger' : 'good', 'schedule', 'ส่งเกินเวลา', late, 'ครั้ง') +
-    tile('danger', 'report', 'ข้อที่ตกรวม', fails, 'ข้อ') +
-    (currentUser.role === 'branch' ? '' : tile('neutral', 'storefront', 'สาขาที่ส่ง', branches, 'สาขา'));
+  var total = dailies.length;
+  var late = dailies.filter(_isDailyLate).length;
+  var onTime = total - late;
+  var pass = 0, fail = 0;
+  var failBranches = {};
+  dailies.forEach(function (d) {
+    (d.items || []).forEach(function (it) {
+      if (!it) return;
+      if (it.status === 'pass') pass++;
+      else if (it.status === 'fail') {
+        fail++;
+        failBranches[d.branchCode || d.branchName || '-'] = 1;
+      }
+    });
+  });
+  var checked = pass + fail;
+  var branches = new Set(dailies.map(function (d) { return d.branchCode || d.branchName || '-'; })).size;
+  var rosterN = _sfTodayScopeRoster().length;
+
+  var pctOn = total ? Math.round(onTime / total * 100) : 0;
+  var pctPass = checked ? Math.round(pass / checked * 100) : 0;
+  var nFailBr = Object.keys(failBranches).length;
+
+  var tile = function (tone, icon, label, val, unit, sub) {
+    return '<div class="jd-kpi sf-kpi" data-tone="' + tone + '">'
+      + '<div class="sf-kpi-ico"><span class="material-symbols-rounded">' + icon + '</span></div>'
+      + '<div class="sf-kpi-body">'
+      +   '<div class="jd-kpi-label">' + label + '</div>'
+      +   '<div class="jd-kpi-value">' + val + (unit ? '<small class="sf-kpi-unit">' + unit + '</small>' : '') + '</div>'
+      +   '<div class="jd-kpi-sub">' + sub + '</div>'
+      + '</div></div>';
+  };
+
+  /* เหลือสาขาเดียว (สาขาล็อกอินเอง หรือแอดมินกรองเหลือสาขาเดียว)
+     การบอก "1 สาขา จาก 1" ไม่ได้ความรู้อะไร เปลี่ยนไปบอกแยกรอบเปิด-ปิดแทน */
+  var single = rosterN <= 1;
+  var nOpen = dailies.filter(function (d) { return (d.shift || 'open') !== 'close'; }).length;
+  var nClose = total - nOpen;
+
+  return tile('neutral', 'fact_check', 'การส่งทั้งหมด', total, ' ครั้ง',
+              single ? ('รอบเปิด ' + nOpen + ' · รอบปิด ' + nClose)
+                     : (branches + ' สาขา' + (rosterN ? ' จาก ' + rosterN : '')))
+    + tile(total === 0 ? 'neutral' : (pctOn >= 90 ? 'good' : (pctOn >= 70 ? 'warn' : 'danger')),
+           'schedule', 'ส่งตรงเวลา', total ? pctOn : '—', total ? '%' : '',
+           late > 0 ? ('เกินเวลา ' + late + ' ครั้ง') : 'ไม่มีที่เกินเวลา')
+    + tile(checked === 0 ? 'neutral' : (pctPass >= 95 ? 'good' : (pctPass >= 85 ? 'warn' : 'danger')),
+           'verified', 'ข้อที่ผ่าน', checked ? pctPass : '—', checked ? '%' : '',
+           checked ? ('ผ่าน ' + pass.toLocaleString() + ' จาก ' + checked.toLocaleString() + ' ข้อ') : 'ยังไม่มีข้อมูล')
+    + tile(fail > 0 ? 'danger' : 'good', 'report', 'ข้อที่ตก', fail, ' ข้อ',
+           fail === 0 ? 'ไม่มีข้อตก'
+             : (single ? ('จากที่ตรวจ ' + checked.toLocaleString() + ' ข้อ')
+                       : ('พบใน ' + nFailBr + ' สาขา')));
 }
 
 // สรุปหมวดที่ตก (รายวัน) — จัดกลุ่มตามหมวดของ Daily checklist (จุดเตรียมงาน/PASTA/STEAK…)
