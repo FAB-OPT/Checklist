@@ -5292,6 +5292,12 @@ html.fab-sso-pending #login-screen { display: none !important; }
         <!-- สถานะวันนี้ — เรื่องเดียวที่ต้องรู้ทันทีตอนเปิดหน้า: ใครยังไม่ส่ง
              ของเดิมบอกแต่ "ส่งไปแล้วกี่ครั้ง" ซึ่งตอบไม่ได้ว่าขาดใครบ้าง -->
         <div id="sf-today-status"></div>
+        <div class="sfrep-open" data-ck-action="report-sf">
+          <div class="sfrep-open-t">ต้องส่งให้ผู้บริหาร หรือเก็บไว้เป็นหลักฐาน — ออกเป็นไฟล์ได้ทั้ง PDF และ Excel</div>
+          <button type="button" class="btn btn-secondary" onclick="SFRep.open()">
+            <span class="material-symbols-rounded">download</span> ออกรายงาน
+          </button>
+        </div>
         <div class="jd-dash-date-filter" id="sf-cl-date-chips"></div>
         <div class="jd-dash-filter" id="sf-cl-filter" style="display:none;margin-bottom:14px;">
           <select id="sf-cl-scope-select" class="jd-form-input" onchange="setSfClScope(this.value)">
@@ -7697,6 +7703,7 @@ const CK_ACTIONS = [
   { id: 'view-jd-dash',  group: 'menu',   label: 'แดชบอร์ด (เจ๊แดง)',    roles: ['admin','coo','vp','bzm'] },
   { id: 'view-jd-hub',   group: 'menu',   label: 'ตรวจร้าน (เจ๊แดง)',    roles: ['admin','coo','vp','bzm','branch'] },
   { id: 'print-detail',  group: 'export', label: 'พิมพ์ผลตรวจ',          roles: ['admin','coo','vp','bzm'] },
+  { id: 'report-sf',     group: 'export', label: 'ออกรายงาน (ซานตาเฟ่)', roles: ['admin','bzm'] },
   { id: 'delete-daily',  group: 'danger', label: 'ลบผลตรวจ (ซานตาเฟ่)',  roles: ['admin'], danger: true },
   { id: 'delete-jd',     group: 'danger', label: 'ลบผลตรวจ (เจ๊แดง)',    roles: ['admin'], danger: true },
   /* ปุ่มบันทึกของสองระบบต้องแยกสิทธิ์กัน — ซานตาเฟ่สาขากรอกเอง ส่วนเจ๊แดงเป็นการตรวจร้าน
@@ -10846,25 +10853,56 @@ function _jdPlainPrint(footerText, footerElId) {
 function printJaedaengDetail() { return _printDetailPDF('jaedaeng-detail-screen', 'jd-print-footer'); }
 function printDailyDetail()    { return _printDetailPDF('daily-detail-screen',    'daily-print-footer'); }
 
+/* รอรูปให้โหลดครบก่อนสั่งพิมพ์
+   รูปในผลตรวจถูกอัปโหลดขึ้นคลาวด์แล้วเก็บไว้เป็น "ลิงก์" เวลาพิมพ์จึงต้องโหลดผ่านเน็ตจริง ๆ
+   ถ้าสั่งพิมพ์ก่อนรูปมาถึง จะได้ช่องว่างแทนรูป · ยิ่งรายงานหลายใบ รูปยิ่งเยอะ ยิ่งไม่ทัน */
+function _waitImages(doc, onProgress) {
+  const imgs = Array.from(doc.images || []);
+  const ready = (i) => i.complete && i.naturalWidth > 0;
+  const left = () => imgs.filter(i => !ready(i)).length;
+  if (!imgs.length || !left()) return Promise.resolve({ total: imgs.length, missing: 0 });
+  let done = imgs.length - left();
+  const tick = () => { done++; if (onProgress) onProgress(done, imgs.length); };
+  const one = (img) => new Promise(res => {
+    if (ready(img)) return res();
+    img.addEventListener('load', () => { tick(); res(); }, { once: true });
+    img.addEventListener('error', () => { tick(); res(); }, { once: true });
+  });
+  /* กันค้าง: ให้เวลาตามจำนวนรูป แต่ไม่เกินหนึ่งนาที
+     เน็ตแย่จริงก็ยอมพิมพ์เท่าที่ได้ ดีกว่าค้างจนกดอะไรไม่ได้ */
+  return Promise.race([
+    Promise.all(imgs.map(one)),
+    new Promise(res => setTimeout(res, Math.min(60000, 6000 + imgs.length * 1200)))
+  ]).then(() => ({ total: imgs.length, missing: left() }));
+}
+
+// ออก PDF หน้ารายละเอียดเช็คลิสต์ (ใช้ร่วมกันทั้ง เจ๊แดง และ ซานตาเฟ่)
 async function _printDetailPDF(screenId, footerElId) {
-  if (window._jdPrinting) return;
-  window._jdPrinting = true;
-  const footerText = _jdPrintFooterText();
   const screen = document.getElementById(screenId);
-  if (!screen) { window._jdPrinting = false; _jdPlainPrint(footerText, footerElId); return; }
-
-  // ตัวบอกสถานะระหว่างสร้าง PDF
-  const overlay = document.createElement('div');
-  overlay.id = 'jd-pdf-overlay';
-  overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.45);color:#fff;font-size:15px;font-weight:700;';
-  overlay.textContent = 'กำลังสร้าง PDF…';
-  document.body.appendChild(overlay);
-  const killOverlay = () => { const o = document.getElementById('jd-pdf-overlay'); if (o) o.remove(); window._jdPrinting = false; };
-
+  if (!screen) { _jdPlainPrint(_jdPrintFooterText(), footerElId); return; }
   // เตรียมเนื้อหารายงาน (ตัดปุ่ม/footer เดิม + ลบ id กันซ้ำ)
   const src = screen.cloneNode(true);
   src.querySelectorAll('.no-print, .print-footer').forEach(e => e.remove());
   src.querySelectorAll('[id]').forEach(e => e.removeAttribute('id'));
+  return _printHtmlPDF(src.innerHTML, footerElId, { cls: 'pdf-report container' });
+}
+
+/* พิมพ์ HTML ก้อนหนึ่งออกเป็น PDF ด้วย Paged.js (แบ่งหน้า + เลขหน้า X/Y + footer ต่อหน้า)
+   ใช้ร่วมกันสองทาง: หน้ารายละเอียดรายใบ และรายงานที่ประกอบขึ้นเอง (SFRep)
+   opts = { cls, extraCss, filename } */
+async function _printHtmlPDF(bodyHtml, footerElId, opts) {
+  if (window._jdPrinting) return;
+  window._jdPrinting = true;
+  opts = opts || {};
+  const footerText = _jdPrintFooterText();
+
+  // ตัวบอกสถานะระหว่างสร้าง PDF
+  const overlay = document.createElement('div');
+  overlay.id = 'jd-pdf-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.45);color:#fff;font-size:15px;font-weight:600;text-align:center;padding:24px;';
+  overlay.textContent = 'กำลังสร้าง PDF…';
+  document.body.appendChild(overlay);
+  const killOverlay = () => { const o = document.getElementById('jd-pdf-overlay'); if (o) o.remove(); window._jdPrinting = false; };
 
   // สร้าง iframe พิมพ์แยก (ไม่กระทบ DOM/สไตล์แอป)
   const old = document.getElementById('jd-pdf-frame');
@@ -10878,7 +10916,7 @@ async function _printDetailPDF(screenId, footerElId) {
   doc.write('<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head><body></body></html>');
   doc.close();
 
-  // ก๊อปฟอนต์ + สไตล์ของแอปเข้า iframe เพื่อให้รายงานหน้าตาเหมือนเดิม
+  // ก๊อปฟอนต์ + สไตล์ของแอปเข้า iframe เพื่อให้รายงานหน้าตาเหมือนบนจอ
   document.querySelectorAll('link[rel="stylesheet"]').forEach(l => {
     const nl = doc.createElement('link'); nl.rel = 'stylesheet'; nl.href = l.href; doc.head.appendChild(nl);
   });
@@ -10889,33 +10927,45 @@ async function _printDetailPDF(screenId, footerElId) {
   // สไตล์รายงาน + @page (footer ซ้าย, เลขหน้า X/Y ขวา) — Paged.js polyfill ให้ครบทุกเบราว์เซอร์
   const ft = footerText.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
   const extra = doc.createElement('style');
-  extra.textContent = PDF_REPORT_CSS +
-    `@page { size:A4 portrait; margin:14mm 12mm 16mm;` +
+  extra.textContent = PDF_REPORT_CSS + (opts.extraCss || '') +
+    `@page { size:${opts.landscape ? 'A4 landscape' : 'A4 portrait'}; margin:14mm 12mm 16mm;` +
     ` @bottom-left { content:"${ft}"; font-size:8pt; color:#555; }` +
     ` @bottom-right { content:"หน้า " counter(page) " / " counter(pages); font-size:8pt; color:#666; } }`;
   doc.head.appendChild(extra);
 
   // เนื้อหารายงาน
   const wrap = doc.createElement('div');
-  wrap.className = 'pdf-report container';
-  wrap.innerHTML = src.innerHTML;
+  wrap.className = opts.cls || 'pdf-report';
+  wrap.innerHTML = bodyHtml;
   doc.body.appendChild(wrap);
+
+  // ตั้งชื่อไฟล์ที่กล่องบันทึกเสนอให้ (เบราว์เซอร์ใช้ title ของหน้าที่พิมพ์)
+  const oldTitle = document.title;
+  if (opts.filename) doc.title = document.title = opts.filename.replace(/\.pdf$/i, '');
 
   // เก็บกวาด iframe หลังพิมพ์เสร็จ/ยกเลิก
   let cleaned = false;
-  const cleanup = () => { if (cleaned) return; cleaned = true; killOverlay(); setTimeout(() => { const f = document.getElementById('jd-pdf-frame'); if (f) f.remove(); }, 400); };
+  const cleanup = () => {
+    if (cleaned) return; cleaned = true; killOverlay();
+    document.title = oldTitle;
+    setTimeout(() => { const f = document.getElementById('jd-pdf-frame'); if (f) f.remove(); }, 500);
+  };
   try { iframe.contentWindow.addEventListener('afterprint', cleanup); } catch (e) {}
   // ปิด overlay เมื่อกล่องพิมพ์เปิด (พิมพ์เริ่มทำงาน)
   try { iframe.contentWindow.addEventListener('beforeprint', killOverlay); } catch (e) {}
-  setTimeout(cleanup, 60000); // safety net
+  setTimeout(cleanup, 120000); // safety net
 
   // รอรูป + ฟอนต์พร้อมก่อนแบ่งหน้า
+  let imgStat = { total: 0, missing: 0 };
   try {
-    const imgs = Array.from(doc.images);
-    await Promise.race([
-      Promise.all(imgs.map(img => img.complete ? true : new Promise(res => { img.onload = img.onerror = res; }))),
-      new Promise(res => setTimeout(res, 5000))
-    ]);
+    imgStat = await _waitImages(doc, (n, all) => {
+      const o = document.getElementById('jd-pdf-overlay');
+      if (o) o.textContent = `กำลังโหลดรูป ${n}/${all} …`;
+    });
+    const o = document.getElementById('jd-pdf-overlay');
+    if (o) o.textContent = imgStat.missing
+      ? `มี ${imgStat.missing} รูปโหลดไม่สำเร็จ — กำลังจัดหน้า…`
+      : 'กำลังจัดหน้า…';
     if (doc.fonts && doc.fonts.ready) { await Promise.race([doc.fonts.ready, new Promise(res => setTimeout(res, 3000))]); }
   } catch (e) {}
 
@@ -10927,10 +10977,14 @@ async function _printDetailPDF(screenId, footerElId) {
   // โหลด Paged.js เข้า iframe (auto รันเอง) — ถ้าโหลดไม่ได้ → fallback พิมพ์แบบเดิม
   const pg = doc.createElement('script');
   pg.src = 'https://unpkg.com/pagedjs/dist/paged.polyfill.js';
-  pg.onerror = () => { killOverlay(); const f = document.getElementById('jd-pdf-frame'); if (f) f.remove(); _jdPlainPrint(footerText, footerElId); };
+  pg.onerror = () => {
+    killOverlay(); document.title = oldTitle;
+    const f = document.getElementById('jd-pdf-frame'); if (f) f.remove();
+    _jdPlainPrint(footerText, footerElId);
+  };
   doc.body.appendChild(pg);
   // เผื่อ Paged.js ไม่ยิง before/afterprint (บางเบราว์เซอร์) — ปิด overlay อัตโนมัติ
-  setTimeout(killOverlay, 8000);
+  setTimeout(killOverlay, 15000);
 }
 
 // เลื่อนไปข้อที่ระบุในหน้า detail + กระพริบให้เห็นชัด
@@ -11094,6 +11148,819 @@ const _ssoLikely = _hasValidSessionSync();
   redirectToHubLogin();
 })();
 
+
+/* ════════════════════════════════════════════════════════════════
+   ออกรายงาน Daily Open-Close Checklist (ซานตาเฟ่) — PDF / Excel
+   4 แบบ: การส่งรายวัน · สรุปตามช่วงเวลา · หัวข้อที่ตกบ่อย · รายละเอียดหลายใบ
+   ข้อมูลทั้งหมดผ่าน getVisibleDailyChecklists() กับ _visibleBranchRoster()
+   จึงถูกจำกัดตามสิทธิ์ของผู้ใช้อยู่แล้ว BZM เห็นเฉพาะสาขาที่ตัวเองดูแล
+   ════════════════════════════════════════════════════════════════ */
+
+/* หน้าตาเอกสารรายงาน — เขียนแยกจากสไตล์ของหน้าจอ เพราะรายงานคือกระดาษ A4
+   ไม่ใช่หน้าเว็บย่อส่วน ใช้ตัวเลขความกว้างเป็น % เพื่อให้พอดีหน้าเสมอ */
+const SFR_CSS = `
+.sfr{font-size:10pt;color:#111;line-height:1.45}
+.sfr *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.sfr-bar{height:4px;background:#D63622;border-radius:2px;margin-bottom:10px}
+.sfr-org{font-size:7.5pt;letter-spacing:.16em;text-transform:uppercase;color:#D63622;font-weight:800}
+.sfr h1{font-size:17pt;font-weight:900;letter-spacing:-.3px;margin:4px 0 0;color:#111}
+.sfr-meta{display:flex;flex-wrap:wrap;gap:4px 18px;margin-top:7px;padding-bottom:9px;
+  border-bottom:1.5px solid #111;font-size:8.5pt;color:#444}
+.sfr-meta b{color:#111;font-weight:800}
+.sfr-figs{display:flex;gap:0;margin:12px 0 14px;border:1px solid #C9CDD4;border-radius:4px;overflow:hidden}
+.sfr-fig{flex:1;padding:8px 10px;border-right:1px solid #C9CDD4;text-align:center}
+.sfr-fig:last-child{border-right:none}
+.sfr-fig b{display:block;font-size:15pt;font-weight:900;line-height:1.1;color:#111}
+.sfr-fig span{display:block;font-size:7.5pt;color:#666;margin-top:2px}
+.sfr-fig.ok b{color:#1E6B36}.sfr-fig.warn b{color:#9A6212}.sfr-fig.bad b{color:#B3261E}
+.sfr-band{display:flex;height:7px;border-radius:4px;overflow:hidden;background:#EDEFF2;margin:-6px 0 14px}
+.sfr-band i{display:block;height:100%}
+.sfr-band i.ok{background:#2E9E5B}.sfr-band i.warn{background:#E0A32E}.sfr-band i.bad{background:#D64545}
+.sfr-h2{font-size:11pt;font-weight:900;margin:14px 0 6px;padding-bottom:3px;border-bottom:1px solid #C9CDD4}
+.sfr-tb{width:100%;border-collapse:collapse;table-layout:fixed;font-size:8.5pt;margin-bottom:10px}
+.sfr-tb thead{display:table-header-group}
+.sfr-tb tr{page-break-inside:avoid;break-inside:avoid}
+.sfr-tb th{background:#2B2F36;color:#fff;font-weight:700;text-align:left;padding:5px 6px;
+  border:1px solid #2B2F36;font-size:8pt}
+.sfr-tb td{padding:4px 6px;border:1px solid #D5D8DE;vertical-align:top;
+  overflow:hidden;text-overflow:ellipsis}
+.sfr-tb td.c,.sfr-tb th.c{text-align:center}
+.sfr-tb td.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.sfr-tb td.nw{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sfr-tb tbody tr:nth-child(even) td{background:#F7F8FA}
+.sfr-tb tr.grp td{background:#E9EBEF;font-weight:800;font-size:8.5pt}
+.sfr-tb tr.sum td{background:#F0F1F4;font-weight:800}
+.sfr-pill{display:inline-block;padding:0 6px;border-radius:8px;font-size:7.5pt;font-weight:800;white-space:nowrap}
+.sfr-pill.ok{background:#DCF0E3;color:#1E6B36}
+.sfr-pill.late{background:#FBEBCB;color:#8A5A08}
+.sfr-pill.miss{background:#F7D9D4;color:#8A2318}
+.sfr-pill.na{background:#EBEDF0;color:#5A6068}
+.sfr-card{border:1px solid #C9CDD4;border-radius:5px;margin-bottom:11px;page-break-inside:avoid;break-inside:avoid}
+.sfr-card-h{background:#F2F3F6;border-bottom:1px solid #C9CDD4;padding:7px 10px;display:flex;
+  justify-content:space-between;align-items:baseline;gap:10px}
+.sfr-card-h b{font-size:10.5pt;font-weight:900}
+.sfr-card-h small{font-size:8pt;color:#555}
+.sfr-card-b{padding:8px 10px}
+.sfr-sec{font-size:8.5pt;font-weight:800;background:#EDEFF2;padding:3px 7px;margin:7px 0 4px;border-radius:3px}
+.sfr-it{display:flex;gap:8px;padding:3px 2px;border-bottom:1px dotted #DADDE3;font-size:8.5pt}
+.sfr-it:last-child{border-bottom:none}
+.sfr-it .t{flex:1}
+.sfr-note{background:#FBEDEA;color:#7A1F10;border-radius:3px;padding:3px 7px;margin:3px 0 5px 22px;font-size:8pt}
+.sfr-ph{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin:4px 0 6px 22px}
+.sfr-ph img{width:100%;aspect-ratio:4/3;object-fit:cover;border:1px solid #C9CDD4;border-radius:3px}
+.sfr-break{break-after:page;page-break-after:always;height:0}
+.sfr-empty{padding:22px;text-align:center;color:#777;font-size:9.5pt;border:1px dashed #C9CDD4;border-radius:5px}
+.sfr-foot{margin-top:12px;padding-top:7px;border-top:1px solid #C9CDD4;font-size:7.5pt;color:#666;line-height:1.5}
+`;
+
+const SFRep = {
+  S: { type: 'submit', from: '', to: '', zone: 'all', branch: 'all', shift: 'all', photos: true },
+
+  TYPES: [
+    { k: 'submit',  t: 'สรุปการส่งรายวัน',        d: 'สาขาไหนส่งครบ ใครส่งสาย ใครยังไม่ส่ง — ดูเป็นรายวัน' },
+    { k: 'period',  t: 'สรุปตามช่วงเวลา',          d: 'รายสาขา/รายโซน: อัตราส่ง ตรงเวลา ผ่านเกณฑ์ ข้อที่ตก' },
+    { k: 'topfail', t: 'หัวข้อที่ตกบ่อย',           d: 'ข้อไหนตกมากที่สุด คิดเป็นกี่ % และสาขาไหนตกบ่อย' },
+    { k: 'detail',  t: 'รายละเอียดหลายใบ',        d: 'ผลตรวจทีละใบ พร้อมหมายเหตุและรูปของข้อที่ตก' },
+  ],
+  QUICK: [
+    { k: 'today', t: 'วันนี้' }, { k: '7', t: '7 วันล่าสุด' },
+    { k: 'mtd', t: 'เดือนนี้' }, { k: 'lastm', t: 'เดือนที่แล้ว' },
+  ],
+
+  /* ── เปิด/ปิดกล่อง ── */
+  open() {
+    if (typeof ckCan === 'function' && !ckCan('report-sf')) { showModal('ไม่มีสิทธิ์', 'บัญชีนี้ยังไม่ได้รับสิทธิ์ออกรายงาน — ติดต่อผู้ดูแลระบบ'); return; }
+    /* ตั้งต้นตามที่เลือกอยู่บนแดชบอร์ด จะได้ไม่ต้องเลือกซ้ำ */
+    if (typeof sfClFilter === 'object' && sfClFilter) {
+      this.S.zone = sfClFilter.zone || 'all';
+      this.S.branch = sfClFilter.branch || 'all';
+    }
+    if (!this.S.from) this.setQuick('7', true);
+    this.paintTypes(); this.paintQuick(); this.paintScope();
+    document.getElementById('sfrep-from').value = this.S.from;
+    document.getElementById('sfrep-to').value = this.S.to;
+    document.getElementById('sfrep-shift').value = this.S.shift;
+    document.getElementById('sfrep-photos').checked = this.S.photos;
+    document.getElementById('sfrep-ov').classList.add('show');
+    this.preview();
+  },
+  close() { document.getElementById('sfrep-ov').classList.remove('show'); },
+
+  set(k, v) { this.S[k] = v; if (k === 'from' || k === 'to') this.paintQuick(); this.preview(); },
+  setType(t) { this.S.type = t; this.paintTypes(); this.preview(); },
+  setZone(z) {
+    this.S.zone = z;
+    /* เปลี่ยนโซนแล้วสาขาที่เลือกไว้อาจไม่อยู่ในโซนใหม่ — ล้างทิ้งดีกว่าปล่อยให้ขัดกันเงียบ ๆ */
+    this.S.branch = 'all';
+    this.paintScope(); this.preview();
+  },
+
+  /* ── ช่วงวันที่แบบกดครั้งเดียว ── */
+  setQuick(k, silent) {
+    const iso = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    const now = new Date(); now.setHours(0, 0, 0, 0);
+    let from = new Date(now), to = new Date(now);
+    if (k === '7') { from.setDate(from.getDate() - 6); }
+    else if (k === 'mtd') { from = new Date(now.getFullYear(), now.getMonth(), 1); }
+    else if (k === 'lastm') {
+      from = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      to = new Date(now.getFullYear(), now.getMonth(), 0);
+    }
+    this.S.from = iso(from); this.S.to = iso(to);
+    if (silent) return;
+    document.getElementById('sfrep-from').value = this.S.from;
+    document.getElementById('sfrep-to').value = this.S.to;
+    this.paintQuick(); this.preview();
+  },
+  quickKey() {
+    const cur = this.S.from + '|' + this.S.to;
+    const save = { from: this.S.from, to: this.S.to };
+    let hit = '';
+    this.QUICK.forEach((q) => { this.setQuick(q.k, true); if (this.S.from + '|' + this.S.to === cur) hit = q.k; });
+    this.S.from = save.from; this.S.to = save.to;
+    return hit;
+  },
+
+  /* ── วาดตัวเลือกในกล่อง ── */
+  paintTypes() {
+    document.getElementById('sfrep-types').innerHTML = this.TYPES.map((x) =>
+      `<button type="button" class="sfrep-type${this.S.type === x.k ? ' on' : ''}" onclick="SFRep.setType('${x.k}')">
+        <b>${escapeHtml(x.t)}</b><span>${escapeHtml(x.d)}</span></button>`).join('');
+    const row = document.getElementById('sfrep-photo-row');
+    if (row) row.style.display = this.S.type === 'detail' ? '' : 'none';
+  },
+  paintQuick() {
+    const cur = this.quickKey();
+    document.getElementById('sfrep-quick').innerHTML = this.QUICK.map((q) =>
+      `<button type="button" class="sfrep-chip${cur === q.k ? ' on' : ''}" onclick="SFRep.setQuick('${q.k}')">${escapeHtml(q.t)}</button>`).join('');
+  },
+  paintScope() {
+    const all = (typeof _visibleBranchRoster === 'function') ? _visibleBranchRoster() : [];
+    const zones = []; const seen = {};
+    all.forEach((b) => { const z = _sfBranchZone(b.code); if (z && !seen[z]) { seen[z] = 1; zones.push(z); } });
+    zones.sort();
+    const zs = document.getElementById('sfrep-zone');
+    zs.innerHTML = '<option value="all">ทุกโซน</option>' + zones.map((z) => `<option value="${escapeAttr(z)}">${escapeHtml(z)}</option>`).join('');
+    zs.value = this.S.zone;
+    const pool = this.S.zone === 'all' ? all : all.filter((b) => _sfBranchZone(b.code) === this.S.zone);
+    const bs = document.getElementById('sfrep-branch');
+    bs.innerHTML = '<option value="all">ทุกสาขา</option>' + pool.map((b) =>
+      `<option value="${escapeAttr(b.code)}">${escapeHtml(branchLabel(b.code, b.name))}</option>`).join('');
+    bs.value = pool.some((b) => String(b.code) === String(this.S.branch)) ? this.S.branch : 'all';
+    this.S.branch = bs.value;
+  },
+
+  /* ── ขอบเขตข้อมูล ── */
+  roster() {
+    let list = (typeof _visibleBranchRoster === 'function') ? _visibleBranchRoster() : [];
+    if (this.S.branch !== 'all') return list.filter((b) => String(b.code) === String(this.S.branch));
+    if (this.S.zone !== 'all') return list.filter((b) => _sfBranchZone(b.code) === this.S.zone);
+    return list;
+  },
+  dateList() {
+    const out = [];
+    if (!this.S.from || !this.S.to || this.S.from > this.S.to) return out;
+    const d = new Date(this.S.from + 'T00:00:00'), end = new Date(this.S.to + 'T00:00:00');
+    while (d <= end && out.length < 190) {   /* กันช่วงยาวจนเครื่องค้าง */
+      out.push(d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'));
+      d.setDate(d.getDate() + 1);
+    }
+    return out;
+  },
+  /* หนึ่งสาขา-วัน-รอบ อาจมีทั้งร่างและตัวที่ส่งจริง — เอาตัวที่ส่งแล้วเป็นหลัก
+     (กติกาเดียวกับการ์ดสถานะวันนี้ ไม่งั้นตัวเลขสองที่จะไม่ตรงกัน) */
+  records() {
+    const codes = {}; this.roster().forEach((b) => { codes[String(b.code)] = 1; });
+    const all = (typeof getVisibleDailyChecklists === 'function') ? getVisibleDailyChecklists() : [];
+    const m = {};
+    all.forEach((d) => {
+      if (!d || !d.date || !codes[String(d.branchCode)]) return;
+      if (this.S.from && d.date < this.S.from) return;
+      if (this.S.to && d.date > this.S.to) return;
+      const sh = d.shift || 'open';
+      if (this.S.shift !== 'all' && sh !== this.S.shift) return;
+      const k = String(d.branchCode) + '|' + d.date + '|' + sh;
+      if (!m[k] || (!m[k].submittedAt && d.submittedAt)) m[k] = d;
+    });
+    return Object.keys(m).map((k) => m[k]);
+  },
+  stat(d) {
+    let pass = 0, fail = 0, na = 0;
+    ((d && d.items) || []).forEach((it) => {
+      if (!it) return;
+      if (it.status === 'pass') pass++;
+      else if (it.status === 'fail') fail++;
+      else na++;
+    });
+    const graded = pass + fail;
+    return { pass, fail, na, graded, pct: graded ? Math.round(pass / graded * 1000) / 10 : null };
+  },
+  sentTime(d) {
+    const t = d && (d.submittedAt || d.startedAt);
+    if (!t) return '';
+    const x = new Date(t);
+    if (isNaN(x.getTime())) return '';
+    return String(x.getHours()).padStart(2, '0') + ':' + String(x.getMinutes()).padStart(2, '0');
+  },
+  shiftName(s) { return s === 'close' ? 'ปิดร้าน' : 'เปิดร้าน'; },
+
+  /* ── ข้อมูลของแต่ละรายงาน ── */
+  dataSubmit() {
+    const recs = this.records(), roster = this.roster(), dates = this.dateList();
+    const by = {};
+    recs.forEach((d) => { by[String(d.branchCode) + '|' + d.date + '|' + (d.shift || 'open')] = d; });
+    const shifts = this.S.shift === 'all' ? ['open', 'close'] : [this.S.shift];
+    const rows = [];
+    dates.forEach((dt) => {
+      roster.forEach((b) => {
+        const cell = {};
+        shifts.forEach((sh) => {
+          const r = by[String(b.code) + '|' + dt + '|' + sh];
+          const st = this.stat(r);
+          cell[sh] = {
+            state: !r || !r.submittedAt ? 'miss' : (_isDailyLate(r) ? 'late' : 'ok'),
+            time: this.sentTime(r), pct: st.pct, fail: st.fail,
+          };
+        });
+        rows.push({ date: dt, code: b.code, name: b.name, zone: _sfBranchZone(b.code), shifts: shifts, cell: cell });
+      });
+    });
+    let need = 0, ok = 0, late = 0, miss = 0;
+    rows.forEach((r) => r.shifts.forEach((sh) => {
+      need++;
+      const s = r.cell[sh].state;
+      if (s === 'miss') miss++; else { ok++; if (s === 'late') late++; }
+    }));
+    return { rows: rows, sum: { need: need, sent: ok, onTime: ok - late, late: late, miss: miss }, dates: dates };
+  },
+
+  dataPeriod() {
+    const recs = this.records(), roster = this.roster(), days = this.dateList().length;
+    const perShift = this.S.shift === 'all' ? 2 : 1;
+    const map = {};
+    roster.forEach((b) => {
+      map[String(b.code)] = { code: b.code, name: b.name, zone: _sfBranchZone(b.code),
+        need: days * perShift, sent: 0, late: 0, pass: 0, fail: 0 };
+    });
+    recs.forEach((d) => {
+      const m = map[String(d.branchCode)]; if (!m) return;
+      if (d.submittedAt) { m.sent++; if (_isDailyLate(d)) m.late++; }
+      const st = this.stat(d); m.pass += st.pass; m.fail += st.fail;
+    });
+    const rows = Object.keys(map).map((k) => {
+      const m = map[k], graded = m.pass + m.fail;
+      m.sentPct = m.need ? Math.round(m.sent / m.need * 1000) / 10 : null;
+      m.onTime = m.sent - m.late;
+      m.onTimePct = m.sent ? Math.round(m.onTime / m.sent * 1000) / 10 : null;
+      m.graded = graded;
+      m.passPct = graded ? Math.round(m.pass / graded * 1000) / 10 : null;
+      return m;
+    }).sort((a, b) => (a.zone || '').localeCompare(b.zone || '', 'th') || String(a.code).localeCompare(String(b.code)));
+    const tot = rows.reduce((a, r) => {
+      a.need += r.need; a.sent += r.sent; a.late += r.late; a.pass += r.pass; a.fail += r.fail; return a;
+    }, { need: 0, sent: 0, late: 0, pass: 0, fail: 0 });
+    tot.onTime = tot.sent - tot.late;
+    tot.graded = tot.pass + tot.fail;
+    tot.sentPct = tot.need ? Math.round(tot.sent / tot.need * 1000) / 10 : null;
+    tot.onTimePct = tot.sent ? Math.round(tot.onTime / tot.sent * 1000) / 10 : null;
+    tot.passPct = tot.graded ? Math.round(tot.pass / tot.graded * 1000) / 10 : null;
+    return { rows: rows, total: tot, days: days };
+  },
+
+  dataTopFail() {
+    const recs = this.records();
+    const m = {};
+    recs.forEach((d) => {
+      const bn = branchLabel(d.branchCode, d.branchName);
+      (d.items || []).forEach((it) => {
+        if (!it || (it.status !== 'pass' && it.status !== 'fail')) return;
+        const sec = it.section || '-';
+        const k = sec + '||' + it.text;
+        if (!m[k]) m[k] = { section: sec, text: it.text, fail: 0, total: 0, br: {}, shifts: {} };
+        m[k].total++;
+        if (it.status === 'fail') {
+          m[k].fail++;
+          m[k].br[bn] = (m[k].br[bn] || 0) + 1;
+          m[k].shifts[d.shift || 'open'] = 1;
+        }
+      });
+    });
+    const rows = Object.keys(m).map((k) => m[k]).filter((r) => r.fail > 0).map((r) => {
+      const names = Object.keys(r.br).sort((a, b) => r.br[b] - r.br[a]);
+      r.pct = r.total ? Math.round(r.fail / r.total * 1000) / 10 : 0;
+      r.branchCount = names.length;
+      r.topBranches = names.slice(0, 3).map((n) => n + ' (' + r.br[n] + ')').join(', ');
+      r.shiftText = Object.keys(r.shifts).length === 2 ? 'เปิด+ปิด' : (r.shifts.close ? 'ปิด' : 'เปิด');
+      return r;
+    }).sort((a, b) => b.fail - a.fail || b.pct - a.pct);
+    const totFail = rows.reduce((s, r) => s + r.fail, 0);
+    return { rows: rows, totalFail: totFail };
+  },
+
+  dataDetail() {
+    return this.records().sort((a, b) =>
+      (a.date || '').localeCompare(b.date || '') ||
+      String(a.branchCode).localeCompare(String(b.branchCode)) ||
+      String(a.shift || 'open').localeCompare(String(b.shift || 'open')));
+  },
+
+  /* ── บรรทัดสรุปในกล่อง (บอกก่อนกด ว่าจะได้อะไร) ── */
+  scopeText() {
+    const r = this.roster();
+    const who = this.S.branch !== 'all'
+      ? branchLabel(this.S.branch, (r[0] || {}).name || '')
+      : (this.S.zone !== 'all' ? 'โซน ' + this.S.zone : 'ทุกสาขา') + ' (' + r.length + ' สาขา)';
+    const sh = this.S.shift === 'all' ? 'ทั้งเปิดและปิด' : (this.S.shift === 'open' ? 'เฉพาะรอบเปิด' : 'เฉพาะรอบปิด');
+    return who + ' · ' + sh;
+  },
+  rangeText() {
+    if (!this.S.from || !this.S.to) return '—';
+    if (this.S.from === this.S.to) return fmtDateThaiShort(this.S.from);
+    return fmtDateThaiShort(this.S.from) + ' – ' + fmtDateThaiShort(this.S.to);
+  },
+  preview() {
+    const el = document.getElementById('sfrep-pv'); if (!el) return;
+    el.className = 'sfrep-pv';
+    if (!this.S.from || !this.S.to) { el.innerHTML = 'เลือกช่วงวันที่ก่อน'; return; }
+    if (this.S.from > this.S.to) { el.className = 'sfrep-pv warn'; el.innerHTML = 'วันเริ่มต้นอยู่หลังวันสิ้นสุด — สลับวันที่ก่อน'; return; }
+    const days = this.dateList().length, recs = this.records().length, br = this.roster().length;
+    let line = '', warn = '';
+    if (this.S.type === 'submit') {
+      const n = days * br * (this.S.shift === 'all' ? 2 : 1);
+      line = `<b>${days}</b> วัน × <b>${br}</b> สาขา — ได้ <b>${days * br}</b> แถว (${n} รอบที่ต้องส่ง)`;
+      if (days * br > 1500) warn = 'ช่วงนี้ยาวมาก ไฟล์ PDF จะหนาหลายสิบหน้า — Excel เหมาะกว่า';
+    } else if (this.S.type === 'period') {
+      line = `<b>${br}</b> สาขา · ช่วง <b>${days}</b> วัน — จากผลตรวจ <b>${recs}</b> ใบ`;
+    } else if (this.S.type === 'topfail') {
+      const d = this.dataTopFail();
+      line = `พบข้อที่ตก <b>${d.rows.length}</b> หัวข้อ · รวม <b>${d.totalFail}</b> ครั้ง — จากผลตรวจ <b>${recs}</b> ใบ`;
+      if (!d.rows.length) { el.className = 'sfrep-pv warn'; line = 'ช่วงนี้ไม่มีข้อที่ตกเลย — ลองขยายช่วงวันที่'; }
+    } else {
+      const ph = this.S.photos ? this.countPhotos() : 0;
+      line = `ผลตรวจ <b>${recs}</b> ใบ` + (this.S.photos ? ` · รูปที่จะแนบ <b>${ph}</b> รูป` : '');
+      if (recs > 60) warn = 'ใบเยอะมาก ไฟล์จะหนักและใช้เวลาสร้างนาน — ลองแคบช่วงวันที่ลง';
+      else if (ph > 120) warn = 'รูปเยอะมาก ต้องรอโหลดรูปสักครู่ก่อนหน้าต่างพิมพ์จะเปิด';
+    }
+    if (!recs && this.S.type !== 'submit') { el.className = 'sfrep-pv warn'; line = 'ช่วงที่เลือกยังไม่มีผลตรวจเลย'; }
+    el.innerHTML = line + (warn ? `<div style="margin-top:5px">⚠ ${warn}</div>` : '');
+    if (warn) el.className = 'sfrep-pv warn';
+  },
+  countPhotos() {
+    let n = 0;
+    this.records().forEach((d) => (d.items || []).forEach((it) => {
+      if (it && it.status === 'fail' && Array.isArray(it.photos)) {
+        n += it.photos.filter((p) => typeof p === 'string' && /^https?:/i.test(p)).length;
+      }
+    }));
+    return n;
+  },
+
+  busy(on, msg) {
+    const box = document.getElementById('sfrep-ov');
+    if (!box) return;
+    box.querySelectorAll('.sfrep-foot .btn').forEach((b) => {
+      b.disabled = !!on;
+      b.style.opacity = on ? '.5' : '';
+      b.style.pointerEvents = on ? 'none' : '';
+    });
+    if (on && msg) { const pv = document.getElementById('sfrep-pv'); if (pv) pv.textContent = msg; }
+    if (!on) this.preview();
+  },
+
+  title() { return (this.TYPES.find((x) => x.k === this.S.type) || {}).t || 'รายงาน'; },
+  fileBase() {
+    const t = { submit: 'การส่งรายวัน', period: 'สรุปตามช่วงเวลา', topfail: 'หัวข้อที่ตกบ่อย', detail: 'รายละเอียด' }[this.S.type];
+    return 'เช็คลิสต์ซานตาเฟ่_' + t + '_' + this.S.from + '_ถึง_' + this.S.to;
+  },
+
+  /* ══════════════ PDF ══════════════ */
+  head(extra) {
+    const who = (currentUser && (currentUser.name || currentUser.nick)) || '-';
+    const now = new Date();
+    const stamp = now.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' })
+      + ' ' + String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0') + ' น.';
+    return `<div class="sfr-bar"></div>
+      <div class="sfr-org">Santa Fe · Daily Open-Close Checklist</div>
+      <h1>${escapeHtml(this.title())}</h1>
+      <div class="sfr-meta">
+        <span>ช่วงข้อมูล <b>${escapeHtml(this.rangeText())}</b></span>
+        <span>ขอบเขต <b>${escapeHtml(this.scopeText())}</b></span>
+        ${extra || ''}
+        <span>ออกเมื่อ <b>${escapeHtml(stamp)}</b></span>
+        <span>ผู้ออกรายงาน <b>${escapeHtml(who)}</b></span>
+      </div>`;
+  },
+  figs(items) {
+    return '<div class="sfr-figs">' + items.map((f) =>
+      `<div class="sfr-fig ${f.c || ''}"><b>${escapeHtml(String(f.v))}</b><span>${escapeHtml(f.l)}</span></div>`).join('') + '</div>';
+  },
+  pct(v) { return v == null ? '—' : (Math.round(v * 10) / 10) + '%'; },
+  stPill(s) {
+    return s === 'ok' ? '<span class="sfr-pill ok">ตรงเวลา</span>'
+      : s === 'late' ? '<span class="sfr-pill late">สาย</span>'
+      : '<span class="sfr-pill miss">ยังไม่ส่ง</span>';
+  },
+
+  docSubmit() {
+    const d = this.dataSubmit();
+    if (!d.rows.length) return this.head() + '<div class="sfr-empty">ช่วงที่เลือกไม่มีสาขาหรือไม่มีวันให้แสดง</div>';
+    const s = d.sum;
+    let h = this.head() + this.figs([
+      { v: s.need, l: 'รอบที่ต้องส่ง' },
+      { v: s.sent, l: 'ส่งแล้ว', c: 'ok' },
+      { v: s.onTime, l: 'ตรงเวลา', c: 'ok' },
+      { v: s.late, l: 'ส่งสาย', c: 'warn' },
+      { v: s.miss, l: 'ยังไม่ส่ง', c: 'bad' },
+    ]);
+    const w = (n) => s.need ? (n / s.need * 100) : 0;
+    h += `<div class="sfr-band"><i class="ok" style="width:${w(s.onTime)}%"></i>`
+      + `<i class="warn" style="width:${w(s.late)}%"></i><i class="bad" style="width:${w(s.miss)}%"></i></div>`;
+    const shifts = d.rows[0].shifts;
+    const byDate = {};
+    d.rows.forEach((r) => { (byDate[r.date] = byDate[r.date] || []).push(r); });
+    Object.keys(byDate).sort().forEach((dt, di) => {
+      if (di) h += '<div class="sfr-break"></div>';
+      h += `<div class="sfr-h2">${escapeHtml(fmtDateThaiShort(dt))}</div>`;
+      const cols = ['<col style="width:9%">', '<col style="width:27%">', '<col style="width:12%">']
+        .concat(shifts.map(() => ['<col style="width:13%">', '<col style="width:13%">', '<col style="width:13%">']).flat());
+      h += `<table class="sfr-tb"><colgroup>${cols.join('')}</colgroup><thead><tr>
+        <th>รหัส</th><th>สาขา</th><th>โซน</th>
+        ${shifts.map((sh) => `<th class="c">${this.shiftName(sh)}</th><th class="c">เวลาส่ง</th><th class="c">ผ่าน</th>`).join('')}
+      </tr></thead><tbody>`;
+      byDate[dt].forEach((r) => {
+        h += `<tr><td class="nw">${escapeHtml(String(r.code))}</td><td>${escapeHtml(r.name)}</td><td class="nw">${escapeHtml(r.zone || '—')}</td>`
+          + shifts.map((sh) => {
+            const c = r.cell[sh];
+            return `<td class="c">${this.stPill(c.state)}</td><td class="c">${escapeHtml(c.time || '—')}</td>`
+              + `<td class="c">${c.pct == null ? '—' : this.pct(c.pct)}</td>`;
+          }).join('') + '</tr>';
+      });
+      h += '</tbody></table>';
+    });
+    return h + this.foot('นับ “ส่งสาย” จากเวลาที่เริ่มทำเช็คลิสต์ — รอบเปิดหลัง 11:30 น. รอบปิดหลัง 22:00 น.');
+  },
+
+  docPeriod() {
+    const d = this.dataPeriod();
+    if (!d.rows.length) return this.head() + '<div class="sfr-empty">ไม่มีสาขาในขอบเขตที่เลือก</div>';
+    const t = d.total;
+    let h = this.head(`<span>จำนวนวัน <b>${d.days}</b> วัน</span>`) + this.figs([
+      { v: this.pct(t.sentPct), l: 'อัตราการส่ง', c: 'ok' },
+      { v: this.pct(t.onTimePct), l: 'ส่งตรงเวลา', c: 'ok' },
+      { v: this.pct(t.passPct), l: 'ผ่านเกณฑ์', c: 'ok' },
+      { v: t.fail, l: 'ข้อที่ตก', c: 'bad' },
+      { v: t.need - t.sent, l: 'รอบที่ขาด', c: 'bad' },
+    ]);
+    h += `<table class="sfr-tb"><colgroup>
+      <col style="width:8%"><col style="width:24%"><col style="width:9%"><col style="width:9%">
+      <col style="width:9%"><col style="width:10%"><col style="width:10%"><col style="width:10%"><col style="width:11%">
+      </colgroup><thead><tr>
+      <th>รหัส</th><th>สาขา</th><th class="c">ต้องส่ง</th><th class="c">ส่งแล้ว</th><th class="c">% ส่ง</th>
+      <th class="c">ตรงเวลา</th><th class="c">% ตรงเวลา</th><th class="c">ข้อที่ตก</th><th class="c">% ผ่าน</th>
+      </tr></thead><tbody>`;
+    let curZone = null;
+    d.rows.forEach((r) => {
+      if (r.zone !== curZone) {
+        curZone = r.zone;
+        const z = d.rows.filter((x) => x.zone === curZone);
+        const zs = z.reduce((a, x) => { a.need += x.need; a.sent += x.sent; a.fail += x.fail; return a; }, { need: 0, sent: 0, fail: 0 });
+        h += `<tr class="grp"><td colspan="9">โซน ${escapeHtml(curZone || '—')} · ${z.length} สาขา · ส่ง ${zs.sent}/${zs.need} รอบ · ตก ${zs.fail} ข้อ</td></tr>`;
+      }
+      h += `<tr><td class="nw">${escapeHtml(String(r.code))}</td><td>${escapeHtml(r.name)}</td>
+        <td class="n">${r.need}</td><td class="n">${r.sent}</td><td class="n">${this.pct(r.sentPct)}</td>
+        <td class="n">${r.onTime}</td><td class="n">${this.pct(r.onTimePct)}</td>
+        <td class="n">${r.fail}</td><td class="n">${this.pct(r.passPct)}</td></tr>`;
+    });
+    h += `<tr class="sum"><td colspan="2">รวมทั้งหมด ${d.rows.length} สาขา</td>
+      <td class="n">${t.need}</td><td class="n">${t.sent}</td><td class="n">${this.pct(t.sentPct)}</td>
+      <td class="n">${t.onTime}</td><td class="n">${this.pct(t.onTimePct)}</td>
+      <td class="n">${t.fail}</td><td class="n">${this.pct(t.passPct)}</td></tr></tbody></table>`;
+    return h + this.foot('“ต้องส่ง” = จำนวนวันในช่วง × รอบที่เลือก · “% ผ่าน” คิดจากข้อที่ให้ผลจริง ไม่รวมข้อที่ยังไม่ได้ตอบ');
+  },
+
+  docTopFail() {
+    const d = this.dataTopFail();
+    if (!d.rows.length) return this.head() + '<div class="sfr-empty">ช่วงที่เลือกไม่มีข้อที่ตกเลย</div>';
+    const top = d.rows.slice(0, 60);
+    let h = this.head() + this.figs([
+      { v: d.rows.length, l: 'หัวข้อที่เคยตก' },
+      { v: d.totalFail, l: 'ครั้งที่ตกทั้งหมด', c: 'bad' },
+      { v: this.records().length, l: 'ผลตรวจที่นำมาคิด' },
+    ]);
+    h += `<table class="sfr-tb"><colgroup>
+      <col style="width:5%"><col style="width:15%"><col style="width:31%"><col style="width:8%">
+      <col style="width:8%"><col style="width:8%"><col style="width:7%"><col style="width:18%">
+      </colgroup><thead><tr>
+      <th class="c">#</th><th>หมวด</th><th>หัวข้อ</th><th class="c">รอบ</th>
+      <th class="c">ตก</th><th class="c">ตรวจ</th><th class="c">% ตก</th><th>สาขาที่ตกบ่อย</th>
+      </tr></thead><tbody>`;
+    top.forEach((r, i) => {
+      h += `<tr><td class="c">${i + 1}</td><td>${escapeHtml(r.section)}</td><td>${escapeHtml(r.text)}</td>
+        <td class="c">${escapeHtml(r.shiftText)}</td><td class="n">${r.fail}</td><td class="n">${r.total}</td>
+        <td class="n">${this.pct(r.pct)}</td><td>${escapeHtml(r.topBranches)}</td></tr>`;
+    });
+    h += '</tbody></table>';
+    const cut = d.rows.length - top.length;
+    return h + this.foot('เรียงตามจำนวนครั้งที่ตกมากไปน้อย · “% ตก” คิดจากจำนวนครั้งที่ข้อนั้นถูกตรวจ'
+      + (cut > 0 ? ` · แสดง 60 อันดับแรก อีก ${cut} หัวข้อดูได้ในไฟล์ Excel` : ''));
+  },
+
+  docDetail() {
+    const list = this.dataDetail();
+    if (!list.length) return this.head() + '<div class="sfr-empty">ช่วงที่เลือกยังไม่มีผลตรวจ</div>';
+    let h = this.head(`<span>จำนวนใบ <b>${list.length}</b> ใบ</span>`);
+    list.forEach((d, i) => {
+      if (i) h += '<div class="sfr-break"></div>';
+      const st = this.stat(d);
+      const late = _isDailyLate(d);
+      h += `<div class="sfr-card"><div class="sfr-card-h">
+        <b>${escapeHtml(branchLabel(d.branchCode, d.branchName))}</b>
+        <small>${escapeHtml(fmtDateThaiShort(d.date))} · ${this.shiftName(d.shift)} · ส่ง ${escapeHtml(this.sentTime(d) || '—')} น.
+        ${late ? '<span class="sfr-pill late">สาย</span>' : '<span class="sfr-pill ok">ตรงเวลา</span>'}</small>
+      </div><div class="sfr-card-b">`;
+      h += this.figs([
+        { v: this.pct(st.pct), l: 'ผ่านเกณฑ์', c: 'ok' },
+        { v: st.pass, l: 'ผ่าน', c: 'ok' },
+        { v: st.fail, l: 'ไม่ผ่าน', c: 'bad' },
+        { v: st.na, l: 'ยังไม่ตอบ' },
+      ]);
+      let sec = null;
+      (d.items || []).forEach((it) => {
+        if (!it) return;
+        if (it.section !== sec) { sec = it.section; h += `<div class="sfr-sec">${escapeHtml(sec || '-')}</div>`; }
+        const p = it.status === 'pass' ? '<span class="sfr-pill ok">ผ่าน</span>'
+          : it.status === 'fail' ? '<span class="sfr-pill miss">ไม่ผ่าน</span>'
+          : '<span class="sfr-pill na">—</span>';
+        h += `<div class="sfr-it">${p}<span class="t">${escapeHtml(it.text || '')}</span></div>`;
+        if (it.status === 'fail' && (it.note || '').trim()) h += `<div class="sfr-note"><b>หมายเหตุ:</b> ${escapeHtml(it.note)}</div>`;
+        if (this.S.photos && it.status === 'fail' && Array.isArray(it.photos)) {
+          const ps = it.photos.filter((p2) => typeof p2 === 'string' && /^https?:/i.test(p2));
+          if (ps.length) h += '<div class="sfr-ph">' + ps.map((u) => `<img src="${escapeAttr(u)}" alt="">`).join('') + '</div>';
+        }
+      });
+      h += '</div></div>';
+    });
+    return h + this.foot('หนึ่งใบต่อหนึ่งหน้า · แสดงรูปเฉพาะข้อที่ไม่ผ่าน');
+  },
+
+  foot(note) {
+    return `<div class="sfr-foot">${escapeHtml(note)}<br>
+      ข้อมูลจากระบบ Daily Open-Close Checklist · ตัวเลขในรายงานตรงกับที่แสดงบนแดชบอร์ด ณ เวลาที่ออกรายงาน</div>`;
+  },
+
+  pdf() {
+    if (this.S.from > this.S.to) { showModal('ช่วงวันที่ไม่ถูกต้อง', 'วันเริ่มต้นอยู่หลังวันสิ้นสุด'); return; }
+    const doc = this.S.type === 'submit' ? this.docSubmit()
+      : this.S.type === 'period' ? this.docPeriod()
+      : this.S.type === 'topfail' ? this.docTopFail() : this.docDetail();
+    this.close();
+    _printHtmlPDF('<div class="sfr">' + doc + '</div>', 'daily-print-footer',
+      { cls: 'pdf-report', extraCss: SFR_CSS, filename: this.fileBase() + '.pdf' });
+  },
+
+  /* ══════════════ Excel ══════════════ */
+  loadExcel() {
+    if (window.ExcelJS) return Promise.resolve();
+    if (this._xl) return this._xl;
+    this._xl = new Promise((res, rej) => {
+      const s = document.createElement('script');
+      s.src = 'https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js';
+      s.onload = () => res();
+      s.onerror = () => { this._xl = null; rej(new Error('โหลดตัวสร้าง Excel ไม่ได้ — ตรวจการเชื่อมต่ออินเทอร์เน็ต')); };
+      document.head.appendChild(s);
+    });
+    return this._xl;
+  },
+  sheetSpec() {
+    const S = this.S;
+    if (S.type === 'submit') {
+      const d = this.dataSubmit(), shifts = S.shift === 'all' ? ['open', 'close'] : [S.shift];
+      const cols = [{ h: 'วันที่', w: 13 }, { h: 'รหัส', w: 9 }, { h: 'สาขา', w: 30 }, { h: 'โซน', w: 12 }];
+      shifts.forEach((sh) => {
+        const n = this.shiftName(sh);
+        cols.push({ h: n + ' · สถานะ', w: 13 }, { h: n + ' · เวลาส่ง', w: 11 },
+          { h: n + ' · % ผ่าน', w: 10 }, { h: n + ' · ข้อที่ตก', w: 11 });
+      });
+      const rows = d.rows.map((r) => {
+        const o = [fmtDateThaiShort(r.date), String(r.code), r.name, r.zone || ''];
+        shifts.forEach((sh) => {
+          const c = r.cell[sh];
+          o.push(c.state === 'ok' ? 'ตรงเวลา' : c.state === 'late' ? 'สาย' : 'ยังไม่ส่ง',
+            c.time || '', c.pct == null ? '' : c.pct, c.fail || 0);
+        });
+        return o;
+      });
+      return { name: 'การส่งรายวัน', cols: cols, rows: rows };
+    }
+    if (S.type === 'period') {
+      const d = this.dataPeriod();
+      return {
+        name: 'สรุปตามช่วงเวลา',
+        cols: [{ h: 'รหัส', w: 9 }, { h: 'สาขา', w: 30 }, { h: 'โซน', w: 12 }, { h: 'ต้องส่ง (รอบ)', w: 13 },
+          { h: 'ส่งแล้ว', w: 10 }, { h: '% ส่ง', w: 9 }, { h: 'ตรงเวลา', w: 10 }, { h: '% ตรงเวลา', w: 11 },
+          { h: 'ส่งสาย', w: 9 }, { h: 'ข้อที่ผ่าน', w: 11 }, { h: 'ข้อที่ตก', w: 10 }, { h: '% ผ่าน', w: 10 }],
+        rows: d.rows.map((r) => [String(r.code), r.name, r.zone || '', r.need, r.sent, r.sentPct,
+          r.onTime, r.onTimePct, r.late, r.pass, r.fail, r.passPct]),
+        total: ['รวม', d.rows.length + ' สาขา', '', d.total.need, d.total.sent, d.total.sentPct,
+          d.total.onTime, d.total.onTimePct, d.total.late, d.total.pass, d.total.fail, d.total.passPct],
+      };
+    }
+    if (S.type === 'topfail') {
+      const d = this.dataTopFail();
+      return {
+        name: 'หัวข้อที่ตกบ่อย',
+        cols: [{ h: 'อันดับ', w: 8 }, { h: 'หมวด', w: 22 }, { h: 'หัวข้อ', w: 52 }, { h: 'รอบ', w: 10 },
+          { h: 'ตก (ครั้ง)', w: 11 }, { h: 'ตรวจ (ครั้ง)', w: 12 }, { h: '% ตก', w: 9 },
+          { h: 'จำนวนสาขาที่ตก', w: 15 }, { h: 'สาขาที่ตกบ่อย', w: 46 }],
+        rows: d.rows.map((r, i) => [i + 1, r.section, r.text, r.shiftText, r.fail, r.total, r.pct, r.branchCount, r.topBranches]),
+      };
+    }
+    const list = this.dataDetail();
+    const rows = [];
+    list.forEach((d) => {
+      const late = _isDailyLate(d) ? 'สาย' : 'ตรงเวลา';
+      (d.items || []).forEach((it) => {
+        if (!it) return;
+        rows.push([fmtDateThaiShort(d.date), String(d.branchCode), d.branchName || '',
+          _sfBranchZone(d.branchCode) || '', this.shiftName(d.shift), this.sentTime(d) || '', late,
+          it.section || '', it.text || '',
+          it.status === 'pass' ? 'ผ่าน' : it.status === 'fail' ? 'ไม่ผ่าน' : 'ยังไม่ตอบ',
+          (it.note || ''), (Array.isArray(it.photos) ? it.photos.length : 0)]);
+      });
+    });
+    return {
+      name: 'รายละเอียดรายข้อ',
+      cols: [{ h: 'วันที่', w: 13 }, { h: 'รหัส', w: 9 }, { h: 'สาขา', w: 28 }, { h: 'โซน', w: 12 },
+        { h: 'รอบ', w: 10 }, { h: 'เวลาส่ง', w: 10 }, { h: 'ตรงเวลา/สาย', w: 12 },
+        { h: 'หมวด', w: 22 }, { h: 'หัวข้อ', w: 52 }, { h: 'ผล', w: 11 }, { h: 'หมายเหตุ', w: 40 }, { h: 'จำนวนรูป', w: 10 }],
+      rows: rows,
+    };
+  },
+  excel() {
+    if (this.S.from > this.S.to) { showModal('ช่วงวันที่ไม่ถูกต้อง', 'วันเริ่มต้นอยู่หลังวันสิ้นสุด'); return; }
+    const spec = this.sheetSpec();
+    if (!spec.rows.length) { showModal('ไม่มีข้อมูล', 'ช่วงและขอบเขตที่เลือกยังไม่มีข้อมูลให้ออกรายงาน'); return; }
+    /* ตัวสร้าง Excel โหลดจากเน็ตตอนกดครั้งแรก อาจใช้เวลาสองสามวินาที
+       ถ้าไม่บอกอะไรเลย ผู้ใช้จะนึกว่าปุ่มเสียแล้วกดซ้ำ */
+    this.busy(true, 'กำลังสร้างไฟล์ Excel…');
+    this.loadExcel().then(() => {
+      const wb = new ExcelJS.Workbook();
+      const ws = wb.addWorksheet(spec.name);
+      /* หัวเรื่องสองบรรทัด บอกว่ารายงานอะไร ช่วงไหน ขอบเขตอะไร — เปิดไฟล์ทีหลังจะได้ไม่ต้องเดา */
+      ws.addRow([this.title()]);
+      ws.addRow(['ช่วงข้อมูล ' + this.rangeText() + ' · ' + this.scopeText()
+        + ' · ออกโดย ' + ((currentUser && (currentUser.name || currentUser.nick)) || '-')]);
+      ws.addRow([]);
+      ws.getRow(1).font = { bold: true, size: 14 };
+      ws.getRow(2).font = { size: 10, color: { argb: 'FF666666' } };
+      const hIdx = 4;
+      ws.addRow(spec.cols.map((c) => c.h));
+      const hr = ws.getRow(hIdx);
+      hr.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+      hr.alignment = { vertical: 'middle', wrapText: true };
+      hr.eachCell((c) => { c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF2B2F36' } }; });
+      ws.columns = spec.cols.map((c) => ({ width: c.w }));
+      spec.rows.forEach((r) => {
+        const row = ws.addRow(r);
+        row.alignment = { vertical: 'top', wrapText: false };
+        r.forEach((v, i) => {
+          if (v === 'ยังไม่ส่ง' || v === 'ไม่ผ่าน') row.getCell(i + 1).font = { color: { argb: 'FFB3261E' }, bold: true };
+          else if (v === 'สาย') row.getCell(i + 1).font = { color: { argb: 'FF8A5A08' }, bold: true };
+        });
+      });
+      if (spec.total) {
+        const tr = ws.addRow(spec.total);
+        tr.font = { bold: true };
+        tr.eachCell((c) => { c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF0F1F4' } }; });
+      }
+      ws.views = [{ state: 'frozen', ySplit: hIdx }];
+      if (spec.cols.length <= 26) {
+        ws.autoFilter = { from: { row: hIdx, column: 1 }, to: { row: hIdx, column: spec.cols.length } };
+      }
+      return wb.xlsx.writeBuffer();
+    }).then((buf) => {
+      const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = this.fileBase() + '.xlsx';
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+      this.busy(false);
+      this.close();
+      showModalHtml('ออกรายงานแล้ว', `ไฟล์ Excel <b>${spec.rows.length}</b> แถว<br>
+        <span style="font-size:12px;color:#666">${escapeHtml(this.rangeText())} · ${escapeHtml(this.scopeText())}</span>`);
+    }).catch((e) => {
+      this.busy(false);
+      showModal('ออกรายงานไม่สำเร็จ', (e && e.message) || String(e));
+    });
+  },
+};
 </script>
+<style>
+/* ══════════ กล่องออกรายงาน (ซานตาเฟ่) ══════════ */
+.sfrep-open{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:0 0 12px}
+.sfrep-open .sfrep-open-t{font-size:13px;color:var(--text-secondary);line-height:1.5}
+.sfrep-ov{position:fixed;inset:0;z-index:2600;display:none;align-items:flex-start;justify-content:center;
+  padding:20px;background:rgba(15,23,42,.5);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);overflow-y:auto}
+.sfrep-ov.show{display:flex}
+.sfrep-box{background:var(--surface,#fff);border-radius:20px;width:100%;max-width:680px;margin:auto;
+  box-shadow:0 30px 70px -30px rgba(15,23,42,.5);overflow:hidden}
+.sfrep-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 20px;
+  border-bottom:1px solid var(--border,#e5e7eb)}
+.sfrep-head h3{margin:0;font-size:17px;font-weight:800;letter-spacing:-.01em}
+.sfrep-head .sfrep-sub{font-size:12px;color:var(--text-secondary);margin-top:2px}
+.sfrep-x{width:32px;height:32px;border-radius:9px;border:none;background:none;cursor:pointer;
+  display:grid;place-items:center;color:var(--text-secondary);flex:0 0 auto}
+.sfrep-x:hover{background:var(--bg-strong,#f1f5f9)}
+.sfrep-body{padding:16px 20px;max-height:70vh;overflow-y:auto}
+.sfrep-foot{display:flex;gap:10px;padding:14px 20px;border-top:1px solid var(--border,#e5e7eb);flex-wrap:wrap}
+.sfrep-foot .btn{flex:1;min-width:130px;justify-content:center}
+
+.sfrep-lbl{font-size:12px;font-weight:800;color:var(--text-secondary);letter-spacing:.02em;margin:16px 0 7px}
+.sfrep-lbl:first-child{margin-top:0}
+.sfrep-types{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+@media(max-width:560px){.sfrep-types{grid-template-columns:1fr}}
+.sfrep-type{text-align:left;background:var(--surface,#fff);border:1.5px solid var(--border,#e5e7eb);border-radius:13px;
+  padding:11px 13px;cursor:pointer;transition:border-color .14s,background .14s;font-family:inherit}
+.sfrep-type:hover{border-color:var(--text-secondary)}
+.sfrep-type.on{border-color:var(--primary,#D63622);background:rgba(214,54,34,.05)}
+.sfrep-type b{display:block;font-size:13.5px;font-weight:800;margin-bottom:2px}
+.sfrep-type span{display:block;font-size:11.5px;color:var(--text-secondary);line-height:1.45}
+.sfrep-chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:9px}
+.sfrep-chip{border:1px solid var(--border,#e5e7eb);background:var(--surface,#fff);border-radius:999px;
+  padding:6px 13px;font-size:12.5px;font-weight:700;color:var(--text-secondary);cursor:pointer;font-family:inherit}
+.sfrep-chip.on{background:var(--primary,#D63622);border-color:transparent;color:#fff}
+.sfrep-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media(max-width:560px){.sfrep-grid{grid-template-columns:1fr}}
+.sfrep-f{display:block}
+.sfrep-f>span{display:block;font-size:11.5px;font-weight:700;color:var(--text-secondary);margin-bottom:4px}
+.sfrep-f input,.sfrep-f select{width:100%;padding:9px 11px;border:1px solid var(--border,#e5e7eb);border-radius:10px;
+  font-family:inherit;font-size:13.5px;background:var(--surface,#fff);color:var(--text-primary,#111)}
+.sfrep-sw{display:flex;align-items:center;gap:9px;margin-top:12px;font-size:13px;cursor:pointer}
+.sfrep-sw input{width:17px;height:17px;accent-color:var(--primary,#D63622);cursor:pointer}
+.sfrep-pv{margin-top:15px;padding:11px 13px;border-radius:11px;background:var(--bg-strong,#f1f5f9);
+  font-size:12.5px;line-height:1.65;color:var(--text-secondary)}
+.sfrep-pv b{color:var(--text-primary,#111);font-weight:800}
+.sfrep-pv.warn{background:#FEF3C7;color:#78350F}
+.sfrep-pv.warn b{color:#78350F}
+</style>
+<!-- ══════════ กล่องออกรายงาน (ซานตาเฟ่) ══════════ -->
+<div class="sfrep-ov" id="sfrep-ov">
+  <div class="sfrep-box" role="dialog" aria-modal="true" aria-labelledby="sfrep-title">
+    <div class="sfrep-head">
+      <div>
+        <h3 id="sfrep-title">ออกรายงาน</h3>
+        <div class="sfrep-sub">Daily Open-Close Checklist · ซานตาเฟ่</div>
+      </div>
+      <button type="button" class="sfrep-x" onclick="SFRep.close()" aria-label="ปิด">
+        <span class="material-symbols-rounded">close</span>
+      </button>
+    </div>
+
+    <div class="sfrep-body">
+      <div class="sfrep-lbl">เลือกรายงาน</div>
+      <div class="sfrep-types" id="sfrep-types"></div>
+
+      <div class="sfrep-lbl">ช่วงวันที่</div>
+      <div class="sfrep-chips" id="sfrep-quick"></div>
+      <div class="sfrep-grid">
+        <label class="sfrep-f"><span>ตั้งแต่วันที่</span><input type="date" id="sfrep-from" onchange="SFRep.set('from',this.value)"></label>
+        <label class="sfrep-f"><span>ถึงวันที่</span><input type="date" id="sfrep-to" onchange="SFRep.set('to',this.value)"></label>
+      </div>
+
+      <div class="sfrep-lbl">ขอบเขต</div>
+      <div class="sfrep-grid">
+        <label class="sfrep-f"><span>โซน</span><select id="sfrep-zone" onchange="SFRep.setZone(this.value)"></select></label>
+        <label class="sfrep-f"><span>สาขา</span><select id="sfrep-branch" onchange="SFRep.set('branch',this.value)"></select></label>
+      </div>
+      <div class="sfrep-grid" style="margin-top:10px">
+        <label class="sfrep-f"><span>รอบ</span>
+          <select id="sfrep-shift" onchange="SFRep.set('shift',this.value)">
+            <option value="all">ทั้งเปิดและปิด</option>
+            <option value="open">เฉพาะรอบเปิด</option>
+            <option value="close">เฉพาะรอบปิด</option>
+          </select>
+        </label>
+      </div>
+
+      <label class="sfrep-sw" id="sfrep-photo-row">
+        <input type="checkbox" id="sfrep-photos" checked onchange="SFRep.set('photos',this.checked)">
+        แนบรูปถ่ายของข้อที่ตก (เฉพาะรายงานแบบละเอียด)
+      </label>
+
+      <div class="sfrep-pv" id="sfrep-pv">กำลังคำนวณ…</div>
+    </div>
+
+    <div class="sfrep-foot">
+      <button type="button" class="btn btn-secondary" onclick="SFRep.close()">ยกเลิก</button>
+      <button type="button" class="btn btn-secondary" onclick="SFRep.excel()">
+        <span class="material-symbols-rounded">table_view</span> Excel
+      </button>
+      <button type="button" class="btn btn-primary" onclick="SFRep.pdf()">
+        <span class="material-symbols-rounded">picture_as_pdf</span> PDF
+      </button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
