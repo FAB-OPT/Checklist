@@ -11158,6 +11158,15 @@ const _ssoLikely = _hasValidSessionSync();
 
 /* หน้าตาเอกสารรายงาน — เขียนแยกจากสไตล์ของหน้าจอ เพราะรายงานคือกระดาษ A4
    ไม่ใช่หน้าเว็บย่อส่วน ใช้ตัวเลขความกว้างเป็น % เพื่อให้พอดีหน้าเสมอ */
+/* ════════════════════════════════════════════════════════════════
+   ออกรายงาน Daily Open-Close Checklist (ซานตาเฟ่) — PDF / Excel
+   4 แบบ: การส่งรายวัน · สรุปตามช่วงเวลา · หัวข้อที่ตกบ่อย · รายละเอียดหลายใบ
+   ข้อมูลทั้งหมดผ่าน getVisibleDailyChecklists() กับ _visibleBranchRoster()
+   จึงถูกจำกัดตามสิทธิ์ของผู้ใช้อยู่แล้ว BZM เห็นเฉพาะสาขาที่ตัวเองดูแล
+   ════════════════════════════════════════════════════════════════ */
+
+/* หน้าตาเอกสารรายงาน — เขียนแยกจากสไตล์ของหน้าจอ เพราะรายงานคือกระดาษ A4
+   ไม่ใช่หน้าเว็บย่อส่วน ใช้ตัวเลขความกว้างเป็น % เพื่อให้พอดีหน้าเสมอ */
 const SFR_CSS = `
 .sfr{font-size:10pt;color:#111;line-height:1.45}
 .sfr *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
@@ -11211,10 +11220,14 @@ const SFR_CSS = `
 .sfr-break{break-after:page;page-break-after:always;height:0}
 .sfr-empty{padding:22px;text-align:center;color:#777;font-size:9.5pt;border:1px dashed #C9CDD4;border-radius:5px}
 .sfr-foot{margin-top:12px;padding-top:7px;border-top:1px solid #C9CDD4;font-size:7.5pt;color:#666;line-height:1.5}
+.sfr-h3{font-size:9.5pt;font-weight:800;margin:12px 0 5px;color:#333}
+.sfr-ok{padding:8px 10px;background:#EEF7F1;border:1px solid #BFE3CD;border-radius:4px;
+  font-size:8.5pt;color:#1E6B36;margin-bottom:10px}
+.sfr-note.ok{background:#F1F3F6;color:#3C4450}
 `;
 
 const SFRep = {
-  S: { type: 'submit', from: '', to: '', zone: 'all', branch: 'all', shift: 'all', photos: true },
+  S: { type: 'submit', from: '', to: '', zone: 'all', branch: 'all', shift: 'all', photos: true, depth: 'normal' },
 
   TYPES: [
     { k: 'submit',  t: 'สรุปการส่งรายวัน',        d: 'สาขาไหนส่งครบ ใครส่งสาย ใครยังไม่ส่ง — ดูเป็นรายวัน' },
@@ -11241,6 +11254,8 @@ const SFRep = {
     document.getElementById('sfrep-to').value = this.S.to;
     document.getElementById('sfrep-shift').value = this.S.shift;
     document.getElementById('sfrep-photos').checked = this.S.photos;
+    const dp = document.getElementById('sfrep-depth');
+    if (dp) dp.checked = this.S.depth === 'full';
     document.getElementById('sfrep-ov').classList.add('show');
     this.preview();
   },
@@ -11363,6 +11378,60 @@ const SFRep = {
     return String(x.getHours()).padStart(2, '0') + ':' + String(x.getMinutes()).padStart(2, '0');
   },
   shiftName(s) { return s === 'close' ? 'ปิดร้าน' : 'เปิดร้าน'; },
+  hhmm(iso) {
+    if (!iso) return '';
+    const x = new Date(iso);
+    return isNaN(x.getTime()) ? '' : String(x.getHours()).padStart(2, '0') + ':' + String(x.getMinutes()).padStart(2, '0');
+  },
+  /* เวลาที่ใช้ทำเช็คลิสต์ — ใบที่ทำเสร็จใน 1–2 นาทีคือสัญญาณว่ากดผ่านรวดโดยไม่ได้ตรวจจริง
+     ตัวเลขนี้ดูออกได้เฉพาะรายงานแบบละเอียด สรุปรวมมองไม่เห็น */
+  minutesUsed(r) {
+    if (!r || !r.startedAt || !r.submittedAt) return null;
+    const a = new Date(r.startedAt), b = new Date(r.submittedAt);
+    if (isNaN(a.getTime()) || isNaN(b.getTime())) return null;
+    const m = Math.round((b - a) / 60000);
+    return m >= 0 && m < 1440 ? m : null;
+  },
+  failList(r) {
+    return ((r && r.items) || []).filter((it) => it && it.status === 'fail')
+      .map((it) => ({ section: it.section || '-', text: it.text || '', note: it.note || '',
+                      photos: (Array.isArray(it.photos) ? it.photos.filter((p) => typeof p === 'string' && /^https?:/i.test(p)) : []) }));
+  },
+  /* สรุปรายหมวด — ตอบว่า "ปัญหากองอยู่ที่หมวดไหน" ซึ่งรายข้ออย่างเดียวมองไม่เห็น */
+  bySection(recs) {
+    const m = {};
+    recs.forEach((d) => (d.items || []).forEach((it) => {
+      if (!it || (it.status !== 'pass' && it.status !== 'fail')) return;
+      const k = it.section || '-';
+      if (!m[k]) m[k] = { section: k, total: 0, fail: 0, br: {} };
+      m[k].total++;
+      if (it.status === 'fail') { m[k].fail++; m[k].br[branchLabel(d.branchCode, d.branchName)] = 1; }
+    }));
+    return Object.keys(m).map((k) => {
+      const x = m[k];
+      x.pct = x.total ? Math.round(x.fail / x.total * 1000) / 10 : 0;
+      x.branchCount = Object.keys(x.br).length;
+      return x;
+    }).sort((a, b) => b.fail - a.fail);
+  },
+  /* รายวัน — ใช้ดูว่าวันไหนของช่วงที่เลือกแย่เป็นพิเศษ */
+  byDay(recs, nBranch, perShift) {
+    const m = {};
+    this.dateList().forEach((dt) => { m[dt] = { date: dt, need: nBranch * perShift, sent: 0, late: 0, pass: 0, fail: 0 }; });
+    recs.forEach((d) => {
+      const x = m[d.date]; if (!x) return;
+      if (d.submittedAt) { x.sent++; if (_isDailyLate(d)) x.late++; }
+      const st = this.stat(d); x.pass += st.pass; x.fail += st.fail;
+    });
+    return Object.keys(m).sort().map((k) => {
+      const x = m[k], g = x.pass + x.fail;
+      x.onTime = x.sent - x.late;
+      x.sentPct = x.need ? Math.round(x.sent / x.need * 1000) / 10 : null;
+      x.passPct = g ? Math.round(x.pass / g * 1000) / 10 : null;
+      return x;
+    });
+  },
+  deep() { return this.S.depth === 'full'; },
 
   /* ── ข้อมูลของแต่ละรายงาน ── */
   dataSubmit() {
@@ -11380,6 +11449,9 @@ const SFRep = {
           cell[sh] = {
             state: !r || !r.submittedAt ? 'miss' : (_isDailyLate(r) ? 'late' : 'ok'),
             time: this.sentTime(r), pct: st.pct, fail: st.fail,
+            start: this.hhmm(r && r.startedAt), used: this.minutesUsed(r),
+            by: (r && (r.submittedBy || r.createdBy || r.user)) || '',
+            fails: this.failList(r),
           };
         });
         rows.push({ date: dt, code: b.code, name: b.name, zone: _sfBranchZone(b.code), shifts: shifts, cell: cell });
@@ -11400,11 +11472,16 @@ const SFRep = {
     const map = {};
     roster.forEach((b) => {
       map[String(b.code)] = { code: b.code, name: b.name, zone: _sfBranchZone(b.code),
-        need: days * perShift, sent: 0, late: 0, pass: 0, fail: 0 };
+        need: days * perShift, sent: 0, late: 0, pass: 0, fail: 0,
+        sentOpen: 0, sentClose: 0, lateOpen: 0, lateClose: 0 };
     });
     recs.forEach((d) => {
       const m = map[String(d.branchCode)]; if (!m) return;
-      if (d.submittedAt) { m.sent++; if (_isDailyLate(d)) m.late++; }
+      const isClose = (d.shift || 'open') === 'close';
+      if (d.submittedAt) {
+        m.sent++; m[isClose ? 'sentClose' : 'sentOpen']++;
+        if (_isDailyLate(d)) { m.late++; m[isClose ? 'lateClose' : 'lateOpen']++; }
+      }
       const st = this.stat(d); m.pass += st.pass; m.fail += st.fail;
     });
     const rows = Object.keys(map).map((k) => {
@@ -11424,7 +11501,8 @@ const SFRep = {
     tot.sentPct = tot.need ? Math.round(tot.sent / tot.need * 1000) / 10 : null;
     tot.onTimePct = tot.sent ? Math.round(tot.onTime / tot.sent * 1000) / 10 : null;
     tot.passPct = tot.graded ? Math.round(tot.pass / tot.graded * 1000) / 10 : null;
-    return { rows: rows, total: tot, days: days };
+    return { rows: rows, total: tot, days: days,
+             sections: this.bySection(recs), byDay: this.byDay(recs, roster.length, perShift) };
   },
 
   dataTopFail() {
@@ -11436,12 +11514,15 @@ const SFRep = {
         if (!it || (it.status !== 'pass' && it.status !== 'fail')) return;
         const sec = it.section || '-';
         const k = sec + '||' + it.text;
-        if (!m[k]) m[k] = { section: sec, text: it.text, fail: 0, total: 0, br: {}, shifts: {} };
+        if (!m[k]) m[k] = { section: sec, text: it.text, fail: 0, total: 0, br: {}, shifts: {}, occ: [] };
         m[k].total++;
         if (it.status === 'fail') {
           m[k].fail++;
           m[k].br[bn] = (m[k].br[bn] || 0) + 1;
           m[k].shifts[d.shift || 'open'] = 1;
+          /* เก็บทุกครั้งที่ตก ไว้กางให้ดูในรายงานแบบละเอียด — สรุปอย่างเดียวตามงานต่อไม่ได้
+             ต้องรู้ว่าตกวันไหน สาขาไหน และสาขาเขียนหมายเหตุไว้ว่าอะไร */
+          m[k].occ.push({ date: d.date, branch: bn, shift: d.shift || 'open', note: it.note || '' });
         }
       });
     });
@@ -11453,8 +11534,9 @@ const SFRep = {
       r.shiftText = Object.keys(r.shifts).length === 2 ? 'เปิด+ปิด' : (r.shifts.close ? 'ปิด' : 'เปิด');
       return r;
     }).sort((a, b) => b.fail - a.fail || b.pct - a.pct);
+    rows.forEach((r) => r.occ.sort((a, b) => (a.date || '').localeCompare(b.date || '') || a.branch.localeCompare(b.branch, 'th')));
     const totFail = rows.reduce((s, r) => s + r.fail, 0);
-    return { rows: rows, totalFail: totFail };
+    return { rows: rows, totalFail: totFail, sections: this.bySection(recs) };
   },
 
   dataDetail() {
@@ -11500,6 +11582,12 @@ const SFRep = {
       line = `ผลตรวจ <b>${recs}</b> ใบ` + (this.S.photos ? ` · รูปที่จะแนบ <b>${ph}</b> รูป` : '');
       if (recs > 60) warn = 'ใบเยอะมาก ไฟล์จะหนักและใช้เวลาสร้างนาน — ลองแคบช่วงวันที่ลง';
       else if (ph > 120) warn = 'รูปเยอะมาก ต้องรอโหลดรูปสักครู่ก่อนหน้าต่างพิมพ์จะเปิด';
+    }
+    if (this.deep()) {
+      const more = { submit: 'เพิ่มเวลาเริ่ม เวลาที่ใช้ทำ และรายการข้อที่ไม่ผ่านของแต่ละวัน',
+        period: 'เพิ่มตารางรายหมวดและรายวัน', topfail: 'กางทุกครั้งที่ตก พร้อมวันที่ สาขา และหมายเหตุ',
+        detail: 'เพิ่มสรุปรายหมวดของแต่ละใบ และหมายเหตุ/รูปของทุกข้อที่มี' }[this.S.type];
+      line += `<div style="margin-top:5px;font-size:12px">แบบละเอียด: ${more}</div>`;
     }
     if (!recs && this.S.type !== 'submit') { el.className = 'sfrep-pv warn'; line = 'ช่วงที่เลือกยังไม่มีผลตรวจเลย'; }
     el.innerHTML = line + (warn ? `<div style="margin-top:5px">⚠ ${warn}</div>` : '');
@@ -11581,6 +11669,44 @@ const SFRep = {
     Object.keys(byDate).sort().forEach((dt, di) => {
       if (di) h += '<div class="sfr-break"></div>';
       h += `<div class="sfr-h2">${escapeHtml(fmtDateThaiShort(dt))}</div>`;
+      if (this.deep()) {
+        /* แบบละเอียดใช้ 1 แถวต่อ 1 รอบ แทนการยัดสองรอบไว้แถวเดียว
+           เพราะต้องใส่ทั้งเวลาเริ่ม เวลาส่ง และเวลาที่ใช้ทำ ซึ่งวางในแนวนอนไม่พอ */
+        h += `<table class="sfr-tb"><colgroup>
+          <col style="width:8%"><col style="width:24%"><col style="width:10%"><col style="width:9%">
+          <col style="width:11%"><col style="width:8%"><col style="width:8%"><col style="width:9%">
+          <col style="width:7%"><col style="width:6%">
+          </colgroup><thead><tr>
+          <th>รหัส</th><th>สาขา</th><th>โซน</th><th class="c">รอบ</th><th class="c">สถานะ</th>
+          <th class="c">เริ่ม</th><th class="c">ส่ง</th><th class="c">ใช้เวลา</th><th class="c">ผ่าน</th><th class="c">ตก</th>
+          </tr></thead><tbody>`;
+        byDate[dt].forEach((r) => shifts.forEach((sh) => {
+          const c = r.cell[sh];
+          h += `<tr><td class="nw">${escapeHtml(String(r.code))}</td><td>${escapeHtml(r.name)}</td>
+            <td class="nw">${escapeHtml(r.zone || '—')}</td><td class="c">${this.shiftName(sh)}</td>
+            <td class="c">${this.stPill(c.state)}</td>
+            <td class="c">${escapeHtml(c.start || '—')}</td><td class="c">${escapeHtml(c.time || '—')}</td>
+            <td class="c">${c.used == null ? '—' : c.used + ' น.'}</td>
+            <td class="n">${c.pct == null ? '—' : this.pct(c.pct)}</td>
+            <td class="n">${c.state === 'miss' ? '—' : c.fail}</td></tr>`;
+        }));
+        h += '</tbody></table>';
+        /* รายการข้อที่ไม่ผ่านของวันนั้น — สรุปบอกว่า "ตก 3 ข้อ" แต่ไม่บอกว่าข้อไหน
+           คนที่ต้องตามแก้ต้องรู้ว่าข้อไหน ที่สาขาไหน และสาขาเขียนหมายเหตุไว้ว่าอะไร */
+        const fl = [];
+        byDate[dt].forEach((r) => shifts.forEach((sh) => {
+          (r.cell[sh].fails || []).forEach((f) => fl.push({ br: r.code + ' ' + r.name, sh: sh, f: f }));
+        }));
+        h += `<div class="sfr-h3">ข้อที่ไม่ผ่านของวันนี้ (${fl.length} รายการ)</div>`;
+        h += fl.length ? `<table class="sfr-tb"><colgroup>
+            <col style="width:22%"><col style="width:9%"><col style="width:18%"><col style="width:27%"><col style="width:24%">
+            </colgroup><thead><tr><th>สาขา</th><th class="c">รอบ</th><th>หมวด</th><th>หัวข้อ</th><th>หมายเหตุจากสาขา</th></tr></thead><tbody>`
+          + fl.map((x) => `<tr><td>${escapeHtml(x.br)}</td><td class="c">${this.shiftName(x.sh)}</td>
+              <td>${escapeHtml(x.f.section)}</td><td>${escapeHtml(x.f.text)}</td>
+              <td>${escapeHtml(x.f.note || '—')}${x.f.photos.length ? ` <span class="sfr-pill na">มีรูป ${x.f.photos.length}</span>` : ''}</td></tr>`).join('')
+          + '</tbody></table>'
+          : '<div class="sfr-ok">ไม่มีข้อที่ไม่ผ่านในวันนี้</div>';
+      } else {
       const cols = ['<col style="width:9%">', '<col style="width:27%">', '<col style="width:12%">']
         .concat(shifts.map(() => ['<col style="width:13%">', '<col style="width:13%">', '<col style="width:13%">']).flat());
       h += `<table class="sfr-tb"><colgroup>${cols.join('')}</colgroup><thead><tr>
@@ -11596,6 +11722,7 @@ const SFRep = {
           }).join('') + '</tr>';
       });
       h += '</tbody></table>';
+      }
     });
     return h + this.foot('นับ “ส่งสาย” จากเวลาที่เริ่มทำเช็คลิสต์ — รอบเปิดหลัง 11:30 น. รอบปิดหลัง 22:00 น.');
   },
@@ -11618,13 +11745,14 @@ const SFRep = {
       <th>รหัส</th><th>สาขา</th><th class="c">ต้องส่ง</th><th class="c">ส่งแล้ว</th><th class="c">% ส่ง</th>
       <th class="c">ตรงเวลา</th><th class="c">% ตรงเวลา</th><th class="c">ข้อที่ตก</th><th class="c">% ผ่าน</th>
       </tr></thead><tbody>`;
+    const nCol = 9;
     let curZone = null;
     d.rows.forEach((r) => {
       if (r.zone !== curZone) {
         curZone = r.zone;
         const z = d.rows.filter((x) => x.zone === curZone);
         const zs = z.reduce((a, x) => { a.need += x.need; a.sent += x.sent; a.fail += x.fail; return a; }, { need: 0, sent: 0, fail: 0 });
-        h += `<tr class="grp"><td colspan="9">โซน ${escapeHtml(curZone || '—')} · ${z.length} สาขา · ส่ง ${zs.sent}/${zs.need} รอบ · ตก ${zs.fail} ข้อ</td></tr>`;
+        h += `<tr class="grp"><td colspan="${nCol}">โซน ${escapeHtml(curZone || '—')} · ${z.length} สาขา · ส่ง ${zs.sent}/${zs.need} รอบ · ตก ${zs.fail} ข้อ</td></tr>`;
       }
       h += `<tr><td class="nw">${escapeHtml(String(r.code))}</td><td>${escapeHtml(r.name)}</td>
         <td class="n">${r.need}</td><td class="n">${r.sent}</td><td class="n">${this.pct(r.sentPct)}</td>
@@ -11635,6 +11763,29 @@ const SFRep = {
       <td class="n">${t.need}</td><td class="n">${t.sent}</td><td class="n">${this.pct(t.sentPct)}</td>
       <td class="n">${t.onTime}</td><td class="n">${this.pct(t.onTimePct)}</td>
       <td class="n">${t.fail}</td><td class="n">${this.pct(t.passPct)}</td></tr></tbody></table>`;
+    if (this.deep()) {
+      /* สรุปรายหมวด — ตอบว่าปัญหากองอยู่หมวดไหน ซึ่งตารางรายสาขาข้างบนมองไม่เห็น */
+      h += '<div class="sfr-h2">ผลรายหมวด</div>';
+      h += `<table class="sfr-tb"><colgroup>
+        <col style="width:44%"><col style="width:13%"><col style="width:13%"><col style="width:14%"><col style="width:16%">
+        </colgroup><thead><tr><th>หมวด</th><th class="c">ตรวจ (ข้อ)</th><th class="c">ตก</th><th class="c">% ตก</th><th class="c">สาขาที่ตก</th></tr></thead><tbody>`
+        + (d.sections.length ? d.sections.map((x) => `<tr><td>${escapeHtml(x.section)}</td>
+            <td class="n">${x.total}</td><td class="n">${x.fail}</td><td class="n">${this.pct(x.pct)}</td>
+            <td class="n">${x.branchCount}</td></tr>`).join('')
+          : '<tr><td colspan="5" style="text-align:center;color:#777">ไม่มีข้อมูล</td></tr>')
+        + '</tbody></table>';
+      /* รายวัน — ใช้ดูว่าวันไหนแย่เป็นพิเศษ เช่น วันหยุดยาวหรือวันที่มีอีเวนต์ */
+      h += '<div class="sfr-h2">ผลรายวัน</div>';
+      h += `<table class="sfr-tb"><colgroup>
+        <col style="width:24%"><col style="width:13%"><col style="width:13%"><col style="width:13%">
+        <col style="width:13%"><col style="width:12%"><col style="width:12%">
+        </colgroup><thead><tr><th>วันที่</th><th class="c">ต้องส่ง</th><th class="c">ส่งแล้ว</th><th class="c">% ส่ง</th>
+        <th class="c">ตรงเวลา</th><th class="c">ข้อที่ตก</th><th class="c">% ผ่าน</th></tr></thead><tbody>`
+        + d.byDay.map((x) => `<tr><td class="nw">${escapeHtml(fmtDateThaiShort(x.date))}</td>
+            <td class="n">${x.need}</td><td class="n">${x.sent}</td><td class="n">${this.pct(x.sentPct)}</td>
+            <td class="n">${x.onTime}</td><td class="n">${x.fail}</td><td class="n">${this.pct(x.passPct)}</td></tr>`).join('')
+        + '</tbody></table>';
+    }
     return h + this.foot('“ต้องส่ง” = จำนวนวันในช่วง × รอบที่เลือก · “% ผ่าน” คิดจากข้อที่ให้ผลจริง ไม่รวมข้อที่ยังไม่ได้ตอบ');
   },
 
@@ -11647,6 +11798,15 @@ const SFRep = {
       { v: d.totalFail, l: 'ครั้งที่ตกทั้งหมด', c: 'bad' },
       { v: this.records().length, l: 'ผลตรวจที่นำมาคิด' },
     ]);
+    if (this.deep() && d.sections.length) {
+      h += '<div class="sfr-h2">ภาพรวมรายหมวด</div>';
+      h += `<table class="sfr-tb"><colgroup>
+        <col style="width:44%"><col style="width:13%"><col style="width:13%"><col style="width:14%"><col style="width:16%">
+        </colgroup><thead><tr><th>หมวด</th><th class="c">ตรวจ (ข้อ)</th><th class="c">ตก</th><th class="c">% ตก</th><th class="c">สาขาที่ตก</th></tr></thead><tbody>`
+        + d.sections.map((x) => `<tr><td>${escapeHtml(x.section)}</td><td class="n">${x.total}</td>
+            <td class="n">${x.fail}</td><td class="n">${this.pct(x.pct)}</td><td class="n">${x.branchCount}</td></tr>`).join('')
+        + '</tbody></table><div class="sfr-h2">อันดับหัวข้อที่ตก</div>';
+    }
     h += `<table class="sfr-tb"><colgroup>
       <col style="width:5%"><col style="width:15%"><col style="width:31%"><col style="width:8%">
       <col style="width:8%"><col style="width:8%"><col style="width:7%"><col style="width:18%">
@@ -11660,6 +11820,25 @@ const SFRep = {
         <td class="n">${this.pct(r.pct)}</td><td>${escapeHtml(r.topBranches)}</td></tr>`;
     });
     h += '</tbody></table>';
+    if (this.deep()) {
+      /* กางทุกครั้งที่ตก — ตัวเลข "ตก 12 ครั้ง" เอาไปสั่งงานต่อไม่ได้
+         ต้องรู้ว่าตกวันไหน ที่สาขาไหน และสาขาบันทึกไว้ว่าอะไร */
+      const deepN = Math.min(top.length, 25);
+      h += `<div class="sfr-h2">รายละเอียดแต่ละครั้งที่ตก (${deepN} อันดับแรก)</div>`;
+      top.slice(0, deepN).forEach((r, i) => {
+        h += `<div class="sfr-card"><div class="sfr-card-h">
+          <b>${i + 1}. ${escapeHtml(r.text)}</b>
+          <small>${escapeHtml(r.section)} · ตก ${r.fail} จาก ${r.total} ครั้ง (${this.pct(r.pct)}) · ${r.branchCount} สาขา</small>
+        </div><div class="sfr-card-b">
+        <table class="sfr-tb" style="margin:0"><colgroup>
+          <col style="width:16%"><col style="width:28%"><col style="width:12%"><col style="width:44%">
+          </colgroup><thead><tr><th>วันที่</th><th>สาขา</th><th class="c">รอบ</th><th>หมายเหตุจากสาขา</th></tr></thead><tbody>`
+          + r.occ.map((o) => `<tr><td class="nw">${escapeHtml(fmtDateThaiShort(o.date))}</td>
+              <td>${escapeHtml(o.branch)}</td><td class="c">${this.shiftName(o.shift)}</td>
+              <td>${escapeHtml(o.note || '—')}</td></tr>`).join('')
+          + '</tbody></table></div></div>';
+      });
+    }
     const cut = d.rows.length - top.length;
     return h + this.foot('เรียงตามจำนวนครั้งที่ตกมากไปน้อย · “% ตก” คิดจากจำนวนครั้งที่ข้อนั้นถูกตรวจ'
       + (cut > 0 ? ` · แสดง 60 อันดับแรก อีก ${cut} หัวข้อดูได้ในไฟล์ Excel` : ''));
@@ -11684,6 +11863,18 @@ const SFRep = {
         { v: st.fail, l: 'ไม่ผ่าน', c: 'bad' },
         { v: st.na, l: 'ยังไม่ตอบ' },
       ]);
+      if (this.deep()) {
+        /* สรุปรายหมวดของใบนี้ — เห็นทันทีว่าปัญหาอยู่หมวดไหน ไม่ต้องไล่อ่านทีละข้อ */
+        const bs = this.bySection([d]);
+        if (bs.length) {
+          h += `<table class="sfr-tb" style="margin:4px 0 8px"><colgroup>
+            <col style="width:52%"><col style="width:16%"><col style="width:16%"><col style="width:16%">
+            </colgroup><thead><tr><th>หมวด</th><th class="c">ข้อ</th><th class="c">ตก</th><th class="c">% ผ่าน</th></tr></thead><tbody>`
+            + bs.map((x) => `<tr><td>${escapeHtml(x.section)}</td><td class="n">${x.total}</td>
+                <td class="n">${x.fail}</td><td class="n">${this.pct(x.total ? Math.round((x.total - x.fail) / x.total * 1000) / 10 : null)}</td></tr>`).join('')
+            + '</tbody></table>';
+        }
+      }
       let sec = null;
       (d.items || []).forEach((it) => {
         if (!it) return;
@@ -11692,8 +11883,13 @@ const SFRep = {
           : it.status === 'fail' ? '<span class="sfr-pill miss">ไม่ผ่าน</span>'
           : '<span class="sfr-pill na">—</span>';
         h += `<div class="sfr-it">${p}<span class="t">${escapeHtml(it.text || '')}</span></div>`;
-        if (it.status === 'fail' && (it.note || '').trim()) h += `<div class="sfr-note"><b>หมายเหตุ:</b> ${escapeHtml(it.note)}</div>`;
-        if (this.S.photos && it.status === 'fail' && Array.isArray(it.photos)) {
+        /* แบบละเอียดโชว์หมายเหตุและรูปของทุกข้อที่มี ไม่ใช่เฉพาะข้อที่ตก
+           ข้อที่ผ่านแต่สาขาเขียนหมายเหตุไว้ มักเป็นเรื่องที่กำลังจะกลายเป็นปัญหา */
+        const showAll = this.deep();
+        if ((it.note || '').trim() && (showAll || it.status === 'fail')) {
+          h += `<div class="sfr-note${it.status === 'fail' ? '' : ' ok'}"><b>หมายเหตุ:</b> ${escapeHtml(it.note)}</div>`;
+        }
+        if (this.S.photos && (showAll || it.status === 'fail') && Array.isArray(it.photos)) {
           const ps = it.photos.filter((p2) => typeof p2 === 'string' && /^https?:/i.test(p2));
           if (ps.length) h += '<div class="sfr-ph">' + ps.map((u) => `<img src="${escapeAttr(u)}" alt="">`).join('') + '</div>';
         }
@@ -11736,17 +11932,24 @@ const SFRep = {
     if (S.type === 'submit') {
       const d = this.dataSubmit(), shifts = S.shift === 'all' ? ['open', 'close'] : [S.shift];
       const cols = [{ h: 'วันที่', w: 13 }, { h: 'รหัส', w: 9 }, { h: 'สาขา', w: 30 }, { h: 'โซน', w: 12 }];
+      const deep = this.deep();
       shifts.forEach((sh) => {
         const n = this.shiftName(sh);
-        cols.push({ h: n + ' · สถานะ', w: 13 }, { h: n + ' · เวลาส่ง', w: 11 },
-          { h: n + ' · % ผ่าน', w: 10 }, { h: n + ' · ข้อที่ตก', w: 11 });
+        cols.push({ h: n + ' · สถานะ', w: 13 });
+        if (deep) cols.push({ h: n + ' · เริ่ม', w: 10 });
+        cols.push({ h: n + ' · เวลาส่ง', w: 11 });
+        if (deep) cols.push({ h: n + ' · ใช้เวลา (นาที)', w: 15 });
+        cols.push({ h: n + ' · % ผ่าน', w: 10 }, { h: n + ' · ข้อที่ตก', w: 11 });
       });
       const rows = d.rows.map((r) => {
         const o = [fmtDateThaiShort(r.date), String(r.code), r.name, r.zone || ''];
         shifts.forEach((sh) => {
           const c = r.cell[sh];
-          o.push(c.state === 'ok' ? 'ตรงเวลา' : c.state === 'late' ? 'สาย' : 'ยังไม่ส่ง',
-            c.time || '', c.pct == null ? '' : c.pct, c.fail || 0);
+          o.push(c.state === 'ok' ? 'ตรงเวลา' : c.state === 'late' ? 'สาย' : 'ยังไม่ส่ง');
+          if (deep) o.push(c.start || '');
+          o.push(c.time || '');
+          if (deep) o.push(c.used == null ? '' : c.used);
+          o.push(c.pct == null ? '' : c.pct, c.fail || 0);
         });
         return o;
       });
@@ -11796,47 +11999,99 @@ const SFRep = {
       rows: rows,
     };
   },
+  /* ชีตเสริมของรายงานแบบละเอียด — แยกชีตดีกว่ายัดลงชีตเดียว
+     เพราะแต่ละชุดมีหน่วยข้อมูลคนละอย่าง (รายสาขา / รายหมวด / รายครั้งที่ตก) */
+  extraSheets() {
+    if (!this.deep()) return [];
+    const T = this.S.type;
+    if (T === 'submit') {
+      const d = this.dataSubmit(), rows = [];
+      d.rows.forEach((r) => r.shifts.forEach((sh) => {
+        (r.cell[sh].fails || []).forEach((f) => rows.push([
+          fmtDateThaiShort(r.date), String(r.code), r.name, r.zone || '', this.shiftName(sh),
+          f.section, f.text, f.note || '', f.photos.length]));
+      }));
+      return [{ name: 'ข้อที่ไม่ผ่าน',
+        cols: [{ h: 'วันที่', w: 13 }, { h: 'รหัส', w: 9 }, { h: 'สาขา', w: 28 }, { h: 'โซน', w: 12 },
+          { h: 'รอบ', w: 10 }, { h: 'หมวด', w: 22 }, { h: 'หัวข้อ', w: 50 }, { h: 'หมายเหตุจากสาขา', w: 44 }, { h: 'จำนวนรูป', w: 10 }],
+        rows: rows }];
+    }
+    if (T === 'period') {
+      const d = this.dataPeriod();
+      return [
+        { name: 'รายหมวด',
+          cols: [{ h: 'หมวด', w: 34 }, { h: 'ตรวจ (ข้อ)', w: 12 }, { h: 'ตก', w: 10 }, { h: '% ตก', w: 10 }, { h: 'จำนวนสาขาที่ตก', w: 16 }],
+          rows: d.sections.map((x) => [x.section, x.total, x.fail, x.pct, x.branchCount]) },
+        { name: 'รายวัน',
+          cols: [{ h: 'วันที่', w: 14 }, { h: 'ต้องส่ง (รอบ)', w: 13 }, { h: 'ส่งแล้ว', w: 10 }, { h: '% ส่ง', w: 10 },
+            { h: 'ตรงเวลา', w: 10 }, { h: 'ส่งสาย', w: 10 }, { h: 'ข้อที่ตก', w: 10 }, { h: '% ผ่าน', w: 10 }],
+          rows: d.byDay.map((x) => [fmtDateThaiShort(x.date), x.need, x.sent, x.sentPct, x.onTime, x.late, x.fail, x.passPct]) },
+      ];
+    }
+    if (T === 'topfail') {
+      const d = this.dataTopFail(), rows = [];
+      d.rows.forEach((r, i) => r.occ.forEach((o) => rows.push([
+        i + 1, r.section, r.text, fmtDateThaiShort(o.date), o.branch, this.shiftName(o.shift), o.note || ''])));
+      return [
+        { name: 'รายครั้งที่ตก',
+          cols: [{ h: 'อันดับหัวข้อ', w: 12 }, { h: 'หมวด', w: 22 }, { h: 'หัวข้อ', w: 50 }, { h: 'วันที่', w: 13 },
+            { h: 'สาขา', w: 30 }, { h: 'รอบ', w: 10 }, { h: 'หมายเหตุจากสาขา', w: 46 }],
+          rows: rows },
+        { name: 'รายหมวด',
+          cols: [{ h: 'หมวด', w: 34 }, { h: 'ตรวจ (ข้อ)', w: 12 }, { h: 'ตก', w: 10 }, { h: '% ตก', w: 10 }, { h: 'จำนวนสาขาที่ตก', w: 16 }],
+          rows: d.sections.map((x) => [x.section, x.total, x.fail, x.pct, x.branchCount]) },
+      ];
+    }
+    const secs = this.bySection(this.records());
+    return [{ name: 'สรุปรายหมวด',
+      cols: [{ h: 'หมวด', w: 34 }, { h: 'ตรวจ (ข้อ)', w: 12 }, { h: 'ตก', w: 10 }, { h: '% ตก', w: 10 }, { h: 'จำนวนสาขาที่ตก', w: 16 }],
+      rows: secs.map((x) => [x.section, x.total, x.fail, x.pct, x.branchCount]) }];
+  },
+
   excel() {
     if (this.S.from > this.S.to) { showModal('ช่วงวันที่ไม่ถูกต้อง', 'วันเริ่มต้นอยู่หลังวันสิ้นสุด'); return; }
     const spec = this.sheetSpec();
     if (!spec.rows.length) { showModal('ไม่มีข้อมูล', 'ช่วงและขอบเขตที่เลือกยังไม่มีข้อมูลให้ออกรายงาน'); return; }
+    const specs = [spec].concat(this.extraSheets().filter((x) => x.rows.length));
     /* ตัวสร้าง Excel โหลดจากเน็ตตอนกดครั้งแรก อาจใช้เวลาสองสามวินาที
        ถ้าไม่บอกอะไรเลย ผู้ใช้จะนึกว่าปุ่มเสียแล้วกดซ้ำ */
     this.busy(true, 'กำลังสร้างไฟล์ Excel…');
     this.loadExcel().then(() => {
       const wb = new ExcelJS.Workbook();
-      const ws = wb.addWorksheet(spec.name);
-      /* หัวเรื่องสองบรรทัด บอกว่ารายงานอะไร ช่วงไหน ขอบเขตอะไร — เปิดไฟล์ทีหลังจะได้ไม่ต้องเดา */
-      ws.addRow([this.title()]);
-      ws.addRow(['ช่วงข้อมูล ' + this.rangeText() + ' · ' + this.scopeText()
-        + ' · ออกโดย ' + ((currentUser && (currentUser.name || currentUser.nick)) || '-')]);
-      ws.addRow([]);
-      ws.getRow(1).font = { bold: true, size: 14 };
-      ws.getRow(2).font = { size: 10, color: { argb: 'FF666666' } };
-      const hIdx = 4;
-      ws.addRow(spec.cols.map((c) => c.h));
-      const hr = ws.getRow(hIdx);
-      hr.font = { bold: true, color: { argb: 'FFFFFFFF' } };
-      hr.alignment = { vertical: 'middle', wrapText: true };
-      hr.eachCell((c) => { c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF2B2F36' } }; });
-      ws.columns = spec.cols.map((c) => ({ width: c.w }));
-      spec.rows.forEach((r) => {
-        const row = ws.addRow(r);
-        row.alignment = { vertical: 'top', wrapText: false };
-        r.forEach((v, i) => {
-          if (v === 'ยังไม่ส่ง' || v === 'ไม่ผ่าน') row.getCell(i + 1).font = { color: { argb: 'FFB3261E' }, bold: true };
-          else if (v === 'สาย') row.getCell(i + 1).font = { color: { argb: 'FF8A5A08' }, bold: true };
+      specs.forEach((sp) => {
+        const ws = wb.addWorksheet(sp.name);
+        /* หัวเรื่องสองบรรทัด บอกว่ารายงานอะไร ช่วงไหน ขอบเขตอะไร — เปิดไฟล์ทีหลังจะได้ไม่ต้องเดา */
+        ws.addRow([this.title() + (sp === spec ? '' : ' · ' + sp.name)]);
+        ws.addRow(['ช่วงข้อมูล ' + this.rangeText() + ' · ' + this.scopeText()
+          + ' · ออกโดย ' + ((currentUser && (currentUser.name || currentUser.nick)) || '-')]);
+        ws.addRow([]);
+        ws.getRow(1).font = { bold: true, size: 14 };
+        ws.getRow(2).font = { size: 10, color: { argb: 'FF666666' } };
+        const hIdx = 4;
+        ws.addRow(sp.cols.map((c) => c.h));
+        const hr = ws.getRow(hIdx);
+        hr.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+        hr.alignment = { vertical: 'middle', wrapText: true };
+        hr.eachCell((c) => { c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF2B2F36' } }; });
+        ws.columns = sp.cols.map((c) => ({ width: c.w }));
+        sp.rows.forEach((r) => {
+          const row = ws.addRow(r);
+          row.alignment = { vertical: 'top', wrapText: false };
+          r.forEach((v, i) => {
+            if (v === 'ยังไม่ส่ง' || v === 'ไม่ผ่าน') row.getCell(i + 1).font = { color: { argb: 'FFB3261E' }, bold: true };
+            else if (v === 'สาย') row.getCell(i + 1).font = { color: { argb: 'FF8A5A08' }, bold: true };
+          });
         });
+        if (sp.total) {
+          const tr = ws.addRow(sp.total);
+          tr.font = { bold: true };
+          tr.eachCell((c) => { c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF0F1F4' } }; });
+        }
+        ws.views = [{ state: 'frozen', ySplit: hIdx }];
+        if (sp.cols.length <= 26) {
+          ws.autoFilter = { from: { row: hIdx, column: 1 }, to: { row: hIdx, column: sp.cols.length } };
+        }
       });
-      if (spec.total) {
-        const tr = ws.addRow(spec.total);
-        tr.font = { bold: true };
-        tr.eachCell((c) => { c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF0F1F4' } }; });
-      }
-      ws.views = [{ state: 'frozen', ySplit: hIdx }];
-      if (spec.cols.length <= 26) {
-        ws.autoFilter = { from: { row: hIdx, column: 1 }, to: { row: hIdx, column: spec.cols.length } };
-      }
       return wb.xlsx.writeBuffer();
     }).then((buf) => {
       const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
@@ -11847,7 +12102,9 @@ const SFRep = {
       setTimeout(() => URL.revokeObjectURL(url), 5000);
       this.busy(false);
       this.close();
-      showModalHtml('ออกรายงานแล้ว', `ไฟล์ Excel <b>${spec.rows.length}</b> แถว<br>
+      showModalHtml('ออกรายงานแล้ว', `ไฟล์ Excel <b>${spec.rows.length}</b> แถว`
+        + (specs.length > 1 ? ` · ${specs.length} ชีต (${specs.map((x) => escapeHtml(x.name)).join(' · ')})` : '')
+        + `<br>
         <span style="font-size:12px;color:#666">${escapeHtml(this.rangeText())} · ${escapeHtml(this.scopeText())}</span>`);
     }).catch((e) => {
       this.busy(false);
@@ -11943,9 +12200,15 @@ const SFRep = {
         </label>
       </div>
 
+      <div class="sfrep-lbl">ระดับความละเอียด</div>
+      <label class="sfrep-sw" style="margin-top:0">
+        <input type="checkbox" id="sfrep-depth" onchange="SFRep.set('depth', this.checked ? 'full' : 'normal')">
+        <span>รายงานแบบละเอียด — <span style="color:var(--text-secondary)">ลงลึกถึงรายข้อที่ไม่ผ่านทีละรายการ พร้อมหมายเหตุจากสาขา · ไฟล์จะยาวกว่าเดิม</span></span>
+      </label>
+
       <label class="sfrep-sw" id="sfrep-photo-row">
         <input type="checkbox" id="sfrep-photos" checked onchange="SFRep.set('photos',this.checked)">
-        แนบรูปถ่ายของข้อที่ตก (เฉพาะรายงานแบบละเอียด)
+        แนบรูปถ่ายของข้อที่ไม่ผ่าน (ใช้กับรายงาน “รายละเอียดหลายใบ”)
       </label>
 
       <div class="sfrep-pv" id="sfrep-pv">กำลังคำนวณ…</div>
