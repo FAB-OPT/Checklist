@@ -787,6 +787,25 @@ body.repmode #app-screen { padding-top: 0; }
   max-width: 520px; margin: 60px auto; padding: 24px;
   text-align: center; font-weight: 700; color: var(--text-secondary);
 }
+/* แถบบนของหน้ารายงาน — ชื่อรายงานซ้าย ปุ่มบันทึกเป็น PDF ขวา · ติดขอบบนตอนเลื่อน */
+.rep-bar {
+  position: sticky; top: 0; z-index: 60;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 10px 16px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+.rep-ttl {
+  font-size: 14px; font-weight: 800; color: var(--text);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.rep-bar .btn { flex: 0 0 auto; min-height: 40px; padding: 9px 16px; font-size: 14px; }
+@media (max-width: 480px) {
+  .rep-bar { padding: 8px 12px; }
+  .rep-ttl { font-size: 12px; }
+  .rep-bar .btn { min-height: 38px; padding: 8px 12px; font-size: 13px; }
+}
 
 .login-logo { text-align: center; margin-bottom: 24px; }
 .login-logo .icon {
@@ -11016,13 +11035,17 @@ async function openPublicJDReport(id) {
   allJaedaengAudits = [rec];
   try { showJaedaengDetail(rec.id); }
   catch (e) { console.error('[JD report] render error', e, rec); _jdRepMsg('แสดงรายงานไม่ได้ — ข้อมูลบางส่วนไม่สมบูรณ์'); return; }
-  // เหลือปุ่มเดียว: บันทึกเป็น PDF (ไม่มีกลับไปประวัติ/แชร์/แก้ไข/ลบ เพราะไม่ได้ล็อกอิน)
+  // ตัดปุ่มท้ายหน้าออกทั้งการ์ด (กลับไปประวัติ/แชร์/แก้ไข/ลบ ใช้ไม่ได้เพราะไม่ได้ล็อกอิน)
+  // แล้วย้าย "บันทึกเป็น PDF" ขึ้นแถบบนขวา — เห็นตลอดโดยไม่ต้องเลื่อนลงสุด
   const actions = document.getElementById('jd-detail-actions');
-  if (actions) {
-    actions.innerHTML = '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
-      '<button class="btn btn-primary" style="flex:1;min-width:130px;" onclick="printJaedaengDetail()">' +
-      '<span class="material-symbols-rounded">picture_as_pdf</span> บันทึกเป็น PDF</button></div>';
-  }
+  if (actions) actions.remove();
+  const bar = document.createElement('div');
+  bar.className = 'rep-bar no-print';
+  bar.innerHTML = '<div class="rep-ttl">รายงานการตรวจสาขา · ' +
+    escapeHtml(rec.storeName || 'เจ๊แดง') + '</div>' +
+    '<button class="btn btn-primary" onclick="printJaedaengDetail()">' +
+    '<span class="material-symbols-rounded">picture_as_pdf</span> บันทึกเป็น PDF</button>';
+  if (app) app.prepend(bar);
 }
 
 /* รอรูปให้โหลดครบก่อนสั่งพิมพ์
