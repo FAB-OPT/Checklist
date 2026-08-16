@@ -787,23 +787,18 @@ body.repmode #app-screen { padding-top: 0; }
   max-width: 520px; margin: 60px auto; padding: 24px;
   text-align: center; font-weight: 700; color: var(--text-secondary);
 }
-/* แถบบนของหน้ารายงาน — ชื่อรายงานซ้าย ปุ่มบันทึกเป็น PDF ขวา · ติดขอบบนตอนเลื่อน */
+/* แถบบนของหน้ารายงาน — แถบขาวเปล่า มีปุ่มบันทึกเป็น PDF ชิดขวา · ติดขอบบนตอนเลื่อน */
 .rep-bar {
   position: sticky; top: 0; z-index: 60;
-  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  display: flex; align-items: center; justify-content: flex-end;
   padding: 10px 16px;
   background: var(--surface);
   border-bottom: 1px solid var(--border);
   box-shadow: 0 2px 8px rgba(0,0,0,0.06);
 }
-.rep-ttl {
-  font-size: 14px; font-weight: 800; color: var(--text);
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-}
 .rep-bar .btn { flex: 0 0 auto; min-height: 40px; padding: 9px 16px; font-size: 14px; }
 @media (max-width: 480px) {
   .rep-bar { padding: 8px 12px; }
-  .rep-ttl { font-size: 12px; }
   .rep-bar .btn { min-height: 38px; padding: 8px 12px; font-size: 13px; }
 }
 
@@ -11041,9 +11036,8 @@ async function openPublicJDReport(id) {
   if (actions) actions.remove();
   const bar = document.createElement('div');
   bar.className = 'rep-bar no-print';
-  bar.innerHTML = '<div class="rep-ttl">รายงานการตรวจสาขา · ' +
-    escapeHtml(rec.storeName || 'เจ๊แดง') + '</div>' +
-    '<button class="btn btn-primary" onclick="printJaedaengDetail()">' +
+  // ไม่ใส่ชื่อรายงานในแถบ — ชื่อสาขาอยู่ในหัวรายงานข้างล่างอยู่แล้ว เอาแค่แถบขาว + ปุ่ม
+  bar.innerHTML = '<button class="btn btn-primary" onclick="printJaedaengDetail()">' +
     '<span class="material-symbols-rounded">picture_as_pdf</span> บันทึกเป็น PDF</button>';
   if (app) app.prepend(bar);
 }
