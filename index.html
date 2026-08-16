@@ -1349,6 +1349,26 @@ input[type="time"].jd-form-input {
   color: var(--text);
   font-family: inherit;
 }
+/* N/A — ติ๊กเลือกเหตุผลจากรายการ (แทนการพิมพ์เอง) */
+.jd-na-reasons { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.jd-na-chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 6px 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 12px; font-weight: 600;
+  color: var(--text-secondary);
+  font-family: inherit; cursor: pointer;
+}
+.jd-na-chip .material-symbols-rounded { font-size: 15px; }
+.jd-na-chip:hover { border-color: var(--text-secondary); color: var(--text); }
+.jd-na-chip.active {
+  background: var(--text-secondary); border-color: var(--text-secondary); color: #fff;
+}
+.jd-na-reasons.is-required .jd-na-chip {
+  border-color: rgba(199,50,35,0.35); background: var(--danger-bg); color: var(--danger);
+}
 .jd-item.is-required-photo {
   background: rgba(217,119,6,0.04);
   border-left: 4px solid var(--warning);
@@ -10020,6 +10040,52 @@ function _setupJdSectionObserver() {
   sections.forEach(s => _jdSectionObserver.observe(s));
 }
 
+// เหตุผลสำเร็จรูปของข้อที่ตอบ N/A — ติ๊กเลือกแทนการพิมพ์ (พิมพ์เองได้ที่ "อื่นๆ")
+const JD_NA_REASONS = [
+  'ยกเว้นการตรวจ',
+];
+const JD_NA_OTHER = -1; // index ที่ใช้แทนตัวเลือก "อื่นๆ (ระบุ)"
+
+// true = ข้อนี้เลือก "อื่นๆ" อยู่ (ติ๊กไว้ หรือเหตุผลที่มีไม่ตรงกับรายการสำเร็จรูป)
+function _jdNaIsOther(it) {
+  const note = (it.note || '').trim();
+  return it.naOther === true || (!!note && !JD_NA_REASONS.includes(note));
+}
+
+function _jdNaReasonHtml(it, idx) {
+  const note = (it.note || '').trim();
+  const isOther = _jdNaIsOther(it);
+  const chips = JD_NA_REASONS.map((r, ri) => {
+    const on = !isOther && note === r;
+    return `<button type="button" class="jd-na-chip${on ? ' active' : ''}" onclick="setJDNaReason(${idx},${ri})">
+      <span class="material-symbols-rounded">${on ? 'check_circle' : 'radio_button_unchecked'}</span>${escapeHtml(r)}</button>`;
+  }).join('');
+  const otherChip = `<button type="button" class="jd-na-chip${isOther ? ' active' : ''}" onclick="setJDNaReason(${idx},${JD_NA_OTHER})">
+    <span class="material-symbols-rounded">${isOther ? 'check_circle' : 'radio_button_unchecked'}</span>อื่นๆ (ระบุ)</button>`;
+  const rowCls = note ? 'jd-na-reasons' : 'jd-na-reasons is-required';
+  return `<div class="${rowCls}">${chips}${otherChip}</div>` +
+    (isOther ? `<input type="text" class="jd-note-input${note ? '' : ' is-required'}" placeholder="ระบุเหตุผลที่ N/A (จำเป็น)" value="${escapeAttr(it.note || '')}" oninput="setJDNote(${idx}, this.value)">` : '');
+}
+
+// ติ๊กเหตุผล N/A — เก็บลง it.note เหมือนเดิม เพื่อให้รายงาน/หน้ารายละเอียดอ่านได้โดยไม่ต้องแก้
+function setJDNaReason(idx, ri) {
+  if (!currentJDAudit) return;
+  const it = currentJDAudit.items[idx];
+  if (!it) return;
+  if (ri === JD_NA_OTHER) {
+    // กดซ้ำที่ "อื่นๆ" = ยกเลิกการเลือก
+    it.naOther = !_jdNaIsOther(it);
+    it.note = '';
+  } else {
+    const val = JD_NA_REASONS[ri];
+    if (val === undefined) return;
+    it.naOther = false;
+    it.note = (it.note || '').trim() === val ? '' : val;
+  }
+  _saveJDDraft();
+  renderJaedaengForm();
+}
+
 function renderJaedaengForm() {
   renderJaedaengSectionTabs();
   const container = document.getElementById('jaedaeng-sections-container');
@@ -10074,7 +10140,7 @@ function renderJaedaengForm() {
           </button>
         </div>
         ${isFail ? `<input type="text" class="jd-note-input${(it.note||'').trim()?'':' is-required'}" placeholder="ระบุหมายเหตุ / Action (จำเป็น)" value="${escapeAttr(it.note || '')}" oninput="setJDNote(${idx}, this.value)">` : ''}
-        ${isNA ? `<input type="text" class="jd-note-input${(it.note||'').trim()?'':' is-required'}" placeholder="ระบุเหตุผลที่ N/A (จำเป็น)" value="${escapeAttr(it.note || '')}" oninput="setJDNote(${idx}, this.value)">` : ''}
+        ${isNA ? _jdNaReasonHtml(it, idx) : ''}
         ${photosHtml}
       </div>`;
     });
@@ -10159,13 +10225,17 @@ function _onModalOkOnce(fn) {
 
 function setJDAnswer(idx, value) {
   if (!currentJDAudit) return;
-  currentJDAudit.items[idx].status = value;
+  const it = currentJDAudit.items[idx];
+  const prev = it.status;
+  it.status = value;
   const isRequired = (currentJDAudit.requiredPhotos || []).includes(idx);
-  if (value !== 'fail') {
-    currentJDAudit.items[idx].note = '';
-    // Keep photos on required-photo items even when toggled to pass/na
-    if (!isRequired) currentJDAudit.items[idx].photos = [];
+  // เปลี่ยนคำตอบ = ล้างหมายเหตุ/เหตุผลเดิม (กดซ้ำคำตอบเดิมไม่ล้าง)
+  if (value !== prev) {
+    it.note = '';
+    it.naOther = false;
   }
+  // Keep photos on required-photo items even when toggled to pass/na
+  if (value !== 'fail' && !isRequired) it.photos = [];
   _saveJDDraft();
   renderJaedaengForm();
 }
@@ -10539,7 +10609,7 @@ async function submitJaedaengAudit() {
   );
   if (naFirstIdx >= 0) {
     const naCount = currentJDAudit.items.filter(it => it.status === 'na' && (!it.note || !it.note.trim())).length;
-    showModal('N/A ต้องระบุเหตุผล', `มี ${naCount} ข้อที่ตอบ "N/A" แต่ยังไม่ได้ระบุเหตุผล — กดตกลงเพื่อไปข้อนั้น`, () => scrollToJDItem(naFirstIdx));
+    showModal('N/A ต้องเลือกเหตุผล', `มี ${naCount} ข้อที่ตอบ "N/A" แต่ยังไม่ได้เลือกเหตุผล — กดตกลงเพื่อไปข้อนั้น`, () => scrollToJDItem(naFirstIdx));
     return;
   }
   const items = currentJDAudit.items;
