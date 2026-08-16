@@ -13,7 +13,11 @@
     var ua = navigator.userAgent || '';
     if (!/\bLine\//i.test(ua)) return;
     if (/[?&]openExternalBrowser=1/.test(location.search)) return;   // ลองแล้ว — กันวนซ้ำ
-    location.replace(location.href + (location.search ? '&' : '?') + 'openExternalBrowser=1');
+    // ต้องต่อพารามิเตอร์เข้า "query" แล้วเอา hash ตามท้าย — ต่อท้าย location.href เฉย ๆ
+    // จะไปโผล่ใน hash (#report=...?openExternalBrowser=1) ทำให้ LINE ไม่เห็นพารามิเตอร์
+    // และลิงก์แชร์รายงานก็พังเพราะ id มีพารามิเตอร์ติดไปด้วย
+    var qs = location.search ? location.search + '&openExternalBrowser=1' : '?openExternalBrowser=1';
+    location.replace(location.origin + location.pathname + qs + location.hash);
   } catch (e) {}
 })();
 </script>
@@ -10972,7 +10976,8 @@ function shareJaedaengReport(id) {
    ดึงผลตรวจใบเดียวจาก Firestore มาแสดงด้วยหน้ารายละเอียดตัวเดิม
    จึงได้หน้าตา/ภาคผนวกรูป/การแบ่งหน้า PDF เหมือนกับที่เห็นในแอปทุกอย่าง */
 function parseJDReportHash() {
-  const m = (location.hash || '').match(/[#&]report=jd~([^&]+)/);
+  // ตัดที่ & และ ? ด้วย — บางแอป (LINE) ชอบต่อพารามิเตอร์ของตัวเองท้าย URL
+  const m = (location.hash || '').match(/[#&]report=jd~([^&?]+)/);
   if (!m) return null;
   try { return decodeURIComponent(m[1]); } catch (e) { return m[1]; }
 }
