@@ -774,6 +774,16 @@ body {
 .screen { display: none; }
 .screen.active { display: block; }
 
+/* ── โหมดดูรายงานผ่านลิงก์แชร์ (เปิดได้โดยไม่ต้องล็อกอิน) ──
+   ตัดหัวแอป/เมนูล่างออก เหลือแต่ตัวรายงาน + ปุ่มบันทึกเป็น PDF */
+body.repmode .app-header,
+body.repmode #bottom-nav { display: none !important; }
+body.repmode #app-screen { padding-top: 0; }
+.rep-load {
+  max-width: 520px; margin: 60px auto; padding: 24px;
+  text-align: center; font-weight: 700; color: var(--text-secondary);
+}
+
 .login-logo { text-align: center; margin-bottom: 24px; }
 .login-logo .icon {
   width: 72px; height: 72px; border-radius: 16px;
@@ -5588,13 +5598,13 @@ html.fab-sso-pending #login-screen { display: none !important; }
       </div>
       <div id="jd-detail-content"></div>
       <div class="print-only-photos" id="jd-print-photos"></div>
-      <div class="card no-print">
+      <div class="card no-print" id="jd-detail-actions">
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
           <button class="btn btn-secondary" style="flex:1;min-width:130px;" onclick="showJaedaengHub()">
             <span class="material-symbols-rounded">arrow_back</span> กลับไปประวัติ
           </button>
-          <button class="btn btn-primary" data-ck-action="print-detail" style="flex:1;min-width:130px;" onclick="printJaedaengDetail()">
-            <span class="material-symbols-rounded">picture_as_pdf</span> ออก PDF
+          <button class="btn btn-primary" data-ck-action="print-detail" style="flex:1;min-width:130px;" onclick="shareJaedaengReport()">
+            <span class="material-symbols-rounded">link</span> แชร์ลิงก์รายงาน
           </button>
           <button class="btn btn-primary" id="jd-detail-edit-btn" style="flex:1;min-width:130px;display:none;" onclick="editJaedaengAudit(currentJDDetailId)">
             <span class="material-symbols-rounded">edit</span> แก้ไขผล
@@ -10926,6 +10936,90 @@ function _jdPlainPrint(footerText, footerElId) {
 function printJaedaengDetail() { return _printDetailPDF('jaedaeng-detail-screen', 'jd-print-footer'); }
 function printDailyDetail()    { return _printDetailPDF('daily-detail-screen',    'daily-print-footer'); }
 
+/* ══════════════════════════════════════════════════════════════════
+   แชร์รายงานเจ๊แดงเป็น "ลิงก์" — เหมือนระบบตรวจร้าน (fqa-visit)
+   ผู้รับเปิดลิงก์ได้ทุกเครื่องโดยไม่ต้องล็อกอิน แล้วกดบันทึกเป็น PDF เอง
+   แก้ปัญหาไฟล์ PDF ดาวน์โหลดแล้วส่งต่อยาก / Android กดแล้วเงียบ
+   ══════════════════════════════════════════════════════════════════ */
+function jdReportUrl(id) {
+  return location.origin + location.pathname + '#report=jd~' + encodeURIComponent(id);
+}
+
+function shareJaedaengReport(id) {
+  const recId = id || currentJDDetailId;
+  if (!recId) return;
+  const r = (allJaedaengAudits || []).find(x => x.id === recId);
+  const url = jdReportUrl(recId);
+  const title = 'รายงานการตรวจสาขา' + (r && r.storeName ? ' · ' + r.storeName : '');
+  const askManual = () => { try { window.prompt('คัดลอกลิงก์นี้เพื่อแชร์', url); } catch (e) {} };
+  // navigator.share ใช้ได้เฉพาะ https + ส่วนใหญ่เป็นมือถือ · คอมตกไปที่คัดลอกลิงก์
+  if (navigator.share) {
+    navigator.share({ title, text: title, url }).catch(() => {});
+    return;
+  }
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(url)
+      .then(() => showModalHtml('คัดลอกลิงก์รายงานแล้ว',
+        'วางส่งใน LINE / อีเมลได้เลย — ผู้รับเปิดดูได้โดยไม่ต้องล็อกอิน<br><br>' +
+        `<div style="word-break:break-all;font-size:12px;color:var(--text-secondary);">${escapeHtml(url)}</div>`))
+      .catch(askManual);
+    return;
+  }
+  askManual();
+}
+
+/* ── หน้าดูรายงานผ่านลิงก์ (สาธารณะ) — เปิดจาก #report=jd~<id> ──
+   ดึงผลตรวจใบเดียวจาก Firestore มาแสดงด้วยหน้ารายละเอียดตัวเดิม
+   จึงได้หน้าตา/ภาคผนวกรูป/การแบ่งหน้า PDF เหมือนกับที่เห็นในแอปทุกอย่าง */
+function parseJDReportHash() {
+  const m = (location.hash || '').match(/[#&]report=jd~([^&]+)/);
+  if (!m) return null;
+  try { return decodeURIComponent(m[1]); } catch (e) { return m[1]; }
+}
+
+function _jdRepMsg(html) {
+  const app = document.getElementById('app-screen');
+  if (app) app.innerHTML = `<div class="rep-load">${html}</div>`;
+}
+
+async function openPublicJDReport(id) {
+  document.body.classList.add('repmode');
+  const login = document.getElementById('login-screen');
+  if (login) login.classList.remove('active');
+  const app = document.getElementById('app-screen');
+  if (app) app.classList.add('active');
+  const loading = document.createElement('div');
+  loading.className = 'rep-load';
+  loading.id = 'jd-rep-loading';
+  loading.textContent = 'กำลังโหลดรายงาน…';
+  if (app) app.prepend(loading);
+
+  if (!firebaseDb) { _jdRepMsg('เปิดรายงานไม่ได้ — เชื่อมต่อฐานข้อมูลไม่สำเร็จ'); return; }
+  let rec;
+  try {
+    const snap = await firebaseDb.collection(JAEDAENG_COLLECTION).doc(String(id)).get();
+    if (!snap.exists) { _jdRepMsg('ไม่พบรายงานนี้ (อาจถูกลบไปแล้ว)'); return; }
+    rec = snap.data();
+  } catch (e) {
+    console.error('[JD report] load error', e);
+    _jdRepMsg('โหลดรายงานไม่สำเร็จ — ตรวจอินเทอร์เน็ตแล้วลองใหม่');
+    return;
+  }
+  rec.id = rec.id || String(id);
+  loading.remove();
+  // หน้ารายละเอียดอ่านจาก allJaedaengAudits — ยัดใบเดียวที่โหลดมาเข้าไปแล้วเรียกตัวเดิม
+  allJaedaengAudits = [rec];
+  try { showJaedaengDetail(rec.id); }
+  catch (e) { console.error('[JD report] render error', e, rec); _jdRepMsg('แสดงรายงานไม่ได้ — ข้อมูลบางส่วนไม่สมบูรณ์'); return; }
+  // เหลือปุ่มเดียว: บันทึกเป็น PDF (ไม่มีกลับไปประวัติ/แชร์/แก้ไข/ลบ เพราะไม่ได้ล็อกอิน)
+  const actions = document.getElementById('jd-detail-actions');
+  if (actions) {
+    actions.innerHTML = '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
+      '<button class="btn btn-primary" style="flex:1;min-width:130px;" onclick="printJaedaengDetail()">' +
+      '<span class="material-symbols-rounded">picture_as_pdf</span> บันทึกเป็น PDF</button></div>';
+  }
+}
+
 /* รอรูปให้โหลดครบก่อนสั่งพิมพ์
    รูปในผลตรวจถูกอัปโหลดขึ้นคลาวด์แล้วเก็บไว้เป็น "ลิงก์" เวลาพิมพ์จึงต้องโหลดผ่านเน็ตจริง ๆ
    ถ้าสั่งพิมพ์ก่อนรูปมาถึง จะได้ช่องว่างแทนรูป · ยิ่งรายงานหลายใบ รูปยิ่งเยอะ ยิ่งไม่ทัน */
@@ -11213,6 +11307,9 @@ const _ssoLikely = _hasValidSessionSync();
 })();
 
 (async function bootstrapLogin() {
+  // เปิดจากลิงก์แชร์รายงาน → แสดงรายงานอย่างเดียว ไม่ต้องล็อกอิน ไม่เด้งไป Hub
+  const _repId = parseJDReportHash();
+  if (_repId) { openPublicJDReport(_repId); return; }
   // If a sibling FAB app already logged the user in, skip straight into the app.
   const ok = await autoLoginFromSession();
   if (ok) return;
