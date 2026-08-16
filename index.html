@@ -782,16 +782,18 @@ body {
    ตัดหัวแอป/เมนูล่างออก เหลือแต่ตัวรายงาน + ปุ่มบันทึกเป็น PDF */
 body.repmode .app-header,
 body.repmode #bottom-nav { display: none !important; }
-body.repmode #app-screen { padding-top: 0; }
+body.repmode #app-screen { padding-top: 58px; }
 .rep-load {
   max-width: 520px; margin: 60px auto; padding: 24px;
   text-align: center; font-weight: 700; color: var(--text-secondary);
 }
-/* แถบบนของหน้ารายงาน — แถบขาวเปล่า มีปุ่มบันทึกเป็น PDF ชิดขวา · ติดขอบบนตอนเลื่อน */
+/* แถบบนของหน้ารายงาน — แถบขาวยาวเต็มความกว้าง มีปุ่มบันทึกเป็น PDF ชิดขวา
+   ยึดกับ viewport (fixed) ไม่ใช่กล่องเนื้อหา แถบจึงชนขอบซ้าย-ขวาเสมอ
+   ไม่ว่ากล่องข้างในจะมี max-width หรือ padding เท่าไร */
 .rep-bar {
-  position: sticky; top: 0; z-index: 60;
+  position: fixed; top: 0; left: 0; right: 0; z-index: 60;
   display: flex; align-items: center; justify-content: flex-end;
-  padding: 10px 16px;
+  padding: 9px 16px;
   background: var(--surface);
   border-bottom: 1px solid var(--border);
   box-shadow: 0 2px 8px rgba(0,0,0,0.06);
@@ -11039,7 +11041,7 @@ async function openPublicJDReport(id) {
   // ไม่ใส่ชื่อรายงานในแถบ — ชื่อสาขาอยู่ในหัวรายงานข้างล่างอยู่แล้ว เอาแค่แถบขาว + ปุ่ม
   bar.innerHTML = '<button class="btn btn-primary" onclick="printJaedaengDetail()">' +
     '<span class="material-symbols-rounded">picture_as_pdf</span> บันทึกเป็น PDF</button>';
-  if (app) app.prepend(bar);
+  document.body.appendChild(bar);
 }
 
 /* รอรูปให้โหลดครบก่อนสั่งพิมพ์
