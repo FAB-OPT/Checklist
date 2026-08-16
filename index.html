@@ -10041,13 +10041,15 @@ function renderJaedaengForm() {
       const isFail = it.status === 'fail';
       const isNA = it.status === 'na';
       const isRequired = (currentJDAudit.requiredPhotos || []).includes(idx);
+      // ตอบ N/A = ไม่มีของให้ถ่าย → ยกเว้นการบังคับรูปหลักฐาน
+      const photoRequired = isRequired && !isNA;
       const photos = it.photos || [];
-      const showPhotos = isRequired || isFail;
+      const showPhotos = photoRequired || isFail || photos.length > 0;
       let photosHtml = '';
       if (showPhotos) {
-        const missing = isRequired && photos.length === 0;
+        const missing = photoRequired && photos.length === 0;
         const btnCls = missing ? 'jd-photo-upload-btn is-required' : 'jd-photo-upload-btn';
-        const btnLabel = missing ? 'ต้องถ่ายรูปหลักฐาน' : (isRequired || photos.length > 0 ? 'ถ่ายรูปเพิ่ม' : 'ถ่ายรูป');
+        const btnLabel = missing ? 'ต้องถ่ายรูปหลักฐาน' : (photoRequired || photos.length > 0 ? 'ถ่ายรูปเพิ่ม' : 'ถ่ายรูป');
         photosHtml = '<div class="jd-photo-section">' +
           '<button type="button" class="' + btnCls + '" onclick="openJDCamera(' + idx + ')"><span class="material-symbols-rounded">photo_camera</span> ' + btnLabel + '</button>' +
           (photos.length ? '<div class="jd-photo-preview">' +
@@ -10055,7 +10057,7 @@ function renderJaedaengForm() {
           '</div>' : '') +
           '</div>';
       }
-      html += `<div class="jd-item ${isPass ? 'is-pass' : ''} ${isFail ? 'is-fail' : ''} ${isNA ? 'is-na' : ''} ${isRequired ? 'is-required-photo' : ''}" id="jd-item-${idx}">
+      html += `<div class="jd-item ${isPass ? 'is-pass' : ''} ${isFail ? 'is-fail' : ''} ${isNA ? 'is-na' : ''} ${photoRequired ? 'is-required-photo' : ''}" id="jd-item-${idx}">
         <div class="jd-item-q">
           <span class="jd-item-num">${j + 1}</span>
           <span class="jd-item-text">${escapeHtml(it.text)}</span>
@@ -10501,9 +10503,10 @@ async function submitJaedaengAudit() {
     showModal('ข้อหลักฐานต้องตรวจก่อน', `มี ${reqNoStatus.length} ข้อที่ต้องถ่ายรูปหลักฐาน แต่ยังไม่ได้เลือกผล — กดตกลงเพื่อไปข้อนั้น`, () => scrollToJDItem(reqNoStatus[0]));
     return;
   }
-  // Required-photo items must have at least one photo attached
+  // Required-photo items must have at least one photo attached — ยกเว้นข้อที่ตอบ N/A
   const missing = required.filter(i => {
     const it = currentJDAudit.items[i];
+    if (it && it.status === 'na') return false;
     return !it || !it.photos || it.photos.length === 0;
   });
   if (missing.length > 0) {
@@ -10759,7 +10762,7 @@ function showJaedaengDetail(id, targetText) {
       const photosHtml = photos.length ? '<div class="detail-photos">' + photos.map(p => {
         const lbIdx = lightboxImages.indexOf(p);
         return `<button type="button" class="detail-photo-btn" onclick="openLightbox(${lbIdx})"><img src="${p}" alt=""><span class="detail-photo-zoom"><span class="material-symbols-rounded">zoom_in</span></span></button>`;
-      }).join('') + '</div>' : (r.photosPurgedAt && (it.status === 'fail' || (r.requiredPhotos || []).map(i => (r.items||[])[i] && r.items[i].key).includes(it.key))
+      }).join('') + '</div>' : (r.photosPurgedAt && it.status !== 'na' && (it.status === 'fail' || (r.requiredPhotos || []).map(i => (r.items||[])[i] && r.items[i].key).includes(it.key))
         ? '<div class="detail-item-note" style="background:var(--surface-2);color:var(--text-tertiary);border-color:var(--border);"><span class="material-symbols-rounded">photo_camera</span>รูปถูกลบหลังเก็บครบ 45 วัน</div>'
         : '');
       html += `<div class="detail-item is-${status}" data-item-text="${escapeAttr(it.text)}">
