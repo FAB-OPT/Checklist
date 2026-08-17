@@ -4293,7 +4293,8 @@ input[type="time"].jd-form-input {
 }
 /* Brand-specific logos use cover so the brand artwork fills the rounded tile */
 .login-box.brand-santafe .brand-logo img,
-.login-box.brand-jaedaeng .brand-logo img {
+.login-box.brand-jaedaeng .brand-logo img,
+.login-box.brand-yamachan .brand-logo img {
   object-fit: cover;
 }
 .brand-logo .material-symbols-rounded { font-size: 42px; color: white; }
@@ -5298,6 +5299,9 @@ html.fab-sso-pending #login-screen { display: none !important; }
         <button type="button" class="brand-pick-card brand-pick-jaedaeng" onclick="selectBrand('jaedaeng')" aria-label="เจ๊แดงสามย่าน">
           <img src="Logo-Jaedang_samyan.png" alt="เจ๊แดงสามย่าน" class="brand-pick-img">
         </button>
+        <button type="button" class="brand-pick-card brand-pick-yamachan" onclick="selectBrand('yamachan')" aria-label="ยามะจัง">
+          <img src="logo-yamachan.png" alt="ยามะจัง" class="brand-pick-img">
+        </button>
       </div>
       <p class="brand-pick-hint">เลือกแบรนด์เพื่อเข้าสู่ระบบ</p>
     </div>
@@ -6290,14 +6294,18 @@ const YAMACHAN_CLOSE = [
 ];
 
 // เลือกชุดหัวข้อตามสาขา — รหัสขึ้นต้น "55" ใช้ฟอร์ม ST_Easy ชุดใหม่ · ที่เหลือใช้ของเดิม
+/* ชุดหัวข้อของแต่ละแบรนด์ */
+const CK_DAILY_SETS = {
+  santafe:  { open: DAILY_OPEN,    close: DAILY_CLOSE    },
+  yamachan: { open: YAMACHAN_OPEN, close: YAMACHAN_CLOSE },
+};
 function dailyTemplate(shift, branchCode) {
   const code = String(branchCode || '');
-  /* เลือกชุดจากรหัสนำหน้าสาขา — ตรงกับที่ตั้งไว้ในทะเบียนแบรนด์ของฮับ
-     60 = ยามะจัง · 55 = ST_Easy · ที่เหลือ = ซานตาเฟ่ชุดมาตรฐาน */
-  if (code.startsWith('60')) return shift === 'open' ? YAMACHAN_OPEN : YAMACHAN_CLOSE;
-  const use55 = code.startsWith('55');
-  if (shift === 'open') return use55 ? DAILY_OPEN_55 : DAILY_OPEN;
-  return use55 ? DAILY_CLOSE_55 : DAILY_CLOSE;
+  /* ST_Easy (55) เป็นร้านรูปแบบเล็กของซานตาเฟ่ ใช้ชุดย่อของตัวเอง
+     ต้องเช็คก่อนแบรนด์ เพราะรหัส 55 ก็นับเป็นซานตาเฟ่เหมือนกัน */
+  if (code.startsWith('55')) return shift === 'open' ? DAILY_OPEN_55 : DAILY_CLOSE_55;
+  const set = CK_DAILY_SETS[ckBrandOfBranch(code)] || CK_DAILY_SETS.santafe;
+  return shift === 'open' ? set.open : set.close;
 }
 // แบ่งหมวดจากข้อมูลใน record เอง (ไม่ผูกกับ template) → แสดงถูกเสมอแม้หัวข้อจะต่างชุดกัน
 function _dailySections(items) {
@@ -6549,6 +6557,41 @@ const JAEDAENG_CHECKLIST = [
 const STORAGE_KEY = 'qa_audits_v1';
 const DAILY_STORAGE_KEY = 'qa_daily_v1';
 const AUDITS_COLLECTION = 'audits';
+/* ══════════ ทะเบียนแบรนด์ในระบบเช็คลิสต์ ══════════
+   ที่เดียวที่กำหนดว่าแบรนด์ไหนมีอะไรบ้าง เพิ่มแบรนด์ใหม่แก้ที่นี่ที่เดียว
+   prefixes = รหัสนำหน้าสาขา ต้องตรงกับที่ตั้งไว้ในทะเบียนแบรนด์ของฮับ (⚙️)
+              ใช้แยกว่าสาขาไหนเป็นของใคร ทั้งตอนเลือกชุดหัวข้อและตอนกรองรายชื่อ
+   daily    = ใช้ระบบตรวจร้านเปิด-ปิด · เจ๊แดงใช้ระบบ QSC คนละชุดจึงเป็น false */
+const CK_BRANDS = {
+  santafe:  { name: 'Santa Fe Happy Steak', logo: 'logo-santafe.png',        prefixes: ['50', '55'], daily: true  },
+  yamachan: { name: 'ยามะจัง',               logo: 'logo-yamachan.png',       prefixes: ['60'],       daily: true  },
+  jaedaeng: { name: 'เจ๊แดงสามย่าน',          logo: 'Logo-Jaedang_samyan.png', prefixes: ['40'],       daily: false },
+};
+function ckBrand(key) { return CK_BRANDS[key] || null; }
+/* แบรนด์ที่กำลังดูอยู่ — ไม่รู้จักก็ถือเป็นซานตาเฟ่ (ของเดิมเป็นแบบนี้) */
+function ckViewBrandKey() {
+  const k = currentView || (currentUser && currentUser.brand);
+  return CK_BRANDS[k] ? k : 'santafe';
+}
+/* สาขานี้เป็นของแบรนด์ไหน — ดูจากรหัสนำหน้า
+   เทียบตัวยาวก่อน เพราะ 55 (ST_Easy) เป็นส่วนหนึ่งของซานตาเฟ่ ต้องไม่ชนกับ 5 */
+function ckBrandOfBranch(code) {
+  const c = String(code || '');
+  for (const k in CK_BRANDS) {
+    if ((CK_BRANDS[k].prefixes || []).some(p => c.startsWith(p))) return k;
+  }
+  return 'santafe';
+}
+/* กรองรายชื่อสาขาให้เหลือเฉพาะของแบรนด์ที่ดูอยู่
+   ทะเบียนสาขาจากฮับรวมทุกแบรนด์ไว้ก้อนเดียว ถ้าไม่กรอง ซานตาเฟ่จะเห็นสาขา
+   ยามะจังปนมาในตารางและแดชบอร์ด */
+function ckBrandBranches(list, brandKey) {
+  const key = brandKey || ckViewBrandKey();
+  const pre = (CK_BRANDS[key] && CK_BRANDS[key].prefixes) || [];
+  if (!pre.length) return list;
+  return list.filter(b => pre.some(p => String(b.code || '').startsWith(p)));
+}
+
 const DAILY_COLLECTION = 'dailyChecklists';
 // ── Optimize การอ่าน Firestore: incremental sync + หน้าต่าง 90 วัน + branch scope ──
 const DAILY_SYNC_KEY = 'qa_daily_sync_v1';     // เวลา sync ล่าสุด (incremental)
@@ -7030,10 +7073,14 @@ function initRealtimeSync() {
    ทั้งที่เข้าใช้แค่เจ๊แดง (หรือกลับกัน) จนแรมพุ่งแครช · crossBrand (admin) โหลดทั้งคู่ */
 function loadBrandData() {
   const cross = !!(currentUser && currentUser.crossBrand);
-  const wantJd = cross || !currentBrand || currentBrand === 'jaedaeng';
-  const wantSf = cross || !currentBrand || currentBrand === 'santafe';
+  const b = CK_BRANDS[currentBrand];
+  /* แบรนด์ที่ใช้ระบบตรวจร้านเปิด-ปิด (ซานตาเฟ่/ยามะจัง) โหลดชุดเดียวกัน
+     ข้อมูลอยู่คอลเลกชันเดียวกัน แยกกันด้วยรหัสสาขาอยู่แล้ว
+     เดิมเช็คตรง ๆ ว่าเป็น santafe ไหม แบรนด์ใหม่เลยไม่ได้โหลดอะไรเลย */
+  const wantDaily = cross || !currentBrand || !!(b && b.daily);
+  const wantJd    = cross || !currentBrand || currentBrand === 'jaedaeng';
   const tasks = [];
-  if (wantSf) { tasks.push(loadAudits()); tasks.push(loadDailyChecklists()); }
+  if (wantDaily) { tasks.push(loadAudits()); tasks.push(loadDailyChecklists()); }
   if (wantJd) { tasks.push(loadJaedaengAudits()); }
   return Promise.all(tasks);
 }
@@ -7137,25 +7184,20 @@ function selectBrand(brand) {
     brandStage.style.display = 'none';
     brandStage.classList.remove('is-leaving');
     loginStage.style.display = '';
-    loginStage.classList.remove('brand-santafe', 'brand-jaedaeng', 'is-entering', 'is-leaving');
+    Object.keys(CK_BRANDS).forEach(k => loginStage.classList.remove('brand-' + k));
+    loginStage.classList.remove('is-entering', 'is-leaving');
     loginStage.classList.add('brand-' + brand);
     void loginStage.offsetWidth; // force reflow so the animation replays
     loginStage.classList.add('is-entering');
-    if (brand === 'santafe') {
-      title.textContent = 'Operations Checklist';
-      subtitle.textContent = '';
-      subtitle.style.display = 'none';
-      if (logo) { logo.src = 'logo-santafe.png'; logo.alt = 'Santa Fe'; }
-      toggle.style.display = '';
-      selectRole('branch');
-    } else {
-      title.textContent = 'Operations Checklist';
-      subtitle.textContent = '';
-      subtitle.style.display = 'none';
-      if (logo) { logo.src = 'Logo-Jaedang_samyan.png'; logo.alt = 'เจ๊แดงสามย่าน'; }
-      toggle.style.display = 'none';
-      selectRole('staff');
-    }
+    const info = CK_BRANDS[brand] || CK_BRANDS.santafe;
+    title.textContent = 'Operations Checklist';
+    subtitle.textContent = '';
+    subtitle.style.display = 'none';
+    if (logo) { logo.src = info.logo; logo.alt = info.name; }
+    /* แบรนด์ที่ตรวจร้านเปิด-ปิดเข้าด้วยรหัสสาขา จึงมีปุ่มสลับสาขา/ผู้ตรวจ
+       เจ๊แดงเข้าด้วยรหัสพนักงานอย่างเดียว ไม่ต้องมีปุ่มนั้น */
+    toggle.style.display = info.daily ? '' : 'none';
+    selectRole(info.daily ? 'branch' : 'staff');
   }, 360);
 }
 
@@ -7167,7 +7209,8 @@ function backToBrand() {
   loginStage.classList.add('is-leaving');
   setTimeout(() => {
     loginStage.style.display = 'none';
-    loginStage.classList.remove('is-leaving', 'is-entering', 'brand-santafe', 'brand-jaedaeng');
+    loginStage.classList.remove('is-leaving', 'is-entering');
+    Object.keys(CK_BRANDS).forEach(k => loginStage.classList.remove('brand-' + k));
     const brandStage = document.getElementById('brand-stage');
     brandStage.style.display = '';
     brandStage.classList.remove('is-leaving');
@@ -7320,20 +7363,10 @@ function applyBrandHeader() {
   const titleEl = document.getElementById('app-title-text');
   const subEl = document.getElementById('header-subtitle');
   const view = currentView || (currentUser && currentUser.brand);
-  let appTitle, appSub, eyebrow;
-  if (view === 'santafe') {
-    appTitle = 'Operations Checklist';
-    appSub   = 'Santa Fe Happy Steak';
-    eyebrow  = 'Operations Checklist';
-  } else if (view === 'jaedaeng') {
-    appTitle = 'Operations Checklist';
-    appSub   = 'เจ๊แดงสามย่าน';
-    eyebrow  = 'Operations Checklist';
-  } else {
-    appTitle = 'Operations Checklist';
-    appSub   = 'ระบบตรวจสอบมาตรฐานการทำงาน';
-    eyebrow  = 'Operations Checklist';
-  }
+  const appTitle = 'Operations Checklist';
+  const eyebrow  = 'Operations Checklist';
+  const _b = CK_BRANDS[view];
+  const appSub = _b ? _b.name : 'ระบบตรวจสอบมาตรฐานการทำงาน';
   // ชื่อระบบบรรทัดเดียว (wrap เองตามความกว้าง) · ชื่อผู้ใช้อยู่บรรทัดถัดไป (app-user-line)
   if (titleEl) titleEl.textContent = appTitle;
   if (subEl)   subEl.textContent   = appSub;
@@ -7434,7 +7467,7 @@ function _unusedUpdateTestModeToggle() {
 
 function switchViewBrand(brand) {
   if (!currentUser || !currentUser.crossBrand) return;
-  if (brand !== 'santafe' && brand !== 'jaedaeng') return;
+  if (!CK_BRANDS[brand]) return;
   currentView = brand;
   applyBrandHeader();
   renderBottomNav();
@@ -8223,7 +8256,8 @@ function _renderSfTable() { const el = document.getElementById('sf-daily-table')
 // ตัดสาขาที่ปิดแล้วออกจากงานประจำ — แต่ยังอยู่ใน BRANCHES ให้ค้นชื่อจากรหัสได้ (รายงานย้อนหลัง)
 function _openBranches() { return BRANCHES.filter(b => !b.closed); }
 function _visibleBranchRoster() {
-  const src = _openBranches();
+  /* กรองตามแบรนด์ก่อนเสมอ — ทะเบียนสาขาจากฮับรวมทุกแบรนด์ไว้ก้อนเดียว */
+  const src = ckBrandBranches(_openBranches());
   if (!currentUser) return src;
   if (currentUser.role === 'branch') return src.filter(b => String(b.code) === String(currentUser.branchCode || ''));
   if (currentUser.role === 'bzm') return src.filter(b => b.manager === currentUser.name || b.managerNick === currentUser.nick || b.managerNick === currentUser.name);
@@ -8473,7 +8507,7 @@ function _dailyTargetBranch() {
 function _setupDailyBranchOptions() {
   const sel = document.getElementById('daily-branch-select');
   if (!sel) return;
-  let pool = BRANCHES;
+  let pool = ckBrandBranches(BRANCHES);
   if (currentUser.role === 'bzm') pool = _openBranches().filter(b => b.manager === currentUser.name || b.managerNick === currentUser.nick);
   sel.innerHTML = '<option value="">— เลือกสาขา —</option>' + pool.map(b => `<option value="${escapeAttr(b.code)}">${escapeHtml(b.code + ' ' + b.name)}</option>`).join('');
   sel.value = _dailySelectedBranch || '';
@@ -11366,12 +11400,14 @@ let pendingSessionUser = null; // set when SSO is waiting for brand selection
 async function autoLoginFromSession() {
   const s = loadFabSession();
   if (!s) return false;
-  // Hub แยกปุ่มเป็น 2 แบรนด์ (santafe / jaedaeng) → ส่งผ่าน ?brand=
+  // Hub แยกปุ่มตามแบรนด์ → ส่งผ่าน ?brand=
   // ถ้ามี → override brand บน session (สำหรับ admin/coo cross-brand
   // หรือ branch ที่อยากเปิดอีกแบรนด์)
+  // เทียบกับทะเบียนแบรนด์ ไม่ไล่ชื่อทีละอัน — เพิ่มแบรนด์ใหม่จะได้ไม่ตกหล่น
+  // (ตกหล่นแล้วจะเงียบ ๆ กลับไปเป็นซานตาเฟ่ หาสาเหตุยาก)
   try {
     const qp = new URLSearchParams(window.location.search).get('brand');
-    if (qp === 'santafe' || qp === 'jaedaeng') {
+    if (qp && CK_BRANDS[qp]) {
       s.brand = qp;
       try { localStorage.setItem(FAB_SESSION_KEY, JSON.stringify(s)); } catch (_) {}
     }
