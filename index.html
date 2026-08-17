@@ -6379,10 +6379,24 @@ const JAEDAENG_LOCATIONS = [
 ];
 
 // Show distances as "N ม." under 1 km, otherwise as "X.XXX กิโลเมตร".
+/* ระยะทางที่ส่งเข้ามาเป็นทศนิยมดิบจากการคำนวณ ต้องปัดที่นี่ที่เดียว
+   ไม่งั้นบางจุดปัดมาก่อน บางจุดไม่ปัด แล้วโผล่เป็น "64.971 ม." บนหน้าจอ
+   ปัดเป็นเมตรเต็มพอ — GPS มือถือแม่นสุดก็ระดับ 5-10 ม. ทศนิยมไม่มีความหมาย */
 function fmtDistance(meters) {
-  const m = Number(meters) || 0;
+  const m = Math.round(Number(meters) || 0);
   if (m < 1000) return `${m.toLocaleString()} ม.`;
-  return `${(m / 1000).toFixed(3)} กิโลเมตร`;
+  return `${(m / 1000).toFixed(2)} กิโลเมตร`;
+}
+/* สัญญาณ GPS แย่แค่ไหน — ใช้ตัดสินว่าจะเชื่อระยะที่คำนวณได้หรือไม่
+   ค่า accuracy คือรัศมีความคลาดเคลื่อน ถ้ากว้างกว่าเกณฑ์ 500 ม. ที่ใช้ตัดสิน
+   ตัวเลขระยะก็ไม่มีความหมาย (เช่น ±1414 ม. แต่ขึ้นว่าห่าง 65 ม.) */
+const JD_GPS_ACC_WARN = 100;   // เกินนี้ = หยาบ เตือนไว้ก่อน
+function jdGpsAccuracyNote(acc) {
+  const a = Number(acc) || 0;
+  if (a <= JD_GPS_ACC_WARN) return '';
+  return a >= 500
+    ? 'สัญญาณ GPS หยาบมาก — ระยะที่แสดงเชื่อไม่ได้ ลองออกไปที่โล่งแล้วเริ่มตรวจใหม่'
+    : 'สัญญาณ GPS ไม่ค่อยแม่น — ระยะที่แสดงอาจคลาดเคลื่อน';
 }
 
 function jdHaversineMeters(lat1, lng1, lat2, lng2) {
@@ -10049,23 +10063,7 @@ function _renderJDAuditScreen() {
     bzmDisp.textContent = (a.bzm || '') + (a.bzmNick ? ' (' + a.bzmNick + ')' : '');
     bzmRow.style.display = '';
   } else if (bzmRow) { bzmRow.style.display = 'none'; }
-  const gpsRow = document.getElementById('jd-gps-row');
-  const gpsDisp = document.getElementById('jd-gps-display');
-  if (gpsRow && gpsDisp && a.gps) {
-    const g = a.gps;
-    // คำนวณใหม่สดจากพิกัดสาขาปัจจุบัน (ไม่ใช้ snapshot เก่าในเรคคอร์ด) → ผลตรวจเก่าตรงตามพิกัดใหม่
-    let nearbyHtml = '';
-    const near = findJaedaengBranchesWithinRadius(g.lat, g.lng, 500);
-    if (near.length > 0) {
-      nearbyHtml = '<div style="font-size:12px;margin-top:6px;color:var(--text-secondary);">สาขาในระยะ 500 ม.: ' +
-        near.map(b => `<b>${escapeHtml(b.name)}</b> · ${fmtDistance(b.distance)}`).join(' · ') + '</div>';
-    } else {
-      const nearest = findNearestJaedaengBranch(g.lat, g.lng);
-      if (nearest) nearbyHtml = `<div style="font-size:12px;margin-top:6px;color:var(--text-secondary);">ใกล้สุด <b>${escapeHtml(nearest.name)}</b> · ${fmtDistance(Math.round(nearest.distance))} <span style="color:var(--warning);">(เกินรัศมี 500 ม.)</span></div>`;
-    }
-    gpsDisp.innerHTML = `<a href="https://www.google.com/maps?q=${g.lat},${g.lng}" target="_blank" rel="noopener" style="color:var(--primary-dark);text-decoration:underline;">เปิด Google Maps</a> <span style="font-size:11px;color:var(--text-tertiary);">±${Math.round(g.accuracy || 0)} m</span>${nearbyHtml}`;
-    gpsRow.style.display = '';
-  }
+  _jdPaintGpsRow();
   renderJaedaengForm();
 }
 
@@ -10113,6 +10111,56 @@ function editJaedaengAudit(id) {
   window.scrollTo(0, 0);
 }
 
+/* พ่นแถบ "ตำแหน่ง GPS" ใหม่ทั้งแถบ
+   แยกออกมาเพราะต้องเรียกซ้ำตอนผู้ตรวจเปลี่ยนสาขา — ของเดิมพ่นครั้งเดียว
+   ตอนเปิดหน้า (ยังไม่ได้เลือกสาขา) แถบจึงบอกได้แค่ว่ามีสาขาไหนอยู่ใกล้
+   ไม่เคยบอกว่าห่างจาก "สาขาที่เลือก" เท่าไร ซึ่งคือเรื่องที่ต้องรู้จริง ๆ */
+function _jdPaintGpsRow() {
+  const a = currentJDAudit;
+  const row = document.getElementById('jd-gps-row');
+  const disp = document.getElementById('jd-gps-display');
+  if (!row || !disp || !a || !a.gps) return;
+  const g = a.gps;
+  const S = 'font-size:12px;margin-top:6px;';
+
+  // ── ระยะถึงสาขาที่เลือก — บรรทัดสำคัญที่สุด วางไว้บนสุด ──
+  // คำนวณสดจากพิกัดสาขาปัจจุบัน ไม่ใช้ค่าที่เก็บไว้ตอนกดเริ่มตรวจ
+  // (พิกัดสาขาแก้ที่ฮับได้ ผลตรวจเก่าจะได้ตรงตามพิกัดใหม่)
+  let selHtml = '';
+  if (a.storeName) {
+    const d = jdDistanceFromGpsToBranch(g, a.storeName);
+    if (d == null) {
+      selHtml = `<div style="${S}color:var(--warning);">⚠ ไม่พบพิกัดของสาขา <b>${escapeHtml(a.storeName)}</b> ในระบบ — ตรวจสอบระยะไม่ได้</div>`;
+    } else if (d <= 500) {
+      selHtml = `<div style="${S}color:var(--success,#16a34a);">📍 ตรงสาขา <b>${escapeHtml(a.storeName)}</b> · ${fmtDistance(d)}</div>`;
+    } else {
+      selHtml = `<div style="${S}color:var(--danger,#dc2626);font-weight:700;">📍 ห่างจากสาขา <b>${escapeHtml(a.storeName)}</b> · ${fmtDistance(d)} (เกินรัศมี 500 ม.)</div>`;
+    }
+  }
+
+  // ── สาขาอื่นที่อยู่ใกล้ — ข้อมูลประกอบ ตัดสาขาที่เลือกออกไม่ให้ซ้ำบรรทัดบน ──
+  let nearHtml = '';
+  const near = findJaedaengBranchesWithinRadius(g.lat, g.lng, 500)
+    .filter(b => b.name !== a.storeName);
+  if (near.length > 0) {
+    nearHtml = `<div style="${S}color:var(--text-secondary);">สาขาอื่นในระยะ 500 ม.: ` +
+      near.map(b => `<b>${escapeHtml(b.name)}</b> · ${fmtDistance(b.distance)}`).join(' · ') + '</div>';
+  } else if (!a.storeName) {
+    const nearest = findNearestJaedaengBranch(g.lat, g.lng);
+    if (nearest) nearHtml = `<div style="${S}color:var(--text-secondary);">ใกล้สุด <b>${escapeHtml(nearest.name)}</b> · ${fmtDistance(nearest.distance)} <span style="color:var(--warning);">(เกินรัศมี 500 ม.)</span></div>`;
+  }
+
+  // ── คุณภาพสัญญาณ ── ตัวเลข ±  บอกไปก็ไม่มีใครรู้ว่าแปลว่าอะไร
+  const accNote = jdGpsAccuracyNote(g.accuracy);
+  const accHtml = accNote ? `<div style="${S}color:var(--warning);">⚠ ${accNote}</div>` : '';
+
+  disp.innerHTML =
+    `<a href="https://www.google.com/maps?q=${g.lat},${g.lng}" target="_blank" rel="noopener" style="color:var(--primary-dark);text-decoration:underline;">เปิด Google Maps</a> ` +
+    `<span style="font-size:11px;color:var(--text-tertiary);">±${Math.round(g.accuracy || 0)} m</span>` +
+    selHtml + nearHtml + accHtml;
+  row.style.display = '';
+}
+
 function setJDStore(field, value) {
   if (!currentJDAudit) return;
   if (field === 'store') {
@@ -10131,6 +10179,8 @@ function setJDStore(field, value) {
       currentJDAudit.bzmNick = '';
       row.style.display = 'none';
     }
+    // เปลี่ยนสาขาแล้วแถบ GPS ต้องบอกระยะของสาขาใหม่ทันที
+    _jdPaintGpsRow();
     // Warn if the selected branch is not within 500m of the captured GPS.
     const g = currentJDAudit.gps;
     if (value && g && g.lat != null && g.lng != null) {
@@ -10138,9 +10188,16 @@ function setJDStore(field, value) {
       const distM = jdDistanceFromGpsToBranch(g, value);
       if (distM != null && distM > 500) {
         const distTxt = `ห่างจากสาขา <b>${escapeHtml(value)}</b> <b>${fmtDistance(distM)}</b>`;
+        /* สัญญาณหยาบ ๆ ก็เด้งเตือนได้ทั้งที่อาจยืนอยู่หน้าร้านจริง
+           บอกไปตรง ๆ ว่าเป็นเพราะสัญญาณ ผู้ตรวจจะได้ไม่งงว่าทำไมเตือน */
+        const accNote = jdGpsAccuracyNote(g.accuracy);
+        const accLine = accNote
+          ? `<div class="modal-warn-hint">${escapeHtml(accNote)}</div>`
+          : '';
         showModalHtml('ตำแหน่งไม่ตรงกับสาขา', `<div class="modal-warn-body">
           <div class="modal-warn-icon"><span class="material-symbols-rounded">wrong_location</span></div>
           <div class="modal-warn-dist">${distTxt}</div>
+          ${accLine}
           <div class="modal-warn-q">ยืนยันว่าตรวจสาขานี้จริงหรือไม่?</div>
           <div class="modal-warn-hint">ถ้าใช่ กด "ยืนยัน" เพื่อตรวจต่อ</div>
         </div>`);
