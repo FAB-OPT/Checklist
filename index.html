@@ -8275,10 +8275,13 @@ function _sfTableDay(delta) { const d = new Date(sfTableDate); d.setDate(d.getDa
 function _renderSfTable() { const el = document.getElementById('sf-daily-table'); if (el) el.innerHTML = _sfDailyTableHTML(); }
 // สาขาที่ผู้ใช้เห็น (admin/vp/coo=ทุกสาขา · bzm=สาขาที่ดูแล · branch=ของตัวเอง)
 // ตัดสาขาที่ปิดแล้วออกจากงานประจำ — แต่ยังอยู่ใน BRANCHES ให้ค้นชื่อจากรหัสได้ (รายงานย้อนหลัง)
-function _openBranches() { return BRANCHES.filter(b => !b.closed); }
+/* สาขาที่เปิดอยู่ "ของแบรนด์ที่กำลังดู"
+   ทะเบียนสาขารวมทุกแบรนด์ไว้ก้อนเดียว จึงต้องกรองด้วยรหัสนำหน้าเสมอ
+   กรองที่นี่จุดเดียว ไม่ใช่ไปไล่กรองตอนเอาไปใช้ — ของเดิมมีที่เรียก 6 ที่
+   กรองแค่บางที่ ตัวเลือกโซน/สาขาบนแดชบอร์ดเลยยังมีสาขาแบรนด์อื่นโผล่มา */
+function _openBranches() { return ckBrandBranches(BRANCHES.filter(b => !b.closed)); }
 function _visibleBranchRoster() {
-  /* กรองตามแบรนด์ก่อนเสมอ — ทะเบียนสาขาจากฮับรวมทุกแบรนด์ไว้ก้อนเดียว */
-  const src = ckBrandBranches(_openBranches());
+  const src = _openBranches();   // กรองตามแบรนด์ให้แล้วในตัว
   if (!currentUser) return src;
   if (currentUser.role === 'branch') return src.filter(b => String(b.code) === String(currentUser.branchCode || ''));
   if (currentUser.role === 'bzm') return src.filter(b => b.manager === currentUser.name || b.managerNick === currentUser.nick || b.managerNick === currentUser.name);
@@ -8528,7 +8531,7 @@ function _dailyTargetBranch() {
 function _setupDailyBranchOptions() {
   const sel = document.getElementById('daily-branch-select');
   if (!sel) return;
-  let pool = ckBrandBranches(BRANCHES);
+  let pool = _openBranches();
   if (currentUser.role === 'bzm') pool = _openBranches().filter(b => b.manager === currentUser.name || b.managerNick === currentUser.nick);
   sel.innerHTML = '<option value="">— เลือกสาขา —</option>' + pool.map(b => `<option value="${escapeAttr(b.code)}">${escapeHtml(b.code + ' ' + b.name)}</option>`).join('');
   sel.value = _dailySelectedBranch || '';
