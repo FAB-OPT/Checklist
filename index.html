@@ -4685,19 +4685,26 @@ body:has(#login-screen.active) {
     display: flex; align-items: center; gap: 10px;
     padding: 14px 0 0;
   }
+  /* เดิมพื้นป้ายเป็นสีแบรนด์ (แดง-ส้ม) ซึ่งเป็นสีเดียวกับเมนูข้าง โลโก้เลย
+     จมหายไปกับพื้นหลัง · แถม object-fit:cover ยังครอบตัดโลโก้แนวนอน 720x408
+     จนเหลือแค่ตรงกลาง อ่านไม่ออกว่าเป็นแบรนด์อะไร
+     เปลี่ยนเป็นป้ายขาวแล้ววางโลโก้เต็มใบข้างใน แบบเดียวกับระบบบันทึกการสอนงาน */
   .nav-brand-icon {
-    width: 36px; height: 36px;
-    border-radius: var(--r-sm);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+    width: 38px; height: 38px;
+    border-radius: 10px;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.22);
     flex-shrink: 0;
     overflow: hidden;
-    background: var(--primary);
-    border: 1.5px solid rgba(255,255,255,0.6);
+    background: #fff;
+    border: none;
+    display: flex; align-items: center; justify-content: center;
+    padding: 4px;                 /* กันโลโก้ชนขอบป้าย */
+    box-sizing: border-box;
   }
   .nav-brand-icon svg,
   .nav-brand-icon img {
     width: 100%; height: 100%; display: block;
-    object-fit: cover;
+    object-fit: contain;          /* เห็นโลโก้ทั้งใบ ไม่โดนครอบตัด */
   }
   .nav-branch-info { min-width: 0; flex: 1; }
   .nav-branch-text {
