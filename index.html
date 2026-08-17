@@ -6577,9 +6577,9 @@ const AUDITS_COLLECTION = 'audits';
               ใช้แยกว่าสาขาไหนเป็นของใคร ทั้งตอนเลือกชุดหัวข้อและตอนกรองรายชื่อ
    daily    = ใช้ระบบตรวจร้านเปิด-ปิด · เจ๊แดงใช้ระบบ QSC คนละชุดจึงเป็น false */
 const CK_BRANDS = {
-  santafe:  { name: 'Santa Fe Happy Steak', logo: 'logo-santafe.png',        prefixes: ['50', '55'], daily: true  },
-  yamachan: { name: 'ยามะจัง',               logo: 'logo-yamachan.png',       prefixes: ['60'],       daily: true  },
-  jaedaeng: { name: 'เจ๊แดงสามย่าน',          logo: 'Logo-Jaedang_samyan.png', prefixes: ['40'],       daily: false },
+  santafe:  { name: 'Santa Fe Happy Steak', short: 'Santa Fe', logo: 'logo-santafe.png',        prefixes: ['50', '55'], daily: true  },
+  yamachan: { name: 'ยามะจัง',               short: 'ยามะจัง',  logo: 'logo-yamachan.png',       prefixes: ['60'],       daily: true  },
+  jaedaeng: { name: 'เจ๊แดงสามย่าน',          short: 'เจ๊แดง',   logo: 'Logo-Jaedang_samyan.png', prefixes: ['40'],       daily: false },
 };
 function ckBrand(key) { return CK_BRANDS[key] || null; }
 /* แบรนด์ที่กำลังดูอยู่ — ไม่รู้จักก็ถือเป็นซานตาเฟ่ (ของเดิมเป็นแบบนี้) */
@@ -7310,7 +7310,10 @@ async function doLogin() {
       name: branch.name,
       nick: branch.code,
       role: 'branch',
-      brand: 'santafe',
+      /* แบรนด์มาจากรหัสสาขา ไม่ใช่ซานตาเฟ่ตายตัว
+         สาขายามะจัง (60xx) ที่ถูกตีตราว่าซานตาเฟ่ จะโดนตัวกรองรายชื่อ
+         ตามแบรนด์คัดทิ้ง แล้วเปิดเข้ามาเจอหน้าจอว่างเปล่า */
+      brand: ckBrandOfBranch(branch.code),
       branchCode: branch.code,
       branchName: branch.name,
       bzm: branch.manager
@@ -7319,8 +7322,11 @@ async function doLogin() {
     // Staff login — check the picked brand's table first, fall back to the
     // other brand for users marked crossBrand so Admin/COO can sign in via
     // either brand picker.
-    const primary = currentBrand === 'jaedaeng' ? USERS_JAEDAENG : USERS;
-    const secondary = currentBrand === 'jaedaeng' ? USERS : USERS_JAEDAENG;
+    /* เจ๊แดงมีทะเบียนพนักงานของตัวเอง · แบรนด์ที่ตรวจร้านเปิด-ปิด
+       (ซานตาเฟ่/ยามะจัง) ใช้ทะเบียนกลางร่วมกัน */
+    const ownTable = !!(CK_BRANDS[currentBrand] && !CK_BRANDS[currentBrand].daily);
+    const primary = ownTable ? USERS_JAEDAENG : USERS;
+    const secondary = ownTable ? USERS : USERS_JAEDAENG;
     let user = primary[id];
     if (!user) {
       const other = secondary[id];
@@ -7505,9 +7511,7 @@ function renderBottomNav() {
   }
   // title ย่อ ตาม brand — OSS/QSC + ขีดเส้นใต้ · บรรทัดถัดไป โลโก้ + ชื่อสาขา
   const _v = currentView || (currentUser && currentUser.brand);
-  const _navTitle = _v === 'santafe'
-    ? 'Operations Checklist'
-    : 'Operations Checklist';
+  const _navTitle = 'Operations Checklist';   // เหมือนกันทุกแบรนด์
   html += '<div class="nav-brand">' +
     '<div class="nav-app-name nav-app-name-underline">' + _navTitle + '</div>' +
     '<div class="nav-brand-branch">' +
@@ -7550,9 +7554,12 @@ function renderBottomNav() {
 function _toolsHtml(view) {
   let html = '';
   if (currentUser.crossBrand) {
+    /* สร้างจากทะเบียนแบรนด์ ไม่เขียนปุ่มตายตัว — เพิ่มแบรนด์ใหม่แล้ว
+       ลืมมาเติมปุ่มตรงนี้ คนข้ามแบรนด์จะสลับเข้าแบรนด์นั้นไม่ได้เลย */
     html += '<div class="header-view-toggle">' +
-      `<button type="button" class="header-view-pill ${view === 'santafe' ? 'active' : ''}" onclick="switchViewBrand('santafe')">Santa Fe</button>` +
-      `<button type="button" class="header-view-pill ${view === 'jaedaeng' ? 'active' : ''}" onclick="switchViewBrand('jaedaeng')">เจ๊แดง</button>` +
+      Object.keys(CK_BRANDS).map(k =>
+        `<button type="button" class="header-view-pill ${view === k ? 'active' : ''}" onclick="switchViewBrand('${k}')">${escapeHtml(CK_BRANDS[k].short || CK_BRANDS[k].name)}</button>`
+      ).join('') +
     '</div>';
   }
   return html;
