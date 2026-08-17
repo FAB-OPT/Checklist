@@ -6581,7 +6581,38 @@ const CK_BRANDS = {
   yamachan: { name: 'ยามะจัง',               short: 'ยามะจัง',  logo: 'logo-yamachan.png',       prefixes: ['60'],       daily: true  },
   jaedaeng: { name: 'เจ๊แดงสามย่าน',          short: 'เจ๊แดง',   logo: 'Logo-Jaedang_samyan.png', prefixes: ['40'],       daily: false },
 };
-function ckBrand(key) { return CK_BRANDS[key] || null; }
+/* ทะเบียนแบรนด์จากฮับ (ตั้งค่าได้เองที่ ⚙️ → จัดการแบรนด์)
+   ทับค่าตั้งต้นในไฟล์เฉพาะช่องที่กรอกไว้จริง — โหลดไม่ได้ก็ยังใช้ของเดิมได้ */
+let CK_BRANDS_CLOUD = {};
+function ckBrand(key) {
+  const base = CK_BRANDS[key];
+  const cloud = CK_BRANDS_CLOUD[key];
+  if (!base && !cloud) return null;
+  const out = Object.assign({}, base);
+  if (cloud) {
+    if (cloud.name) out.name = cloud.name;
+    if (cloud.company) out.company = cloud.company;
+    if (cloud.color) out.color = cloud.color;
+    if (cloud.logo) out.logoData = cloud.logo;   // เป็น data URI ใช้ในรายงานได้เลย
+  }
+  return out;
+}
+/* ชื่อที่ขึ้นหัวรายงาน — ชื่อบริษัทถ้าตั้งไว้ ไม่งั้นใช้ชื่อแบรนด์ */
+function ckReportOrg(key) {
+  const b = ckBrand(key || ckViewBrandKey()) || {};
+  return b.company || b.name || 'Operations Checklist';
+}
+/* โลโก้สำหรับรายงาน — ต้องเป็น data URI เท่านั้น
+   รายงาน PDF วาดใน iframe แยกที่ไม่มี base path เดียวกับหน้าเว็บ
+   ใส่ชื่อไฟล์ธรรมดาไปรูปจะไม่ขึ้น จึงใช้ได้เฉพาะโลโก้ที่อัปไว้ที่ฮับ */
+function ckReportLogo(key) {
+  const b = ckBrand(key || ckViewBrandKey()) || {};
+  return /^data:image\//.test(b.logoData || '') ? b.logoData : '';
+}
+function ckBrandColor(key) {
+  const b = ckBrand(key || ckViewBrandKey()) || {};
+  return b.color || '#D63622';
+}
 /* แบรนด์ที่กำลังดูอยู่ — ไม่รู้จักก็ถือเป็นซานตาเฟ่ (ของเดิมเป็นแบบนี้) */
 function ckViewBrandKey() {
   const k = currentView || (currentUser && currentUser.brand);
@@ -8016,9 +8047,25 @@ function loadCkPermsFromHub(force) {
   _ckPermsInflight = _fetchCkPermsFromHub(force).finally(() => { _ckPermsInflight = null; });
   return _ckPermsInflight;
 }
+/* ทะเบียนแบรนด์มากับ config ก้อนเดียวกับสิทธิ์ปุ่ม ไม่ต้องยิงเพิ่ม
+   เก็บลงเครื่องด้วย — ออกรายงานตอนเน็ตหลุดจะได้ชื่อบริษัทกับโลโก้ถูกอยู่ */
+const CK_BRANDS_CLOUD_KEY = 'ck_brands_cloud_v1';
+try {
+  const _c = JSON.parse(localStorage.getItem(CK_BRANDS_CLOUD_KEY) || 'null');
+  if (_c && typeof _c === 'object') CK_BRANDS_CLOUD = _c;
+} catch (_) {}
+function _applyCkBrandsFromHub(res) {
+  const arr = res && res.brands;
+  if (!Array.isArray(arr) || !arr.length) return;
+  const map = {};
+  arr.forEach(b => { if (b && b.key) map[b.key] = b; });
+  CK_BRANDS_CLOUD = map;
+  try { localStorage.setItem(CK_BRANDS_CLOUD_KEY, JSON.stringify(map)); } catch (_) {}
+}
 async function _fetchCkPermsFromHub(force) {
   try {
     const res = await fetchHubConfig(force);
+    _applyCkBrandsFromHub(res);
     if (res && res.ok && res.perms && res.perms.checklist) {
       CK_PERMS = _normalizeCkPerms(res.perms.checklist);
       _ckPermsFetchedAt = Date.now();
@@ -8407,7 +8454,12 @@ function branchLabel(code, name) {
   if (!code && !name) return '';
   if (!name) return String(code);
   const n = String(name).trim();
-  const prefix = /^santa\s*fe/i.test(n) ? '' : 'Santa Fe ';
+  /* เติมชื่อแบรนด์นำหน้าถ้าชื่อสาขายังไม่มี — ดูจากรหัสสาขา ไม่ใช่เดาว่า
+     เป็นซานตาเฟ่เสมอ ของเดิมทำให้สาขายามะจังขึ้นว่า "6001 Santa Fe Sukhumvit 39" */
+  const b = ckBrand(ckBrandOfBranch(code)) || {};
+  const bn = String(b.short || b.name || '').trim();
+  const has = bn && n.toLowerCase().indexOf(bn.toLowerCase()) === 0;
+  const prefix = (bn && !has) ? bn + ' ' : '';
   return `${code} ${prefix}${n}`.replace(/\s+/g, ' ').trim();
 }
 
@@ -11598,8 +11650,10 @@ const _ssoLikely = _hasValidSessionSync();
 const SFR_CSS = `
 .sfr{font-size:10pt;color:#111;line-height:1.45}
 .sfr *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
-.sfr-bar{height:4px;background:#D63622;border-radius:2px;margin-bottom:10px}
-.sfr-org{font-size:7.5pt;letter-spacing:.16em;text-transform:uppercase;color:#D63622;font-weight:800}
+.sfr-bar{height:4px;background:var(--sfr-accent,#D63622);border-radius:2px;margin-bottom:10px}
+.sfr-org-row{display:flex;align-items:center;gap:7px;margin-bottom:2px}
+.sfr-logo{height:20px;width:auto;max-width:70px;object-fit:contain;display:block}
+.sfr-org{font-size:7.5pt;letter-spacing:.16em;text-transform:uppercase;color:var(--sfr-accent,#D63622);font-weight:800}
 .sfr h1{font-size:17pt;font-weight:900;letter-spacing:-.3px;margin:4px 0 0;color:#111}
 .sfr-meta{display:flex;flex-wrap:wrap;gap:4px 18px;margin-top:7px;padding-bottom:9px;
   border-bottom:1.5px solid #111;font-size:8.5pt;color:#444}
@@ -12046,7 +12100,9 @@ const SFRep = {
   title() { return (this.TYPES.find((x) => x.k === this.S.type) || {}).t || 'รายงาน'; },
   fileBase() {
     const t = { submit: 'การส่งรายวัน', period: 'สรุปตามช่วงเวลา', topfail: 'หัวข้อที่ตกบ่อย', detail: 'รายละเอียด' }[this.S.type];
-    return 'เช็คลิสต์ซานตาเฟ่_' + t + '_' + this.S.from + '_ถึง_' + this.S.to;
+    /* ชื่อไฟล์ใช้ชื่อแบรนด์ (สั้น) ไม่ใช่ชื่อบริษัท (ยาวเกินไปสำหรับชื่อไฟล์) */
+    const b = ckBrand(ckViewBrandKey()) || {};
+    return 'เช็คลิสต์' + (b.short || b.name || '') + '_' + t + '_' + this.S.from + '_ถึง_' + this.S.to;
   },
 
   /* ══════════════ PDF ══════════════ */
@@ -12055,8 +12111,13 @@ const SFRep = {
     const now = new Date();
     const stamp = now.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' })
       + ' ' + String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0') + ' น.';
+    const logo = ckReportLogo();
+    const org = ckReportOrg();
     return `<div class="sfr-bar"></div>
-      <div class="sfr-org">Santa Fe · Daily Open-Close Checklist</div>
+      <div class="sfr-org-row">
+        ${logo ? `<img class="sfr-logo" src="${escapeAttr(logo)}" alt="">` : ''}
+        <div class="sfr-org">${escapeHtml(org)} · Daily Open-Close Checklist</div>
+      </div>
       <h1>${escapeHtml(this.title())}</h1>
       <div class="sfr-meta">
         <span>ช่วงข้อมูล <b>${escapeHtml(this.rangeText())}</b></span>
@@ -12328,7 +12389,7 @@ const SFRep = {
   },
 
   foot(note) {
-    return `<div class="sfr-foot">${escapeHtml(note)}<br>
+    return `<div class="sfr-foot">${escapeHtml(ckReportOrg())} · ${escapeHtml(note)}<br>
       ข้อมูลจากระบบ Daily Open-Close Checklist · ตัวเลขในรายงานตรงกับที่แสดงบนแดชบอร์ด ณ เวลาที่ออกรายงาน</div>`;
   },
 
@@ -12338,8 +12399,11 @@ const SFRep = {
       : this.S.type === 'period' ? this.docPeriod()
       : this.S.type === 'topfail' ? this.docTopFail() : this.docDetail();
     this.close();
+    /* สีแบรนด์ส่งเข้าไปเป็นตัวแปร CSS — เอกสารวาดใน iframe แยก
+       จะอ่านตัวแปรจากหน้าเว็บหลักไม่ได้ ต้องประกาศซ้ำในสไตล์ของเอกสารเอง */
+    const accentCss = ':root{--sfr-accent:' + ckBrandColor() + '}';
     _printHtmlPDF('<div class="sfr">' + doc + '</div>', 'daily-print-footer',
-      { cls: 'pdf-report', extraCss: SFR_CSS, filename: this.fileBase() + '.pdf' });
+      { cls: 'pdf-report', extraCss: accentCss + SFR_CSS, filename: this.fileBase() + '.pdf' });
   },
 
   /* ══════════════ Excel ══════════════ */
@@ -12489,13 +12553,15 @@ const SFRep = {
       specs.forEach((sp) => {
         const ws = wb.addWorksheet(sp.name);
         /* หัวเรื่องสองบรรทัด บอกว่ารายงานอะไร ช่วงไหน ขอบเขตอะไร — เปิดไฟล์ทีหลังจะได้ไม่ต้องเดา */
+        ws.addRow([ckReportOrg()]);
         ws.addRow([this.title() + (sp === spec ? '' : ' · ' + sp.name)]);
         ws.addRow(['ช่วงข้อมูล ' + this.rangeText() + ' · ' + this.scopeText()
           + ' · ออกโดย ' + ((currentUser && (currentUser.name || currentUser.nick)) || '-')]);
         ws.addRow([]);
-        ws.getRow(1).font = { bold: true, size: 14 };
-        ws.getRow(2).font = { size: 10, color: { argb: 'FF666666' } };
-        const hIdx = 4;
+        ws.getRow(1).font = { bold: true, size: 11, color: { argb: 'FF666666' } };  // ชื่อบริษัท
+        ws.getRow(2).font = { bold: true, size: 14 };                                // ชื่อรายงาน
+        ws.getRow(3).font = { size: 10, color: { argb: 'FF666666' } };               // ช่วง/ขอบเขต
+        const hIdx = 5;
         ws.addRow(sp.cols.map((c) => c.h));
         const hr = ws.getRow(hIdx);
         hr.font = { bold: true, color: { argb: 'FFFFFFFF' } };
