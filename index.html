@@ -6750,32 +6750,46 @@ function _clearDailyDraft() {
   try { localStorage.removeItem(DAILY_DRAFT_KEY); } catch (e) {}
 }
 
+/* ── เขียนแคชลงเครื่องแบบยอมลดขนาด ──
+   แคชมีหน้าที่สองอย่าง: ให้จอไม่ว่างตอนเปิด และเป็นจุดอ้างอิงเวลาว่า
+   ครั้งก่อนซิงค์ถึงไหน ถ้าเขียนไม่ลงเลย จุดอ้างอิงหาย = เปิดทีไรก็ต้อง
+   ดึงย้อนหลังใหม่ทั้งก้อน ซึ่งคือสาเหตุที่โหลดช้ามาก
+   จึงต้องยอมเก็บน้อยลง ดีกว่าไม่เก็บเลย
+
+   เริ่มจากช่วงที่พอดีอยู่แล้ว ไม่ลองทั้งก้อนก่อน — ข้อมูลเก่ากว่านั้น
+   ผู้ใช้ต้องกด "ดูย้อนหลังทั้งหมด" ถึงจะดึง ไม่จำเป็นต้องอยู่ในแคช
+   รายการที่ยังส่งขึ้นคลาวด์ไม่สำเร็จ (_pendingSync) ต้องเก็บไว้เสมอ ห้ามตัด */
+const CACHE_KEEP_DAYS = 45;      // เท่ากับช่วงที่เครื่องใหม่ดึงมาตอนแรก
+function _writeShrinkingCache(key, records, label) {
+  const all = (records || []).filter(Boolean);
+  const must = all.filter(d => d._pendingSync);
+  const from = _daysAgoStr(CACHE_KEEP_DAYS);
+  const recent = all
+    .filter(d => !d._pendingSync && (!d.date || d.date >= from))
+    .sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));   // ใหม่ก่อน
+
+  let n = recent.length;
+  for (let guard = 0; guard < 20; guard++) {
+    try {
+      localStorage.setItem(key, JSON.stringify(_liteAuditsForCache(must.concat(recent.slice(0, n)))));
+      if (n < recent.length) {
+        console.warn('[' + label + '] พื้นที่ในเครื่องไม่พอ เก็บได้ ' + n + '/' + recent.length + ' รายการ (ล่าสุดก่อน)');
+      }
+      return true;
+    } catch (_) {
+      if (n === 0) break;
+      n = Math.floor(n / 2);
+    }
+  }
+  /* เหลือแต่รายการที่ยังส่งไม่สำเร็จ — ห้ามทิ้ง เพราะไม่มีที่อื่นเก็บแล้ว */
+  try { localStorage.setItem(key, JSON.stringify(_liteAuditsForCache(must))); return true; } catch (_) {}
+  try { localStorage.removeItem(key); } catch (_) {}
+  console.warn('[' + label + '] เก็บลงเครื่องไม่ได้เลย — รอบหน้าจะต้องโหลดใหม่ทั้งหมด');
+  return false;
+}
 function saveDailyLocal() {
   if (testMode) return;
-  const isBranch = currentUser && currentUser.role === 'branch';
-  const bc = String((currentUser && currentUser.branchCode) || '');
-  // เลือกชุดข้อมูลที่จะเซฟ: คง record ที่ยังค้าง sync (_pendingSync) ไว้เสมอ + จำกัดหน้าต่างวัน/สาขา
-  const pick = (days, ownOnly) => {
-    const from = days ? _daysAgoStr(days) : null;
-    return allDailyChecklists.filter(d => d && (
-      d._pendingSync ||
-      ((!ownOnly || !isBranch || String(d.branchCode) === bc) && (!from || (d.date && d.date >= from)))
-    ));
-  };
-  // ลองเซฟชุดใหญ่ก่อน ถ้า localStorage เต็มค่อยลดขนาดลงทีละขั้น (กันเซฟไม่ลงแล้วแก้ไข/ผลตรวจหาย)
-  const sets = [
-    allDailyChecklists,
-    pick(90, true),
-    pick(30, true),
-    pick(14, true),
-    pick(3, true),
-    allDailyChecklists.filter(d => d && d._pendingSync), // ขั้นสุดท้าย: อย่างน้อยเก็บของที่ยังไม่ sync ให้ได้
-  ];
-  for (const set of sets) {
-    // เซฟแบบตัด base64 เสมอ — กัน qa_daily_v1 บวมจนมือถือแครชตอนโหลด
-    try { localStorage.setItem(DAILY_STORAGE_KEY, JSON.stringify(_liteAuditsForCache(set))); return; }
-    catch (_) { /* เต็ม → ลองชุดที่เล็กลง */ }
-  }
+  _writeShrinkingCache(DAILY_STORAGE_KEY, allDailyChecklists, 'daily');
 }
 
 // ── โหลดแบบประหยัดโควตา (incremental) เพื่อรองรับหลายสาขาในระยะยาว ──
@@ -6931,8 +6945,9 @@ function _liteAuditsForCache(arr) {
 }
 function saveJaedaengLocal() {
   if (testMode) return;
-  // เซฟแบบตัด base64 เสมอ — กัน localStorage บวมจน มือถือแครชตอนโหลด
-  try { localStorage.setItem(JAEDAENG_STORAGE_KEY, JSON.stringify(_liteAuditsForCache(allJaedaengAudits))); } catch (_) {}
+  /* ของเดิมพลาดแล้วเงียบ ไม่เก็บอะไรเลย รอบหน้าจึงไม่มีจุดอ้างอิง
+     ต้องดึงย้อนหลังใหม่ทั้งก้อนทุกครั้ง — ใช้ตัวเดียวกับซานตาเฟ่ */
+  _writeShrinkingCache(JAEDAENG_STORAGE_KEY, allJaedaengAudits, 'jaedaeng');
 }
 
 /* Tombstones — จำ id ที่ถูกลบ (กัน resync ดึงกลับในเครื่องที่ลบ) */
