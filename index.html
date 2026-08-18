@@ -7137,7 +7137,12 @@ function _applyTestMode(on) {
 // อ่าน/subscribe ข้อมูลเจ๊แดงเฉพาะผู้ใช้ที่เกี่ยวข้อง — สาขาซานตาเฟ่ (70 สาขา) ไม่ต้องอ่าน (ประหยัดโควตา Firestore)
 function _needsJaedaengData() {
   if (!currentUser) return false;
-  return currentUser.crossBrand === true || currentUser.brand === 'jaedaeng' || currentView === 'jaedaeng';
+  /* ยึดจากแบรนด์ที่กำลังดู ไม่ใช่สิทธิ์ที่มี
+     ของเดิมคนที่ข้ามแบรนด์ได้จะเปิดตัวรับข้อมูลสดของเจ๊แดงค้างไว้ตลอด
+     แม้กำลังดูซานตาเฟ่ ข้อมูลไหลเข้าหน่วยความจำโดยไม่มีหน้าไหนใช้
+     สลับมาดูเจ๊แดงเมื่อไรค่อยเปิด — renderBottomNav เรียก initRealtimeSync
+     ให้ทุกครั้งที่วาดเมนูอยู่แล้ว และ switchViewBrand ก็เรียก renderBottomNav */
+  return ckViewBrandKey() === 'jaedaeng';
 }
 function initRealtimeSync() {
   if (_jdRealtimeStarted) return;
@@ -7149,18 +7154,27 @@ function initRealtimeSync() {
 
 /* โหลดเฉพาะข้อมูลของแบรนด์ที่ใช้จริง — กันมือถือโหลด Daily (ซานตาเฟ่) 22MB
    ทั้งที่เข้าใช้แค่เจ๊แดง (หรือกลับกัน) จนแรมพุ่งแครช · crossBrand (admin) โหลดทั้งคู่ */
-function loadBrandData() {
-  const cross = !!(currentUser && currentUser.crossBrand);
-  const b = CK_BRANDS[currentBrand];
-  /* แบรนด์ที่ใช้ระบบตรวจร้านเปิด-ปิด (ซานตาเฟ่/ยามะจัง) โหลดชุดเดียวกัน
-     ข้อมูลอยู่คอลเลกชันเดียวกัน แยกกันด้วยรหัสสาขาอยู่แล้ว
-     เดิมเช็คตรง ๆ ว่าเป็น santafe ไหม แบรนด์ใหม่เลยไม่ได้โหลดอะไรเลย */
-  const wantDaily = cross || !currentBrand || !!(b && b.daily);
-  const wantJd    = cross || !currentBrand || currentBrand === 'jaedaeng';
+/* โหลดเฉพาะข้อมูลของแบรนด์ที่กำลังดู
+   ของเดิม: คนที่ข้ามแบรนด์ได้จะโหลดข้อมูลทุกแบรนด์มาพร้อมกันตั้งแต่เปิด
+   ทั้งที่หน้าจอดูได้ทีละแบรนด์ ผลตรวจแต่ละใบมีหัวข้อหลายสิบข้อพร้อมรูป
+   บนมือถือหน่วยความจำไม่พอ เบราว์เซอร์เลยปิดหน้าทิ้งแล้วขึ้นว่า
+   "เกิดปัญหาตลอดเวลา" — ประวัติจึงไม่ขึ้นตามไปด้วย
+
+   ซานตาเฟ่กับยามะจังใช้คอลเลกชันเดียวกัน (แยกด้วยรหัสสาขา) โหลดครั้งเดียว
+   จึงครอบคลุมทั้งคู่ · จำไว้ว่าโหลดอะไรไปแล้ว สลับกลับมาจะได้ไม่ดึงซ้ำ */
+const _ckLoadedSets = new Set();
+function loadBrandData(force) {
+  const view = ckViewBrandKey();
+  const set = (CK_BRANDS[view] && CK_BRANDS[view].daily) ? 'daily' : view;
+  if (!force && _ckLoadedSets.has(set)) return Promise.resolve();
+  _ckLoadedSets.add(set);
   const tasks = [];
-  if (wantDaily) { tasks.push(loadAudits()); tasks.push(loadDailyChecklists()); }
-  if (wantJd) { tasks.push(loadJaedaengAudits()); }
-  return Promise.all(tasks);
+  if (set === 'daily') { tasks.push(loadAudits()); tasks.push(loadDailyChecklists()); }
+  else if (set === 'jaedaeng') { tasks.push(loadJaedaengAudits()); }
+  return Promise.all(tasks).catch(err => {
+    _ckLoadedSets.delete(set);   // โหลดไม่สำเร็จ ต้องให้ลองใหม่ได้
+    throw err;
+  });
 }
 
 async function loadJaedaengAudits() {
@@ -7556,6 +7570,11 @@ function switchViewBrand(brand) {
   applyBrandHeader();
   renderBottomNav();
   routeByRole();
+  /* ข้อมูลของแบรนด์นี้อาจยังไม่ได้โหลด (ตอนนี้โหลดทีละแบรนด์)
+     วาดจากที่มีก่อนให้จอไม่ว่าง แล้วค่อยวาดซ้ำเมื่อข้อมูลมาถึง */
+  loadBrandData()
+    .then(() => { if (currentUser && currentView === brand) routeByRole(); })
+    .catch(() => {});
 }
 
 function renderBottomNav() {
