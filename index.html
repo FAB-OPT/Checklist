@@ -1194,6 +1194,10 @@ body.test-mode-on { box-shadow: inset 0 0 0 3px #F59E0B; }
 .daily-fill-input{margin-bottom:6px}
 .daily-fill-input:last-child{margin-bottom:0}
 .daily-fill-input.is-empty{border-style:dashed}
+/* ป้ายบนตัวข้อ บอกตั้งแต่ยังไม่เลื่อนลงไปเห็นช่องกรอก */
+.daily-item-fill-badge{display:inline-block;margin-left:6px;padding:2px 8px;border-radius:6px;
+  font-size:11px;font-weight:700;white-space:nowrap;vertical-align:2px;
+  background:var(--bg3,#f6f6f8);color:var(--text2,#555);border:1px solid var(--border,#e5e5ea)}
 /* รายการที่กรอกไว้ ตอนเปิดดูย้อนหลัง */
 .detail-item-fills{margin-top:6px;font-size:13px;color:var(--text2,#555);line-height:1.6}
 .detail-item-fills b{color:var(--text,#222)}
@@ -9153,14 +9157,20 @@ function renderDailyForm() {
           photos.map((p, pi) => '<div class="photo-thumb"><img src="'+p+'"><button class="remove-btn" onclick="removeDailyPhoto('+globalIdx+','+pi+')"><span class="material-symbols-rounded" style="font-size:14px;">close</span></button></div>').join('') +
           '</div></div>';
       }
-      /* ช่องกรอกใต้ข้อ — โผล่เมื่อกด "ผ่าน" เท่านั้น
-         กดไม่ผ่าน/N/A แปลว่าไม่ได้ทำ จึงไม่ต้องกรอก */
+      /* ช่องกรอกใต้ข้อ — แสดงตลอดตั้งแต่เห็นข้อ
+         ของเดิมซ่อนไว้จนกว่าจะกด "ผ่าน" ซึ่งกลับหัวกลับหาง: คนตรวจต้องจด
+         ว่าชิมอะไรตอนชิม ไม่ใช่หลังตัดสินผล และเมื่อไม่เห็นช่องก็ไม่มีทาง
+         รู้ว่าต้องกรอก · เหมือนไฟล์ต้นฉบับที่มี 5 บรรทัดว่างอยู่ใต้ข้อเสมอ
+         กดไม่ผ่าน/N/A ยังกรอกได้ (จดไว้ว่าชิมอะไรถึงไม่ผ่าน) แต่ไม่บังคับ */
       let fillsHtml = '';
-      if (Array.isArray(item.fills) && isPass) {
+      if (Array.isArray(item.fills) && !isNA) {
         const miss = _dailyFillMissing(item);
+        /* _dailyFillMissing นับเฉพาะตอนกด "ผ่าน" (เพราะใช้ตัดสินตอนบันทึก)
+           ตัวนับบนหน้าจอต้องนับจริงเสมอ ไม่งั้นยังไม่กดผ่านจะขึ้น 5/5 ทั้งที่ว่าง */
+        const done = item.fills.filter(v => String(v || '').trim()).length;
         fillsHtml = '<div class="daily-fills' + (miss ? ' is-missing' : '') + '">'
           + '<div class="daily-fills-label">' + escapeHtml(item.fillLabel || 'รายละเอียด')
-          + ' <span class="daily-fills-count">' + (item.fills.length - miss) + '/' + item.fills.length + '</span></div>'
+          + ' <span class="daily-fills-count">' + done + '/' + item.fills.length + '</span></div>'
           + item.fills.map((v, fi) =>
               '<input type="text" class="jd-form-input daily-fill-input' + (String(v || '').trim() ? '' : ' is-empty') + '"'
               + ' value="' + escapeAttr(v || '') + '"'
@@ -9173,7 +9183,7 @@ function renderDailyForm() {
       html += `<div class="daily-item ${isPass?'is-pass':''} ${isFail?'is-fail':''} ${isNA?'is-na':''} ${isRequired?'is-required-photo':''}">
         <div class="daily-item-q">
           <span class="daily-item-num">${iIdx+1}</span>
-          <span class="daily-item-text">${escapeHtml(text)}${(isRequired && !isNA) ? '<span class="daily-item-photo-badge">📷 ต้องแนบรูป</span>' : ''}</span>
+          <span class="daily-item-text">${escapeHtml(text)}${(isRequired && !isNA) ? '<span class="daily-item-photo-badge">📷 ต้องแนบรูป</span>' : ''}${Array.isArray(item.fills) ? '<span class="daily-item-fill-badge">✍️ ต้องกรอก ' + item.fills.length + ' ช่อง</span>' : ''}</span>
         </div>
         <div class="daily-item-actions">
           <button type="button" class="daily-choice pass ${isPass ? 'active' : ''}" onclick="setDailyItem(${globalIdx},'pass')">
