@@ -6759,7 +6759,7 @@ function _clearDailyDraft() {
    เริ่มจากช่วงที่พอดีอยู่แล้ว ไม่ลองทั้งก้อนก่อน — ข้อมูลเก่ากว่านั้น
    ผู้ใช้ต้องกด "ดูย้อนหลังทั้งหมด" ถึงจะดึง ไม่จำเป็นต้องอยู่ในแคช
    รายการที่ยังส่งขึ้นคลาวด์ไม่สำเร็จ (_pendingSync) ต้องเก็บไว้เสมอ ห้ามตัด */
-const CACHE_KEEP_DAYS = 45;      // เท่ากับช่วงที่เครื่องใหม่ดึงมาตอนแรก
+const CACHE_KEEP_DAYS = 30;      // เท่ากับช่วงที่เครื่องใหม่ดึงมาตอนแรก
 function _writeShrinkingCache(key, records, label) {
   const all = (records || []).filter(Boolean);
   const must = all.filter(d => d._pendingSync);
@@ -6806,7 +6806,7 @@ function saveDailyLocal() {
 }
 
 // ── โหลดแบบประหยัดโควตา (incremental) เพื่อรองรับหลายสาขาในระยะยาว ──
-const DAILY_BACKFILL_DAYS = 45;                    // เครื่องใหม่/ล้างแคช: โหลดย้อนหลังกี่วัน (ครั้งเดียว) · ลดจาก 90 กันโหลดหนัก
+const DAILY_BACKFILL_DAYS = 30;                    // เครื่องใหม่/ล้างแคช: โหลดย้อนหลังกี่วัน (ครั้งเดียว) · ลดจาก 90 กันโหลดหนัก
 const DAILY_SYNC_OVERLAP_MS = 6 * 60 * 60 * 1000;  // เผื่อนาฬิกาเครื่องคลาดกัน 6 ชม. กันข้อมูลตกหล่น
 function _maxDailyUpdatedAt(list) {
   let m = '';
@@ -6923,34 +6923,45 @@ async function _resyncLocalOnlyDaily(records) {
   try { saveDailyLocal(); } catch (_) {}
 }
 
-// ปุ่ม "ดูย้อนหลังทั้งหมด" — โหลดข้อมูลเก่ากว่าหน้าต่าง 90 วัน (เรียกตอนต้องใช้เท่านั้น)
+/* ── ทำให้แน่ใจว่าช่วงวันที่ที่ขอ มีข้อมูลครบในเครื่อง ──
+   ในเครื่องเก็บไว้แค่หน้าต่างสั้น ๆ เพื่อความเร็ว แต่การออกรายงาน
+   เลือกช่วงย้อนหลังได้อิสระ ของเดิมคำนวณจากที่โหลดไว้เท่านั้น
+   เลือกช่วงที่เก่ากว่าหน้าต่างแล้วตัวเลขจะขาดโดยไม่มีอะไรบอก
+   ตอนนี้ดึงเฉพาะช่วงที่ยังไม่มี แล้วรวมเข้าไป — ขอซ้ำช่วงเดิมไม่ดึงใหม่ */
+let _dailyLoadedFrom = '';
+function _dailyHaveFrom() {
+  return _dailyLoadedFrom || _daysAgoStr(DAILY_BACKFILL_DAYS);
+}
+async function _ensureDailyRange(from) {
+  if (!firebaseDb || !from) return false;
+  const have = _dailyHaveFrom();
+  if (from >= have) return false;              // ครอบคลุมอยู่แล้ว
+  let q = firebaseDb.collection(DAILY_COLLECTION).where('date', '>=', from).where('date', '<', have);
+  const isBr = currentUser && currentUser.role === 'branch';
+  const bc = isBr ? String(currentUser.branchCode || '') : '';
+  if (isBr && bc) q = q.where('branchCode', '==', bc);   // สาขาไม่ต้องดึงของคนอื่น
+  const snap = await q.get();
+  const map = new Map(allDailyChecklists.filter(d => d && d.id != null).map(d => [String(d.id), d]));
+  _mergeDailyDocs(map, snap.docs);
+  _dailyLoadedFrom = from;
+  saveDailyLocal();
+  return true;
+}
+
+// ปุ่ม "ดูย้อนหลัง" — ขยายช่วงถอยหลังทีละ 90 วัน (ของเดิมดึงทั้ง collection) วัน (เรียกตอนต้องใช้เท่านั้น)
 let _dailyFullLoaded = false;
+const DAILY_MORE_STEP_DAYS = 90;
 async function loadAllDailyHistory() {
-  if (!firebaseDb) return;
-  try {
-    // สาขา → ดึงเฉพาะสาขาตัวเอง (ไม่โหลดทั้ง collection 22MB ให้มือถือแครช)
-    const _isBr = currentUser && currentUser.role === 'branch';
-    const _bc = _isBr ? String(currentUser.branchCode || '') : '';
-    const snap = (_isBr && _bc)
-      ? await firebaseDb.collection(DAILY_COLLECTION).where('branchCode', '==', _bc).get()
-      : await firebaseDb.collection(DAILY_COLLECTION).get();
-    const cache = loadLocalDaily();
-    const map = new Map(cache.map(d => [String(d.id), d]));
-    snap.docs.map(d => d.data()).forEach(d => {
-      if (!d || d.id == null) return;
-      delete d._pendingSync; // ธงเฉพาะเครื่อง — ห้ามรับจาก cloud
-      const ex = map.get(String(d.id));
-      if (ex && ex.updatedAt && d.updatedAt && d.updatedAt < ex.updatedAt) return; // ในเครื่องใหม่กว่า → ไม่ทับ
-      map.set(String(d.id), d);
-    });
-    let all = Array.from(map.values()).filter(d => d && !d.deleted);
-    all.forEach(function(d){ const _x = _dropBase64Photos(d.items); if (_x > 0 && d.id != null && !_dailyB64CleanIds.has(String(d.id))) { _dailyB64CleanIds.add(String(d.id)); _silentResaveDaily(d); } });   // ตัด base64 + ล้างขึ้น cloud
-    const isBranch = currentUser && currentUser.role === 'branch';
-    if (isBranch) all = all.filter(d => String(d.branchCode) === String(currentUser.branchCode || ''));
-    allDailyChecklists = all;
-    saveDailyLocal();
-    _dailyFullLoaded = true;
-  } catch (e) { console.warn('loadAllDailyHistory failed', e); }
+  /* ของเดิมดึงทั้ง collection ทีเดียว (หลายสิบเมกะไบต์) มือถือรับไม่ไหว
+     เปลี่ยนเป็นถอยหลังทีละช่วง กดซ้ำได้เรื่อย ๆ จนกว่าจะไม่มีของเก่ากว่านั้น */
+  const before = _dailyHaveFrom();
+  const d = new Date(before + 'T00:00:00');
+  d.setDate(d.getDate() - DAILY_MORE_STEP_DAYS);
+  const from = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  const got = allDailyChecklists.length;
+  await _ensureDailyRange(from);
+  /* ขยายช่วงแล้วไม่ได้อะไรเพิ่ม = ไม่มีของเก่ากว่านี้แล้ว ซ่อนปุ่มได้ */
+  if (allDailyChecklists.length === got) _dailyFullLoaded = true;
 }
 
 async function saveDailyToBackend(daily) {
@@ -12159,11 +12170,30 @@ const SFRep = {
     if (this.S.from === this.S.to) return fmtDateThaiShort(this.S.from);
     return fmtDateThaiShort(this.S.from) + ' – ' + fmtDateThaiShort(this.S.to);
   },
+  /* ดึงข้อมูลของช่วงที่เลือกให้ครบก่อนคำนวณ — ไม่งั้นตัวเลขขาดเงียบ ๆ
+     เรียกก่อนทุกทางที่ผลิตตัวเลข (ตัวอย่าง · PDF · Excel) */
+  async ensure() {
+    if (!this.S.from) return;
+    try {
+      if (await _ensureDailyRange(this.S.from)) _repaintDaily();
+    } catch (e) {
+      console.warn('[รายงาน] ดึงข้อมูลย้อนหลังไม่สำเร็จ', e);
+      showModal('ดึงข้อมูลย้อนหลังไม่สำเร็จ',
+        'ตัวเลขในรายงานอาจไม่ครบ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่');
+    }
+  },
   preview() {
     const el = document.getElementById('sfrep-pv'); if (!el) return;
     el.className = 'sfrep-pv';
     if (!this.S.from || !this.S.to) { el.innerHTML = 'เลือกช่วงวันที่ก่อน'; return; }
     if (this.S.from > this.S.to) { el.className = 'sfrep-pv warn'; el.innerHTML = 'วันเริ่มต้นอยู่หลังวันสิ้นสุด — สลับวันที่ก่อน'; return; }
+    /* ช่วงที่เลือกยังไม่มีข้อมูล → ดึงแล้ววาดตัวอย่างใหม่อีกรอบ
+       เช็คก่อนว่าขาดจริงไหม จะได้ไม่ยิงซ้ำทุกครั้งที่ขยับตัวเลือก */
+    if (this.S.from < _dailyHaveFrom()) {
+      el.innerHTML = 'กำลังดึงข้อมูลย้อนหลัง…';
+      this.ensure().then(() => this.preview());
+      return;
+    }
     const days = this.dateList().length, recs = this.records().length, br = this.roster().length;
     let line = '', warn = '';
     if (this.S.type === 'submit') {
@@ -12510,8 +12540,11 @@ const SFRep = {
       ข้อมูลจากระบบ Daily Open-Close Checklist · ตัวเลขในรายงานตรงกับที่แสดงบนแดชบอร์ด ณ เวลาที่ออกรายงาน</div>`;
   },
 
-  pdf() {
+  async pdf() {
     if (this.S.from > this.S.to) { showModal('ช่วงวันที่ไม่ถูกต้อง', 'วันเริ่มต้นอยู่หลังวันสิ้นสุด'); return; }
+    this.busy(true, 'กำลังเตรียมข้อมูล…');
+    await this.ensure();
+    this.busy(false);
     const doc = this.S.type === 'submit' ? this.docSubmit()
       : this.S.type === 'period' ? this.docPeriod()
       : this.S.type === 'topfail' ? this.docTopFail() : this.docDetail();
@@ -12657,10 +12690,17 @@ const SFRep = {
       rows: secs.map((x) => [x.section, x.total, x.fail, x.pct, x.branchCount]) }];
   },
 
-  excel() {
+  async excel() {
     if (this.S.from > this.S.to) { showModal('ช่วงวันที่ไม่ถูกต้อง', 'วันเริ่มต้นอยู่หลังวันสิ้นสุด'); return; }
+    this.busy(true, 'กำลังเตรียมข้อมูล…');
+    await this.ensure();
     const spec = this.sheetSpec();
-    if (!spec.rows.length) { showModal('ไม่มีข้อมูล', 'ช่วงและขอบเขตที่เลือกยังไม่มีข้อมูลให้ออกรายงาน'); return; }
+    /* ต้องปลดปุ่มก่อนออกทุกทาง ไม่งั้นกล่องค้างกดอะไรไม่ได้ */
+    if (!spec.rows.length) {
+      this.busy(false);
+      showModal('ไม่มีข้อมูล', 'ช่วงและขอบเขตที่เลือกยังไม่มีข้อมูลให้ออกรายงาน');
+      return;
+    }
     const specs = [spec].concat(this.extraSheets().filter((x) => x.rows.length));
     /* ตัวสร้าง Excel โหลดจากเน็ตตอนกดครั้งแรก อาจใช้เวลาสองสามวินาที
        ถ้าไม่บอกอะไรเลย ผู้ใช้จะนึกว่าปุ่มเสียแล้วกดซ้ำ */
