@@ -1182,6 +1182,25 @@ body.test-mode-on { box-shadow: inset 0 0 0 3px #F59E0B; }
 .jd-form-head .jd-form-head-row + .jd-form-head-row {
   border-top: 1px dashed var(--border);
 }
+/* ── ช่องกรอกใต้ข้อ (สุ่มชิมวัตถุดิบ) ──
+   ใช้พื้นจาง ๆ ให้แยกจากตัวข้อ แต่ไม่แย่งสายตาไปจากปุ่มผ่าน/ไม่ผ่าน */
+.daily-fills{margin-top:10px;padding:10px 12px;border-radius:10px;
+  background:var(--bg3,#f6f6f8);border:1px solid var(--border,#e5e5ea)}
+.daily-fills.is-missing{border-color:var(--warning,#b45309);background:#fff8ec}
+.daily-fills-label{font-size:12px;font-weight:700;color:var(--text2,#555);margin-bottom:8px;
+  display:flex;align-items:center;gap:8px}
+.daily-fills-count{font-weight:600;color:var(--text3,#888);font-variant-numeric:tabular-nums}
+.daily-fills.is-missing .daily-fills-count{color:var(--warning,#b45309)}
+.daily-fill-input{margin-bottom:6px}
+.daily-fill-input:last-child{margin-bottom:0}
+.daily-fill-input.is-empty{border-style:dashed}
+/* ช่องลงชื่อประจำส่วน — ฟอร์มต้นฉบับแยกลงชื่อครัวกับบริการ */
+.daily-section-by{padding:10px 14px 4px}
+.daily-section-by .daily-form-input-label{display:block;margin-bottom:6px}
+/* รายการที่กรอกไว้ ตอนเปิดดูย้อนหลัง */
+.detail-item-fills{margin-top:6px;font-size:13px;color:var(--text2,#555);line-height:1.6}
+.detail-item-fills b{color:var(--text,#222)}
+
 /* 2 คอลัมน์ — สาขา|ผู้ตรวจ · วันที่|เวลา */
 .jd-form-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .jd-form-grid2 .jd-form-head-row { border-top: none; grid-template-columns: 1fr; gap: 4px; align-items: stretch; }
@@ -6222,7 +6241,7 @@ const YAMACHAN_OPEN = [
     "พื้นครัวสะอาดไม่มีขยะ ไม่เปียก ไม่ลื่น",
     "ผนังครัวไม่สกปรก ไม่มีคราบน้ำมันฝังแน่น",
     "ระบบ Gasใช้งานได้ปกติ",
-    "สุ่มชิมวัตถุดิบ 5 ชนิดต่อวัน",
+    { text: "สุ่มชิมวัตถุดิบ 5 ชนิดต่อวัน", fills: 5, fillLabel: "ชนิดที่ชิม" },
   ]},
   { name: "ส่วนบริการ", items: [
     "เช็ค โซนให้บริการ โต๊ะ เก้าอี้ สะอาด จัดเป็นระเบียบ (ก่อนเปิดร้าน 15 นาที)",
@@ -8944,10 +8963,15 @@ async function startDailyShift(shift) {
   const template = dailyTemplate(shift, _target.code);
   const items = [];
   template.forEach((sec, sIdx) => {
-    sec.items.forEach((text, iIdx) => {
+    sec.items.forEach((raw, iIdx) => {
+      /* หัวข้อเขียนได้สองแบบ: ข้อความล้วน หรือ { text, fills } สำหรับข้อที่
+         ต้องกรอกข้อความเพิ่ม (เช่น สุ่มชิมวัตถุดิบ ต้องบอกว่าชิมอะไรบ้าง)
+         แบรนด์เดิมใช้ข้อความล้วนทั้งหมด จึงไม่กระทบ */
+      const text = (typeof raw === 'string') ? raw : ((raw && raw.text) || '');
+      const nFill = (raw && raw.fills) || 0;
       const key = `${sIdx}|${iIdx}`;
       const prior = existing && (existing.items || []).find(it => it.key === key);
-      items.push({
+      const it = {
         key,
         section: sec.name,
         num: iIdx + 1,
@@ -8955,7 +8979,13 @@ async function startDailyShift(shift) {
         status: prior ? prior.status : '',
         note: prior ? (prior.note || '') : '',
         photos: prior && Array.isArray(prior.photos) ? prior.photos.slice() : []
-      });
+      };
+      if (nFill) {
+        it.fillLabel = (raw && raw.fillLabel) || 'รายละเอียด';
+        const old = (prior && Array.isArray(prior.fills)) ? prior.fills : [];
+        it.fills = Array.from({ length: nFill }, (_, i) => String(old[i] || ''));
+      }
+      items.push(it);
     });
   });
 
@@ -8985,6 +9015,9 @@ async function startDailyShift(shift) {
     shift,
     manager: existing ? (existing.manager || '') : '',
     items,
+    /* แต่ละส่วนมีคนรับผิดชอบของตัวเอง ตามช่อง "ลงชื่อ" ในฟอร์มต้นฉบับ
+       เก็บเป็น { ชื่อส่วน: ชื่อคน } — ส่วนไหนไม่กรอกก็ไม่มีคีย์ */
+    sectionBy: (existing && existing.sectionBy) ? Object.assign({}, existing.sectionBy) : {},
     requiredPhotos,
     submittedBy: currentUser.code,
     submittedByName: currentUser.name,
@@ -9035,6 +9068,30 @@ function renderDailySectionTabs() {
   tabs.innerHTML = html;
 }
 
+/* ช่องกรอกใต้ข้อ (เช่น สุ่มชิมวัตถุดิบ ต้องบอกว่าชิมอะไรบ้าง)
+   เก็บทันทีที่พิมพ์ ไม่ต้องรอกดอะไร — เผื่อปิดหน้าไปกลางคัน draft ยังอยู่ */
+function setDailyFill(gIdx, fIdx, val) {
+  const it = currentDaily && currentDaily.items[gIdx];
+  if (!it || !Array.isArray(it.fills)) return;
+  it.fills[fIdx] = String(val || '');
+  _saveDailyDraft();
+  renderDailySectionTabs();   // ตัวนับความคืบหน้าเปลี่ยนตาม
+}
+/* ผู้รับผิดชอบรายส่วน — ตามช่อง "ลงชื่อ" ที่มีแยกในฟอร์มต้นฉบับ */
+function setDailySectionBy(name, val) {
+  if (!currentDaily) return;
+  currentDaily.sectionBy = currentDaily.sectionBy || {};
+  const v = String(val || '').trim();
+  if (v) currentDaily.sectionBy[name] = v; else delete currentDaily.sectionBy[name];
+  _saveDailyDraft();
+}
+/* ข้อนี้กรอกครบหรือยัง — ใช้ทั้งตอนวาดและตอนตรวจก่อนบันทึก
+   บังคับเฉพาะตอนกด "ผ่าน" เพราะการชิมเกิดขึ้นจริง ถ้าชิมไม่ได้ให้กดไม่ผ่าน */
+function _dailyFillMissing(it) {
+  if (!it || !Array.isArray(it.fills) || it.status !== 'pass') return 0;
+  return it.fills.filter(v => !String(v || '').trim()).length;
+}
+
 function scrollToDailySection(idx) {
   const target = document.getElementById('daily-section-' + idx);
   if (!target) return;
@@ -9059,6 +9116,14 @@ function renderDailyForm() {
         <div class="daily-section-progress">${doneCount}/${sec.items.length}${failCount ? ` · <span style="color:var(--danger)">✗${failCount}</span>` : ''}</div>
       </div>
       <div class="daily-section-body">`;
+    /* ช่องลงชื่อของส่วนนี้ — ฟอร์มต้นฉบับแยกลงชื่อครัวกับบริการคนละใบ
+       รวมเป็นใบเดียวแล้ว แต่ยังต้องรู้ว่าใครรับผิดชอบส่วนไหน */
+    html += `<div class="daily-section-by">
+      <label class="daily-form-input-label">ผู้รับผิดชอบส่วนนี้</label>
+      <input type="text" class="jd-form-input" placeholder="ชื่อผู้ตรวจส่วน${escapeAttr(sec.name.replace(/^ส่วน/, ''))}"
+             value="${escapeAttr((currentDaily.sectionBy || {})[sec.name] || '')}"
+             oninput="setDailySectionBy('${escapeAttr(sec.name)}', this.value)">
+    </div>`;
     sec.items.forEach((item, iIdx) => {
       const globalIdx = sec.start + iIdx;
       const text = item.text || '';
@@ -9078,6 +9143,21 @@ function renderDailyForm() {
           '<div class="photo-preview">' +
           photos.map((p, pi) => '<div class="photo-thumb"><img src="'+p+'"><button class="remove-btn" onclick="removeDailyPhoto('+globalIdx+','+pi+')"><span class="material-symbols-rounded" style="font-size:14px;">close</span></button></div>').join('') +
           '</div></div>';
+      }
+      /* ช่องกรอกใต้ข้อ — โผล่เมื่อกด "ผ่าน" เท่านั้น
+         กดไม่ผ่าน/N/A แปลว่าไม่ได้ทำ จึงไม่ต้องกรอก */
+      let fillsHtml = '';
+      if (Array.isArray(item.fills) && isPass) {
+        const miss = _dailyFillMissing(item);
+        fillsHtml = '<div class="daily-fills' + (miss ? ' is-missing' : '') + '">'
+          + '<div class="daily-fills-label">' + escapeHtml(item.fillLabel || 'รายละเอียด')
+          + ' <span class="daily-fills-count">' + (item.fills.length - miss) + '/' + item.fills.length + '</span></div>'
+          + item.fills.map((v, fi) =>
+              '<input type="text" class="jd-form-input daily-fill-input' + (String(v || '').trim() ? '' : ' is-empty') + '"'
+              + ' value="' + escapeAttr(v || '') + '"'
+              + ' placeholder="' + escapeAttr((fi + 1) + '.') + '"'
+              + ' oninput="setDailyFill(' + globalIdx + ',' + fi + ',this.value)">').join('')
+          + '</div>';
       }
       const needNote = isFail || isNA;
       const noteMissing = needNote && !(item.note || '').trim();
@@ -9101,6 +9181,7 @@ function renderDailyForm() {
           </button>
         </div>
         <input type="text" class="daily-note-input${noteMissing ? ' is-required' : ''}" placeholder="${isNA ? 'ระบุเหตุผลที่ N/A (จำเป็น)' : 'ระบุเหตุผล / Action ที่ไม่ผ่าน (จำเป็น)'}" value="${escapeAttr(item.note || '')}" oninput="setDailyNote(${globalIdx}, this.value)" style="display:${needNote ? 'block' : 'none'};" id="daily-note-${globalIdx}">
+        ${fillsHtml}
         ${photosHtml}
       </div>`;
     });
@@ -9164,6 +9245,17 @@ async function submitDailyShift() {
   const unanswered = items.findIndex(it => !it || !it.status);
   if (unanswered >= 0) { _scrollTo(unanswered, 'ตอบไม่ครบทุกข้อ', 'กรุณาเลือก ผ่าน/ไม่ผ่าน/N/A ให้ครบทุกข้อก่อนบันทึก'); return; }
   // 2) ไม่ผ่าน → ต้องมีเหตุผล + รูป · N/A → ต้องมีเหตุผล
+  /* ข้อที่มีช่องกรอกและกด "ผ่าน" ต้องกรอกให้ครบ — ไม่งั้นบันทึกว่าตรวจแล้ว
+     แต่ไม่มีหลักฐานว่าตรวจอะไร ซึ่งคือเหตุผลที่มีช่องนี้ตั้งแต่แรก */
+  const badFill = items.findIndex(it => _dailyFillMissing(it) > 0);
+  if (badFill >= 0) {
+    const it = items[badFill];
+    showModal('กรอกยังไม่ครบ',
+      '<b>' + escapeHtml(it.text) + '</b><br>ต้องกรอก "' + escapeHtml(it.fillLabel || 'รายละเอียด')
+      + '" ให้ครบ ' + it.fills.length + ' ช่อง (ยังขาด ' + _dailyFillMissing(it) + ')'
+      + '<br><br>ถ้าทำไม่ได้จริง ให้กด "ไม่ผ่าน" แล้วระบุเหตุผลแทน');
+    return;
+  }
   const badNote = items.findIndex(it => (it.status === 'fail' || it.status === 'na') && !(it.note || '').trim());
   if (badNote >= 0) { _scrollTo(badNote, 'ระบุเหตุผลไม่ครบ', 'ข้อที่ "ไม่ผ่าน" หรือ "N/A" ต้องระบุเหตุผลก่อนบันทึก'); return; }
   const failNoPhoto = items.findIndex(it => it.status === 'fail' && (!it.photos || it.photos.length === 0));
@@ -9361,6 +9453,10 @@ function showDailyDetail(id, targetText) {
     { icon: 'badge',              label: 'Manager on duty', value: d.manager || '-' },
     { icon: 'supervisor_account', label: 'BZM',             value: d.bzm || '-' },
     { icon: 'person',             label: 'บันทึกโดย',       value: d.submittedByName || '-' },
+    /* ผู้รับผิดชอบรายส่วน — โชว์เฉพาะใบที่มีกรอกไว้ (แบรนด์เดิมไม่มีช่องนี้) */
+    ...(d.sectionBy && Object.keys(d.sectionBy).length
+      ? Object.keys(d.sectionBy).map(k => ({ icon: 'assignment_ind', label: k, value: d.sectionBy[k] }))
+      : []),
     { icon: 'fact_check',         label: 'สถานะรายการ',     value: `ผ่าน ${passN} ข้อ - ไม่ผ่าน ${failN} ข้อ - N/A ${naN} ข้อ${pendN > 0 ? ` - รอ ${pendN} ข้อ` : ''} - ทั้งหมด ${total} ข้อ` },
   ];
   if (_isDailyLate(d) && (d.lateReason || '').trim()) {
@@ -9427,6 +9523,10 @@ function showDailyDetail(id, targetText) {
         <span class="detail-status-pill">${pillLabel}</span>
         <div class="detail-item-body">
           <div class="detail-item-text"><b>${j+1}.</b> ${escapeHtml(it.text)}</div>
+          ${(Array.isArray(it.fills) && it.fills.some(v => String(v||'').trim()))
+            ? `<div class="detail-item-fills"><b>${escapeHtml(it.fillLabel || 'รายละเอียด')}:</b> `
+              + it.fills.filter(v => String(v||'').trim()).map(v => escapeHtml(v)).join(' · ') + '</div>'
+            : ''}
           ${it.note ? `<div class="detail-item-note"><span class="material-symbols-rounded">edit_note</span>${escapeHtml(it.note)}</div>` : ''}
           ${photosHtml}
         </div>
