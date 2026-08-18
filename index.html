@@ -1194,6 +1194,7 @@ body.test-mode-on { box-shadow: inset 0 0 0 3px #F59E0B; }
 .daily-fill-input{margin-bottom:6px}
 .daily-fill-input:last-child{margin-bottom:0}
 .daily-fill-input.is-empty{border-style:dashed}
+.daily-fills.is-one{padding:8px 10px}
 /* ป้ายบนตัวข้อ บอกตั้งแต่ยังไม่เลื่อนลงไปเห็นช่องกรอก */
 .daily-item-fill-badge{display:inline-block;margin-left:6px;padding:2px 8px;border-radius:6px;
   font-size:11px;font-weight:700;white-space:nowrap;vertical-align:2px;
@@ -6251,7 +6252,14 @@ const YAMACHAN_OPEN = [
     "พื้นครัวสะอาดไม่มีขยะ ไม่เปียก ไม่ลื่น",
     "ผนังครัวไม่สกปรก ไม่มีคราบน้ำมันฝังแน่น",
     "ระบบ Gasใช้งานได้ปกติ",
-    { text: "สุ่มชิมวัตถุดิบ 5 ชนิดต่อวัน", fills: 5, fillLabel: "ชนิดที่ชิม" },
+    /* ต้นฉบับเขียนเป็นข้อเดียว "สุ่มชิมวัตถุดิบ 5 ชนิดต่อวัน" พร้อม 5 บรรทัดว่าง
+       แยกเป็น 5 ข้อเพื่อให้ตัดสินผ่าน/ไม่ผ่านแยกกันได้ — ชิม 5 อย่างแล้วอย่างหนึ่ง
+       มีปัญหา ต้องชี้ได้ว่าอย่างไหน ไม่ใช่ตกทั้งข้อ */
+    { text: "สุ่มชิมวัตถุดิบ — ชนิดที่ 1", fills: 1, fillLabel: "ชื่อวัตถุดิบที่ชิม" },
+    { text: "สุ่มชิมวัตถุดิบ — ชนิดที่ 2", fills: 1, fillLabel: "ชื่อวัตถุดิบที่ชิม" },
+    { text: "สุ่มชิมวัตถุดิบ — ชนิดที่ 3", fills: 1, fillLabel: "ชื่อวัตถุดิบที่ชิม" },
+    { text: "สุ่มชิมวัตถุดิบ — ชนิดที่ 4", fills: 1, fillLabel: "ชื่อวัตถุดิบที่ชิม" },
+    { text: "สุ่มชิมวัตถุดิบ — ชนิดที่ 5", fills: 1, fillLabel: "ชื่อวัตถุดิบที่ชิม" },
   ]},
   { name: "ส่วนบริการ", items: [
     "เช็ค โซนให้บริการ โต๊ะ เก้าอี้ สะอาด จัดเป็นระเบียบ (ก่อนเปิดร้าน 15 นาที)",
@@ -9168,13 +9176,17 @@ function renderDailyForm() {
         /* _dailyFillMissing นับเฉพาะตอนกด "ผ่าน" (เพราะใช้ตัดสินตอนบันทึก)
            ตัวนับบนหน้าจอต้องนับจริงเสมอ ไม่งั้นยังไม่กดผ่านจะขึ้น 5/5 ทั้งที่ว่าง */
         const done = item.fills.filter(v => String(v || '').trim()).length;
-        fillsHtml = '<div class="daily-fills' + (miss ? ' is-missing' : '') + '">'
-          + '<div class="daily-fills-label">' + escapeHtml(item.fillLabel || 'รายละเอียด')
-          + ' <span class="daily-fills-count">' + done + '/' + item.fills.length + '</span></div>'
+        /* ช่องเดียวไม่ต้องมีตัวนับ 0/1 และไม่ต้องมีเลขลำดับหน้าช่อง
+           ใช้ป้ายกำกับเป็น placeholder ไปเลย ประหยัดที่และอ่านง่ายกว่า */
+        const one = item.fills.length === 1;
+        const label = item.fillLabel || 'รายละเอียด';
+        fillsHtml = '<div class="daily-fills' + (miss ? ' is-missing' : '') + (one ? ' is-one' : '') + '">'
+          + (one ? '' : '<div class="daily-fills-label">' + escapeHtml(label)
+              + ' <span class="daily-fills-count">' + done + '/' + item.fills.length + '</span></div>')
           + item.fills.map((v, fi) =>
               '<input type="text" class="jd-form-input daily-fill-input' + (String(v || '').trim() ? '' : ' is-empty') + '"'
               + ' value="' + escapeAttr(v || '') + '"'
-              + ' placeholder="' + escapeAttr((fi + 1) + '.') + '"'
+              + ' placeholder="' + escapeAttr(one ? label : (fi + 1) + '.') + '"'
               + ' oninput="setDailyFill(' + globalIdx + ',' + fi + ',this.value)">').join('')
           + '</div>';
       }
@@ -9183,7 +9195,7 @@ function renderDailyForm() {
       html += `<div class="daily-item ${isPass?'is-pass':''} ${isFail?'is-fail':''} ${isNA?'is-na':''} ${isRequired?'is-required-photo':''}">
         <div class="daily-item-q">
           <span class="daily-item-num">${iIdx+1}</span>
-          <span class="daily-item-text">${escapeHtml(text)}${(isRequired && !isNA) ? '<span class="daily-item-photo-badge">📷 ต้องแนบรูป</span>' : ''}${Array.isArray(item.fills) ? '<span class="daily-item-fill-badge">✍️ ต้องกรอก ' + item.fills.length + ' ช่อง</span>' : ''}</span>
+          <span class="daily-item-text">${escapeHtml(text)}${(isRequired && !isNA) ? '<span class="daily-item-photo-badge">📷 ต้องแนบรูป</span>' : ''}${Array.isArray(item.fills) ? '<span class="daily-item-fill-badge">✍️ ' + (item.fills.length === 1 ? 'ต้องระบุชื่อ' : 'ต้องกรอก ' + item.fills.length + ' ช่อง') + '</span>' : ''}</span>
         </div>
         <div class="daily-item-actions">
           <button type="button" class="daily-choice pass ${isPass ? 'active' : ''}" onclick="setDailyItem(${globalIdx},'pass')">
