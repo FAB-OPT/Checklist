@@ -6801,6 +6801,36 @@ function _maxDailyUpdatedAt(list) {
   return m;
 }
 
+/* รวมข้อมูลจากคลาวด์เข้ากับของในเครื่อง
+   แยกออกมาเพราะตอนนี้ดึงสองจังหวะ (ของใหม่ก่อน · ย้อนหลังตามมา)
+   ต้องรวมได้ทั้งสองรอบ */
+function _mergeDailyDocs(map, docs) {
+  // กันรายการว่างปน — ตอนนี้ถูกเรียกจากสองที่ ไม่ได้ผูกกับผลของ Firestore อย่างเดียวแล้ว
+  const snap = { docs: (docs || []).filter(Boolean) };
+    snap.docs.map(d => d.data()).forEach(d => {
+      if (!d || d.id == null) return;
+      delete d._pendingSync; // ธงเฉพาะเครื่อง — ห้ามรับค่าจาก cloud (กันเข้าใจผิดว่าค้าง แล้ว resync วนไม่จบ = write/read storm)
+      const ex = map.get(String(d.id));
+      // ในเครื่องใหม่กว่า (แก้ยังไม่ sync) → ไม่ทับ · ไม่งั้น cloud (sync แล้ว) ทับ = ล้างธงค้างไปในตัว
+      if (ex && ex.updatedAt && d.updatedAt && d.updatedAt < ex.updatedAt) return;
+      map.set(String(d.id), d);
+    });
+    allDailyChecklists = Array.from(map.values()).filter(d => d && !d.deleted);
+}
+/* วาดหน้าจอใหม่เท่าที่เปิดอยู่ — เรียกได้ทุกจังหวะที่ข้อมูลมาถึง */
+function _repaintDaily() {
+  try {
+    if (document.getElementById('sf-daily-table')) _renderSfTable();
+    /* renderDailyList() อ่านค่าจากช่องกรองตรง ๆ ถ้าหน้านั้นยังไม่ถูกวาดจะพัง
+       จึงเช็คจากช่องค้นหาซึ่งเป็นตัวแรกที่มันอ่าน */
+    if (document.getElementById('daily-filter-search')) renderDailyList();
+  } catch (e) { console.warn('[daily] วาดหน้าจอใหม่ไม่สำเร็จ', e); }
+}
+
+/* จังหวะแรกดึงกี่วัน — พอให้แดชบอร์ด ("วันนี้ใครยังไม่ส่ง") ขึ้นได้ทันที
+   เผื่อไว้ 3 วันกันกรณีเปิดข้ามเที่ยงคืนหรือย้อนดูเมื่อวาน */
+const DAILY_FIRST_PAINT_DAYS = 3;
+
 async function loadDailyChecklists() {
   loadCkSysNotes(); // หมายเหตุระบบรายวัน/รอบ (เช่น ระบบล่ม สาขาส่งไม่ได้)
   loadSfBranches(); // โหลดรายชื่อสาขา (เพิ่ม/ลบ) จาก cloud — ครั้งเดียวต่อ session
@@ -6825,22 +6855,25 @@ async function loadDailyChecklists() {
       snap = await firebaseDb.collection(DAILY_COLLECTION).where('updatedAt', '>', since).get();
     } else {
       // เครื่องใหม่/ล้างแคช → โหลดย้อนหลัง N วันครั้งเดียว แทนดึงทั้งก้อน (คุมจำนวนอ่าน)
+      /* เห็นทุกสาขา + ยังไม่มีแคช = ก้อนใหญ่ที่สุด
+         ดึงสองจังหวะ: ของไม่กี่วันล่าสุดก่อน วาดให้เห็นทันที
+         แล้วค่อยดึงย้อนหลังที่เหลือตามมา ของเดิมรอทั้งก้อนก่อนถึงจะวาด
+         บนมือถือจึงเหมือนค้างไปเลย */
       const since = _daysAgoStr(DAILY_BACKFILL_DAYS);
-      snap = await firebaseDb.collection(DAILY_COLLECTION).where('date', '>=', since).get();
+      const recent = _daysAgoStr(DAILY_FIRST_PAINT_DAYS);
+      const first = await firebaseDb.collection(DAILY_COLLECTION).where('date', '>=', recent).get();
+      _mergeDailyDocs(map, first.docs);
+      _repaintDaily();
+      /* ที่เหลือคือช่วงที่เก่ากว่าจังหวะแรก — ไม่ทับกัน จึงไม่ได้ดึงซ้ำ */
+      snap = await firebaseDb.collection(DAILY_COLLECTION)
+        .where('date', '>=', since).where('date', '<', recent).get();
     }
-    snap.docs.map(d => d.data()).forEach(d => {
-      if (!d || d.id == null) return;
-      delete d._pendingSync; // ธงเฉพาะเครื่อง — ห้ามรับค่าจาก cloud (กันเข้าใจผิดว่าค้าง แล้ว resync วนไม่จบ = write/read storm)
-      const ex = map.get(String(d.id));
-      // ในเครื่องใหม่กว่า (แก้ยังไม่ sync) → ไม่ทับ · ไม่งั้น cloud (sync แล้ว) ทับ = ล้างธงค้างไปในตัว
-      if (ex && ex.updatedAt && d.updatedAt && d.updatedAt < ex.updatedAt) return;
-      map.set(String(d.id), d);
-    });
-    allDailyChecklists = Array.from(map.values()).filter(d => d && !d.deleted);
+    _mergeDailyDocs(map, snap.docs);
     allDailyChecklists.forEach(function(d){ const _x = _dropBase64Photos(d.items); if (_x > 0 && d.id != null && !_dailyB64CleanIds.has(String(d.id))) { _dailyB64CleanIds.add(String(d.id)); _silentResaveDaily(d); } });   // ตัด base64 + ล้างขึ้น cloud
     saveDailyLocal();
     _dailyFullLoaded = false; // ยังโหลดไม่ครบทุกวัน → ปุ่ม "ดูย้อนหลังทั้งหมด" ยังใช้ได้
     // ดันเฉพาะที่ยังค้างจริง (ในเครื่องยัง _pendingSync หลัง merge = cloud ไม่มีที่ใหม่กว่า) — ไม่ใช่ทุก record
+    _repaintDaily();
     const pending = allDailyChecklists.filter(d => d && d.id != null && d._pendingSync && !d.deleted);
     if (pending.length) _resyncLocalOnlyDaily(pending);
   } catch (e) {
