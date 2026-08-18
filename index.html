@@ -6614,7 +6614,11 @@ const AUDITS_COLLECTION = 'audits';
               ใช้แยกว่าสาขาไหนเป็นของใคร ทั้งตอนเลือกชุดหัวข้อและตอนกรองรายชื่อ
    daily    = ใช้ระบบตรวจร้านเปิด-ปิด · เจ๊แดงใช้ระบบ QSC คนละชุดจึงเป็น false */
 const CK_BRANDS = {
-  santafe:  { name: 'Santa Fe Happy Steak', short: 'Santa Fe', logo: 'logo-santafe.png',        prefixes: ['50', '55'], daily: true  },
+  /* cutoff = เวลาตัดว่า "ส่งสาย" (นาทีนับจากเที่ยงคืน)
+     ไม่ใส่ = แบรนด์นั้นไม่มีเงื่อนไขเวลา ส่งเมื่อไรก็ไม่นับว่าสาย
+     เวลานี้เป็นของซานตาเฟ่ ยามะจังเวลาทำการคนละแบบจึงไม่ผูกกติกานี้ */
+  santafe:  { name: 'Santa Fe Happy Steak', short: 'Santa Fe', logo: 'logo-santafe.png',        prefixes: ['50', '55'], daily: true,
+              cutoff: { open: 11 * 60 + 30, close: 22 * 60 } },
   yamachan: { name: 'ยามะจัง',               short: 'ยามะจัง',  logo: 'logo-yamachan.png',       prefixes: ['60'],       daily: true  },
   jaedaeng: { name: 'เจ๊แดงสามย่าน',          short: 'เจ๊แดง',   logo: 'Logo-Jaedang_samyan.png', prefixes: ['40'],       daily: false },
 };
@@ -6670,6 +6674,16 @@ const _ckBrandCache = new Map();
 const _ckLabelCache = new Map();
 function _ckBrandCacheBust() {
   _ckBrandOfCache.clear(); _ckBrandCache.clear(); _ckLabelCache.clear();
+}
+/* เวลาตัด "ส่งสาย" ของสาขานี้ — คืน null ถ้าแบรนด์ไม่ได้ตั้งไว้
+   แยกออกมาเพราะใช้ทั้งตอนเริ่มตรวจ (เตือน + ขอเหตุผล) และตอนแสดงผลย้อนหลัง
+   ต้องใช้กติกาเดียวกัน ไม่งั้นเตือนตอนกรอกแต่ไม่ขึ้นป้ายในรายงาน */
+function ckCutoffMin(branchCode, shift) {
+  const b = CK_BRANDS[ckBrandOfBranch(branchCode)];
+  const c = b && b.cutoff;
+  if (!c) return null;
+  const m = (shift === 'close') ? c.close : c.open;
+  return (typeof m === 'number') ? m : null;
 }
 function ckBrandOfBranch(code) {
   const c = String(code || '');
@@ -7868,11 +7882,14 @@ function applySfClScopeFilter(records) {
 // เกินเวลาไหม — รอบเปิด ≤ 11:30 · รอบปิด ≤ 22:00 (ใช้ธง late ถ้ามี · ไม่งั้นคำนวณจากเวลาจริง)
 function _isDailyLate(rec) {
   if (!rec) return false;
+  /* แบรนด์ที่ไม่ได้ตั้งเวลาตัด ไม่มีคำว่าสาย — เช็คก่อนธง late ด้วย
+     เผื่อมีเรคคอร์ดเก่าที่ถูกตีธงไว้ตอนกติกายังใช้กับทุกแบรนด์ */
+  const cutMin = ckCutoffMin(rec.branchCode, rec.shift);
+  if (cutMin == null) return false;
   if (rec.late) return true;
   const iso = rec.startedAt || rec.submittedAt;
   if (!iso) return false;
   const dd = new Date(iso);
-  const cutMin = rec.shift === 'close' ? (22 * 60) : (11 * 60 + 30);
   const ddMin = dd.getHours() * 60 + dd.getMinutes();
   return ddMin > cutMin || (ddMin === cutMin && dd.getSeconds() > 0);
 }
@@ -8957,9 +8974,10 @@ async function startDailyShift(shift) {
   let _isLate    = existing ? !!existing.late : false;
   let _lateReason = existing ? (existing.lateReason || '') : '';
   let _startedAt  = (existing && existing.startedAt) ? existing.startedAt : _now.toISOString();
-  if (!existing) {
-    const _cutMin = shift === 'open' ? (11 * 60 + 30) : (22 * 60); // รอบเปิด ≤ 11:30 · รอบปิด ≤ 22:00
-    const _cutTxt = shift === 'open' ? '11:30' : '22:00';
+  const _cutMin = ckCutoffMin(_target.code, shift);   // null = แบรนด์นี้ไม่มีเงื่อนไขเวลา
+  if (!existing && _cutMin != null) {
+    const _cutTxt = String(Math.floor(_cutMin / 60)).padStart(2, '0') + ':' +
+                    String(_cutMin % 60).padStart(2, '0');
     const _nowMin = _now.getHours() * 60 + _now.getMinutes();
     _isLate = (_nowMin > _cutMin) || (_nowMin === _cutMin && _now.getSeconds() > 0);
     if (_isLate) {
