@@ -6585,9 +6585,11 @@ const CK_BRANDS = {
    ทับค่าตั้งต้นในไฟล์เฉพาะช่องที่กรอกไว้จริง — โหลดไม่ได้ก็ยังใช้ของเดิมได้ */
 let CK_BRANDS_CLOUD = {};
 function ckBrand(key) {
+  const cached = _ckBrandCache.get(key);
+  if (cached !== undefined) return cached;
   const base = CK_BRANDS[key];
   const cloud = CK_BRANDS_CLOUD[key];
-  if (!base && !cloud) return null;
+  if (!base && !cloud) { _ckBrandCache.set(key, null); return null; }
   const out = Object.assign({}, base);
   if (cloud) {
     if (cloud.name) out.name = cloud.name;
@@ -6595,6 +6597,7 @@ function ckBrand(key) {
     if (cloud.color) out.color = cloud.color;
     if (cloud.logo) out.logoData = cloud.logo;   // เป็น data URI ใช้ในรายงานได้เลย
   }
+  _ckBrandCache.set(key, out);
   return out;
 }
 /* ชื่อที่ขึ้นหัวรายงาน — ชื่อบริษัทถ้าตั้งไว้ ไม่งั้นใช้ชื่อแบรนด์ */
@@ -6620,12 +6623,27 @@ function ckViewBrandKey() {
 }
 /* สาขานี้เป็นของแบรนด์ไหน — ดูจากรหัสนำหน้า
    เทียบตัวยาวก่อน เพราะ 55 (ST_Easy) เป็นส่วนหนึ่งของซานตาเฟ่ ต้องไม่ชนกับ 5 */
+/* ── ตัวจำผลลัพธ์ ──
+   สามฟังก์ชันข้างล่างถูกเรียก "ต่อหนึ่งเรคคอร์ด" ในหลายวง (ค้นหา ·
+   สรุปหัวข้อที่ตก · ประวัติ · รายงาน) ซึ่งมีได้หลายหมื่นเรคคอร์ด
+   คำตอบไม่เปลี่ยนระหว่างรอบ จึงจำไว้แทนที่จะคำนวณใหม่ทุกครั้ง
+   ล้างเมื่อทะเบียนแบรนด์เปลี่ยนเท่านั้น (_ckBrandCacheBust) */
+const _ckBrandOfCache = new Map();
+const _ckBrandCache = new Map();
+const _ckLabelCache = new Map();
+function _ckBrandCacheBust() {
+  _ckBrandOfCache.clear(); _ckBrandCache.clear(); _ckLabelCache.clear();
+}
 function ckBrandOfBranch(code) {
   const c = String(code || '');
+  const hit = _ckBrandOfCache.get(c);
+  if (hit !== undefined) return hit;
+  let out = 'santafe';
   for (const k in CK_BRANDS) {
-    if ((CK_BRANDS[k].prefixes || []).some(p => c.startsWith(p))) return k;
+    if ((CK_BRANDS[k].prefixes || []).some(p => c.startsWith(p))) { out = k; break; }
   }
-  return 'santafe';
+  _ckBrandOfCache.set(c, out);
+  return out;
 }
 /* กรองรายชื่อสาขาให้เหลือเฉพาะของแบรนด์ที่ดูอยู่
    ทะเบียนสาขาจากฮับรวมทุกแบรนด์ไว้ก้อนเดียว ถ้าไม่กรอง ซานตาเฟ่จะเห็นสาขา
@@ -8060,6 +8078,7 @@ function _applyCkBrandsFromHub(res) {
   const map = {};
   arr.forEach(b => { if (b && b.key) map[b.key] = b; });
   CK_BRANDS_CLOUD = map;
+  _ckBrandCacheBust();   // ชื่อ/สี/โลโก้เปลี่ยน ของที่จำไว้ใช้ไม่ได้แล้ว
   try { localStorage.setItem(CK_BRANDS_CLOUD_KEY, JSON.stringify(map)); } catch (_) {}
 }
 async function _fetchCkPermsFromHub(force) {
@@ -8453,6 +8472,9 @@ function _sfDailyTimesHTML(dailies) {
 function branchLabel(code, name) {
   if (!code && !name) return '';
   if (!name) return String(code);
+  const ck = code + '\u0000' + name;
+  const hit = _ckLabelCache.get(ck);
+  if (hit !== undefined) return hit;
   const n = String(name).trim();
   /* เติมชื่อแบรนด์นำหน้าถ้าชื่อสาขายังไม่มี — ดูจากรหัสสาขา ไม่ใช่เดาว่า
      เป็นซานตาเฟ่เสมอ ของเดิมทำให้สาขายามะจังขึ้นว่า "6001 Santa Fe Sukhumvit 39" */
@@ -8460,7 +8482,9 @@ function branchLabel(code, name) {
   const bn = String(b.short || b.name || '').trim();
   const has = bn && n.toLowerCase().indexOf(bn.toLowerCase()) === 0;
   const prefix = (bn && !has) ? bn + ' ' : '';
-  return `${code} ${prefix}${n}`.replace(/\s+/g, ' ').trim();
+  const out = `${code} ${prefix}${n}`.replace(/\s+/g, ' ').trim();
+  _ckLabelCache.set(ck, out);
+  return out;
 }
 
 function santaFeLogoSVG() {
@@ -8532,20 +8556,26 @@ function fmtDateThaiShort(iso) {
 }
 
 function getVisibleDailyChecklists() {
+  /* ผลตรวจทุกแบรนด์อยู่คอลเลกชันเดียวกัน แยกกันด้วยรหัสสาขา
+     ของเดิมแอดมิน/COO/VP ได้ทั้งก้อนโดยไม่กรองแบรนด์เลย ตอนมีแบรนด์เดียว
+     ไม่มีใครเห็นปัญหา พอเพิ่มยามะจังข้อมูลเลยปนกันทันที
+     กรองที่นี่จุดเดียว ทุกหน้าที่ใช้ (แดชบอร์ด · ประวัติ · รายงาน) ได้ผลตรงกัน */
+  const view = ckViewBrandKey();
+  const mine = allDailyChecklists.filter(d => d && ckBrandOfBranch(d.branchCode) === view);
   if (currentUser.role === 'branch') {
-    return allDailyChecklists.filter(d => d.branchCode === currentUser.branchCode);
+    return mine.filter(d => d.branchCode === currentUser.branchCode);
   } else if (currentUser.role === 'bzm') {
     // หา branchCode ทุกสาขาที่ BZM คนนี้ดูแล (match ชื่อ/ชื่อเล่นจาก BRANCHES) — ทนทานกว่าการเทียบ d.bzm
     const myCodes = new Set(
       _openBranches().filter(b => b.manager === currentUser.name || b.managerNick === currentUser.nick || b.managerNick === currentUser.name)
               .map(b => String(b.code))
     );
-    return allDailyChecklists.filter(d =>
+    return mine.filter(d =>
       myCodes.has(String(d.branchCode)) ||
       d.bzm === currentUser.name || d.bzm === currentUser.nick   // เผื่อ record เก่า
     );
   }
-  return allDailyChecklists;
+  return mine;
 }
 
 function showDailyHub() {
