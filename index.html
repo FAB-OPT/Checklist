@@ -5901,13 +5901,22 @@ function _jdBuildZoneOptions(branches) {
   return opts;
 }
 
+/* ฮับเป็นตัวจริงของพิกัดสาขา ค่าในโค้ดเป็นตัวสำรอง
+
+   ของเดิมทับด้วยค่าในโค้ดเสมอ ค่าที่แก้ในฮับจึงไม่เคยมีผล — แก้พิกัดที
+   ต้องแก้โค้ดแล้ว deploy ซึ่งไม่สมเหตุสมผลกับข้อมูลที่เปลี่ยนได้ตลอด
+   (ร้านย้าย · เพิ่มสาขา · จับหมุดผิด)
+
+   ใช้ค่าในโค้ดต่อเมื่อฮับไม่มีพิกัดของสาขานั้นจริง ๆ เท่านั้น
+   ไม่ใช่ทับทุกกรณี ไม่งั้นจะกลับไปเป็นปัญหาเดิม */
 function _mergeJdBranches(arr) {
   if (!Array.isArray(arr)) return JAEDAENG_BRANCHES;
   return arr.map(e => {
     if (!e || typeof e !== 'object') return e;
+    const hasCoord = e.lat != null && e.lng != null && !isNaN(e.lat) && !isNaN(e.lng);
+    if (hasCoord) return e;                     // ฮับมีพิกัด → ใช้ของฮับ
     const def = DEFAULT_JAEDAENG_BRANCHES.find(d => d.name === e.name);
     if (def && def.lat != null && def.lng != null) {
-      // override พิกัดด้วยค่าในโค้ดเสมอ (กันค่าเก่าจาก cloud/localStorage ทับ)
       return Object.assign({}, e, { lat: def.lat, lng: def.lng });
     }
     return e;
