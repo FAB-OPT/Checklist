@@ -6771,25 +6771,38 @@ function _writeShrinkingCache(key, records, label) {
   let n = recent.length;
   for (let guard = 0; guard < 20; guard++) {
     try {
-      localStorage.setItem(key, JSON.stringify(_liteAuditsForCache(must.concat(recent.slice(0, n)))));
+      const kept = must.concat(recent.slice(0, n));
+      localStorage.setItem(key, JSON.stringify(_liteAuditsForCache(kept)));
       if (n < recent.length) {
         console.warn('[' + label + '] พื้นที่ในเครื่องไม่พอ เก็บได้ ' + n + '/' + recent.length + ' รายการ (ล่าสุดก่อน)');
       }
-      return true;
+      return kept;
     } catch (_) {
       if (n === 0) break;
       n = Math.floor(n / 2);
     }
   }
   /* เหลือแต่รายการที่ยังส่งไม่สำเร็จ — ห้ามทิ้ง เพราะไม่มีที่อื่นเก็บแล้ว */
-  try { localStorage.setItem(key, JSON.stringify(_liteAuditsForCache(must))); return true; } catch (_) {}
+  try { localStorage.setItem(key, JSON.stringify(_liteAuditsForCache(must))); return must; } catch (_) {}
   try { localStorage.removeItem(key); } catch (_) {}
   console.warn('[' + label + '] เก็บลงเครื่องไม่ได้เลย — รอบหน้าจะต้องโหลดใหม่ทั้งหมด');
-  return false;
+  return [];
+}
+/* วันที่เก่าที่สุดที่แคชครอบคลุมจริง
+   จำเป็นเพราะจุดอ้างอิงเวลา (updatedAt ล่าสุด) บอกได้แค่ว่า "ใหม่ถึงไหน"
+   ไม่ได้บอกว่า "เก่าถึงไหน" — พอแคชถูกตัดให้เล็กลงเพราะพื้นที่ไม่พอ
+   รอบต่อไปจะดึงแต่ของที่เปลี่ยนใหม่ ของเก่าที่ถูกตัดจะไม่กลับมาอีกเลย */
+const DAILY_COVER_KEY = 'qa_daily_cover_v1';
+function _dailyCoverFrom() {
+  try { return localStorage.getItem(DAILY_COVER_KEY) || ''; } catch (_) { return ''; }
 }
 function saveDailyLocal() {
   if (testMode) return;
-  _writeShrinkingCache(DAILY_STORAGE_KEY, allDailyChecklists, 'daily');
+  const kept = _writeShrinkingCache(DAILY_STORAGE_KEY, allDailyChecklists, 'daily');
+  try {
+    const dates = (kept || []).map(d => d && d.date).filter(Boolean).sort();
+    localStorage.setItem(DAILY_COVER_KEY, dates[0] || '');
+  } catch (_) {}
 }
 
 // ── โหลดแบบประหยัดโควตา (incremental) เพื่อรองรับหลายสาขาในระยะยาว ──
@@ -6849,24 +6862,31 @@ async function loadDailyChecklists() {
     if (_isBr && _bc) {
       // สาขา → ดึงเฉพาะของสาขาตัวเอง (ไม่กี่ร้อย record) แทนโหลดทุกสาขา (22MB) → มือถือไม่แครช
       snap = await firebaseDb.collection(DAILY_COLLECTION).where('branchCode', '==', _bc).get();
-    } else if (cursor) {
-      // เครื่องนี้มีแคชแล้ว → ดึงเฉพาะที่เปลี่ยนตั้งแต่ครั้งก่อน (incremental) + เผื่อ overlap กันตกหล่น
-      const since = new Date(new Date(cursor).getTime() - DAILY_SYNC_OVERLAP_MS).toISOString();
-      snap = await firebaseDb.collection(DAILY_COLLECTION).where('updatedAt', '>', since).get();
     } else {
-      // เครื่องใหม่/ล้างแคช → โหลดย้อนหลัง N วันครั้งเดียว แทนดึงทั้งก้อน (คุมจำนวนอ่าน)
-      /* เห็นทุกสาขา + ยังไม่มีแคช = ก้อนใหญ่ที่สุด
-         ดึงสองจังหวะ: ของไม่กี่วันล่าสุดก่อน วาดให้เห็นทันที
-         แล้วค่อยดึงย้อนหลังที่เหลือตามมา ของเดิมรอทั้งก้อนก่อนถึงจะวาด
-         บนมือถือจึงเหมือนค้างไปเลย */
-      const since = _daysAgoStr(DAILY_BACKFILL_DAYS);
+      /* ช่วงไม่กี่วันล่าสุด = สิ่งที่ตารางหน้าแรกแสดง ต้องครบเสมอ
+         จึงดึงตามวันที่ทุกครั้ง ไม่พึ่งแคช แล้ววาดให้เห็นทันที
+         (ก้อนเล็ก ไม่กี่ร้อยรายการ) */
       const recent = _daysAgoStr(DAILY_FIRST_PAINT_DAYS);
       const first = await firebaseDb.collection(DAILY_COLLECTION).where('date', '>=', recent).get();
       _mergeDailyDocs(map, first.docs);
       _repaintDaily();
-      /* ที่เหลือคือช่วงที่เก่ากว่าจังหวะแรก — ไม่ทับกัน จึงไม่ได้ดึงซ้ำ */
-      snap = await firebaseDb.collection(DAILY_COLLECTION)
-        .where('date', '>=', since).where('date', '<', recent).get();
+
+      /* ส่วนที่เก่ากว่านั้น เลือกวิธีตามว่าแคชครบหรือไม่
+         - แคชครอบคลุมถึงต้นช่วงแล้ว → ดึงเฉพาะที่เปลี่ยน (เบา)
+         - แคชขาด (พื้นที่ไม่พอจนถูกตัด) → ต้องดึงตามวันที่ ไม่งั้นของที่
+           ถูกตัดทิ้งจะไม่กลับมา แล้วตารางจะขึ้นว่ายังไม่ส่งทั้งที่ส่งแล้ว */
+      const since = _daysAgoStr(DAILY_BACKFILL_DAYS);
+      const cover = _dailyCoverFrom();
+      const covered = !!cursor && !!cover && cover <= since;
+      if (covered) {
+        const from = new Date(new Date(cursor).getTime() - DAILY_SYNC_OVERLAP_MS).toISOString();
+        snap = await firebaseDb.collection(DAILY_COLLECTION)
+          .where('updatedAt', '>', from).get();
+      } else {
+        if (cursor) console.warn('[daily] แคชไม่ครบช่วง (ถึง ' + (cover || '—') + ') → ดึงตามวันที่แทน');
+        snap = await firebaseDb.collection(DAILY_COLLECTION)
+          .where('date', '>=', since).where('date', '<', recent).get();
+      }
     }
     _mergeDailyDocs(map, snap.docs);
     allDailyChecklists.forEach(function(d){ const _x = _dropBase64Photos(d.items); if (_x > 0 && d.id != null && !_dailyB64CleanIds.has(String(d.id))) { _dailyB64CleanIds.add(String(d.id)); _silentResaveDaily(d); } });   // ตัด base64 + ล้างขึ้น cloud
