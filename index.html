@@ -1194,9 +1194,6 @@ body.test-mode-on { box-shadow: inset 0 0 0 3px #F59E0B; }
 .daily-fill-input{margin-bottom:6px}
 .daily-fill-input:last-child{margin-bottom:0}
 .daily-fill-input.is-empty{border-style:dashed}
-/* ช่องลงชื่อประจำส่วน — ฟอร์มต้นฉบับแยกลงชื่อครัวกับบริการ */
-.daily-section-by{padding:10px 14px 4px}
-.daily-section-by .daily-form-input-label{display:block;margin-bottom:6px}
 /* รายการที่กรอกไว้ ตอนเปิดดูย้อนหลัง */
 .detail-item-fills{margin-top:6px;font-size:13px;color:var(--text2,#555);line-height:1.6}
 .detail-item-fills b{color:var(--text,#222)}
@@ -9024,9 +9021,6 @@ async function startDailyShift(shift) {
     shift,
     manager: existing ? (existing.manager || '') : '',
     items,
-    /* แต่ละส่วนมีคนรับผิดชอบของตัวเอง ตามช่อง "ลงชื่อ" ในฟอร์มต้นฉบับ
-       เก็บเป็น { ชื่อส่วน: ชื่อคน } — ส่วนไหนไม่กรอกก็ไม่มีคีย์ */
-    sectionBy: (existing && existing.sectionBy) ? Object.assign({}, existing.sectionBy) : {},
     requiredPhotos,
     submittedBy: currentUser.code,
     submittedByName: currentUser.name,
@@ -9040,6 +9034,10 @@ async function startDailyShift(shift) {
   const _draft = _loadDailyDraft();
   if (_draft && _draft.id === id && Array.isArray(_draft.items) && _draft.items.length === items.length) {
     currentDaily = _draft;
+    /* draft ถูกเก็บไว้ทั้งก้อน ถ้าเก็บตอนที่หัวข้อยังไม่มีช่องกรอก
+       ใบที่กู้มาจะไม่มีโครงช่องกรอกติดมา แล้วช่องหายไปเฉย ๆ โดยไม่มีอะไรบอก
+       เติมโครงจากชุดหัวข้อปัจจุบันเสมอ ค่าที่กรอกไว้แล้วยังอยู่ */
+    _dailyAttachFills(currentDaily.items, template);
   }
 
   hideAllScreens();
@@ -9079,20 +9077,30 @@ function renderDailySectionTabs() {
 
 /* ช่องกรอกใต้ข้อ (เช่น สุ่มชิมวัตถุดิบ ต้องบอกว่าชิมอะไรบ้าง)
    เก็บทันทีที่พิมพ์ ไม่ต้องรอกดอะไร — เผื่อปิดหน้าไปกลางคัน draft ยังอยู่ */
+/* เติมโครงช่องกรอกจากชุดหัวข้อปัจจุบันลงในรายการข้อ
+   ใช้กับใบที่กู้มาจาก draft ซึ่งอาจถูกเก็บไว้ตั้งแต่ตอนที่ยังไม่มีช่องนี้
+   ค่าที่กรอกไว้แล้วคงไว้ · ข้อที่ชุดหัวข้อไม่ได้กำหนดว่ามีช่องกรอก ไม่แตะ */
+function _dailyAttachFills(list, template) {
+  const spec = {};
+  (template || []).forEach((sec, sIdx) => (sec.items || []).forEach((raw, iIdx) => {
+    if (raw && raw.fills) spec[`${sIdx}|${iIdx}`] = raw;
+  }));
+  (list || []).forEach(it => {
+    const raw = it && spec[it.key];
+    if (!raw) return;
+    it.fillLabel = raw.fillLabel || it.fillLabel || 'รายละเอียด';
+    const old = Array.isArray(it.fills) ? it.fills : [];
+    it.fills = Array.from({ length: raw.fills }, (_, i) => String(old[i] || ''));
+  });
+  return list;
+}
+
 function setDailyFill(gIdx, fIdx, val) {
   const it = currentDaily && currentDaily.items[gIdx];
   if (!it || !Array.isArray(it.fills)) return;
   it.fills[fIdx] = String(val || '');
   _saveDailyDraft();
   renderDailySectionTabs();   // ตัวนับความคืบหน้าเปลี่ยนตาม
-}
-/* ผู้รับผิดชอบรายส่วน — ตามช่อง "ลงชื่อ" ที่มีแยกในฟอร์มต้นฉบับ */
-function setDailySectionBy(name, val) {
-  if (!currentDaily) return;
-  currentDaily.sectionBy = currentDaily.sectionBy || {};
-  const v = String(val || '').trim();
-  if (v) currentDaily.sectionBy[name] = v; else delete currentDaily.sectionBy[name];
-  _saveDailyDraft();
 }
 /* ข้อนี้กรอกครบหรือยัง — ใช้ทั้งตอนวาดและตอนตรวจก่อนบันทึก
    บังคับเฉพาะตอนกด "ผ่าน" เพราะการชิมเกิดขึ้นจริง ถ้าชิมไม่ได้ให้กดไม่ผ่าน */
@@ -9125,14 +9133,6 @@ function renderDailyForm() {
         <div class="daily-section-progress">${doneCount}/${sec.items.length}${failCount ? ` · <span style="color:var(--danger)">✗${failCount}</span>` : ''}</div>
       </div>
       <div class="daily-section-body">`;
-    /* ช่องลงชื่อของส่วนนี้ — ฟอร์มต้นฉบับแยกลงชื่อครัวกับบริการคนละใบ
-       รวมเป็นใบเดียวแล้ว แต่ยังต้องรู้ว่าใครรับผิดชอบส่วนไหน */
-    html += `<div class="daily-section-by">
-      <label class="daily-form-input-label">ผู้รับผิดชอบส่วนนี้</label>
-      <input type="text" class="jd-form-input" placeholder="ชื่อผู้ตรวจส่วน${escapeAttr(sec.name.replace(/^ส่วน/, ''))}"
-             value="${escapeAttr((currentDaily.sectionBy || {})[sec.name] || '')}"
-             oninput="setDailySectionBy('${escapeAttr(sec.name)}', this.value)">
-    </div>`;
     sec.items.forEach((item, iIdx) => {
       const globalIdx = sec.start + iIdx;
       const text = item.text || '';
@@ -9462,10 +9462,6 @@ function showDailyDetail(id, targetText) {
     { icon: 'badge',              label: 'Manager on duty', value: d.manager || '-' },
     { icon: 'supervisor_account', label: 'BZM',             value: d.bzm || '-' },
     { icon: 'person',             label: 'บันทึกโดย',       value: d.submittedByName || '-' },
-    /* ผู้รับผิดชอบรายส่วน — โชว์เฉพาะใบที่มีกรอกไว้ (แบรนด์เดิมไม่มีช่องนี้) */
-    ...(d.sectionBy && Object.keys(d.sectionBy).length
-      ? Object.keys(d.sectionBy).map(k => ({ icon: 'assignment_ind', label: k, value: d.sectionBy[k] }))
-      : []),
     { icon: 'fact_check',         label: 'สถานะรายการ',     value: `ผ่าน ${passN} ข้อ - ไม่ผ่าน ${failN} ข้อ - N/A ${naN} ข้อ${pendN > 0 ? ` - รอ ${pendN} ข้อ` : ''} - ทั้งหมด ${total} ข้อ` },
   ];
   if (_isDailyLate(d) && (d.lateReason || '').trim()) {
