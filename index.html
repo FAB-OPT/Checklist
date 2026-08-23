@@ -5810,7 +5810,7 @@ let JAEDAENG_BRANCHES = [
   { name: "ร้านส้มตำเจ๊แดง (PTT ราชพฤกษ์)", manager: "นุชจรินทร์", managerNick: "พี่กัส", lat: 13.8908762, lng: 100.4507402 },
   // คณัสวรรณ (พี่เฟิร์น)
   { name: "ร้านส้มตำเจ๊แดง (มอเตอร์เวย์-ชลบุรี)", manager: "คณัสวรรณ", managerNick: "พี่เฟิร์น", lat: 13.5393739, lng: 101.0093429 },
-  { name: "ร้านส้มตำเจ๊แดง (เอกเกณฑ์ พัทยา)", manager: "คณัสวรรณ", managerNick: "พี่เฟิร์น", lat: 12.9510719, lng: 100.8883628 },
+  { name: "ร้านส้มตำเจ๊แดง (อเกณฑ์ พัทยา)", manager: "คณัสวรรณ", managerNick: "พี่เฟิร์น", lat: 12.9510719, lng: 100.8883628 },
   { name: "ร้านส้มตำเจ๊แดง (The Street รัชดา)", manager: "คณัสวรรณ", managerNick: "พี่เฟิร์น", lat: 13.7711937, lng: 100.5700447 },
   { name: "ร้านส้มตำเจ๊แดง (PTT. นวลจันทร์)", manager: "คณัสวรรณ", managerNick: "พี่เฟิร์น", lat: 13.8181761, lng: 100.6462648 },
   { name: "ร้านส้มตำเจ๊แดง (ปตท. พระราม 4)", manager: "คณัสวรรณ", managerNick: "พี่เฟิร์น", lat: 13.7140419, lng: 100.582331 },
@@ -9711,12 +9711,30 @@ function applyJaedaengDateFilter(records) {
 
 // BZM sees the stores they manage AND any audit they personally conducted;
 // higher roles see everything.
+/* ── ชื่อสาขาที่เคยสะกดคนละแบบ ──
+   ชื่อสาขาถูกแก้ในทะเบียนกลางเมื่อไร ผลตรวจที่บันทึกไปแล้วยังติดชื่อเดิมอยู่
+   ตารางอันดับจัดกลุ่มจากชื่อที่ติดมากับผลตรวจ สาขาเดียวจึงโผล่สองอัน
+   คะแนนกับจำนวนครั้งที่ตรวจถูกหารออกเป็นสองกอง
+   แปลงชื่อเก่าเป็นชื่อปัจจุบันตรงนี้ที่เดียว — อันดับ ตัวกรอง ประวัติ จะตรงกันหมด
+   ชื่อไหนถูกเปลี่ยนอีกในอนาคต ก็มาเติมคู่ใหม่ที่นี่ */
+const JD_STORE_ALIAS = {
+  'ร้านส้มตำเจ๊แดง (เอกเกณฑ์ พัทยา)': 'ร้านส้มตำเจ๊แดง (อเกณฑ์ พัทยา)'
+};
+function jdCanonStore(n) {
+  const s = String(n == null ? '' : n).trim();
+  return JD_STORE_ALIAS[s] || s;
+}
 function getVisibleJaedaengAudits() {
   // รวม realtime (90 วันล่าสุด) + ของเก่าที่โหลดตามคำขอ (dedup ตาม id)
   const seen = new Set();
   const all = [];
   (allJaedaengAudits || []).concat(_jdOlderAudits || []).forEach(r => {
-    if (r && r.id != null && !seen.has(String(r.id))) { seen.add(String(r.id)); all.push(r); }
+    if (r && r.id != null && !seen.has(String(r.id))) {
+      seen.add(String(r.id));
+      const fixed = jdCanonStore(r.storeName);
+      if (fixed !== r.storeName) r.storeName = fixed;
+      all.push(r);
+    }
   });
   if (!currentUser) return all;
   if (currentUser.role === 'bzm') {
