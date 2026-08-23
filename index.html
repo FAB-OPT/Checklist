@@ -8925,6 +8925,61 @@ async function _onLoadAllDaily(btn) {
 
 // ── Archive: ย้ายผลตรวจเก่า (> 1 ปี) เป็นไฟล์ JSON แล้วลบออกจาก Firestore (กัน 1GB เต็ม) ──
 const DAILY_ARCHIVE_DAYS = 365;
+/* ── แก้ชื่อสาขาที่บันทึกไว้แบบเก่าในคลาวด์ ──
+   หน้าจอรวมชื่อเก่าให้แล้วตอนแสดงผล แต่ข้อมูลจริงยังเป็นชื่อเดิม
+   ใครดึงข้อมูลไปใช้ทางอื่น (ส่งออก · รายงาน · ระบบอื่น) ก็จะยังเจอสองชื่ออยู่ดี
+   ตรงนี้ไล่แก้ให้ตรงกันจริง ๆ ทีเดียว · ถามจากคลาวด์ตรง ๆ ไม่ใช่จากที่โหลดมาแล้ว
+   เพราะใบเก่ากว่า 90 วันยังไม่ได้ถูกโหลดขึ้นมา จะตกหล่น */
+async function jdFixStoreNames(btn) {
+  if (!firebaseDb) { showModal('ยังไม่พร้อม', 'ยังไม่ได้เชื่อมต่อฐานข้อมูล'); return; }
+  if (!ckIsAdmin()) { showModal('ไม่มีสิทธิ์', 'เฉพาะ Admin เท่านั้น'); return; }
+  const olds = Object.keys(JD_STORE_ALIAS);
+  if (!olds.length) return;
+  const label = btn ? btn.innerHTML : '';
+  if (btn) { btn.disabled = true; btn.innerHTML = 'กำลังตรวจ…'; }
+  try {
+    /* where in รับได้ทีละ 10 ค่า — วนทีละชุดเผื่อวันหน้ามีชื่อเก่าเยอะกว่านั้น */
+    const docs = [];
+    for (let i = 0; i < olds.length; i += 10) {
+      const snap = await firebaseDb.collection(JAEDAENG_COLLECTION)
+        .where('storeName', 'in', olds.slice(i, i + 10)).get();
+      snap.docs.forEach(d => docs.push(d));
+    }
+    if (btn) { btn.disabled = false; btn.innerHTML = label; }
+    if (!docs.length) {
+      _jdOldNameIds = new Set();
+      showModal('ไม่มีอะไรให้แก้', 'ในฐานข้อมูลไม่เหลือผลตรวจที่ใช้ชื่อสาขาแบบเก่าแล้ว');
+      renderJaedaengDashboard();
+      return;
+    }
+    const lines = olds.map(o => `<div>${escapeHtml(o)} → <b>${escapeHtml(JD_STORE_ALIAS[o])}</b></div>`).join('');
+    const ok = await showConfirm('แก้ชื่อสาขาในฐานข้อมูล?',
+      `พบผลตรวจที่ใช้ชื่อเก่าอยู่ <b>${docs.length}</b> ใบ จะเปลี่ยนเป็นชื่อปัจจุบันให้ทั้งหมด${lines}`,
+      { okLabel: 'แก้ให้ตรงกัน', cancelLabel: 'ยกเลิก' });
+    if (!ok) return;
+    if (btn) { btn.disabled = true; btn.innerHTML = 'กำลังแก้…'; }
+    /* เขียนทีละไม่เกิน 400 ใบต่อ batch — ขีดจำกัดของ Firestore คือ 500 */
+    for (let i = 0; i < docs.length; i += 400) {
+      const batch = firebaseDb.batch();
+      docs.slice(i, i + 400).forEach(d => {
+        batch.update(d.ref, { storeName: jdCanonStore(d.data().storeName) });
+      });
+      await batch.commit();
+    }
+    /* ของในเครื่องถูกแปลงชื่อตอนแสดงผลไปแล้ว เหลือแค่เขียนทับไฟล์ให้ตรง */
+    try { saveJaedaengLocal(); } catch (_) {}
+    _jdOldNameIds = new Set();
+    /* showModal ใช้ textContent — ใส่แท็กไปจะโผล่เป็นตัวอักษร */
+    showModal('แก้เรียบร้อย', `เปลี่ยนชื่อสาขาในผลตรวจ ${docs.length} ใบให้เป็นชื่อปัจจุบันแล้ว`);
+    renderJaedaengDashboard();
+  } catch (e) {
+    console.warn('jdFixStoreNames failed', e);
+    showModal('แก้ไม่สำเร็จ', 'เชื่อมต่อฐานข้อมูลไม่ได้ หรือไม่มีสิทธิ์เขียน — ลองใหม่อีกครั้ง');
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = label; }
+  }
+}
+
 async function archiveOldDaily() {
   if (!firebaseDb) { showModal('ยังไม่พร้อม', 'ยังไม่ได้เชื่อมต่อฐานข้อมูล'); return; }
   if (!currentUser || currentUser.role !== 'admin') { showModal('ไม่มีสิทธิ์', 'เฉพาะ Admin เท่านั้น'); return; }
@@ -9724,6 +9779,9 @@ function jdCanonStore(n) {
   const s = String(n == null ? '' : n).trim();
   return JD_STORE_ALIAS[s] || s;
 }
+/* ใบที่แสดงผลถูกแล้วแต่ในคลาวด์ยังเป็นชื่อเก่า — เก็บไว้เพื่อโชว์ปุ่มแก้ให้แอดมิน
+   ปุ่มจะหายไปเองเมื่อไม่เหลือของค้าง ไม่ต้องมีปุ่มถาวรให้รก */
+let _jdOldNameIds = new Set();
 function getVisibleJaedaengAudits() {
   // รวม realtime (90 วันล่าสุด) + ของเก่าที่โหลดตามคำขอ (dedup ตาม id)
   const seen = new Set();
@@ -9732,7 +9790,7 @@ function getVisibleJaedaengAudits() {
     if (r && r.id != null && !seen.has(String(r.id))) {
       seen.add(String(r.id));
       const fixed = jdCanonStore(r.storeName);
-      if (fixed !== r.storeName) r.storeName = fixed;
+      if (fixed !== r.storeName) { _jdOldNameIds.add(String(r.id)); r.storeName = fixed; }
       all.push(r);
     }
   });
@@ -10134,6 +10192,12 @@ function renderJaedaengDashboard() {
     .map(([name, s]) => ({ name, count: s.count, avg: s.sumPct / s.count, fails: s.fails, records: s.records }))
     .sort((a, b) => b.avg - a.avg);
   const _branchRow = (b, rank) => _scoreRowHTML(rank, escapeHtml(b.name), b.avg, b.count, b.fails, b.records, 'branch');
+  /* ตารางนี้รวมชื่อเก่าให้แล้วตอนแสดงผล แต่ในคลาวด์ยังเป็นชื่อเดิมอยู่
+     โชว์ปุ่มให้แอดมินกดแก้ให้ตรงกันจริง ๆ · ไม่มีของค้างก็ไม่ต้องมีปุ่ม */
+  const _jdFixBtn = (ckIsAdmin() && _jdOldNameIds.size)
+    ? `<button class="btn btn-secondary" style="margin-top:12px" onclick="jdFixStoreNames(this)">` +
+      `<span class="material-symbols-rounded">edit_note</span> แก้ชื่อสาขาในฐานข้อมูลให้ตรงกัน</button>`
+    : '';
   if (branchList.length > 10) {
     // มากกว่า 10 สาขา → โชว์แค่ Top 5 + Bottom 5
     const top = branchList.slice(0, 5);
@@ -10142,9 +10206,9 @@ function renderJaedaengDashboard() {
       '<div class="sf-rank-label sf-rank-top">🏆 Top 5 · สูงสุด</div>' +
       top.map((b, i) => _branchRow(b, i + 1)).join('') +
       '<div class="sf-rank-label sf-rank-bottom">⚠️ Bottom 5 · ต่ำสุด</div>' +
-      bottom.map((b, i) => _branchRow(b, branchList.length - 5 + i + 1)).join('');
+      bottom.map((b, i) => _branchRow(b, branchList.length - 5 + i + 1)).join('') + _jdFixBtn;
   } else {
-    branchesEl.innerHTML = branchList.map((b, i) => _branchRow(b, i + 1)).join('');
+    branchesEl.innerHTML = branchList.map((b, i) => _branchRow(b, i + 1)).join('') + _jdFixBtn;
   }
 
   // Top failed items — group ตามหมวด + drill-down โซน/สาขา (แยกเป็นฟังก์ชัน)
