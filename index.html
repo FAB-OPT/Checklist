@@ -895,20 +895,19 @@ body.in-audit #scroll-bottom-fab .material-symbols-rounded { font-size: 24px; }
 @media (min-width: 1024px) { body.in-audit #scroll-bottom-fab { display: none; } }
 .bottom-nav-item {
   flex: 1; display: flex; flex-direction: column; align-items: center;
-  gap: 3px; padding: 8px 4px; font-size: 11px; font-weight: 600;
-  color: var(--text-secondary); cursor: pointer;
+  gap: 2px; padding: 7px 4px; font-size: 10.5px; font-weight: 700;
+  color: var(--text-tertiary); cursor: pointer;
   background: none; border: none; font-family: inherit;
   min-height: 56px;
   position: relative;
   transition: color 0.18s;
 }
-.bottom-nav-item.active { color: var(--primary); font-weight: 700; }
-.bottom-nav-item.active::after {
-  content: ''; position: absolute; top: 4px;
-  width: 28px; height: 3px; border-radius: var(--r-pill);
-  background: var(--primary-gradient);
-}
-.bottom-nav-item .material-symbols-rounded { font-size: 24px; }
+/* ปุ่มที่อยู่ตอนนี้ = สีแบรนด์ + ไอคอนทึบ
+   ไอคอนทึบเป็นตัวบอกซ้ำอีกทางนอกจากสี คนแยกสีไม่ออกก็ยังรู้ว่าอยู่หน้าไหน
+   จึงไม่ต้องมีขีดบนหัวปุ่มอีก — ขีดนั้นกินที่และทำให้แถบดูรก */
+.bottom-nav-item.active { color: var(--primary); font-weight: 800; }
+.bottom-nav-item.active .material-symbols-rounded { font-variation-settings: 'FILL' 1; }
+.bottom-nav-item .material-symbols-rounded { font-size: 22px; }
 .bottom-nav-item:active { transform: scale(0.94); }
 
 /* ========== ALERTS ========== */
@@ -4585,9 +4584,10 @@ body:has(#login-screen.active) {
   color: var(--primary);
   box-shadow: 0 2px 8px rgba(80,40,20,0.10);
 }
-.nav-logout-btn { color: var(--danger); }
-.nav-logout-btn .material-symbols-rounded { color: var(--danger); }
-.nav-logout-btn.active::after { background: var(--danger); }
+/* ออกระบบเคยเป็นสีแดงเด่นกว่าเพื่อน ทำให้ปุ่มที่ใช้บ่อยกว่าถูกกลบ
+   แถบล่างเป็นทางผ่าน ทุกปุ่มจึงควรเงียบเท่ากัน · การยืนยันตอนกดออกยังอยู่ */
+.nav-logout-btn { color: var(--text-tertiary); }
+.nav-logout-btn .material-symbols-rounded { color: var(--text-tertiary); }
 /* มือถือ (≤1023px): nav 4 ปุ่มแยกสี · กลับเมนู/ออกระบบ พื้นสีเต็ม */
 @media (max-width: 1023px) {
   /* ── สีปุ่มเมนูล่าง ──
@@ -4620,18 +4620,13 @@ body:has(#login-screen.active) {
   .bottom-nav .nav-back-hub-btn .material-symbols-rounded { color: var(--text-tertiary) !important; }
   .bottom-nav .nav-back-hub-btn.active::after { display: none; }
   .bottom-nav .nav-logout-btn {
-    /* เดิมถมสีแดงเต็มปุ่ม พอปุ่มกลับเมนูหลักมาใช้สีแบรนด์
-       แบรนด์ที่สีแดง (ซานตาเฟ่/เจ๊แดง) จะมีปุ่มถมสีแดงสองปุ่มติดกัน
-       ปุ่มหนึ่งพากลับ อีกปุ่มออกจากระบบ — กดพลาดแล้วเสียงานที่ทำค้างไว้
-       เหลือปุ่มถมสีปุ่มเดียวคือปุ่มที่พาไปต่อ ออกระบบเป็นตัวหนังสือแดงพอ */
-    color: var(--danger) !important; font-weight: 800;
+    color: var(--text-tertiary) !important; font-weight: 700;
     background: transparent;
     border-radius: 12px;
     margin: 4px 3px;
     min-height: 50px;
   }
-  .bottom-nav .nav-logout-btn .material-symbols-rounded { color: var(--danger) !important; }
-  .bottom-nav .nav-logout-btn.active::after { display: none; }
+  .bottom-nav .nav-logout-btn .material-symbols-rounded { color: var(--text-tertiary) !important; }
 }
 /* เดสก์ท็อป (sidebar gradient): กลับเมนูหลัก + ออกระบบ จับกลุ่มไว้ล่างสุด
    ลำดับ: ...แดชบอร์ด/ตรวจร้าน (บน) → [ดันลง] → กลับเมนูหลัก → ออกจากระบบ (ล่าง) */
