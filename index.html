@@ -73,13 +73,15 @@
   --border:         color-mix(in srgb, var(--brand)  9%, #ECEEF1);
   --border-strong:  color-mix(in srgb, var(--brand) 17%, #DEE2E7);
   /* Shadows — warm tint */
-  --shadow-sm: 0 1px 2px rgba(80,40,20,0.06);
-  --shadow: 0 2px 6px rgba(80,40,20,0.07), 0 1px 2px rgba(80,40,20,0.04);
-  --shadow-lg: 0 12px 28px rgba(80,40,20,0.09), 0 2px 6px rgba(80,40,20,0.04);
+  /* เงาสีกลาง — ของเดิมเป็นเงาน้ำตาลอมส้มซึ่งเป็นโทนซานตาเฟ่
+     ใช้กับแบรนด์อื่นแล้วการ์ดดูขุ่นเหมือนกระดาษเก่า */
+  --shadow-sm: 0 1px 2px rgba(16,24,40,0.05);
+  --shadow: 0 1px 2px rgba(16,24,40,0.05), 0 4px 12px rgba(16,24,40,0.05);
+  --shadow-lg: 0 12px 32px rgba(16,24,40,0.12), 0 2px 6px rgba(16,24,40,0.05);
   --shadow-primary: 0 6px 16px color-mix(in srgb, var(--brand) 26%, transparent);
   --shadow-accent: 0 6px 16px rgba(255,184,51,0.30);
   /* Radii */
-  --r-sm: 8px;
+  --r-sm: 10px;
   --r-md: 12px;
   --r-lg: 16px;
   --r-xl: 20px;
@@ -260,17 +262,25 @@ body {
 .card {
   background: var(--surface);
   border-radius: var(--r-lg);
-  padding: 20px;
-  margin-bottom: 14px;
+  padding: 16px;
+  margin-bottom: 12px;
   box-shadow: var(--shadow);
-  border: 1px solid rgba(20,15,10,0.04);
+  /* เส้นขอบใช้สีเส้นของธีม ไม่ใช่ดำจาง ๆ — ขอบจะได้อมสีแบรนด์ไปด้วยกันทั้งชุด */
+  border: 1px solid var(--border);
 }
+/* หัวการ์ดมีแถบสีแบรนด์นำหน้า — เป็นตัวบอกว่าหัวข้อเริ่มตรงไหน
+   โดยไม่ต้องตีเส้นคั่นเต็มความกว้างซึ่งทำให้การ์ดดูเป็นตารางแข็ง ๆ */
 .card-header {
-  display: flex; align-items: center; gap: 10px;
-  margin-bottom: 16px; padding-bottom: 14px;
-  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 9px;
+  margin-bottom: 13px; padding-bottom: 0;
+  border-bottom: none;
 }
-.card-header h2 { font-size: 17px; font-weight: 800; color: var(--text); letter-spacing: -0.2px; }
+.card-header::before {
+  content: ''; flex: 0 0 auto;
+  width: 3px; height: 15px; border-radius: 2px;
+  background: var(--primary);
+}
+.card-header h2 { font-size: 15px; font-weight: 800; color: var(--text); letter-spacing: -0.2px; }
 .card-header .material-symbols-rounded { font-size: 22px; }
 
 /* ========== FORMS ========== */
@@ -300,7 +310,7 @@ body {
 /* ========== BUTTONS ========== */
 .btn {
   display: inline-flex; align-items: center; justify-content: center;
-  gap: 8px; padding: 12px 22px; border: none; border-radius: var(--r-md);
+  gap: 8px; padding: 12px 22px; border: none; border-radius: var(--r-lg);
   font-size: 15px; font-weight: 700; font-family: inherit;
   min-height: 46px;
   cursor: pointer; transition: transform 0.12s, box-shadow 0.18s, background 0.18s;
@@ -308,11 +318,13 @@ body {
   user-select: none;
 }
 .btn:active { transform: scale(0.97); }
+/* ปุ่มหลักเป็นสีทึบ ไม่ใช่ไล่สี — ไล่สีทำให้ตัวหนังสือขาวอ่านยากตรงปลายอ่อน
+   และเวลามีปุ่มหลายปุ่มในหน้าเดียว ไล่สีจะทำให้ดูไม่เป็นชุดเดียวกัน */
 .btn-primary {
-  background: var(--primary-gradient); color: white;
+  background: var(--primary); color: white;
   box-shadow: var(--shadow-primary);
 }
-.btn-primary:hover { box-shadow: 0 8px 22px rgba(214,54,34,0.32); }
+.btn-primary:hover { box-shadow: 0 8px 22px color-mix(in srgb, var(--brand) 32%, transparent); }
 .btn-secondary {
   background: var(--surface); color: var(--text);
   border: 1.5px solid var(--border);
