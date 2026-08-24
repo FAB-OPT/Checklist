@@ -59,16 +59,19 @@
   --warning-bg: #FFF1D6;
   --danger: #C73223;
   --danger-bg: #FFE3DC;
-  /* Neutrals — cream-tinted */
-  --bg: #FBF5EE;               /* cream background */
-  --bg-strong: #F4ECE2;
+  /* ── สีกลาง ──
+     ของเดิมเป็นครีมอมส้ม ซึ่งเป็นโทนของซานตาเฟ่ พอเปิดด้วยยามะจัง (น้ำเงิน)
+     พื้นครีมกับหัวน้ำเงินจะตีกัน · ให้สีกลางอมสีแบรนด์นิดเดียวแทน
+     ทุกแบรนด์จึงได้พื้นที่เข้ากับสีของตัวเองโดยใช้สูตรเดียวกัน */
+  --bg:             color-mix(in srgb, var(--brand)  4%, #FBFBFC);
+  --bg-strong:      color-mix(in srgb, var(--brand)  8%, #F4F5F7);
   --surface: #FFFFFF;
-  --surface-2: #FCF7F1;
-  --text: #1F1612;
-  --text-secondary: #756258;
-  --text-tertiary: #A89588;
-  --border: #F0E5DC;           /* warm taupe */
-  --border-strong: #E0CFC0;
+  --surface-2:      color-mix(in srgb, var(--brand)  3%, #FCFCFD);
+  --text:           color-mix(in srgb, var(--brand) 10%, #14161A);
+  --text-secondary: color-mix(in srgb, var(--brand)  9%, #596068);
+  --text-tertiary:  color-mix(in srgb, var(--brand)  7%, #98A0A8);
+  --border:         color-mix(in srgb, var(--brand)  9%, #ECEEF1);
+  --border-strong:  color-mix(in srgb, var(--brand) 17%, #DEE2E7);
   /* Shadows — warm tint */
   --shadow-sm: 0 1px 2px rgba(80,40,20,0.06);
   --shadow: 0 2px 6px rgba(80,40,20,0.07), 0 1px 2px rgba(80,40,20,0.04);
@@ -82,9 +85,11 @@
   --r-xl: 20px;
   --r-pill: 999px;
   /* Gradients — Warm Sunset */
-  --app-gradient: linear-gradient(90deg, #6E7AC8 0%, #8B5A9F 24%, #E84A1F 54%, #FF8C00 80%, #FFCC33 100%);
-  --login-gradient: linear-gradient(135deg, #FFB833 0%, #FF8534 45%, #D63622 100%);
-  --primary-gradient: linear-gradient(135deg, #FF8534 0%, #D63622 100%);
+  /* ไล่สีทุกอันคิดจากสีแบรนด์ เพื่อให้แถบหัวและปุ่มหลักเปลี่ยนตามแบรนด์
+     ของเดิมฝังสีซานตาเฟ่ไว้ตรง ๆ เปิดด้วยแบรนด์ไหนหัวก็ยังเป็นส้ม-แดงอยู่ดี */
+  --app-gradient:     linear-gradient(90deg,  var(--primary-light) 0%, var(--primary) 55%, var(--primary-dark) 100%);
+  --login-gradient:   linear-gradient(135deg, var(--primary-light) 0%, var(--primary) 55%, var(--primary-dark) 100%);
+  --primary-gradient: linear-gradient(135deg, var(--primary-light) 0%, var(--primary) 100%);
   --warm-gradient: linear-gradient(135deg, #FFCC33 0%, #FF8534 50%, #D63622 100%);
   --cool-gradient: linear-gradient(135deg, #8B5A9F 0%, #6E7AC8 100%);
 }
@@ -101,6 +106,20 @@ body[data-brand="santafe"] {
   --accent: #E85A35;
   --secondary: #FF8534;
   --shadow-primary: 0 6px 16px rgba(214,54,34,0.25);
+  /* ไล่สีชุดเดิมของซานตาเฟ่ — หัวเป็นสเปกตรัมม่วง→ส้ม→เหลือง ไม่ใช่เฉดเดียว
+     สูตรจาก --brand ทำแบบนั้นไม่ได้ จึงคงของเดิมไว้เฉพาะแบรนด์นี้ */
+  --app-gradient: linear-gradient(90deg, #6E7AC8 0%, #8B5A9F 24%, #E84A1F 54%, #FF8C00 80%, #FFCC33 100%);
+  --login-gradient: linear-gradient(135deg, #FFB833 0%, #FF8534 45%, #D63622 100%);
+  --primary-gradient: linear-gradient(135deg, #FF8534 0%, #D63622 100%);
+  /* สีกลางชุดครีมเดิมของซานตาเฟ่ */
+  --bg: #FBF5EE;
+  --bg-strong: #F4ECE2;
+  --surface-2: #FCF7F1;
+  --text: #1F1612;
+  --text-secondary: #756258;
+  --text-tertiary: #A89588;
+  --border: #F0E5DC;
+  --border-strong: #E0CFC0;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
@@ -4571,18 +4590,27 @@ body:has(#login-screen.active) {
 .nav-logout-btn.active::after { background: var(--danger); }
 /* มือถือ (≤1023px): nav 4 ปุ่มแยกสี · กลับเมนู/ออกระบบ พื้นสีเต็ม */
 @media (max-width: 1023px) {
-  .nav-dash-btn { color: #ea580c !important; font-weight: 700; }
-  .nav-dash-btn .material-symbols-rounded { color: #ea580c !important; }
-  .nav-dash-btn.active::after { background: #ea580c; }
-  .nav-audit-btn { color: #6d28d9 !important; font-weight: 700; }
-  .nav-audit-btn .material-symbols-rounded { color: #6d28d9 !important; }
-  .nav-audit-btn.active::after { background: #6d28d9; }
-  .nav-daily-btn { color: #047857 !important; font-weight: 700; }
-  .nav-daily-btn .material-symbols-rounded { color: #047857 !important; }
-  .nav-daily-btn.active::after { background: #047857; }
+  /* ── สีปุ่มเมนูล่าง ──
+     ของเดิมกำหนดสีคนละสีต่อปุ่ม (ส้ม/ม่วง/เขียว) ซึ่งเป็นสีของซานตาเฟ่
+     เปิดด้วยยามะจังแล้วเมนูส้มลอยอยู่บนแอปน้ำเงิน
+     เปลี่ยนเป็น: ปุ่มที่อยู่ = สีแบรนด์ · ปุ่มอื่น = เทา
+     ได้ทั้งความเป็นแบรนด์และรู้ว่าตอนนี้อยู่หน้าไหน ซึ่งสีคนละสีบอกไม่ได้อยู่แล้ว */
+  .nav-dash-btn, .nav-audit-btn, .nav-daily-btn { color: var(--text-tertiary); font-weight: 700; }
+  .nav-dash-btn .material-symbols-rounded,
+  .nav-audit-btn .material-symbols-rounded,
+  .nav-daily-btn .material-symbols-rounded { color: var(--text-tertiary); }
+  .nav-dash-btn.active, .nav-audit-btn.active, .nav-daily-btn.active { color: var(--primary); }
+  .nav-dash-btn.active .material-symbols-rounded,
+  .nav-audit-btn.active .material-symbols-rounded,
+  .nav-daily-btn.active .material-symbols-rounded { color: var(--primary); }
+  .nav-dash-btn.active::after,
+  .nav-audit-btn.active::after,
+  .nav-daily-btn.active::after { background: var(--primary); }
   .bottom-nav .nav-back-hub-btn {
     color: #ffffff !important; font-weight: 800;
-    background: #16a34a;
+    /* ปุ่มกลับเมนูหลักเป็นปุ่มพาไปที่อื่น ใช้สีแบรนด์
+       ส่วนปุ่มออกระบบยังเป็นสีแดงตามปกติ เพราะเป็นการออก ไม่ใช่การไปต่อ */
+    background: var(--primary);
     border-radius: 12px;
     margin: 4px 3px;
     min-height: 50px;
@@ -4590,13 +4618,17 @@ body:has(#login-screen.active) {
   .bottom-nav .nav-back-hub-btn .material-symbols-rounded { color: #ffffff !important; }
   .bottom-nav .nav-back-hub-btn.active::after { display: none; }
   .bottom-nav .nav-logout-btn {
-    color: #ffffff !important; font-weight: 800;
-    background: var(--danger);
+    /* เดิมถมสีแดงเต็มปุ่ม พอปุ่มกลับเมนูหลักมาใช้สีแบรนด์
+       แบรนด์ที่สีแดง (ซานตาเฟ่/เจ๊แดง) จะมีปุ่มถมสีแดงสองปุ่มติดกัน
+       ปุ่มหนึ่งพากลับ อีกปุ่มออกจากระบบ — กดพลาดแล้วเสียงานที่ทำค้างไว้
+       เหลือปุ่มถมสีปุ่มเดียวคือปุ่มที่พาไปต่อ ออกระบบเป็นตัวหนังสือแดงพอ */
+    color: var(--danger) !important; font-weight: 800;
+    background: transparent;
     border-radius: 12px;
     margin: 4px 3px;
     min-height: 50px;
   }
-  .bottom-nav .nav-logout-btn .material-symbols-rounded { color: #ffffff !important; }
+  .bottom-nav .nav-logout-btn .material-symbols-rounded { color: var(--danger) !important; }
   .bottom-nav .nav-logout-btn.active::after { display: none; }
 }
 /* เดสก์ท็อป (sidebar gradient): กลับเมนูหลัก + ออกระบบ จับกลุ่มไว้ล่างสุด
@@ -4604,24 +4636,24 @@ body:has(#login-screen.active) {
 @media (min-width: 1024px) {
   .bottom-nav .nav-back-hub-btn {
     order: 98;
-    background: #16a34a;     /* เขียวทึบ */
+    background: var(--primary);   /* สีแบรนด์ */
     color: #ffffff !important;
     font-weight: 800;
     text-shadow: none !important;
     box-shadow: 0 4px 12px rgba(0,0,0,0.18);
   }
   .bottom-nav .nav-back-hub-btn .material-symbols-rounded { color: #ffffff !important; }
-  .bottom-nav .nav-back-hub-btn:hover { background: #15803d; }
+  .bottom-nav .nav-back-hub-btn:hover { background: var(--primary-dark); }
   .bottom-nav .nav-logout-btn {
     order: 99;
     margin-top: 8px !important;  /* เว้นจากปุ่มกลับเมนูหลักนิดนึง */
-    background: var(--danger);   /* แดงทึบ */
-    color: #ffffff !important;
+    background: transparent;     /* ไม่ถมสี — ปุ่มถมสีมีได้ปุ่มเดียวคือปุ่มที่พาไปต่อ */
+    color: var(--danger) !important;
     font-weight: 800;
     text-shadow: none !important;
     box-shadow: 0 4px 12px rgba(0,0,0,0.18);
   }
-  .bottom-nav .nav-logout-btn .material-symbols-rounded { color: #ffffff !important; }
+  .bottom-nav .nav-logout-btn .material-symbols-rounded { color: var(--danger) !important; }
   .bottom-nav .nav-logout-btn:hover { background: #b91c1c; color: #fff !important; }
   .bottom-nav .nav-logout-btn:hover .material-symbols-rounded { color: #fff !important; }
   /* เครื่องมือใน sidebar (สลับแบรนด์ + โหมดทดสอบ) — อยู่เหนือปุ่มกลับเมนูหลัก
