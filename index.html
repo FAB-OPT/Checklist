@@ -41,7 +41,7 @@
 
      สีสถานะ (สำเร็จ/เตือน/ผิดพลาด) ไม่ผูกกับแบรนด์ เพราะความหมายต้องคงที่
      ไม่งั้นสีแดงของเจ๊แดงจะชนกับสีแดงที่แปลว่า "ผิดพลาด" */
-  --brand: #D63622;            /* Santa Fe red — ค่าสำรอง */
+  --brand: #F97316;            /* ส้มซานตาเฟ่ — ค่าสำรองตอนยังไม่รู้แบรนด์ */
   --primary: var(--brand);
   --primary-dark:  color-mix(in srgb, var(--brand) 78%, #000);
   --primary-light: color-mix(in srgb, var(--brand) 62%, #FFF0C8);
@@ -99,30 +99,9 @@
    งานนี้ตั้งใจแก้ให้แบรนด์อื่นได้สีของตัวเอง ไม่ใช่เปลี่ยนหน้าตาของซานตาเฟ่
    สูตรคำนวณให้สีที่ใกล้เคียงก็จริง แต่ไม่เท่ากับที่จูนมาเป๊ะ ๆ
    แบรนด์อื่นไม่มีค่าจูนมือ จึงใช้สูตรจาก --brand ตามปกติ */
-body[data-brand="santafe"] {
-  --primary: #D63622;
-  --primary-dark: #A82518;
-  --primary-light: #FF8534;
-  --primary-50: #FFF6EE;
-  --primary-100: #FFE6D4;
-  --accent: #E85A35;
-  --secondary: #FF8534;
-  --shadow-primary: 0 6px 16px rgba(214,54,34,0.25);
-  /* ไล่สีชุดเดิมของซานตาเฟ่ — หัวเป็นสเปกตรัมม่วง→ส้ม→เหลือง ไม่ใช่เฉดเดียว
-     สูตรจาก --brand ทำแบบนั้นไม่ได้ จึงคงของเดิมไว้เฉพาะแบรนด์นี้ */
-  --app-gradient: linear-gradient(90deg, #6E7AC8 0%, #8B5A9F 24%, #E84A1F 54%, #FF8C00 80%, #FFCC33 100%);
-  --login-gradient: linear-gradient(135deg, #FFB833 0%, #FF8534 45%, #D63622 100%);
-  --primary-gradient: linear-gradient(135deg, #FF8534 0%, #D63622 100%);
-  /* สีกลางชุดครีมเดิมของซานตาเฟ่ */
-  --bg: #FBF5EE;
-  --bg-strong: #F4ECE2;
-  --surface-2: #FCF7F1;
-  --text: #1F1612;
-  --text-secondary: #756258;
-  --text-tertiary: #A89588;
-  --border: #F0E5DC;
-  --border-strong: #E0CFC0;
-}
+/* ซานตาเฟ่ใช้สีส้มตามทะเบียนแบรนด์กลาง (#F97316) เหมือนแบรนด์อื่น
+   ค่าที่เคยล็อกไว้เป็นแดง/ครีมชุดเดิมถูกถอดออกแล้วตามที่ตกลงกัน */
+
 
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 body {
@@ -5205,6 +5184,22 @@ html.fab-sso-pending #login-screen { display: none !important; }
 .sfc-chip.is-tone { margin-left:auto; background:var(--primary-50); border-color:var(--primary-100); color:var(--primary-dark); }
 .sfc-cut { font-size:11px; font-weight:700; color:var(--text-tertiary); text-align:center; margin:10px 0 8px; }
 
+
+/* แท่งหัวข้อที่ตกบ่อย — สีเดียวทุกแท่ง ความยาวคือตัวบอกปริมาณ
+   ไม่ไล่เฉดตามค่า เพราะจะเป็นการบอกเรื่องเดิมซ้ำสองทาง */
+.sfc-fail { background:var(--surface); border:1px solid var(--border); border-radius:var(--r-md);
+  padding:10px 12px; box-shadow:var(--shadow-sm); cursor:pointer; }
+.sfc-fail + .sfc-fail { margin-top:8px; }
+.sfc-fail-h { display:flex; align-items:baseline; gap:8px; }
+.sfc-fail-t { flex:1; min-width:0; font-size:12.5px; font-weight:700; color:var(--text); line-height:1.35; }
+.sfc-fail-n { flex:0 0 auto; font-size:12.5px; font-weight:800; color:var(--danger);
+  font-variant-numeric:tabular-nums; }
+.sfc-fail-tr { height:8px; background:var(--surface-2); border-radius:0 4px 4px 0; overflow:hidden; margin:7px 0 6px; }
+.sfc-fail-tr i { display:block; height:100%; background:var(--danger); border-radius:0 4px 4px 0; }
+.sfc-fail-s { display:flex; align-items:center; gap:8px; flex-wrap:wrap;
+  font-size:11px; font-weight:700; color:var(--text-tertiary); }
+.sfc-fail-s .sf-fail-toggle { margin-left:auto; }
+
 /* ── Polish แดชบอร์ดซานตาเฟ่ (scope #dashboard-screen — ไม่กระทบเจ๊แดง) ── */
 #dashboard-screen .jd-dash-kpis { gap:12px; }
 /* มือถือ: กล่อง KPI อยู่บรรทัดเดียว (nowrap) ทรงคอมแพ็ค ไอคอนบน + ตัวเลข + ป้าย กึ่งกลาง */
@@ -7715,7 +7710,7 @@ async function doLogin() {
    สีมาจากทะเบียนแบรนด์กลาง (ตั้งได้ที่ฮับ) ไม่ได้ฝังไว้ในไฟล์นี้
    ทะเบียนยังไม่มา/ไม่ได้ตั้งสีไว้ ก็ใช้ค่าสำรองประจำแบรนด์
    เซ็ตที่ <html> ตัวเดียว ทุกอย่างที่ใช้ตัวแปรสีจะเปลี่ยนตามทันที */
-const CK_BRAND_FALLBACK = { santafe:'#D63622', jaedaeng:'#DC2626', yamachan:'#2563EB' };
+const CK_BRAND_FALLBACK = { santafe:'#F97316', jaedaeng:'#DC2626', yamachan:'#2563EB' };
 function ckViewBrandKey0(){
   const k = currentView || (currentUser && currentUser.brand) || currentBrand;
   return (k && CK_BRANDS[k]) ? k : null;
@@ -8322,57 +8317,46 @@ function _sfDailyTopFailsHTML(dailies) {
       }
     });
   });
-  const catTotalFails = Object.values(catStats).reduce((s, c) => s + c.fail, 0);
-  const sortedCats = Object.values(catStats).filter(c => c.fail > 0).sort((a, b) => b.fail - a.fail);
-  if (!sortedCats.length) return '<div class="jd-dash-empty">ยังไม่มีข้อไม่ผ่าน 🎉</div>';
-  const segColors = ['#dc2626','#ea580c','#ca8a04','#16a34a','#0891b2','#2563eb','#7c3aed','#db2777','#0d9488','#b45309'];
-  const overview = '<div class="tf-overview"><div class="tf-overview-bar">'
-    + sortedCats.map((cat, i) => { const w = catTotalFails > 0 ? (cat.fail / catTotalFails * 100) : 0; return `<span class="tf-overview-seg" style="width:${w}%;background:${segColors[i % segColors.length]};" title="${escapeAttr(cat.section)}: ${w.toFixed(1)}%"></span>`; }).join('')
-    + '</div><div class="tf-overview-legend">'
-    + sortedCats.map((cat, i) => { const w = catTotalFails > 0 ? (cat.fail / catTotalFails * 100) : 0; return `<span class="tf-legend-item"><span class="tf-legend-dot" style="background:${segColors[i % segColors.length]};"></span>${escapeHtml(cat.section)} ${w.toFixed(0)}%</span>`; }).join('')
-    + '</div></div>';
-  const cards = sortedCats.map((cat, ci) => {
-    const catSharePct = catTotalFails > 0 ? (cat.fail / catTotalFails * 100) : 0;
-    const headColor = segColors[ci % segColors.length];
-    const items = Object.values(itemStats).filter(i => i.section === cat.section && i.fail > 0).sort((a, b) => b.fail - a.fail).slice(0, 5);
-    return `<div class="sf-cat" style="--cat:${headColor};">
-      <button type="button" class="sf-cat-head" onclick="this.parentNode.classList.toggle('open')">
-        <span class="sf-cat-dot"></span>
-        <div class="sf-cat-titles">
-          <div class="sf-cat-name">${escapeHtml(cat.section)}</div>
-          <div class="sf-cat-sub">ตก <b>${cat.fail}</b> ข้อ · จาก ${cat.total} ข้อย่อย</div>
-        </div>
-        <div class="sf-cat-pct">${catSharePct.toFixed(0)}<small>%</small></div>
-        <span class="material-symbols-rounded sf-cat-chev">expand_more</span>
-      </button>
-      ${items.length ? `<div class="sf-cat-body">
-        ${items.map((it, i) => {
-          const itPct = it.total > 0 ? (it.fail / it.total * 100) : 0;
-          const cls = itPct >= 50 ? 'bad' : (itPct >= 25 ? 'warn' : '');
-          const occHtml = (it.occ || []).slice().sort((a, b) => (b.date || '').localeCompare(a.date || '')).map(o => {
-            const sIcon = o.shift === 'close' ? 'bedtime' : 'wb_sunny';
-            const sLabel = o.shift === 'close' ? 'รอบปิดร้าน' : 'รอบเปิดร้าน';
-            return `<div class="sf-occ-row${o.id ? ' sf-occ-clickable' : ''}"${o.id ? ` onclick="event.stopPropagation(); showDailyDetail('${escapeAttr(o.id)}','${escapeAttr(it.text)}')"` : ''}>
-              <span class="sf-occ-branch"><span class="material-symbols-rounded sf-ico-fill">storefront</span> ${escapeHtml(o.branch)}</span>
-              <span class="sf-occ-meta"><span class="material-symbols-rounded sf-ico-fill">event</span> ${escapeHtml(fmtDateDMY(o.date))} · <span class="material-symbols-rounded sf-ico-fill">${sIcon}</span> ${sLabel}</span>
-              ${o.note ? `<span class="sf-occ-note">📝 ${escapeHtml(o.note)}</span>` : ''}
-              ${o.id ? '<span class="material-symbols-rounded sf-occ-go">chevron_right</span>' : ''}
-            </div>`;
-          }).join('');
-          return `<div class="sf-fail-item sf-fail-clickable" onclick="this.classList.toggle('open')">
-            <div class="sf-fail-item-top">
-              <span class="sf-fail-item-name">${i+1}. ${escapeHtml(it.text)}</span>
-              <span class="sf-fail-item-pct">${itPct.toFixed(0)}%</span>
-            </div>
-            <div class="sf-fail-item-meta">ตก ${it.fail} / ${it.total} ครั้ง · <span class="sf-fail-toggle">กดดูสาขา/วัน/รอบ <span class="material-symbols-rounded sf-fail-chev">expand_more</span></span></div>
-            <div class="jd-dash-bar"><div class="jd-dash-bar-fill ${cls}" style="width:${Math.min(100, itPct)}%"></div></div>
-            <div class="sf-fail-occ">${occHtml}</div>
-          </div>`;
-        }).join('')}
-      </div>` : ''}
-    </div>`;
-  }).join('');
-  return overview + cards;
+  /* ── หัวข้อที่ตกบ่อย ──
+     ของเดิมแบ่งเป็นหมวดแล้วต้องกดกางทีละหมวดถึงจะเห็นหัวข้อ
+     คนเปิดหน้านี้มาเพื่อรู้ว่า "ข้อไหนตกบ่อยที่สุด" ไม่ใช่ "หมวดไหน"
+     จึงเรียงหัวข้อตรง ๆ จากตกบ่อยสุดลงมา · หมวดเป็นแค่ป้ายกำกับ
+     แท่งยาวเทียบกับข้อที่ตกบ่อยที่สุด — เห็นทันทีว่าห่างกันแค่ไหน
+     กดที่แถวยังกางดูได้เหมือนเดิมว่าตกที่สาขาไหน วันไหน รอบไหน */
+  const items = Object.values(itemStats).filter(function (i) { return i.fail > 0; })
+    .sort(function (a, b) { return b.fail - a.fail; });
+  if (!items.length) return '<div class="jd-dash-empty">ยังไม่มีข้อไม่ผ่าน 🎉</div>';
+  const top = items.slice(0, 8);
+  const maxFail = top[0].fail || 1;
+  const rest = items.length - top.length;
+
+  return top.map(function (it, i) {
+    const occHtml = (it.occ || []).slice()
+      .sort(function (a, b) { return (b.date || '').localeCompare(a.date || ''); })
+      .map(function (o) {
+        const sIcon = o.shift === 'close' ? 'bedtime' : 'wb_sunny';
+        const sLabel = o.shift === 'close' ? 'รอบปิดร้าน' : 'รอบเปิดร้าน';
+        return '<div class="sf-occ-row' + (o.id ? ' sf-occ-clickable' : '') + '"' +
+          (o.id ? ' onclick="event.stopPropagation(); showDailyDetail(\'' + escapeAttr(o.id) + '\')"' : '') + '>' +
+          '<span class="sf-occ-branch"><span class="material-symbols-rounded sf-ico-fill">storefront</span> ' + escapeHtml(o.branch) + '</span>' +
+          '<span class="sf-occ-meta"><span class="material-symbols-rounded sf-ico-fill">event</span> ' + escapeHtml(fmtDateDMY(o.date)) +
+            ' · <span class="material-symbols-rounded sf-ico-fill">' + sIcon + '</span> ' + sLabel + '</span>' +
+          (o.note ? '<span class="sf-occ-note">📝 ' + escapeHtml(o.note) + '</span>' : '') +
+          (o.id ? '<span class="material-symbols-rounded sf-occ-go">chevron_right</span>' : '') +
+        '</div>';
+      }).join('');
+    return '<div class="sfc-fail sf-fail-item" onclick="this.classList.toggle(\'open\')">' +
+      '<div class="sfc-fail-h">' +
+        '<span class="sfc-fail-t">' + escapeHtml(it.text) + '</span>' +
+        '<span class="sfc-fail-n">' + it.fail + ' ครั้ง</span>' +
+      '</div>' +
+      '<div class="sfc-fail-tr"><i style="width:' + Math.round(it.fail / maxFail * 100) + '%"></i></div>' +
+      '<div class="sfc-fail-s">' + escapeHtml(it.section) + ' · ตก ' + it.fail + ' จาก ' + it.total + ' ครั้งที่ตรวจ' +
+        '<span class="sf-fail-toggle">กดดูสาขา/วัน <span class="material-symbols-rounded sf-fail-chev">expand_more</span></span></div>' +
+      '<div class="sf-fail-occ">' + occHtml + '</div>' +
+    '</div>';
+  }).join('') +
+  (rest > 0 ? '<div class="sfc-cut">ยังมีอีก ' + rest + ' หัวข้อที่ตกน้อยกว่านี้</div>' : '');
 }
 
 // ── จัดการรายชื่อสาขา (เพิ่ม/ลบ) — sync ผ่าน cloud ให้ทุกเครื่องเห็นตรงกัน ──
