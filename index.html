@@ -3918,22 +3918,24 @@ input[type="time"].jd-form-input {
 }
 
 /* Daily form: header card with shift, date, BZM, branch, manager input */
+/* ย่อหัวการ์ดให้เท่ากับหัวการ์ดหน้าหลัก — หน้าตรวจมี 43 ข้อรออยู่ข้างล่าง
+   หัวเรื่องกินจอ 120px ก่อนถึงข้อแรกจึงแพงเกินกว่าที่มันบอกอะไร */
 .daily-form-head-card {
-  padding: 20px 22px;
+  padding: 13px 14px;
 }
 .daily-form-head-top {
-  display: flex; align-items: center; gap: 14px;
-  margin-bottom: 16px;
+  display: flex; align-items: center; gap: 11px;
+  margin-bottom: 12px;
 }
 .daily-form-shift-icon {
-  width: 48px; height: 48px;
-  border-radius: var(--r-md);
+  width: 38px; height: 38px;
+  border-radius: 11px;
   display: flex; align-items: center; justify-content: center;
   flex-shrink: 0;
   color: white;
   box-shadow: 0 4px 12px rgba(80,40,20,0.12);
 }
-.daily-form-shift-icon .material-symbols-rounded { font-size: 26px; color: white; }
+.daily-form-shift-icon .material-symbols-rounded { font-size: 21px; color: white; }
 .daily-form-head-card.is-open  .daily-form-shift-icon { background: linear-gradient(135deg, #FFB833, #FF8534); }
 .daily-form-head-card.is-close .daily-form-shift-icon { background: linear-gradient(135deg, #6E7AC8, #4A5A99); }
 .daily-form-titles { flex: 1; min-width: 0; }
@@ -3942,24 +3944,24 @@ input[type="time"].jd-form-input {
   flex-wrap: wrap;
 }
 .daily-form-titles h2 {
-  font-size: 19px; font-weight: 900;
+  font-size: 15px; font-weight: 800;
   color: var(--text); letter-spacing: -0.3px;
   line-height: 1.2;
 }
 .daily-form-date {
-  display: inline-flex; align-items: center; gap: 6px;
+  display: inline-flex; align-items: center; gap: 5px;
   padding: 0;
   background: transparent;
   border: none;
-  font-size: 15px; font-weight: 800;
+  font-size: 12.5px; font-weight: 800;
   color: var(--primary-dark);
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.2px;
 }
 .daily-form-date .material-symbols-rounded {
-  font-size: 18px; color: var(--primary);
+  font-size: 15px; color: var(--primary);
 }
-.daily-form-head-card .daily-form-head-top { margin-bottom: 20px; }
+.daily-form-head-card .daily-form-head-top { margin-bottom: 12px; }
 .daily-form-input-row {
   display: flex; flex-direction: column; gap: 8px;
 }
@@ -5207,6 +5209,178 @@ html.fab-sso-pending #login-screen { display: none !important; }
 .sfc-fail-s .sf-fail-toggle { margin-left:auto; }
 
 
+
+/* ── หน้าหลัก · หน้าตรวจ ──
+   ใช้ภาษาเดียวกับแดชบอร์ด: หัวข้อคั่นมีแถบสีแบรนด์ · การ์ดขอบบาง เงาอ่อน
+   สีแบรนด์สงวนไว้ให้ "สิ่งที่ต้องทำต่อ" เท่านั้น (ปุ่มกะที่ยังไม่ได้ส่ง · ปุ่มส่งผล)
+   ของที่ทำเสร็จแล้วถอยไปเป็นสีเทา จะได้กวาดตาแล้วเห็นงานค้างทันที */
+.ck-hd { display:flex; align-items:center; gap:11px; background:var(--surface);
+  border:1px solid var(--border); border-radius:14px; padding:12px 13px; box-shadow:var(--shadow-sm); }
+.ck-hd-ic { width:38px; height:38px; border-radius:11px; background:var(--primary-100);
+  color:var(--primary-dark); display:grid; place-items:center; flex:0 0 auto; }
+.ck-hd-ic .material-symbols-rounded { font-size:21px; }
+.ck-hd-t { font-size:14px; font-weight:800; letter-spacing:-.2px; }
+.ck-hd-s { font-size:11px; font-weight:600; color:var(--text-tertiary); margin-top:1px;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.ck-hd-chip { margin-left:auto; font-size:11px; font-weight:700; padding:5px 10px; border-radius:999px;
+  background:var(--bg); border:1px solid var(--border); color:var(--text-secondary); white-space:nowrap; }
+
+.ck-shifts { display:grid; grid-template-columns:1fr 1fr; gap:11px; }
+.ck-shift { border:1px solid var(--border); border-radius:14px; padding:16px 12px; background:var(--surface);
+  text-align:center; box-shadow:var(--shadow-sm); cursor:pointer; font-family:inherit; color:var(--text);
+  display:block; width:100%; transition:.15s; }
+.ck-shift:active { transform:scale(.98); }
+.ck-shift .material-symbols-rounded { font-size:27px; margin-bottom:7px; display:block; }
+.ck-shift-t { font-size:14px; font-weight:800; }
+.ck-shift-s { font-size:11px; font-weight:600; opacity:.85; margin-top:2px; }
+.ck-shift.is-brand { background:var(--primary); border-color:var(--primary); color:#fff;
+  box-shadow:0 6px 18px color-mix(in srgb, var(--primary) 30%, transparent); }
+.ck-shift.is-brand .ck-shift-s { opacity:.9; }
+.ck-shift.is-done { background:var(--bg); color:var(--text-tertiary); box-shadow:none; }
+.ck-shift.is-done .ck-shift-s { color:var(--success); opacity:1; }
+
+.ck-row { background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:11px 13px;
+  box-shadow:var(--shadow-sm); position:relative; overflow:hidden; cursor:pointer; }
+.ck-row + .ck-row { margin-top:8px; }
+.ck-row::before { content:''; position:absolute; left:0; top:0; bottom:0; width:3px; background:var(--primary); }
+.ck-row.r-ok::before  { background:var(--success); }
+.ck-row.r-bad::before { background:var(--danger); }
+.ck-row-top { display:flex; align-items:center; gap:9px; }
+.ck-row-nm { font-size:13px; font-weight:700; flex:1; min-width:0;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.ck-row-pc { font-size:15px; font-weight:800; font-variant-numeric:tabular-nums; flex:0 0 auto; }
+.ck-row-pc small { font-size:10px; font-weight:700; color:var(--text-tertiary); }
+.ck-row-ft { display:flex; align-items:center; gap:7px; flex-wrap:wrap; margin-top:7px; }
+.ck-chip { font-size:10.5px; font-weight:700; padding:3px 8px; border-radius:999px; background:var(--bg);
+  border:1px solid var(--border); color:var(--text-secondary); display:inline-flex; align-items:center; gap:4px; }
+.ck-chip .material-symbols-rounded { font-size:12px; }
+.ck-chip.ok  { background:rgba(45,122,74,.10);  border-color:transparent; color:var(--success); }
+.ck-chip.bad { background:rgba(199,50,35,.09);  border-color:transparent; color:var(--danger); }
+/* ปุ่มแอดมินในแถว — ย่อให้เท่าไอคอน ไม่ให้ไปแย่งน้ำหนักกับคะแนน
+   คนที่ไม่ใช่แอดมินไม่เห็นปุ่มนี้อยู่แล้ว จึงไม่ควรกินที่ของทุกคน */
+.ck-row .jd-history-actions { display:flex; gap:5px; flex:0 0 auto; margin-left:2px; }
+.ck-row .jd-history-edit,
+.ck-row .jd-history-del { width:26px; height:26px; min-width:0; padding:0; border-radius:8px; }
+.ck-row .jd-history-edit .material-symbols-rounded,
+.ck-row .jd-history-del .material-symbols-rounded { font-size:15px; }
+.ck-row .jd-history-gps { margin-top:7px; }
+
+/* แถบความคืบหน้าหน้าตรวจ — ติดบนสุด บอกว่าเหลืออีกกี่ข้อโดยไม่ต้องเลื่อนหา */
+.ck-prog { background:var(--surface); border-bottom:1px solid var(--border); padding:11px 15px;
+  position:sticky; top:0; z-index:52; margin:0 -14px 0; }
+.ck-prog-top { display:flex; align-items:baseline; gap:8px; margin-bottom:7px; }
+.ck-prog-t { font-size:12.5px; font-weight:800; }
+.ck-prog-c { margin-left:auto; font-size:12px; font-weight:800; color:var(--primary);
+  font-variant-numeric:tabular-nums; }
+.ck-prog-tr { height:5px; border-radius:3px; background:color-mix(in srgb, var(--primary) 10%, #E9E7E5); overflow:hidden; }
+.ck-prog-tr i { display:block; height:100%; border-radius:3px; background:var(--primary); transition:width .25s; }
+
+/* ── หน้าตรวจ: คำถามเป็นการ์ดใบละข้อ ──
+   ของเดิมเป็นการ์ดใหญ่ใบเดียวต่อหมวด หัวแถบสีแบรนด์เต็มความกว้าง
+   ซึ่งทำให้สีแบรนด์ไปอยู่กับ "ป้ายชื่อหมวด" แทนที่จะอยู่กับปุ่มที่ต้องกด
+   แยกเป็นใบละข้อแล้วขอบการ์ดทำหน้าที่คั่นข้อแทนเส้น อ่านทีละข้อได้ชัดกว่า */
+#daily-form-screen .daily-section-card { background:none; border:0; box-shadow:none;
+  margin-bottom:4px; overflow:visible; }
+#daily-form-screen .daily-section-header { background:none; color:var(--text);
+  padding:18px 2px 10px; gap:8px; justify-content:flex-start; }
+#daily-form-screen .daily-section-header::before { content:''; flex:0 0 auto;
+  width:3px; height:15px; border-radius:2px; background:var(--primary); }
+#daily-form-screen .daily-section-name { font-size:13px; font-weight:800;
+  text-transform:none; color:var(--text); }
+#daily-form-screen .daily-section-progress { margin-left:auto; background:none; padding:0;
+  font-size:11.5px; font-weight:700; color:var(--primary); }
+#daily-form-screen .daily-section-body { padding:0; }
+#daily-form-screen .daily-item { background:var(--surface); border:1px solid var(--border);
+  border-radius:14px; padding:13px; box-shadow:var(--shadow-sm); }
+#daily-form-screen .daily-item + .daily-item { margin-top:10px; }
+#daily-form-screen .daily-item.is-pass,
+#daily-form-screen .daily-item.is-fail,
+#daily-form-screen .daily-item.is-na { background:var(--surface); }
+#daily-form-screen .daily-item.is-required-photo { border-left:3px solid var(--primary); background:var(--surface); }
+#daily-form-screen .daily-item-q { gap:9px; margin-bottom:11px; }
+#daily-form-screen .daily-item-num { width:22px; height:22px; border-radius:7px;
+  background:var(--primary-100); border:1px solid var(--primary-light);
+  color:var(--primary-dark); font-size:11px; }
+#daily-form-screen .daily-item.is-pass .daily-item-num,
+#daily-form-screen .daily-item.is-fail .daily-item-num { background:var(--primary-100); color:var(--primary-dark); }
+#daily-form-screen .daily-item-text { font-size:13px; font-weight:600; line-height:1.5; padding-top:2px; }
+#daily-form-screen .daily-item-actions { gap:7px; }
+/* ปุ่มไม่มีไอคอน — ไอคอนถูก/ผิดบอกเรื่องเดียวกับข้อความ ซ้ำกันเปล่า ๆ และกินที่
+   สถานะที่เลือกใช้พื้นอ่อน+ขอบสี ไม่ใช่พื้นทึบ จะได้ไม่แย่งสายตากับปุ่มส่งผล */
+#daily-form-screen .daily-choice { gap:0; padding:9px 4px; min-height:0; border-radius:10px;
+  border:1px solid var(--border); background:var(--bg); color:var(--text-secondary);
+  font-size:11.5px; font-weight:700; }
+#daily-form-screen .daily-choice .material-symbols-rounded { display:none; }
+#daily-form-screen .daily-choice.active.pass { background:rgba(45,122,74,.10);
+  border-color:var(--success); color:var(--success); box-shadow:none; }
+#daily-form-screen .daily-choice.active.fail { background:rgba(199,50,35,.09);
+  border-color:var(--danger); color:var(--danger); box-shadow:none; }
+#daily-form-screen .daily-choice.active.na { background:var(--bg);
+  border-color:var(--border-strong); color:var(--text-secondary); box-shadow:none; }
+
+/* ปุ่มส่งผลติดล่างจอ — เป็นปุ่มเดียวที่เป็นสีแบรนด์เต็มใบในหน้านี้ */
+#daily-form-screen .form-action-bar { position:sticky; bottom:0; z-index:40;
+  background:linear-gradient(transparent, var(--bg) 26%); border:0; box-shadow:none;
+  padding:16px 0 calc(6px + env(safe-area-inset-bottom)); margin-bottom:0; }
+#daily-form-screen .form-action-bar .btn-success { background:var(--primary); border-color:var(--primary);
+  color:#fff; font-size:14.5px; font-weight:800; padding:14px; border-radius:14px;
+  box-shadow:0 6px 18px color-mix(in srgb, var(--primary) 30%, transparent); }
+#daily-form-screen .form-action-bar .btn-secondary { flex:0 0 auto; min-width:0; padding:14px 16px; border-radius:14px; }
+#daily-form-screen .sticky-tabs { top:52px; }
+
+
+/* ปุ่มใหญ่ปุ่มเดียว — เจ๊แดงมีงานเดียวคือ "เริ่มตรวจ" จึงไม่ต้องแบ่งเป็นสองปุ่มแบบกะเปิด/ปิด */
+.ck-bigbtn { display:flex; align-items:center; gap:13px; width:100%; padding:16px; border-radius:14px;
+  background:var(--primary); color:#fff; border:none; text-align:left; cursor:pointer; font-family:inherit;
+  box-shadow:0 6px 18px color-mix(in srgb, var(--primary) 30%, transparent); }
+.ck-bigbtn:active { transform:scale(.99); }
+.ck-bigbtn .material-symbols-rounded { font-size:26px; flex:0 0 auto; }
+.ck-bigbtn-t { font-size:15px; font-weight:800; }
+.ck-bigbtn-s { font-size:11.5px; font-weight:600; opacity:.85; }
+.ck-bigbtn .go { margin-left:auto; font-size:20px; }
+
+/* หน้าตรวจเจ๊แดง — ภาษาเดียวกับหน้าตรวจเปิด/ปิดร้าน ต่างแค่สีแบรนด์ */
+#jaedaeng-audit-screen .jd-section-card { background:none; border:0; box-shadow:none;
+  margin-bottom:4px; overflow:visible; }
+#jaedaeng-audit-screen .jd-section-header { background:none; color:var(--text);
+  padding:18px 2px 10px; gap:8px; justify-content:flex-start; }
+#jaedaeng-audit-screen .jd-section-header::before { content:''; flex:0 0 auto;
+  width:3px; height:15px; border-radius:2px; background:var(--primary); }
+#jaedaeng-audit-screen .jd-section-name { font-size:13px; font-weight:800; color:var(--text); }
+#jaedaeng-audit-screen .sf-section-letter { width:20px; height:20px; border-radius:6px;
+  background:var(--primary-100); color:var(--primary-dark); font-size:11px; }
+#jaedaeng-audit-screen .jd-section-progress { margin-left:auto; background:none; padding:0;
+  font-size:11.5px; font-weight:700; color:var(--primary); }
+#jaedaeng-audit-screen .jd-item { background:var(--surface); border:1px solid var(--border);
+  border-radius:14px; padding:13px; box-shadow:var(--shadow-sm); }
+#jaedaeng-audit-screen .jd-item + .jd-item { margin-top:10px; }
+#jaedaeng-audit-screen .jd-item.is-pass,
+#jaedaeng-audit-screen .jd-item.is-fail,
+#jaedaeng-audit-screen .jd-item.is-na { background:var(--surface); }
+#jaedaeng-audit-screen .jd-item-q { gap:9px; margin-bottom:11px; }
+#jaedaeng-audit-screen .jd-item-num { min-width:22px; height:22px; padding:0 5px; border-radius:7px;
+  background:var(--primary-100); border:1px solid var(--primary-light);
+  color:var(--primary-dark); font-size:11px; font-weight:800; }
+#jaedaeng-audit-screen .jd-item-text { font-size:13px; font-weight:600; line-height:1.5; }
+#jaedaeng-audit-screen .jd-item-actions { gap:7px; }
+#jaedaeng-audit-screen .jd-choice { gap:0; padding:9px 4px; border-radius:10px;
+  border:1px solid var(--border); background:var(--bg); color:var(--text-secondary);
+  font-size:11.5px; font-weight:700; }
+#jaedaeng-audit-screen .jd-choice .material-symbols-rounded { display:none; }
+#jaedaeng-audit-screen .jd-choice.pass.active { background:rgba(45,122,74,.10);
+  border-color:var(--success); color:var(--success); }
+#jaedaeng-audit-screen .jd-choice.fail.active { background:rgba(199,50,35,.09);
+  border-color:var(--danger); color:var(--danger); }
+#jaedaeng-audit-screen .jd-choice.na.active { background:var(--bg);
+  border-color:var(--border-strong); color:var(--text-secondary); }
+#jaedaeng-audit-screen .form-action-bar { position:sticky; bottom:0; z-index:40;
+  background:linear-gradient(transparent, var(--bg) 26%); border:0; box-shadow:none;
+  padding:16px 0 calc(6px + env(safe-area-inset-bottom)); margin-bottom:0; }
+#jaedaeng-audit-screen .form-action-bar .btn-success { background:var(--primary); border-color:var(--primary);
+  color:#fff; font-size:14.5px; font-weight:800; padding:14px; border-radius:14px;
+  box-shadow:0 6px 18px color-mix(in srgb, var(--primary) 30%, transparent); }
+#jaedaeng-audit-screen .sticky-tabs { top:52px; }
+
 /* หัวข้อคั่นนอกการ์ด — ใช้กับส่วนที่ไม่ได้อยู่ในกล่อง เช่นแถวตัวเลขสรุป
    แถบสีแบรนด์ทำหน้าที่เดียวกับที่อยู่ในหัวการ์ด จะได้เป็นภาษาเดียวกันทั้งหน้า */
 .sfc-sec { display:flex; align-items:center; gap:8px; margin:18px 2px 10px; }
@@ -5578,40 +5752,40 @@ html.fab-sso-pending #login-screen { display: none !important; }
     <!-- DAILY HUB SCREEN -->
     <div id="daily-hub-screen" style="display:none;">
       <div id="daily-branch-actions" style="display:none;">
-        <div class="page-eyebrow page-eyebrow-section daily-hub-eyebrow">
-          <h2 class="page-eyebrow-title">
-            Daily Open-Close Checklist
-            <span class="page-eyebrow-inline daily-eyebrow-date" id="daily-today-label"></span>
-          </h2>
-          <p class="daily-hub-sub">เลือก shift ที่จะเช็คสำหรับวันนี้</p>
+        <div class="ck-hd">
+          <div class="ck-hd-ic"><span class="material-symbols-rounded">restaurant</span></div>
+          <div style="min-width:0;">
+            <div class="ck-hd-t">Operations Checklist</div>
+            <div class="ck-hd-s" id="daily-hd-sub">เช็คลิสต์เปิด-ปิดร้าน</div>
+          </div>
+          <span class="ck-hd-chip" id="daily-hd-user">—</span>
         </div>
-        <div class="card" id="daily-branch-picker" style="display:none;margin-bottom:12px;">
-          <label class="jd-form-label" style="display:block;margin-bottom:6px;">เลือกสาขาที่จะตรวจ <span class="req">*</span></label>
+
+        <div class="sfc-sec"><span class="sfc-sec-bar"></span>
+          <span class="sfc-sec-t">เช็คลิสต์วันนี้</span>
+          <span class="sfc-sec-x" id="daily-today-label"></span></div>
+
+        <div id="daily-branch-picker" style="display:none;margin-bottom:11px;">
           <select id="daily-branch-select" class="jd-form-input" onchange="setDailyBranch(this.value)">
-            <option value="">— เลือกสาขา —</option>
+            <option value="">— เลือกสาขาที่จะตรวจ —</option>
           </select>
         </div>
-        <div class="card daily-hub-actions">
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-            <button class="btn btn-primary btn-lg" onclick="startDailyShift('open')" style="padding:18px 12px;flex-direction:column;">
-              <span class="material-symbols-rounded" style="font-size:32px;">wb_sunny</span>
-              <span id="daily-open-label">เช็ค Open</span>
-              <span id="daily-open-status" style="font-size:11px;opacity:.9;"></span>
-            </button>
-            <button class="btn btn-secondary btn-lg" onclick="startDailyShift('close')" style="padding:18px 12px;flex-direction:column;background:var(--text);color:#fff;">
-              <span class="material-symbols-rounded" style="font-size:32px;">bedtime</span>
-              <span id="daily-close-label">เช็ค Close</span>
-              <span id="daily-close-status" style="font-size:11px;opacity:.9;"></span>
-            </button>
-          </div>
+        <div class="ck-shifts daily-hub-actions">
+          <button type="button" class="ck-shift" id="daily-open-btn" onclick="startDailyShift('open')">
+            <span class="material-symbols-rounded">wb_sunny</span>
+            <div class="ck-shift-t" id="daily-open-label">เปิดร้าน</div>
+            <div class="ck-shift-s" id="daily-open-status"></div>
+          </button>
+          <button type="button" class="ck-shift" id="daily-close-btn" onclick="startDailyShift('close')">
+            <span class="material-symbols-rounded">bedtime</span>
+            <div class="ck-shift-t" id="daily-close-label">ปิดร้าน</div>
+            <div class="ck-shift-s" id="daily-close-status"></div>
+          </button>
         </div>
       </div>
 
-      <div class="page-eyebrow page-eyebrow-section">
-        <h2 class="page-eyebrow-title" id="daily-list-title">
-          ประวัติ <span class="page-eyebrow-inline">Daily Open-Close Checklist</span>
-        </h2>
-      </div>
+      <div class="sfc-sec"><span class="sfc-sec-bar"></span>
+        <span class="sfc-sec-t" id="daily-list-title">ส่งล่าสุด</span></div>
       <div class="filter-bar" id="daily-filter-bar">
         <input type="text" id="daily-filter-search" placeholder="ค้นหาสาขา..." oninput="renderDailyList()">
         <select id="daily-filter-shift" onchange="renderDailyList()">
@@ -5647,17 +5821,27 @@ html.fab-sso-pending #login-screen { display: none !important; }
         </div>
       </div>
 
+      <!-- ความคืบหน้าอยู่บนสุดและติดหน้าจอ — คำถามที่คนตรวจถามตัวเองตลอดคือ
+           "เหลืออีกกี่ข้อ" ถ้าต้องเลื่อนขึ้นไปดูก็เท่ากับไม่ได้ตอบ -->
+      <div class="ck-prog" id="daily-prog">
+        <div class="ck-prog-top">
+          <span class="ck-prog-t" id="daily-prog-t">เช็คลิสต์</span>
+          <span class="ck-prog-c" id="daily-prog-c">0 / 0</span>
+        </div>
+        <div class="ck-prog-tr"><i id="daily-prog-i" style="width:0%"></i></div>
+      </div>
+
       <div class="sticky-tabs"><div class="chip-row daily-section-tabs" id="daily-section-tabs"></div></div>
 
       <div id="daily-sections-container"></div>
 
       <div class="card no-print form-action-bar">
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
-          <button class="btn btn-secondary" style="flex:1;min-width:130px;" onclick="cancelDailyShift()">
-            <span class="material-symbols-rounded">arrow_back</span> ยกเลิก
+          <button class="btn btn-secondary" onclick="cancelDailyShift()">
+            <span class="material-symbols-rounded">arrow_back</span>
           </button>
           <button class="btn btn-success" data-ck-action="submit-check" style="flex:1;min-width:130px;" onclick="submitDailyShift()">
-            <span class="material-symbols-rounded">save</span> บันทึก
+            ส่งผลตรวจ
           </button>
         </div>
       </div>
@@ -5740,19 +5924,29 @@ html.fab-sso-pending #login-screen { display: none !important; }
 
     <!-- JAE DAENG HUB -->
     <div id="jaedaeng-hub-screen" style="display:none;">
-      <div class="page-eyebrow page-eyebrow-section">
-        <h2 class="page-eyebrow-title">
-          ตรวจร้าน <span class="page-eyebrow-inline">เจ๊แดงสามย่าน</span>
-        </h2>
+      <div class="ck-hd">
+        <div class="ck-hd-ic"><span class="material-symbols-rounded">local_fire_department</span></div>
+        <div style="min-width:0;">
+          <div class="ck-hd-t">Operations Checklist</div>
+          <div class="ck-hd-s" id="jd-hd-sub">ตรวจโดย BZM · เช็คพิกัดหน้าร้าน</div>
+        </div>
+        <span class="ck-hd-chip" id="jd-hd-user">—</span>
       </div>
-      <div class="card jd-hub-actions">
-        <button class="btn btn-primary btn-block btn-lg" onclick="startJaedaengAudit()">
-          <span class="material-symbols-rounded">add_circle</span> ตรวจร้านใหม่
-        </button>
-      </div>
-      <div class="page-eyebrow page-eyebrow-section">
-        <h2 class="page-eyebrow-title">ประวัติการตรวจ</h2>
-      </div>
+
+      <div class="sfc-sec"><span class="sfc-sec-bar"></span>
+        <span class="sfc-sec-t">เริ่มตรวจร้าน</span>
+        <span class="sfc-sec-x" id="jd-today-label"></span></div>
+      <button type="button" class="ck-bigbtn jd-hub-actions" onclick="startJaedaengAudit()">
+        <span class="material-symbols-rounded">fact_check</span>
+        <span>
+          <span class="ck-bigbtn-t" style="display:block;">ตรวจร้าน</span>
+          <span class="ck-bigbtn-s">เช็คพิกัดหน้าร้านก่อนเริ่ม</span>
+        </span>
+        <span class="material-symbols-rounded go">chevron_right</span>
+      </button>
+
+      <div class="sfc-sec"><span class="sfc-sec-bar"></span>
+        <span class="sfc-sec-t">ตรวจล่าสุด</span></div>
       <div id="jaedaeng-list"></div>
     </div>
 
@@ -5790,6 +5984,14 @@ html.fab-sso-pending #login-screen { display: none !important; }
           <div class="jd-form-static" id="jd-gps-display">—</div>
         </div>
       </div>
+      <div class="ck-prog" id="jd-prog">
+        <div class="ck-prog-top">
+          <span class="ck-prog-t">ตรวจร้าน</span>
+          <span class="ck-prog-c" id="jd-prog-c">0 / 0</span>
+        </div>
+        <div class="ck-prog-tr"><i id="jd-prog-i" style="width:0%"></i></div>
+      </div>
+
       <div class="sticky-tabs"><div class="jd-section-tabs" id="jd-section-tabs"></div></div>
       <div id="jaedaeng-sections-container"></div>
       <div class="card no-print form-action-bar">
@@ -9002,8 +9204,10 @@ function fmtDateThaiShort(iso) {
   if (parts.length !== 3) return iso;
   const day = parseInt(parts[2], 10);
   const month = THAI_MONTH_SHORT[parseInt(parts[1], 10) - 1] || parts[1];
-  const year = parseInt(parts[0], 10);
-  return `${day} ${month} ${year}`;
+  /* ปีเป็น พ.ศ. สองหลัก — คนอ่านหน้านี้คิดเป็น พ.ศ. อยู่แล้ว
+     และตัดให้สั้นเพราะวางอยู่ท้ายบรรทัดหัวข้อ ไม่ใช่ข้อมูลหลักของบรรทัด */
+  const year = parseInt(parts[0], 10) + 543;
+  return `${day} ${month} ${String(year).slice(-2)}`;
 }
 
 function getVisibleDailyChecklists() {
@@ -9038,14 +9242,23 @@ function showDailyHub() {
   const picker = document.getElementById('daily-branch-picker');
   const isBranch = currentUser.role === 'branch';
   branchActions.style.display = 'block';   // ทุก role มีเมนูตรวจร้าน
-  document.getElementById('daily-today-label').textContent = fmtDateDMY(todayDateStr());
+  document.getElementById('daily-today-label').textContent = fmtDateThaiShort(todayDateStr());
   if (picker) {
     if (isBranch) { picker.style.display = 'none'; }
     else { picker.style.display = 'block'; _setupDailyBranchOptions(); }
   }
   _refreshDailyActions();
 
-  document.getElementById('daily-list-title').innerHTML = 'ประวัติ <span class="page-eyebrow-inline">Daily Open-Close Checklist</span>';
+  document.getElementById('daily-list-title').textContent = 'ส่งล่าสุด';
+  /* หัวการ์ดบนสุด — ชื่อระบบคงที่ ใต้ชื่อเป็นแบรนด์ที่กำลังดู ขวาสุดเป็นคนที่ล็อกอินอยู่
+     สามอย่างนี้คือสิ่งที่ต้องยืนยันก่อนกดส่งผลตรวจ จึงวางไว้ให้เห็นตั้งแต่เปิดหน้า */
+  const _hdSub = document.getElementById('daily-hd-sub');
+  if (_hdSub) {
+    const _hb = CK_BRANDS[currentView || (currentUser && currentUser.brand)];
+    _hdSub.textContent = _hb ? _hb.name : 'เช็คลิสต์เปิด-ปิดร้าน';
+  }
+  const _hdUser = document.getElementById('daily-hd-user');
+  if (_hdUser) _hdUser.textContent = (currentUser && (currentUser.nick || currentUser.name)) || '—';
   // Branch users only see their own branch; the search field is useless to them
   const searchInput = document.getElementById('daily-filter-search');
   if (searchInput) searchInput.style.display = isBranch ? 'none' : '';
@@ -9077,15 +9290,24 @@ function _refreshDailyActions() {
   const openDone = has('open'), closeDone = has('close');
   const oS = document.getElementById('daily-open-status'), cS = document.getElementById('daily-close-status');
   const oL = document.getElementById('daily-open-label'), cL = document.getElementById('daily-close-label');
-  if (oS) oS.textContent = !target ? 'เลือกสาขาก่อน' : (openDone ? '✓ บันทึกแล้ว' : 'ยังไม่ได้บันทึก');
-  if (cS) cS.textContent = !target ? 'เลือกสาขาก่อน' : (closeDone ? '✓ บันทึกแล้ว' : 'ยังไม่ได้บันทึก');
-  if (oL) oL.textContent = openDone ? 'แก้ไข Open' : 'เช็ค Open';
-  if (cL) cL.textContent = closeDone ? 'แก้ไข Close' : 'เช็ค Close';
-  document.querySelectorAll('.daily-hub-actions .btn').forEach(b => {
-    const dis = !target;
-    b.style.opacity = dis ? '.45' : '';
-    b.style.pointerEvents = dis ? 'none' : '';
-  });
+  /* ส่งแล้วให้บอกเวลาที่ส่ง ไม่ใช่แค่ "บันทึกแล้ว" — คนถามต่อเสมอว่าส่งกี่โมง
+     และกะที่ยังไม่ได้ส่งเท่านั้นที่เป็นสีแบรนด์ ที่เหลือถอยเป็นสีเทา */
+  const _hhmm = d => { const t = d && (d.submittedAt || d.updatedAt); if (!t) return '';
+    const dt = new Date(t); return isNaN(dt.getTime()) ? ''
+      : ' ' + String(dt.getHours()).padStart(2,'0') + ':' + String(dt.getMinutes()).padStart(2,'0'); };
+  if (oS) oS.textContent = !target ? 'เลือกสาขาก่อน' : (openDone ? 'ส่งแล้ว' + _hhmm(openDone) : 'ยังไม่ได้ส่ง');
+  if (cS) cS.textContent = !target ? 'เลือกสาขาก่อน' : (closeDone ? 'ส่งแล้ว' + _hhmm(closeDone) : 'ยังไม่ได้ส่ง');
+  if (oL) oL.textContent = 'เปิดร้าน';
+  if (cL) cL.textContent = 'ปิดร้าน';
+  const _paint = (btn, done) => {
+    if (!btn) return;
+    btn.classList.toggle('is-done', !!target && !!done);
+    btn.classList.toggle('is-brand', !!target && !done);
+    btn.style.opacity = target ? '' : '.45';
+    btn.style.pointerEvents = target ? '' : 'none';
+  };
+  _paint(document.getElementById('daily-open-btn'), openDone);
+  _paint(document.getElementById('daily-close-btn'), closeDone);
 }
 
 // ป้ายเวลาที่ส่ง (จาก submittedAt) — แสดงบนการ์ดประวัติ
@@ -9156,38 +9378,22 @@ function renderDailyList() {
       const shiftName = d.shift === 'open' ? 'Open' : 'Close';
       const shiftThai = d.shift === 'open' ? 'เช้า' : 'ค่ำ';
 
-      return `<div class="daily-history-card ${shiftClass} ${statusClass}" onclick="showDailyDetail('${escapeAttr(d.id)}')">
-        <div class="dhc-head">
-          <div class="dhc-shift-icon"><span class="material-symbols-rounded">${shiftIcon}</span></div>
-          <div class="dhc-titles">
-            <div class="dhc-shift-name">${shiftName} <span class="dhc-shift-thai">· ${shiftThai}</span></div>
-            <div class="dhc-meta">ผู้บันทึก: <b>${escapeHtml(d.manager || '-')}</b>${_dailySentLabel(d)}</div>
-          </div>
-          <div class="dhc-status">${escapeHtml(status)}</div>
+      /* แถวเดียวจบ: ชื่อกะ+สาขา · คะแนน · ชิปเวลาและสถานะ
+         ของเดิมเป็นการ์ดสูงเกือบ 200px ต่อใบ มีทั้งแถบคะแนนและตัวเลขสามช่อง
+         ซึ่งเป็นการเล่าคะแนนซ้ำสามรอบ พอมีหลายสาขาต่อวันเลยต้องปัดจอทั้งวัน
+         รายละเอียดยังอยู่ครบในหน้ารายละเอียด แตะแถวเข้าไปดูได้ */
+      const shiftThaiFull = d.shift === 'open' ? 'เปิดร้าน' : 'ปิดร้าน';
+      const rowTone = failItems > 0 ? 'r-bad' : (pending > 0 ? '' : 'r-ok');
+      const sentAt = _dailySentLabel(d).replace(' · ส่ง ', '').replace(' น.', '');
+      return `<div class="ck-row ${rowTone}" onclick="showDailyDetail('${escapeAttr(d.id)}')">
+        <div class="ck-row-top">
+          <span class="ck-row-nm">${shiftThaiFull}${isBranch ? '' : ' · ' + escapeHtml(branchLabel(d.branchCode, d.branchName))}</span>
+          <span class="ck-row-pc" style="color:${scoreColor};">${scorePct.toFixed(0)}<small>%</small></span>
         </div>
-        ${!isBranch ? `<div class="dhc-branch"><span class="material-symbols-rounded">storefront</span><span>${escapeHtml(branchLabel(d.branchCode, d.branchName))}</span></div>` : ''}
-        <div class="dhc-stats-card">
-          <div class="dhc-scorebar">
-            <div class="dhc-scorebar-head">
-              <span class="dhc-score-value" style="color:${scoreColor};">${scorePct.toFixed(1)}<small>%</small></span>
-              <span class="dhc-score-label">คะแนนผ่านเกณฑ์</span>
-            </div>
-            <div class="dhc-progress"><div class="dhc-progress-fill" style="width:${Math.min(100, scorePct)}%;background:${scoreColor};"></div></div>
-          </div>
-          <div class="dhc-stats">
-            <div class="dhc-stat is-pass">
-              <div class="dhc-stat-value">${passItems}</div>
-              <div class="dhc-stat-label">ผ่าน</div>
-            </div>
-            <div class="dhc-stat is-fail">
-              <div class="dhc-stat-value">${failItems}</div>
-              <div class="dhc-stat-label">ไม่ผ่าน</div>
-            </div>
-            <div class="dhc-stat">
-              <div class="dhc-stat-value">${totalItems}</div>
-              <div class="dhc-stat-label">ทั้งหมด</div>
-            </div>
-          </div>
+        <div class="ck-row-ft">
+          ${sentAt ? `<span class="ck-chip"><span class="material-symbols-rounded">schedule</span>${escapeHtml(sentAt)}</span>` : ''}
+          <span class="ck-chip ${failItems > 0 ? 'bad' : (pending > 0 ? '' : 'ok')}">${escapeHtml(status)}</span>
+          ${late ? '<span class="ck-chip bad"><span class="material-symbols-rounded">timer</span>ตรวจช้า</span>' : ''}
         </div>
         ${lateHtml}
       </div>`;
@@ -9196,7 +9402,7 @@ function renderDailyList() {
     return `<div class="daily-history-group">
       <div class="daily-history-date">
         <span class="material-symbols-rounded">calendar_today</span>
-        <span>${escapeHtml(fmtDateDMY(date))}</span>
+        <span>${escapeHtml(fmtDateThaiShort(date))}</span>
       </div>
       <div class="daily-history-cards">${cards}</div>
     </div>`;
@@ -9500,8 +9706,23 @@ function scrollToDailySection(idx) {
   window.scrollTo({ top, behavior: 'smooth' });
 }
 
+/* แถบความคืบหน้า — นับข้อที่ตอบแล้วจากทั้งชุด (ผ่าน/ไม่ผ่าน/N/A ถือว่าตอบแล้ว)
+   ชื่อบนแถบบอกว่ากำลังเช็คกะไหน เพราะฟอร์มสองกะหน้าตาเหมือนกันจนสลับกันได้ */
+function _paintDailyProgress() {
+  if (!currentDaily) return;
+  const items = currentDaily.items || [];
+  const done = items.filter(i => i.status === 'pass' || i.status === 'fail' || i.status === 'na').length;
+  const t = document.getElementById('daily-prog-t');
+  const c = document.getElementById('daily-prog-c');
+  const i = document.getElementById('daily-prog-i');
+  if (t) t.textContent = 'เช็คลิสต์' + (currentDaily.shift === 'open' ? 'เปิดร้าน' : 'ปิดร้าน');
+  if (c) c.textContent = done + ' / ' + items.length;
+  if (i) i.style.width = (items.length ? (done / items.length * 100) : 0) + '%';
+}
+
 function renderDailyForm() {
   renderDailySectionTabs();
+  _paintDailyProgress();
   const container = document.getElementById('daily-sections-container');
   const secs = _dailySections(currentDaily.items);
   let html = '';
@@ -10580,6 +10801,16 @@ function showJaedaengHub() {
   hideAllScreens();
   document.getElementById('jaedaeng-hub-screen').style.display = 'block';
   setActiveNav('nav-jd-hub');
+  /* หัวการ์ดชุดเดียวกับหน้าเปิด-ปิดร้าน — แบรนด์ที่กำลังดูและคนที่ล็อกอินอยู่ */
+  const _sub = document.getElementById('jd-hd-sub');
+  if (_sub) {
+    const _b = CK_BRANDS[currentView || (currentUser && currentUser.brand)];
+    _sub.textContent = _b ? _b.name : 'ตรวจโดย BZM · เช็คพิกัดหน้าร้าน';
+  }
+  const _u = document.getElementById('jd-hd-user');
+  if (_u) _u.textContent = (currentUser && (currentUser.nick || currentUser.name)) || '—';
+  const _d = document.getElementById('jd-today-label');
+  if (_d) _d.textContent = fmtDateThaiShort(todayDateStr());
   renderJaedaengList();
 }
 
@@ -10624,16 +10855,22 @@ function renderJaedaengList() {
       ? `<button type="button" class="jd-history-edit" title="แก้ไขผลตรวจ" onclick="event.stopPropagation();editJaedaengAudit('${escapeAttr(r.id)}')"><span class="material-symbols-rounded">edit</span></button>`
         + `<button type="button" class="jd-history-del" data-ck-action="delete-jd" title="ลบผลตรวจ" onclick="deleteJaedaengFromList(event, '${escapeAttr(r.id)}', '${escapeAttr(r.storeName||'')}')"><span class="material-symbols-rounded">delete</span></button>`
       : '';
-    return `<div class="jd-history-card ${tier}" onclick="showJaedaengDetail('${escapeAttr(r.id)}')">
-      <div>
-        <div class="jd-history-name">${escapeHtml(r.storeName || '-')}</div>
-        <div class="jd-history-meta">${escapeHtml(fmtDateDMY(r.date))}${r.time ? ' · ' + escapeHtml(r.time) : ''} · ผู้ตรวจ ${escapeHtml(r.auditor || '-')} · ผ่าน ${r.passCount}/${r.totalCount - r.naCount} ข้อ</div>
-        ${gpsLine}
+    /* แถวเดียวจบเหมือนหน้าเปิด-ปิดร้าน — ชื่อสาขา · คะแนน · ชิปบอกวันเวลาและผู้ตรวจ
+       แถบซ้ายบอกระดับคะแนน ไม่ต้องมีป้ายข้อความซ้ำอีก */
+    const rowTone = r.passPct >= 90 ? 'r-ok' : (r.passPct >= 70 ? '' : 'r-bad');
+    const scoreColor = r.passPct >= 90 ? 'var(--success)' : r.passPct >= 70 ? '#C77800' : 'var(--danger)';
+    return `<div class="ck-row ${rowTone}" onclick="showJaedaengDetail('${escapeAttr(r.id)}')">
+      <div class="ck-row-top">
+        <span class="ck-row-nm">${escapeHtml(r.storeName || '-')}</span>
+        <span class="ck-row-pc" style="color:${scoreColor};">${r.passPct.toFixed(0)}<small>%</small></span>
+        ${adminBtns ? `<span class="jd-history-actions" onclick="event.stopPropagation();">${adminBtns}</span>` : ''}
       </div>
-      <div class="jd-history-right">
-        <div class="jd-history-score">${r.passPct.toFixed(1)}<span class="jd-history-score-unit"> %</span></div>
-        <div class="jd-history-actions">${adminBtns}</div>
+      <div class="ck-row-ft">
+        <span class="ck-chip"><span class="material-symbols-rounded">schedule</span>${escapeHtml(fmtDateThaiShort(r.date))}${r.time ? ' ' + escapeHtml(r.time) : ''}</span>
+        <span class="ck-chip">ผ่าน ${r.passCount}/${r.totalCount - r.naCount}</span>
+        <span class="ck-chip">${escapeHtml(r.auditor || '-')}</span>
       </div>
+      ${gpsLine}
     </div>`;
   }).join('');
   applyCkPerms();   // ปุ่มลบวาดใหม่ทุกครั้ง — ต้องบังคับสิทธิ์ซ้ำ ไม่งั้นหลุดการควบคุม
@@ -11054,8 +11291,20 @@ function setJDNaReason(idx, ri) {
   renderJaedaengForm();
 }
 
+/* นับข้อที่ตอบแล้วทั้งชุด — ตัวเลขเดียวกับที่คนตรวจอยากรู้ว่าเหลืออีกเท่าไร */
+function _paintJDProgress() {
+  if (!currentJDAudit) return;
+  const items = currentJDAudit.items || [];
+  const done = items.filter(i => i.status === 'pass' || i.status === 'fail' || i.status === 'na').length;
+  const c = document.getElementById('jd-prog-c');
+  const i = document.getElementById('jd-prog-i');
+  if (c) c.textContent = done + ' / ' + items.length;
+  if (i) i.style.width = (items.length ? (done / items.length * 100) : 0) + '%';
+}
+
 function renderJaedaengForm() {
   renderJaedaengSectionTabs();
+  _paintJDProgress();
   const container = document.getElementById('jaedaeng-sections-container');
   let html = '';
   JAEDAENG_CHECKLIST.forEach((sec, sIdx) => {
