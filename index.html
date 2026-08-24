@@ -123,18 +123,24 @@ body {
 }
 
 /* ========== HEADER ========== */
+/* ── หัวจอ ──
+   ของเดิมเป็นแถบไล่สีทึบตัวหนังสือขาว ซึ่งกินพื้นที่สีเข้มไปเกือบ 15% ของจอ
+   และทำให้สีแบรนด์ไปกองอยู่ที่แถบเดียวแทนที่จะไปอยู่กับของที่กดได้
+   เปลี่ยนเป็นแถบขาวตัวหนังสือเข้ม มีเส้นคั่นบาง ๆ ด้านล่าง
+   สีแบรนด์ย้ายไปอยู่ที่ปุ่ม/แท่ง/หัวข้อ ซึ่งเป็นที่ที่ควรดึงสายตาจริง ๆ */
 .app-header {
-  background: var(--app-gradient);
-  color: white;
-  padding: 16px 20px calc(16px + env(safe-area-inset-top));
-  padding-top: calc(16px + env(safe-area-inset-top));
+  background: var(--surface);
+  color: var(--text);
+  padding: 12px 16px calc(12px + env(safe-area-inset-top));
+  padding-top: calc(12px + env(safe-area-inset-top));
   position: static;
   z-index: 100;
-  box-shadow: 0 4px 12px rgba(168,37,24,0.10);
-  text-shadow: 0 1px 2px rgba(0,0,0,0.18);
+  border-bottom: 1px solid var(--border);
+  box-shadow: none;
+  text-shadow: none;
 }
 @media (max-width: 1023px) {
-  .app-header { padding: 12px 16px; padding-top: calc(12px + env(safe-area-inset-top)); }
+  .app-header { padding: 11px 14px; padding-top: calc(11px + env(safe-area-inset-top)); }
   .app-header h1 { font-size: 14px; }
   .app-header .app-user-line { font-size: 11px; }
 }
@@ -148,9 +154,9 @@ body {
 }
 .app-header h1 .app-title-text { display: block; }
 .app-header .app-user-line {
-  font-size: 13px; font-weight: 700;
-  color: rgba(255,255,255,0.95);
-  margin-top: 6px;
+  font-size: 12px; font-weight: 700;
+  color: var(--text-tertiary);
+  margin-top: 2px;
   letter-spacing: 0.1px;
   text-align: left;
 }
@@ -164,14 +170,17 @@ body {
 .header-view-toggle {
   display: inline-flex; gap: 2px;
   padding: 3px;
-  background: rgba(0,0,0,0.18);
+  /* หัวจอเป็นพื้นขาวแล้ว ปุ่มสลับแบรนด์จึงต้องเป็นตัวหนังสือเข้มบนพื้นเทาอ่อน
+     ของเดิมเป็นขาวจาง ๆ บนพื้นเข้ม พอย้ายมาพื้นขาวแล้วแทบมองไม่เห็น */
+  background: var(--bg-strong);
+  border: 1px solid var(--border);
   border-radius: var(--r-pill);
 }
 .header-view-pill {
   padding: 5px 10px;
   border: none; background: transparent;
   font-size: 11px; font-weight: 800;
-  color: rgba(255,255,255,0.7);
+  color: var(--text-secondary);
   cursor: pointer;
   border-radius: var(--r-pill);
   font-family: inherit;
@@ -179,14 +188,14 @@ body {
   letter-spacing: 0.1px;
 }
 .header-view-pill.active {
-  background: white;
-  color: var(--primary);
-  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+  background: var(--primary);
+  color: #fff;
+  box-shadow: none;
 }
 .header-tool-btn {
   display: inline-flex; align-items: center; gap: 4px;
   padding: 6px 10px;
-  background: rgba(0,0,0,0.18);
+  background: var(--bg-strong);
   border: none;
   border-radius: var(--r-pill);
   font-size: 11px; font-weight: 800;
@@ -4597,16 +4606,18 @@ body:has(#login-screen.active) {
   .nav-dash-btn.active::after,
   .nav-audit-btn.active::after,
   .nav-daily-btn.active::after { background: var(--primary); }
+  /* ── เมนูล่าง ──
+     ของเดิมถมสีเต็มปุ่มสองปุ่ม (กลับเมนูหลัก + ออกระบบ) ทำให้แถบล่าง
+     ดึงสายตามากกว่าเนื้อหาในหน้า ทั้งที่เป็นแค่ทางผ่าน
+     ให้ทั้งสี่ปุ่มเรียบเท่ากัน แล้วใช้สีบอกแค่ว่าตอนนี้อยู่หน้าไหน */
   .bottom-nav .nav-back-hub-btn {
-    color: #ffffff !important; font-weight: 800;
-    /* ปุ่มกลับเมนูหลักเป็นปุ่มพาไปที่อื่น ใช้สีแบรนด์
-       ส่วนปุ่มออกระบบยังเป็นสีแดงตามปกติ เพราะเป็นการออก ไม่ใช่การไปต่อ */
-    background: var(--primary);
+    color: var(--text-tertiary) !important; font-weight: 700;
+    background: transparent;
     border-radius: 12px;
     margin: 4px 3px;
     min-height: 50px;
   }
-  .bottom-nav .nav-back-hub-btn .material-symbols-rounded { color: #ffffff !important; }
+  .bottom-nav .nav-back-hub-btn .material-symbols-rounded { color: var(--text-tertiary) !important; }
   .bottom-nav .nav-back-hub-btn.active::after { display: none; }
   .bottom-nav .nav-logout-btn {
     /* เดิมถมสีแดงเต็มปุ่ม พอปุ่มกลับเมนูหลักมาใช้สีแบรนด์
