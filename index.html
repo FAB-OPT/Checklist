@@ -6970,6 +6970,13 @@ function _clearDailyDraft() {
    ผู้ใช้ต้องกด "ดูย้อนหลังทั้งหมด" ถึงจะดึง ไม่จำเป็นต้องอยู่ในแคช
    รายการที่ยังส่งขึ้นคลาวด์ไม่สำเร็จ (_pendingSync) ต้องเก็บไว้เสมอ ห้ามตัด */
 const CACHE_KEEP_DAYS = 30;      // เท่ากับช่วงที่เครื่องใหม่ดึงมาตอนแรก
+/* เพดานขนาดต่อคีย์ — localStorage เป็นโควตาก้อนเดียวของทั้งโดเมน
+   ระบบอื่นในฮับใช้ก้อนเดียวกันนี้ ที่นี่โตได้อิสระจนถึง 8 MB จากเพดาน 10 MB
+   ระบบที่เหลือจึงเขียนอะไรไม่ลงและข้อมูลที่ซิงค์มาหายเงียบ ๆ โดยไม่มีใครรู้
+   (เจอจริงกับ Visit สาขา — ดึงข้อมูลมาได้แต่บันทึกไม่ลง แล้วรายงานว่าซิงค์สำเร็จ)
+   การรอให้เขียนพลาดก่อนค่อยหดจึงไม่พอ ต้องกันที่ให้เพื่อนบ้านไว้ตั้งแต่แรก
+   30 วันที่ตัดทิ้งไปไม่ได้หาย ยังดึงกลับได้ด้วย "ดูย้อนหลังทั้งหมด" */
+const CACHE_MAX_BYTES = 2.2 * 1024 * 1024;
 function _writeShrinkingCache(key, records, label) {
   const all = (records || []).filter(Boolean);
   const must = all.filter(d => d._pendingSync);
@@ -6979,10 +6986,15 @@ function _writeShrinkingCache(key, records, label) {
     .sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));   // ใหม่ก่อน
 
   let n = recent.length;
-  for (let guard = 0; guard < 20; guard++) {
+  for (let guard = 0; guard < 30; guard++) {
+    const kept = must.concat(recent.slice(0, n));
+    const str = JSON.stringify(_liteAuditsForCache(kept));
+    /* ยาวเกินเพดานก็ตัดก่อนเลย ไม่ต้องรอให้เบราว์เซอร์ปฏิเสธ
+       ตัดทีละ 30% ให้ลู่เข้าเร็วโดยไม่ทิ้งของทิ้งขว้างเกินจำเป็น
+       (นับ 2 ไบต์ต่อตัวอักษร เพราะโควตาคิดแบบ UTF-16) */
+    if (n > 0 && str.length * 2 > CACHE_MAX_BYTES) { n = Math.floor(n * 0.7); continue; }
     try {
-      const kept = must.concat(recent.slice(0, n));
-      localStorage.setItem(key, JSON.stringify(_liteAuditsForCache(kept)));
+      localStorage.setItem(key, str);
       if (n < recent.length) {
         console.warn('[' + label + '] พื้นที่ในเครื่องไม่พอ เก็บได้ ' + n + '/' + recent.length + ' รายการ (ล่าสุดก่อน)');
       }
