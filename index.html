@@ -5158,6 +5158,53 @@ html.fab-sso-pending #login-screen { display: none !important; }
 .sf-bm-del { background:none; border:none; cursor:pointer; color:var(--danger); display:flex; padding:4px; border-radius:6px; }
 .sf-bm-del:hover { background:var(--danger-bg); }
 
+
+/* ── กราฟกับแถวอันดับสาขาในแดชบอร์ด ──
+   เส้น 2px · จุดปลายมีวงแหวนสีพื้น · เส้นกริดเป็นเส้นทึบบาง ๆ
+   เส้นประใช้เฉพาะเส้นเกณฑ์ ซึ่งไม่ใช่เส้นกริด
+   ป้ายเส้นเกณฑ์มีขอบสีพื้นล้อมไว้ อ่านออกแม้ไปทับเส้นข้อมูล */
+.sfc-chart { position:relative; }
+.sfc-h { display:flex; align-items:baseline; gap:8px; margin-bottom:8px; }
+.sfc-t { font-size:12.5px; font-weight:800; color:var(--text); }
+.sfc-s { font-size:11px; font-weight:600; color:var(--text-tertiary); }
+.sfc-now { margin-left:auto; font-size:16px; font-weight:800; color:var(--primary); }
+.sfc-now small { font-size:10px; color:var(--text-tertiary); margin-left:2px; }
+.sfc-chart svg { display:block; width:100%; }
+.sfc-gl { stroke:var(--border); stroke-width:1; }
+.sfc-thr { stroke:var(--border-strong); stroke-width:1; stroke-dasharray:4 4; }
+.sfc-ln { fill:none; stroke:var(--primary); stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+.sfc-ar { fill:var(--primary); opacity:.10; }
+.sfc-dot { fill:var(--primary); stroke:var(--surface); stroke-width:2; }
+.sfc-tk { font-size:9px; fill:var(--text-tertiary); font-weight:700; font-family:inherit; }
+.sfc-thrlb { paint-order:stroke; stroke:var(--surface); stroke-width:3; stroke-linejoin:round; }
+
+.sfc-rank { position:relative; overflow:hidden; background:var(--surface);
+  border:1px solid var(--border); border-radius:var(--r-md);
+  padding:10px 12px; box-shadow:var(--shadow-sm); }
+.sfc-rank + .sfc-rank { margin-top:8px; }
+.sfc-rank::before { content:''; position:absolute; left:0; top:0; bottom:0; width:3px; background:var(--primary); }
+.sfc-rank.ok::before { background:var(--success); }
+.sfc-rank.bad::before { background:var(--danger); }
+.sfc-rank-top { display:flex; align-items:center; gap:9px; }
+.sfc-rank-no { flex:0 0 auto; width:21px; height:21px; border-radius:7px;
+  background:var(--surface-2); border:1px solid var(--border);
+  display:grid; place-items:center; font-size:11px; font-weight:800; color:var(--text-tertiary); }
+.sfc-rank-nm { flex:1; min-width:0; font-size:13px; font-weight:700; color:var(--text);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.sfc-rank-pc { font-size:15px; font-weight:800; color:var(--text); font-variant-numeric:tabular-nums; }
+.sfc-rank-pc small { font-size:10px; font-weight:700; color:var(--text-tertiary); }
+.sfc-bar { height:5px; border-radius:3px; background:var(--border); margin:8px 0 7px; overflow:hidden; }
+.sfc-bar i { display:block; height:100%; border-radius:3px; background:var(--primary); }
+.sfc-rank.ok .sfc-bar i { background:var(--success); }
+.sfc-rank.bad .sfc-bar i { background:var(--danger); }
+.sfc-rank-ft { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+.sfc-chip { font-size:10.5px; font-weight:700; padding:3px 8px; border-radius:999px;
+  background:var(--surface-2); border:1px solid var(--border); color:var(--text-secondary); }
+.sfc-chip.is-bad { background:var(--danger-bg); border-color:transparent; color:var(--danger); }
+.sfc-chip.is-ok { background:var(--success-bg); border-color:transparent; color:var(--success); }
+.sfc-chip.is-tone { margin-left:auto; background:var(--primary-50); border-color:var(--primary-100); color:var(--primary-dark); }
+.sfc-cut { font-size:11px; font-weight:700; color:var(--text-tertiary); text-align:center; margin:10px 0 8px; }
+
 /* ── Polish แดชบอร์ดซานตาเฟ่ (scope #dashboard-screen — ไม่กระทบเจ๊แดง) ── */
 #dashboard-screen .jd-dash-kpis { gap:12px; }
 /* มือถือ: กล่อง KPI อยู่บรรทัดเดียว (nowrap) ทรงคอมแพ็ค ไอคอนบน + ตัวเลข + ป้าย กึ่งกลาง */
@@ -5481,6 +5528,14 @@ html.fab-sso-pending #login-screen { display: none !important; }
           </select>
         </div>
         <div class="jd-dash-kpis" id="sf-cl-kpis"></div>
+        <div class="card">
+          <div class="card-header"><h2>แนวโน้มคะแนน <span class="card-header-en">Score trend</span></h2></div>
+          <div id="sf-cl-trend"><div class="jd-dash-empty">กำลังโหลด…</div></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><h2>คะแนนเฉลี่ยต่อสาขา <span class="card-header-en">Average by branch</span></h2></div>
+          <div id="sf-cl-branches"><div class="jd-dash-empty">กำลังโหลด…</div></div>
+        </div>
         <div class="card">
           <div class="card-header"><span class="material-symbols-rounded" style="color:var(--danger);">priority_high</span><h2>หัวข้อที่ตกบ่อย <span class="card-header-en">Top failed items · รายวัน เปิด-ปิดร้าน</span></h2></div>
           <div id="sf-daily-topfails"><div class="jd-dash-empty">กำลังโหลด…</div></div>
@@ -7890,6 +7945,113 @@ function hideAllScreens() {
 }
 
 // ============ DASHBOARD ============
+
+/* ═══════════ แนวโน้มคะแนน + คะแนนต่อสาขา ═══════════
+   สองอย่างที่แดชบอร์ดเดิมไม่มี — เดิมบอกได้แค่ "ตอนนี้เท่าไร"
+   แต่ไม่บอกว่า "ดีขึ้นหรือแย่ลง" และ "สาขาไหนเป็นตัวถ่วง" */
+
+/* คะแนนเฉลี่ยรายวัน 14 วันหลังสุดที่มีข้อมูล
+   แกนตั้งไม่เริ่มที่ 0 — ช่วงล่างแทบไม่เคยเกิดและกินที่จนเส้นแบนอ่านไม่ออก
+   เขียนตัวเลขกำกับแกนไว้ทุกขีดกันเข้าใจผิดว่าเริ่มจากศูนย์
+   เส้นเดียวจึงไม่ต้องมีกล่องคำอธิบายสี · ป้ายตัวเลขติดเฉพาะค่าล่าสุด */
+function _sfTrendHTML(records) {
+  const byDate = {};
+  (records || []).forEach(function (r) {
+    const d = r && r.date;
+    if (!d) return;
+    if (!byDate[d]) byDate[d] = { sum: 0, n: 0 };
+    byDate[d].sum += Number(r.passPct) || 0;
+    byDate[d].n++;
+  });
+  const days = Object.keys(byDate).sort().slice(-14)
+    .map(function (d) { return { d: d, v: Math.round(byDate[d].sum / byDate[d].n) }; });
+  if (days.length < 2) {
+    return '<div class="jd-dash-empty">ยังมีข้อมูลไม่พอวาดกราฟ — ต้องมีอย่างน้อย 2 วัน</div>';
+  }
+
+  const W = 300, H = 122, PL = 26, PR = 16, PT = 12, PB = 22;
+  const lo = 60, hi = 100, target = 80;
+  const x = function (i) { return PL + (W - PL - PR) * i / (days.length - 1); };
+  const y = function (v) {
+    const c = Math.max(lo, Math.min(hi, v));
+    return PT + (H - PT - PB) * (1 - (c - lo) / (hi - lo));
+  };
+  const path = days.map(function (p, i) {
+    return (i ? 'L' : 'M') + x(i).toFixed(1) + ' ' + y(p.v).toFixed(1);
+  }).join(' ');
+  const area = path + ' L' + x(days.length - 1).toFixed(1) + ' ' + (H - PB) +
+               ' L' + PL + ' ' + (H - PB) + ' Z';
+  const grid = [lo, 80, hi].map(function (v) {
+    return '<line class="sfc-gl" x1="' + PL + '" x2="' + (W - PR) + '" y1="' + y(v) + '" y2="' + y(v) + '"/>' +
+           '<text class="sfc-tk" x="' + (PL - 6) + '" y="' + (y(v) + 3) + '" text-anchor="end">' + v + '</text>';
+  }).join('');
+  const last = days[days.length - 1];
+  const hits = days.map(function (p, i) {
+    return '<title>' + escapeHtml(fmtDateDMY(p.d)) + ' · ' + p.v + '%</title>';
+  });
+  return '' +
+  '<div class="sfc-chart">' +
+    '<div class="sfc-h"><span class="sfc-t">คะแนนเฉลี่ยรายวัน</span>' +
+      '<span class="sfc-s">' + days.length + ' วันล่าสุด</span>' +
+      '<span class="sfc-now">' + last.v + '<small>%</small></span></div>' +
+    '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="กราฟคะแนนเฉลี่ยรายวัน ค่าล่าสุด ' + last.v + ' เปอร์เซ็นต์">' +
+      grid +
+      '<path class="sfc-ar" d="' + area + '"/>' +
+      '<line class="sfc-thr" x1="' + PL + '" x2="' + (W - PR) + '" y1="' + y(target) + '" y2="' + y(target) + '"/>' +
+      '<text class="sfc-tk sfc-thrlb" x="' + (PL + 3) + '" y="' + (y(target) - 5) + '">เกณฑ์ ' + target + '%</text>' +
+      '<path class="sfc-ln" d="' + path + '"/>' +
+      '<circle class="sfc-dot" cx="' + x(days.length - 1).toFixed(1) + '" cy="' + y(last.v).toFixed(1) + '" r="4.5"/>' +
+      '<text class="sfc-tk" x="' + PL + '" y="' + (H - 6) + '">' + escapeHtml(fmtDateDMY(days[0].d)) + '</text>' +
+      '<text class="sfc-tk" x="' + (W - PR) + '" y="' + (H - 6) + '" text-anchor="end">' + escapeHtml(fmtDateDMY(last.d)) + '</text>' +
+    '</svg>' +
+  '</div>';
+}
+
+/* คะแนนเฉลี่ยต่อสาขา เรียงจากมากไปน้อย
+   แถบสีซ้ายบอกระดับ (ดี/กลาง/ต้องปรับปรุง) โดยมีตัวหนังสือกำกับเสมอ
+   ไม่ได้ใช้สีบอกอย่างเดียว */
+function _sfBranchRankHTML(records) {
+  const by = {};
+  (records || []).forEach(function (r) {
+    const k = String((r && r.branchCode) || '');
+    if (!k) return;
+    if (!by[k]) by[k] = { name: r.branchName || k, sum: 0, n: 0, fail: 0 };
+    by[k].sum += Number(r.passPct) || 0;
+    by[k].n++;
+    by[k].fail += Number(r.failCount) || 0;
+  });
+  const rows = Object.keys(by).map(function (k) {
+    const b = by[k];
+    return { code: k, name: b.name, pct: Math.round(b.sum / b.n), n: b.n, fail: b.fail };
+  }).sort(function (a, b) { return b.pct - a.pct; });
+  if (!rows.length) return '<div class="jd-dash-empty">ยังไม่มีผลตรวจในช่วงที่เลือก</div>';
+
+  /* สาขาเยอะ (>10) โชว์ 5 บนกับ 5 ล่าง — ตรงกลางไม่ใช่สิ่งที่ต้องตัดสินใจอะไร
+     และบอกไว้ด้วยว่าตัดตรงกลางออกกี่สาขา ไม่ใช่เงียบ ๆ */
+  let show = rows, cut = 0;
+  if (rows.length > 10) { show = rows.slice(0, 5).concat(rows.slice(-5)); cut = rows.length - 10; }
+
+  return show.map(function (b, i) {
+    const rank = (cut && i >= 5) ? (rows.length - 5 + (i - 5) + 1) : (i + 1);
+    const tone = b.pct >= 90 ? 'ok' : (b.pct < 80 ? 'bad' : '');
+    const tier = b.pct >= 90 ? 'ดีเยี่ยม' : (b.pct >= 80 ? 'ดี' : 'ปรับปรุง');
+    return (cut && i === 5 ? '<div class="sfc-cut">ตัดกลางออก ' + cut + ' สาขา</div>' : '') +
+      '<div class="sfc-rank ' + tone + '">' +
+        '<div class="sfc-rank-top">' +
+          '<span class="sfc-rank-no">' + rank + '</span>' +
+          '<span class="sfc-rank-nm">' + escapeHtml(b.name) + '</span>' +
+          '<span class="sfc-rank-pc">' + b.pct + '<small>%</small></span>' +
+        '</div>' +
+        '<div class="sfc-bar"><i style="width:' + Math.max(0, Math.min(100, b.pct)) + '%"></i></div>' +
+        '<div class="sfc-rank-ft">' +
+          '<span class="sfc-chip">ส่ง ' + b.n + ' ครั้ง</span>' +
+          (b.fail ? '<span class="sfc-chip is-bad">ตก ' + b.fail + ' ข้อ</span>' : '<span class="sfc-chip is-ok">ผ่านทุกข้อ</span>') +
+          '<span class="sfc-chip is-tone">' + tier + '</span>' +
+        '</div>' +
+      '</div>';
+  }).join('');
+}
+
 function showDashboard() {
   hideAllScreens();
   document.getElementById('dashboard-screen').style.display = 'block';
@@ -7915,6 +8077,10 @@ function renderSfChecklistTab() {
   const tEl  = document.getElementById('sf-daily-times');
   const tblEl = document.getElementById('sf-daily-table');
   if (kEl)  kEl.innerHTML  = _sfDailyKpisHTML(dailies);
+  const trEl = document.getElementById('sf-cl-trend');
+  const brEl = document.getElementById('sf-cl-branches');
+  if (trEl) trEl.innerHTML = _sfTrendHTML(dailies);
+  if (brEl) brEl.innerHTML = _sfBranchRankHTML(dailies);
   if (tfEl) tfEl.innerHTML = _sfDailyTopFailsHTML(dailies);
   if (tblEl) tblEl.innerHTML = _sfDailyTableHTML();
   if (tEl)  tEl.innerHTML  = _sfDailyTimesHTML(dailies);
