@@ -5214,6 +5214,15 @@ html.fab-sso-pending #login-screen { display: none !important; }
    ใช้ภาษาเดียวกับแดชบอร์ด: หัวข้อคั่นมีแถบสีแบรนด์ · การ์ดขอบบาง เงาอ่อน
    สีแบรนด์สงวนไว้ให้ "สิ่งที่ต้องทำต่อ" เท่านั้น (ปุ่มกะที่ยังไม่ได้ส่ง · ปุ่มส่งผล)
    ของที่ทำเสร็จแล้วถอยไปเป็นสีเทา จะได้กวาดตาแล้วเห็นงานค้างทันที */
+/* หน้าที่มีหัวการ์ดของตัวเองไม่ต้องมีชื่อระบบบนแถบบนอีก — เป็นข้อความเดียวกัน
+   สองบรรทัดซ้อนกัน กินจอไปฟรี ๆ ราว 70px ก่อนถึงเนื้อหาจริง
+   แถบบนยังอยู่เพราะมีปุ่มสลับแบรนด์ ตัดเฉพาะส่วนที่ซ้ำ */
+body.has-page-head .app-header-stack { display:none; }
+body.has-page-head .app-header-inner { justify-content:flex-end; }
+body.has-page-head .app-header { padding-top:6px; padding-bottom:6px; }
+/* ไม่มีปุ่มสลับแบรนด์ (สาขาเห็นแบรนด์เดียว) แถบบนก็ไม่เหลืออะไร ซ่อนทั้งแถบ */
+body.has-page-head.no-header-tools .app-header { display:none; }
+
 .ck-hd { display:flex; align-items:center; gap:11px; background:var(--surface);
   border:1px solid var(--border); border-radius:14px; padding:12px 13px; box-shadow:var(--shadow-sm); }
 .ck-hd-ic { width:38px; height:38px; border-radius:11px; background:var(--primary-100);
@@ -8171,12 +8180,21 @@ function setActiveNav(id) {
   if (el) el.classList.add('active');
 }
 
+/* แถบบนเหลือไว้เพราะมีปุ่มสลับแบรนด์ — ถ้าผู้ใช้คนนี้ไม่มีปุ่มนั้น ก็ไม่เหลืออะไร
+   ปล่อยไว้จะกลายเป็นแถบเปล่า ๆ คั่นหัวการ์ดกับขอบจอเฉย ๆ */
+function _ckSyncHeader() {
+  const tools = document.getElementById('header-tools');
+  const empty = !tools || tools.childElementCount === 0;
+  document.body.classList.toggle('no-header-tools', empty);
+}
+
 function hideAllScreens() {
   ['dashboard-screen','info-screen','checklist-screen','summary-screen','daily-hub-screen','daily-form-screen','daily-detail-screen','jaedaeng-dashboard-screen','jaedaeng-hub-screen','jaedaeng-audit-screen','jaedaeng-detail-screen'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.style.display = 'none';
   });
   document.body.classList.remove('in-audit');  // ออกจากฟอร์มตรวจ → โชว์เมนูล่างปกติ
+  document.body.classList.remove('has-page-head');   // หน้าถัดไปตั้งเองถ้ามีหัวการ์ด
 }
 
 // ============ DASHBOARD ============
@@ -9236,6 +9254,8 @@ function getVisibleDailyChecklists() {
 function showDailyHub() {
   hideAllScreens();
   document.getElementById('daily-hub-screen').style.display = 'block';
+  document.body.classList.add('has-page-head');
+  _ckSyncHeader();
   setActiveNav('nav-daily');
 
   const branchActions = document.getElementById('daily-branch-actions');
@@ -10800,6 +10820,8 @@ function renderJaedaengDashboard() {
 function showJaedaengHub() {
   hideAllScreens();
   document.getElementById('jaedaeng-hub-screen').style.display = 'block';
+  document.body.classList.add('has-page-head');
+  _ckSyncHeader();
   setActiveNav('nav-jd-hub');
   /* หัวการ์ดชุดเดียวกับหน้าเปิด-ปิดร้าน — แบรนด์ที่กำลังดูและคนที่ล็อกอินอยู่ */
   const _sub = document.getElementById('jd-hd-sub');
