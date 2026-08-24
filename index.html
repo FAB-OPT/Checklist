@@ -5211,6 +5211,15 @@ html.fab-sso-pending #login-screen { display: none !important; }
   font-size:11px; font-weight:700; color:var(--text-tertiary); }
 .sfc-fail-s .sf-fail-toggle { margin-left:auto; }
 
+
+/* หัวข้อคั่นนอกการ์ด — ใช้กับส่วนที่ไม่ได้อยู่ในกล่อง เช่นแถวตัวเลขสรุป
+   แถบสีแบรนด์ทำหน้าที่เดียวกับที่อยู่ในหัวการ์ด จะได้เป็นภาษาเดียวกันทั้งหน้า */
+.sfc-sec { display:flex; align-items:center; gap:8px; margin:18px 2px 10px; }
+.sfc-sec:first-child { margin-top:2px; }
+.sfc-sec-bar { flex:0 0 auto; width:3px; height:15px; border-radius:2px; background:var(--primary); }
+.sfc-sec-t { font-size:13px; font-weight:800; color:var(--text); }
+.sfc-sec-x { margin-left:auto; font-size:11.5px; font-weight:700; color:var(--primary); }
+
 /* ── Polish แดชบอร์ดซานตาเฟ่ (scope #dashboard-screen — ไม่กระทบเจ๊แดง) ── */
 #dashboard-screen .jd-dash-kpis { gap:12px; }
 /* มือถือ: กล่อง KPI อยู่บรรทัดเดียว (nowrap) ทรงคอมแพ็ค ไอคอนบน + ตัวเลข + ป้าย กึ่งกลาง */
@@ -5518,6 +5527,30 @@ html.fab-sso-pending #login-screen { display: none !important; }
     <div id="dashboard-screen" style="display:none;">
       <!-- Operations Checklist (Daily เปิด-ปิดร้าน) -->
       <div id="sf-tab-checklist">
+        <!-- ── ลำดับหน้า ──
+             ภาพรวม → แนวโน้ม → อันดับสาขา → หัวข้อที่ตกบ่อย ขึ้นก่อน
+             เพราะเป็นสิ่งที่คนเปิดแดชบอร์ดมาดู
+             ส่วนสถานะวันนี้ ปุ่มออกรายงาน และตัวกรอง ย้ายลงไปอยู่ล่าง
+             ของพวกนี้เป็นเครื่องมือ ไม่ใช่คำตอบ จึงไม่ควรมาบังคำตอบ
+             ช่วงเวลาที่กรองอยู่เขียนไว้ในหัวข้อ "ภาพรวม" แล้ว จะได้รู้ว่าตัวเลขคิดจากช่วงไหน -->
+        <div class="sfc-sec"><span class="sfc-sec-bar"></span>
+          <span class="sfc-sec-t">ภาพรวม</span>
+          <span class="sfc-sec-x" id="sf-cl-period">ทั้งหมด</span></div>
+        <div class="jd-dash-kpis" id="sf-cl-kpis"></div>
+        <div class="card">
+          <div class="card-header"><h2>แนวโน้มคะแนน <span class="card-header-en">Score trend</span></h2></div>
+          <div id="sf-cl-trend"><div class="jd-dash-empty">กำลังโหลด…</div></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><h2>คะแนนเฉลี่ยต่อสาขา <span class="card-header-en">Average by branch</span></h2></div>
+          <div id="sf-cl-branches"><div class="jd-dash-empty">กำลังโหลด…</div></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><span class="material-symbols-rounded" style="color:var(--danger);">priority_high</span><h2>หัวข้อที่ตกบ่อย <span class="card-header-en">Top failed items · รายวัน เปิด-ปิดร้าน</span></h2></div>
+          <div id="sf-daily-topfails"><div class="jd-dash-empty">กำลังโหลด…</div></div>
+        </div>
+        <div class="sfc-sec"><span class="sfc-sec-bar"></span>
+          <span class="sfc-sec-t">เครื่องมือและรายละเอียด</span></div>
         <!-- สถานะวันนี้ — เรื่องเดียวที่ต้องรู้ทันทีตอนเปิดหน้า: ใครยังไม่ส่ง
              ของเดิมบอกแต่ "ส่งไปแล้วกี่ครั้ง" ซึ่งตอบไม่ได้ว่าขาดใครบ้าง -->
         <div id="sf-today-status"></div>
@@ -5532,19 +5565,6 @@ html.fab-sso-pending #login-screen { display: none !important; }
           <select id="sf-cl-scope-select" class="jd-form-input" onchange="setSfClScope(this.value)">
             <option value="all">ดูทุกโซน · ทุกสาขา</option>
           </select>
-        </div>
-        <div class="jd-dash-kpis" id="sf-cl-kpis"></div>
-        <div class="card">
-          <div class="card-header"><h2>แนวโน้มคะแนน <span class="card-header-en">Score trend</span></h2></div>
-          <div id="sf-cl-trend"><div class="jd-dash-empty">กำลังโหลด…</div></div>
-        </div>
-        <div class="card">
-          <div class="card-header"><h2>คะแนนเฉลี่ยต่อสาขา <span class="card-header-en">Average by branch</span></h2></div>
-          <div id="sf-cl-branches"><div class="jd-dash-empty">กำลังโหลด…</div></div>
-        </div>
-        <div class="card">
-          <div class="card-header"><span class="material-symbols-rounded" style="color:var(--danger);">priority_high</span><h2>หัวข้อที่ตกบ่อย <span class="card-header-en">Top failed items · รายวัน เปิด-ปิดร้าน</span></h2></div>
-          <div id="sf-daily-topfails"><div class="jd-dash-empty">กำลังโหลด…</div></div>
         </div>
         <div class="card">
           <div class="card-header"><span class="material-symbols-rounded" style="color:#0E7490;">table_chart</span><h2>ตารางการส่ง · เปิด/ปิดร้าน <span class="card-header-en">รายสาขา + สาเหตุที่ส่งช้า</span></h2></div>
@@ -8082,6 +8102,11 @@ function renderSfChecklistTab() {
   const tfEl = document.getElementById('sf-daily-topfails');
   const tEl  = document.getElementById('sf-daily-times');
   const tblEl = document.getElementById('sf-daily-table');
+  const pdEl = document.getElementById('sf-cl-period');
+  if (pdEl) {
+    const _pd = { today:'วันนี้', week:'อาทิตย์นี้', month:'เดือนนี้', all:'ทั้งหมด', custom:'ช่วงที่เลือก' };
+    pdEl.textContent = _pd[sfClDate.type] || 'ทั้งหมด';
+  }
   if (kEl)  kEl.innerHTML  = _sfDailyKpisHTML(dailies);
   const trEl = document.getElementById('sf-cl-trend');
   const brEl = document.getElementById('sf-cl-branches');
