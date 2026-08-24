@@ -5162,13 +5162,26 @@ html.fab-sso-pending #login-screen { display: none !important; }
 #dashboard-screen .jd-dash-kpis { gap:12px; }
 /* มือถือ: กล่อง KPI อยู่บรรทัดเดียว (nowrap) ทรงคอมแพ็ค ไอคอนบน + ตัวเลข + ป้าย กึ่งกลาง */
 @media (max-width:719px){
-  #dashboard-screen #sf-cl-kpis { display:flex; flex-wrap:nowrap; gap:8px; }
-  #dashboard-screen #sf-cl-kpis .sf-kpi { flex:1 1 0; min-width:0; flex-direction:column; align-items:center; text-align:center; gap:6px; padding:12px 5px; }
-  #dashboard-screen #sf-cl-kpis .sf-kpi-ico { width:38px; height:38px; border-radius:11px; }
-  #dashboard-screen #sf-cl-kpis .sf-kpi-ico .material-symbols-rounded { font-size:21px; }
-  #dashboard-screen #sf-cl-kpis .sf-kpi .jd-kpi-label { font-size:10.5px; line-height:1.2; }
-  #dashboard-screen #sf-cl-kpis .sf-kpi .jd-kpi-value { font-size:21px; }
-  #dashboard-screen #sf-cl-kpis .sf-kpi .jd-kpi-sub { font-size:9.5px; }
+  /* ── กล่องตัวเลขสรุปบนมือถือ ──
+     ของเดิมยัด 4 ช่องเรียงแถวเดียว ตัวเลขกับป้ายเลยต้องย่อจนอ่านลำบาก
+     เปลี่ยนเป็นตาราง 2×2 ในกรอบเดียว คั่นด้วยช่อง 1px ที่เห็นสีขอบเป็นพื้นหลัง
+     ได้ที่ให้ตัวเลขตัวโตขึ้น และไม่มีเส้นขอบซ้อนกันตรงรอยต่อ
+     ไอคอนซ่อนไว้ — ป้ายบอกอยู่แล้วว่าเป็นตัวเลขอะไร ไอคอนเลยแค่กินที่ */
+  #dashboard-screen #sf-cl-kpis {
+    display:grid; grid-template-columns:1fr 1fr; gap:1px;
+    background:var(--border); border:1px solid var(--border);
+    border-radius:var(--r-lg); overflow:hidden;
+  }
+  #dashboard-screen #sf-cl-kpis .sf-kpi {
+    background:var(--surface); border:none; border-radius:0; box-shadow:none;
+    flex-direction:column; align-items:flex-start; text-align:left; gap:0; padding:12px 13px;
+  }
+  #dashboard-screen #sf-cl-kpis .sf-kpi-ico { display:none; }
+  #dashboard-screen #sf-cl-kpis .sf-kpi-body { display:flex; flex-direction:column; width:100%; }
+  /* ตัวเลขขึ้นก่อน ป้ายอยู่ใต้ — กวาดตาหาตัวเลขได้เร็วกว่าอ่านป้ายก่อนทุกช่อง */
+  #dashboard-screen #sf-cl-kpis .sf-kpi .jd-kpi-value { font-size:23px; order:1; line-height:1.15; }
+  #dashboard-screen #sf-cl-kpis .sf-kpi .jd-kpi-label { font-size:11.5px; line-height:1.35; order:2; margin-top:1px; }
+  #dashboard-screen #sf-cl-kpis .sf-kpi .jd-kpi-sub { font-size:10.5px; order:3; margin-top:2px; }
 }
 /* เดสก์ท็อป: กล่อง KPI ยืดเต็มความกว้าง ขอบตรงกับกล่องอื่น (3 หรือ 4 กล่องก็เต็มแถว) */
 @media (min-width:720px){
