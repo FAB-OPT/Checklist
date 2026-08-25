@@ -7112,6 +7112,24 @@ function loadLocalAudits() {
   }
 }
 
+/* ตัวอ่านแบบรอผล — ใช้ตอนเปิดแอป
+   ตัวอ่านเดิม (loadLocalX) ยังอยู่ครบ เพราะมีที่อื่นเรียกใช้แบบไม่รอผล
+   ตัวพวกนั้นจะได้เฉพาะรายการที่ยังส่งไม่สำเร็จหลังย้ายเสร็จ ซึ่งพอสำหรับงานที่มันทำ */
+function loadCachedDaily() {
+  return ckLoadCache(DAILY_STORAGE_KEY).then(function (arr) {
+    arr.forEach(function (d) { if (d) _dropBase64Photos(d.items); });
+    return arr;
+  });
+}
+function loadCachedJaedaeng() {
+  return ckLoadCache(JAEDAENG_STORAGE_KEY).then(function (arr) {
+    arr.forEach(function (r) { if (r) _dropBase64Photos(r.items); });
+    const deleted = loadJdDeletedIds();
+    return deleted.size ? arr.filter(r => r && !deleted.has(String(r.id))) : arr;
+  });
+}
+function loadCachedAudits() { return ckLoadCache(STORAGE_KEY); }
+
 async function loadAudits() {
   // ระบบ OSS ถูกถอดออกแล้ว — ไม่มีหน้าจอไหนใช้ allAudits → ไม่ต้องอ่านจาก Firestore
   // (ประหยัดการอ่านทั้ง collection ทุกครั้งที่เปิดแอป) ใช้ cache เครื่องพอ
@@ -7120,12 +7138,7 @@ async function loadAudits() {
 
 function saveAudits() {
   if (testMode) return;
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(allAudits));
-  } catch (e) {
-    console.error('Save failed', e);
-    showModal('บันทึกไม่สำเร็จ', 'ข้อมูลอาจเกินขนาด — ลองลบรูปบางส่วนหรือ Export เก็บไว้');
-  }
+  ckSaveCache(STORAGE_KEY, allAudits, 'audits');
 }
 
 async function saveAuditToBackend(audit) {
@@ -7245,11 +7258,14 @@ function _dailyCoverFrom() {
 }
 function saveDailyLocal() {
   if (testMode) return;
-  const kept = _writeShrinkingCache(DAILY_STORAGE_KEY, allDailyChecklists, 'daily');
+  /* หมุด "แคชครอบคลุมถึงวันไหน" คิดจากของที่เก็บจริง — ตอนนี้เก็บครบทุกใบใน IndexedDB
+     จึงเป็นวันเก่าสุดที่มีอยู่ ไม่ใช่วันเก่าสุดที่เหลือรอดจากการตัดทิ้งเหมือนเมื่อก่อน */
+  const all = (allDailyChecklists || []).filter(Boolean);
   try {
-    const dates = (kept || []).map(d => d && d.date).filter(Boolean).sort();
+    const dates = all.map(d => d && d.date).filter(Boolean).sort();
     localStorage.setItem(DAILY_COVER_KEY, dates[0] || '');
   } catch (_) {}
+  ckSaveCache(DAILY_STORAGE_KEY, all, 'daily');
 }
 
 // ── โหลดแบบประหยัดโควตา (incremental) เพื่อรองรับหลายสาขาในระยะยาว ──
@@ -7484,13 +7500,153 @@ function _ckTrimCacheOnBoot() {
                  ' → ' + (after / 1048576).toFixed(2) + ' MB (คืนพื้นที่ให้ระบบอื่นในโดเมนเดียวกัน)');
   });
 }
+/* ยังเรียกอยู่เผื่อเครื่องที่ IndexedDB ใช้ไม่ได้ (โหมดไม่ระบุตัวตน/เบราว์เซอร์เก่า)
+   เครื่องที่ย้ายสำเร็จแล้วจะไม่มีอะไรให้บีบ เพราะ localStorage เหลือแค่ของที่ยังส่งไม่สำเร็จ */
 try { _ckTrimCacheOnBoot(); } catch (_) {}
+
+
+/* ═══════════════════════════════════════════════════════════════════════
+   ที่เก็บข้อมูลก้อนใหญ่ — IndexedDB
+   localStorage มีเพดานราว 10 MB ต่อ "ทั้งเว็บ" และทุกระบบในฮับใช้ก้อนเดียวกัน
+   แคชของที่นี่โตจนเต็มเมื่อไร ระบบอื่นบันทึกอะไรไม่ลงทันที (เจอจริงกับ Visit สาขา
+   ที่คนตรวจกดบันทึกกลางงานแล้วขึ้นว่าพื้นที่เต็ม ทั้งที่ข้อมูลของมันเองมีแค่ 0.35 MB)
+
+   IndexedDB คิดโควตาจากพื้นที่ว่างในเครื่อง ได้หลายร้อย MB จึงไม่ต้องตัดของทิ้ง
+   และไม่ไปเบียดใคร · แบ่งของตามหลัก "หายแล้วเอากลับได้ไหม":
+     - ประวัติผลตรวจ (ก้อนใหญ่ · คลาวด์เป็นตัวจริง) → IndexedDB
+     - รายการที่ยังส่งขึ้นคลาวด์ไม่สำเร็จ (_pendingSync) → localStorage เหมือนเดิม
+       เพราะไม่มีที่อื่นเก็บแล้ว และ Safari บน iOS ลบ IndexedDB ทิ้งได้ถ้าไม่เปิดเว็บเกิน 7 วัน
+       ของชิ้นเล็กแบบนี้อยู่ที่เดิมซึ่งพิสูจน์แล้วว่าเสถียรกว่า
+   ═══════════════════════════════════════════════════════════════════════ */
+const CK_IDB_NAME = 'ck_store_v1';
+const CK_IDB_STORE = 'kv';
+let _ckIdbP = null;
+function ckIdb() {
+  if (_ckIdbP) return _ckIdbP;
+  _ckIdbP = new Promise(function (resolve) {
+    let req;
+    try { req = indexedDB.open(CK_IDB_NAME, 1); }
+    catch (_) { return resolve(null); }           /* โหมดไม่ระบุตัวตน / เบราว์เซอร์ปิดไว้ */
+    req.onupgradeneeded = function () {
+      try { req.result.createObjectStore(CK_IDB_STORE); } catch (_) {}
+    };
+    req.onsuccess = function () { resolve(req.result); };
+    req.onerror = function () { resolve(null); };
+    /* เปิดไม่ขึ้นภายใน 3 วิ ถือว่าใช้ไม่ได้ ดีกว่าค้างหน้าโหลดไปเรื่อย ๆ */
+    setTimeout(function () { resolve(null); }, 3000);
+  });
+  return _ckIdbP;
+}
+function ckIdbGet(key) {
+  return ckIdb().then(function (db) {
+    if (!db) return null;
+    return new Promise(function (resolve) {
+      try {
+        const r = db.transaction(CK_IDB_STORE, 'readonly').objectStore(CK_IDB_STORE).get(key);
+        r.onsuccess = function () { resolve(r.result == null ? null : r.result); };
+        r.onerror = function () { resolve(null); };
+      } catch (_) { resolve(null); }
+    });
+  }).catch(function () { return null; });
+}
+function ckIdbSet(key, val) {
+  return ckIdb().then(function (db) {
+    if (!db) return false;
+    return new Promise(function (resolve) {
+      try {
+        const tx = db.transaction(CK_IDB_STORE, 'readwrite');
+        tx.objectStore(CK_IDB_STORE).put(val, key);
+        tx.oncomplete = function () { resolve(true); };
+        tx.onerror = tx.onabort = function () { resolve(false); };
+      } catch (_) { resolve(false); }
+    });
+  }).catch(function () { return false; });
+}
+
+/* รายการที่ยังส่งไม่สำเร็จ — ตัวเดียวที่ยังอยู่ใน localStorage */
+function _ckPendingOnly(arr) {
+  return (arr || []).filter(function (r) { return r && r._pendingSync; });
+}
+/* อ่านแคช: เอาจาก IndexedDB ก่อน ไม่มีค่อยถอยไป localStorage (ของเดิม/เครื่องที่ IDB ใช้ไม่ได้)
+   แล้วรวมกับรายการที่ยังส่งไม่สำเร็จเสมอ ไม่ว่าจะอ่านมาจากที่ไหน */
+function ckLoadCache(key) {
+  /* ย้ายให้เสร็จก่อนอ่านเสมอ — ครั้งแรกเท่านั้นที่ทำงานจริง ครั้งต่อไปคืนสัญญาเดิมทันที */
+  return ckMigrateOnce().then(function () { return ckIdbGet(key); }).then(function (idb) {
+    let base = Array.isArray(idb) ? idb : null;
+    let ls = [];
+    try {
+      const raw = localStorage.getItem(key);
+      if (raw) { const a = JSON.parse(raw); if (Array.isArray(a)) ls = a; }
+    } catch (_) {}
+    if (!base) return ls;                          /* ยังไม่เคยย้าย → ใช้ของเดิมไปก่อน */
+    const seen = {};
+    base.forEach(function (r) { if (r && r.id != null) seen[String(r.id)] = 1; });
+    const extra = _ckPendingOnly(ls).filter(function (r) { return !seen[String(r.id)]; });
+    return extra.length ? base.concat(extra) : base;
+  });
+}
+/* เขียนแคช: ก้อนเต็มลง IndexedDB · localStorage เก็บเฉพาะที่ยังส่งไม่สำเร็จ
+   เขียน IDB ไม่ผ่าน (เครื่องที่ใช้ไม่ได้) ค่อยถอยไปเขียนแบบเดิมที่มีการหดขนาด */
+function ckSaveCache(key, records, label) {
+  const all = (records || []).filter(Boolean);
+  return ckIdbSet(key, _liteAuditsForCache(all)).then(function (ok) {
+    if (!ok) { _writeShrinkingCache(key, all, label); return false; }
+    const must = _ckPendingOnly(all);
+    try {
+      if (must.length) localStorage.setItem(key, JSON.stringify(_liteAuditsForCache(must)));
+      else localStorage.removeItem(key);
+    } catch (_) {}
+    return true;
+  });
+}
+/* ย้ายของเดิมครั้งเดียว — ก๊อปไป IndexedDB แล้วนับให้ตรงก่อนค่อยลดของใน localStorage
+   นับไม่ตรงคือไม่แตะของเดิม ยอมกินที่ต่อดีกว่าเสี่ยงข้อมูลหาย */
+const CK_MIGRATED_KEY = 'ck_idb_migrated_v1';
+/* ผูกไว้กับการอ่านแคช ไม่ใช่กับหน้าล็อกอิน
+   คนส่วนใหญ่เข้าแอปด้วย session ที่ค้างอยู่ (มาจากฮับ/เปิดค้างไว้) ซึ่งไม่ผ่าน doLogin
+   ถ้าไปแขวนไว้ตรงนั้น เครื่องที่ใช้งานจริงจะไม่มีวันได้ย้ายเลยสักเครื่อง */
+let _ckMigP = null;
+function ckMigrateOnce() {
+  if (_ckMigP) return _ckMigP;
+  _ckMigP = _ckMigrateRun();
+  return _ckMigP;
+}
+function _ckMigrateRun() {
+  let done = {};
+  try { done = JSON.parse(localStorage.getItem(CK_MIGRATED_KEY) || '{}') || {}; } catch (_) {}
+  const keys = [DAILY_STORAGE_KEY, JAEDAENG_STORAGE_KEY, STORAGE_KEY];
+  return keys.reduce(function (chain, key) {
+    return chain.then(function () {
+      if (done[key]) return;
+      let arr = null;
+      try { const raw = localStorage.getItem(key); if (raw) arr = JSON.parse(raw); } catch (_) {}
+      if (!Array.isArray(arr) || !arr.length) { done[key] = 1; return; }
+      const n = arr.length;
+      return ckIdbSet(key, _liteAuditsForCache(arr)).then(function (ok) {
+        if (!ok) return;
+        return ckIdbGet(key).then(function (back) {
+          if (!Array.isArray(back) || back.length !== n) {
+            console.warn('[idb] ' + key + ' นับไม่ตรง (' + (back ? back.length : 0) + '/' + n + ') — คงของเดิมไว้');
+            return;
+          }
+          const must = _ckPendingOnly(arr);
+          try {
+            if (must.length) localStorage.setItem(key, JSON.stringify(_liteAuditsForCache(must)));
+            else localStorage.removeItem(key);
+          } catch (_) {}
+          done[key] = 1;
+          console.warn('[idb] ย้าย ' + key + ' ' + n + ' รายการเรียบร้อย · เหลือใน localStorage ' + must.length);
+        });
+      });
+    });
+  }, Promise.resolve()).then(function () {
+    try { localStorage.setItem(CK_MIGRATED_KEY, JSON.stringify(done)); } catch (_) {}
+  });
+}
 
 function saveJaedaengLocal() {
   if (testMode) return;
-  /* ของเดิมพลาดแล้วเงียบ ไม่เก็บอะไรเลย รอบหน้าจึงไม่มีจุดอ้างอิง
-     ต้องดึงย้อนหลังใหม่ทั้งก้อนทุกครั้ง — ใช้ตัวเดียวกับซานตาเฟ่ */
-  _writeShrinkingCache(JAEDAENG_STORAGE_KEY, allJaedaengAudits, 'jaedaeng');
+  ckSaveCache(JAEDAENG_STORAGE_KEY, allJaedaengAudits, 'jaedaeng');
 }
 
 /* Tombstones — จำ id ที่ถูกลบ (กัน resync ดึงกลับในเครื่องที่ลบ) */
@@ -7964,9 +8120,12 @@ async function doLogin() {
 
   // Show the app instantly using locally-cached data, then refresh from
   // Firestore in the background so login doesn't block on the network.
-  const cachedAudits = loadLocalAudits();
-  const cachedDaily = loadLocalDaily();
-  const cachedJaedaeng = loadLocalJaedaeng();
+  /* ย้ายของเดิมจาก localStorage ไป IndexedDB ครั้งเดียว แล้วค่อยอ่าน
+     ทำก่อนอ่านเพราะถ้าย้ายสำเร็จ ของใน localStorage จะเหลือเฉพาะที่ยังส่งไม่สำเร็จ */
+  try { await ckMigrateOnce(); } catch (_) {}
+  const [cachedAudits, cachedDaily, cachedJaedaeng] = await Promise.all([
+    loadCachedAudits(), loadCachedDaily(), loadCachedJaedaeng()
+  ]);
   const hasCache = cachedAudits.length || cachedDaily.length || cachedJaedaeng.length;
   if (hasCache) {
     allAudits = cachedAudits;
@@ -12518,9 +12677,14 @@ async function autoLoginFromSession() {
   }
   currentUser = s;
   currentBrand = s.brand || null;
-  allAudits = loadLocalAudits();
-  allDailyChecklists = loadLocalDaily();
-  allJaedaengAudits = loadLocalJaedaeng();
+  /* อ่านจาก IndexedDB (ย้ายให้เองถ้ายังไม่เคยย้าย) แล้วค่อยวาดใหม่
+     ระหว่างรอ หน้าจะขึ้นด้วยของว่างแป๊บหนึ่ง ซึ่งเป็นจังหวะเดียวกับที่รอ cloud อยู่แล้ว */
+  Promise.all([loadCachedAudits(), loadCachedDaily(), loadCachedJaedaeng()])
+    .then(function (r) {
+      allAudits = r[0]; allDailyChecklists = r[1]; allJaedaengAudits = r[2];
+      if (currentUser) routeByRole();
+    })
+    .catch(function () {});
   loadBrandData()
     .then(() => { if (currentUser) routeByRole(); })
     .catch(() => {});
@@ -12543,9 +12707,14 @@ function finalizeBrandFromSession(brand) {
   currentBrand = brand;
   pendingSessionUser = null;
   saveFabSession();
-  allAudits = loadLocalAudits();
-  allDailyChecklists = loadLocalDaily();
-  allJaedaengAudits = loadLocalJaedaeng();
+  /* อ่านจาก IndexedDB (ย้ายให้เองถ้ายังไม่เคยย้าย) แล้วค่อยวาดใหม่
+     ระหว่างรอ หน้าจะขึ้นด้วยของว่างแป๊บหนึ่ง ซึ่งเป็นจังหวะเดียวกับที่รอ cloud อยู่แล้ว */
+  Promise.all([loadCachedAudits(), loadCachedDaily(), loadCachedJaedaeng()])
+    .then(function (r) {
+      allAudits = r[0]; allDailyChecklists = r[1]; allJaedaengAudits = r[2];
+      if (currentUser) routeByRole();
+    })
+    .catch(function () {});
   loadBrandData()
     .then(() => { if (currentUser) routeByRole(); })
     .catch(() => {});
