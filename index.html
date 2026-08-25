@@ -7454,6 +7454,38 @@ function _liteAuditsForCache(arr) {
     });
   });
 }
+/* บีบแคชให้อยู่ในเพดานตั้งแต่ตอนเปิดแอป
+   ของเดิมบีบเฉพาะตอน "เขียน" ซึ่งเกิดก็ต่อเมื่อมีข้อมูลเปลี่ยน
+   เครื่องที่แคชบวมไว้ก่อนหน้าจึงค้างเต็มอยู่อย่างนั้น ไม่มีอะไรมาแก้ให้
+   และยังเบียดโควตาของระบบอื่นในโดเมนเดียวกันต่อไปเรื่อย ๆ
+   (Visit สาขาบนเครื่องเดียวกันเขียนข้อมูลที่ซิงค์มาไม่ลงเพราะเหตุนี้)
+   อ่านจาก localStorage ตรง ๆ ไม่พึ่งสถานะในแอป จะได้ทำงานได้ตั้งแต่ก่อนล็อกอิน */
+function _ckTrimCacheOnBoot() {
+  [DAILY_STORAGE_KEY, JAEDAENG_STORAGE_KEY].forEach(function (key) {
+    let raw = '';
+    try { raw = localStorage.getItem(key) || ''; } catch (_) { return; }
+    if (!raw || raw.length * 2 <= CACHE_MAX_BYTES) return;
+    let arr = null;
+    try { arr = JSON.parse(raw); } catch (_) { return; }
+    if (!Array.isArray(arr) || !arr.length) return;
+    const before = raw.length * 2;
+    const kept = _writeShrinkingCache(key, arr, key);
+    if (key === DAILY_STORAGE_KEY) {
+      /* หมุด "แคชครอบคลุมถึงวันไหน" ต้องขยับตาม ไม่งั้นรอบหน้าจะดึงแต่ของใหม่
+         แล้วเข้าใจว่าของเก่ายังอยู่ครบ ทั้งที่เพิ่งตัดทิ้งไป */
+      try {
+        const dates = (kept || []).map(d => d && d.date).filter(Boolean).sort();
+        localStorage.setItem(DAILY_COVER_KEY, dates[0] || '');
+      } catch (_) {}
+    }
+    let after = 0;
+    try { after = (localStorage.getItem(key) || '').length * 2; } catch (_) {}
+    console.warn('[cache] ' + key + ' ' + (before / 1048576).toFixed(2) +
+                 ' → ' + (after / 1048576).toFixed(2) + ' MB (คืนพื้นที่ให้ระบบอื่นในโดเมนเดียวกัน)');
+  });
+}
+try { _ckTrimCacheOnBoot(); } catch (_) {}
+
 function saveJaedaengLocal() {
   if (testMode) return;
   /* ของเดิมพลาดแล้วเงียบ ไม่เก็บอะไรเลย รอบหน้าจึงไม่มีจุดอ้างอิง
