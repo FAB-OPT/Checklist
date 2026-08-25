@@ -5214,14 +5214,16 @@ html.fab-sso-pending #login-screen { display: none !important; }
    ใช้ภาษาเดียวกับแดชบอร์ด: หัวข้อคั่นมีแถบสีแบรนด์ · การ์ดขอบบาง เงาอ่อน
    สีแบรนด์สงวนไว้ให้ "สิ่งที่ต้องทำต่อ" เท่านั้น (ปุ่มกะที่ยังไม่ได้ส่ง · ปุ่มส่งผล)
    ของที่ทำเสร็จแล้วถอยไปเป็นสีเทา จะได้กวาดตาแล้วเห็นงานค้างทันที */
-/* หน้าที่มีหัวการ์ดของตัวเองไม่ต้องมีชื่อระบบบนแถบบนอีก — เป็นข้อความเดียวกัน
-   สองบรรทัดซ้อนกัน กินจอไปฟรี ๆ ราว 70px ก่อนถึงเนื้อหาจริง
-   แถบบนยังอยู่เพราะมีปุ่มสลับแบรนด์ ตัดเฉพาะส่วนที่ซ้ำ */
-body.has-page-head .app-header-stack { display:none; }
-body.has-page-head .app-header-inner { justify-content:flex-end; }
-body.has-page-head .app-header { padding-top:6px; padding-bottom:6px; }
-/* ไม่มีปุ่มสลับแบรนด์ (สาขาเห็นแบรนด์เดียว) แถบบนก็ไม่เหลืออะไร ซ่อนทั้งแถบ */
-body.has-page-head.no-header-tools .app-header { display:none; }
+/* แถบบนเดิมถูกแทนด้วยการ์ดหัวหน้าจอทั้งแถบ (ดู #ck-page-head)
+   บนคอมแถบนี้ถูกซ่อนอยู่แล้วเพราะมี sidebar ทำหน้าที่เดียวกัน */
+.app-header { display:none; }
+#ck-page-head { padding-top: env(safe-area-inset-top); margin-bottom:14px; }
+.ck-hd-tools { display:flex; align-items:center; gap:8px; margin-top:10px; }
+.ck-hd-tools:empty { display:none; }
+/* คอมมี sidebar บอกแบรนด์และผู้ใช้อยู่แล้ว การ์ดนี้จะกลายเป็นของซ้ำ */
+@media (min-width: 1024px) { #ck-page-head { display:none; } }
+/* ในฟอร์มตรวจไม่ต้องมี — ฟอร์มมีหัวของตัวเองและต้องการที่ให้คำถาม */
+body.in-audit #ck-page-head { display:none; }
 
 .ck-hd { display:flex; align-items:center; gap:11px; background:var(--surface);
   border:1px solid var(--border); border-radius:14px; padding:12px 13px; box-shadow:var(--shadow-sm); }
@@ -5701,6 +5703,22 @@ body.has-page-head.no-header-tools .app-header { display:none; }
   </div>
 
   <div class="container">
+    <!-- หัวหน้าจอ — การ์ดใบนี้แทนแถบบนเดิมทั้งแถบ
+         ของเดิมเป็นแถบเต็มขอบจอที่บอกแค่ชื่อระบบกับชื่อคนใช้ ซึ่งเป็นข้อมูลเดียว
+         กับที่การ์ดนี้บอก แต่กินความสูงสองชั้นและไม่เข้าพวกกับการ์ดอื่นในหน้า
+         ปุ่มสลับแบรนด์ย้ายลงมาอยู่ใต้การ์ด เพราะมันคือ "กำลังดูแบรนด์ไหน"
+         ซึ่งเป็นเรื่องเดียวกับที่การ์ดบอก ควรอยู่ด้วยกัน -->
+    <div id="ck-page-head" class="no-print">
+      <div class="ck-hd">
+        <div class="ck-hd-ic"><span class="material-symbols-rounded" id="ck-hd-icon">restaurant</span></div>
+        <div style="min-width:0;">
+          <div class="ck-hd-t">Operations Checklist</div>
+          <div class="ck-hd-s" id="ck-hd-sub">—</div>
+        </div>
+        <span class="ck-hd-chip" id="ck-hd-user">—</span>
+      </div>
+      <div class="ck-hd-tools" id="ck-hd-tools"></div>
+    </div>
     <!-- DASHBOARD (admin/bzm) -->
     <div id="dashboard-screen" style="display:none;">
       <!-- Operations Checklist (Daily เปิด-ปิดร้าน) -->
@@ -5761,15 +5779,6 @@ body.has-page-head.no-header-tools .app-header { display:none; }
     <!-- DAILY HUB SCREEN -->
     <div id="daily-hub-screen" style="display:none;">
       <div id="daily-branch-actions" style="display:none;">
-        <div class="ck-hd">
-          <div class="ck-hd-ic"><span class="material-symbols-rounded">restaurant</span></div>
-          <div style="min-width:0;">
-            <div class="ck-hd-t">Operations Checklist</div>
-            <div class="ck-hd-s" id="daily-hd-sub">เช็คลิสต์เปิด-ปิดร้าน</div>
-          </div>
-          <span class="ck-hd-chip" id="daily-hd-user">—</span>
-        </div>
-
         <div class="sfc-sec"><span class="sfc-sec-bar"></span>
           <span class="sfc-sec-t">เช็คลิสต์วันนี้</span>
           <span class="sfc-sec-x" id="daily-today-label"></span></div>
@@ -5933,15 +5942,6 @@ body.has-page-head.no-header-tools .app-header { display:none; }
 
     <!-- JAE DAENG HUB -->
     <div id="jaedaeng-hub-screen" style="display:none;">
-      <div class="ck-hd">
-        <div class="ck-hd-ic"><span class="material-symbols-rounded">local_fire_department</span></div>
-        <div style="min-width:0;">
-          <div class="ck-hd-t">Operations Checklist</div>
-          <div class="ck-hd-s" id="jd-hd-sub">ตรวจโดย BZM · เช็คพิกัดหน้าร้าน</div>
-        </div>
-        <span class="ck-hd-chip" id="jd-hd-user">—</span>
-      </div>
-
       <div class="sfc-sec"><span class="sfc-sec-bar"></span>
         <span class="sfc-sec-t">เริ่มตรวจร้าน</span>
         <span class="sfc-sec-x" id="jd-today-label"></span></div>
@@ -7991,6 +7991,7 @@ function applyBrandHeader() {
   document.querySelectorAll('.brand-eyebrow-label').forEach(el => {
     el.textContent = eyebrow;
   });
+  _ckPaintPageHead();
   // Row 3 ของ header: "<ชื่อ> (<ตำแหน่ง>)" — ตัดคำนำหน้า · ไม่มี "คุณ"
   const userLineEl = document.getElementById('app-user-line');
   if (userLineEl && currentUser) {
@@ -8169,9 +8170,29 @@ function _toolsHtml(view) {
 }
 function renderHeaderTools(view) {
   const host = document.getElementById('header-tools');
-  if (host) host.innerHTML = _toolsHtml(view);          // มือถือ (ในแถบหัว)
+  if (host) host.innerHTML = _toolsHtml(view);          // แถบหัวเดิม (ซ่อนอยู่ · เก็บไว้กันของเก่าอ้างถึง)
+  const head = document.getElementById('ck-hd-tools');
+  if (head) head.innerHTML = _toolsHtml(view);          // มือถือ (ใต้การ์ดหัวหน้าจอ)
   const side = document.getElementById('nav-tools');
   if (side) side.innerHTML = _toolsHtml(view);          // คอม (ใน sidebar)
+}
+
+/* ไอคอนประจำแบรนด์ — เก็บในโค้ดไม่ใช่ในทะเบียนแบรนด์ที่ซิงค์จากฮับ
+   เพราะเป็นเรื่องหน้าตาของแอปนี้ ไม่ใช่ข้อมูลของแบรนด์ */
+const CK_BRAND_ICON = { santafe:'restaurant', yamachan:'ramen_dining', jaedaeng:'local_fire_department' };
+function _ckPaintPageHead() {
+  const key = currentView || (currentUser && currentUser.brand);
+  const b = CK_BRANDS[key];
+  const ic = document.getElementById('ck-hd-icon');
+  if (ic) ic.textContent = CK_BRAND_ICON[key] || 'restaurant';
+  const sub = document.getElementById('ck-hd-sub');
+  if (sub) sub.textContent = b ? b.name : 'ระบบตรวจสอบมาตรฐานการทำงาน';
+  const user = document.getElementById('ck-hd-user');
+  if (user && currentUser) {
+    /* ชื่อเล่นพอ — ช่องนี้แคบ และคนใช้รู้อยู่แล้วว่าตัวเองเป็นใคร
+       มีไว้เพื่อยืนยันว่าไม่ได้ค้างอยู่ในบัญชีคนอื่นเท่านั้น */
+    user.textContent = currentUser.nick || currentUser.name || '—';
+  }
 }
 
 function setActiveNav(id) {
@@ -8180,21 +8201,12 @@ function setActiveNav(id) {
   if (el) el.classList.add('active');
 }
 
-/* แถบบนเหลือไว้เพราะมีปุ่มสลับแบรนด์ — ถ้าผู้ใช้คนนี้ไม่มีปุ่มนั้น ก็ไม่เหลืออะไร
-   ปล่อยไว้จะกลายเป็นแถบเปล่า ๆ คั่นหัวการ์ดกับขอบจอเฉย ๆ */
-function _ckSyncHeader() {
-  const tools = document.getElementById('header-tools');
-  const empty = !tools || tools.childElementCount === 0;
-  document.body.classList.toggle('no-header-tools', empty);
-}
-
 function hideAllScreens() {
   ['dashboard-screen','info-screen','checklist-screen','summary-screen','daily-hub-screen','daily-form-screen','daily-detail-screen','jaedaeng-dashboard-screen','jaedaeng-hub-screen','jaedaeng-audit-screen','jaedaeng-detail-screen'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.style.display = 'none';
   });
   document.body.classList.remove('in-audit');  // ออกจากฟอร์มตรวจ → โชว์เมนูล่างปกติ
-  document.body.classList.remove('has-page-head');   // หน้าถัดไปตั้งเองถ้ามีหัวการ์ด
 }
 
 // ============ DASHBOARD ============
@@ -9254,8 +9266,6 @@ function getVisibleDailyChecklists() {
 function showDailyHub() {
   hideAllScreens();
   document.getElementById('daily-hub-screen').style.display = 'block';
-  document.body.classList.add('has-page-head');
-  _ckSyncHeader();
   setActiveNav('nav-daily');
 
   const branchActions = document.getElementById('daily-branch-actions');
@@ -9270,15 +9280,7 @@ function showDailyHub() {
   _refreshDailyActions();
 
   document.getElementById('daily-list-title').textContent = 'ส่งล่าสุด';
-  /* หัวการ์ดบนสุด — ชื่อระบบคงที่ ใต้ชื่อเป็นแบรนด์ที่กำลังดู ขวาสุดเป็นคนที่ล็อกอินอยู่
-     สามอย่างนี้คือสิ่งที่ต้องยืนยันก่อนกดส่งผลตรวจ จึงวางไว้ให้เห็นตั้งแต่เปิดหน้า */
-  const _hdSub = document.getElementById('daily-hd-sub');
-  if (_hdSub) {
-    const _hb = CK_BRANDS[currentView || (currentUser && currentUser.brand)];
-    _hdSub.textContent = _hb ? _hb.name : 'เช็คลิสต์เปิด-ปิดร้าน';
-  }
-  const _hdUser = document.getElementById('daily-hd-user');
-  if (_hdUser) _hdUser.textContent = (currentUser && (currentUser.nick || currentUser.name)) || '—';
+  _ckPaintPageHead();
   // Branch users only see their own branch; the search field is useless to them
   const searchInput = document.getElementById('daily-filter-search');
   if (searchInput) searchInput.style.display = isBranch ? 'none' : '';
@@ -10820,17 +10822,8 @@ function renderJaedaengDashboard() {
 function showJaedaengHub() {
   hideAllScreens();
   document.getElementById('jaedaeng-hub-screen').style.display = 'block';
-  document.body.classList.add('has-page-head');
-  _ckSyncHeader();
   setActiveNav('nav-jd-hub');
-  /* หัวการ์ดชุดเดียวกับหน้าเปิด-ปิดร้าน — แบรนด์ที่กำลังดูและคนที่ล็อกอินอยู่ */
-  const _sub = document.getElementById('jd-hd-sub');
-  if (_sub) {
-    const _b = CK_BRANDS[currentView || (currentUser && currentUser.brand)];
-    _sub.textContent = _b ? _b.name : 'ตรวจโดย BZM · เช็คพิกัดหน้าร้าน';
-  }
-  const _u = document.getElementById('jd-hd-user');
-  if (_u) _u.textContent = (currentUser && (currentUser.nick || currentUser.name)) || '—';
+  _ckPaintPageHead();
   const _d = document.getElementById('jd-today-label');
   if (_d) _d.textContent = fmtDateThaiShort(todayDateStr());
   renderJaedaengList();
