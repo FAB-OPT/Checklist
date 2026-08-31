@@ -5095,6 +5095,45 @@ html.fab-sso-pending #login-screen { display: none !important; }
 @media (max-width:560px){ .sf-tline-branch { min-width:100%; } }
 
 /* ── ตารางการส่ง · เปิด/ปิดร้าน (รายสาขา + สาเหตุส่งช้า) ── */
+/* ── แถบสรุปทั้งเดือนของสาขา ── */
+.dm-wrap { border:1px solid var(--border); border-radius:14px; background:var(--surface); padding:12px 13px; margin-bottom:12px; }
+.dm-head { display:flex; align-items:center; gap:7px; flex-wrap:wrap; margin-bottom:11px; }
+.dm-nav { display:inline-flex; align-items:center; justify-content:center; width:30px; height:30px; padding:0;
+  border:1px solid var(--border); border-radius:9px; background:var(--bg); color:var(--text); cursor:pointer; }
+.dm-nav:disabled { opacity:.38; cursor:default; }
+.dm-nav .material-symbols-rounded { font-size:19px; }
+.dm-title { font-weight:800; font-size:14px; color:var(--text); }
+.dm-sum { margin-left:auto; font-size:11.5px; color:var(--text-secondary); font-weight:600; white-space:nowrap; }
+.dm-sum b { color:var(--text); font-weight:800; }
+
+/* ช่องกว้างเท่ากันทุกช่อง ตกบรรทัดเอง — ไม่ยึด 7 คอลัมน์แบบปฏิทิน
+   เพราะที่ต้องการคือ "เดือนนี้ขาดกี่วัน" ไม่ใช่ "วันนี้ตรงกับวันอะไร" */
+.dm-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(38px, 1fr)); gap:5px; }
+.dm-cell { display:flex; flex-direction:column; align-items:center; gap:3px; padding:5px 2px 6px;
+  border:1px solid var(--border); border-radius:9px; background:var(--bg); cursor:pointer;
+  font-family:inherit; }
+.dm-cell:disabled { opacity:.4; cursor:default; }
+.dm-cell.is-full { background:var(--success-bg); border-color:transparent; }
+.dm-cell.is-part { background:var(--warning-bg); border-color:transparent; }
+.dm-cell.is-miss { background:var(--danger-bg); border-color:transparent; }
+.dm-cell.is-today { outline:2px solid var(--primary); outline-offset:-2px; }
+.dm-d { font-size:11.5px; font-weight:800; color:var(--text); font-variant-numeric:tabular-nums; line-height:1; }
+.dm-dots { display:flex; flex-direction:column; gap:2px; }
+.dm-dots i { width:12px; height:3px; border-radius:2px; display:block; }
+.dm-o { background:var(--success); }
+.dm-l { background:var(--warning); }
+.dm-x { background:rgba(127,127,127,.34); }
+.dm-f { background:rgba(127,127,127,.16); }
+.dm-key { display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-top:10px;
+  font-size:11px; color:var(--text-tertiary); font-weight:600; }
+.dm-key span { display:inline-flex; align-items:center; gap:5px; }
+.dm-key i { width:12px; height:3px; border-radius:2px; display:block; }
+.dm-key-note { margin-left:auto; }
+@media (max-width:640px) {
+  .dm-grid { grid-template-columns:repeat(auto-fill, minmax(34px, 1fr)); gap:4px; }
+  .dm-sum { margin-left:0; width:100%; }
+  .dm-key-note { margin-left:0; width:100%; }
+}
 .sf-tbl-day { margin-bottom:18px; }
 .sf-tbl-day-head { display:flex; align-items:center; gap:6px; font-weight:800; color:var(--text); margin-bottom:8px; font-size:14px; }
 .sf-tbl-wrap { overflow-x:auto; border:1px solid var(--border); border-radius:14px; box-shadow:0 1px 3px rgba(0,0,0,.04); }
@@ -5121,6 +5160,41 @@ html.fab-sso-pending #login-screen { display: none !important; }
 .sf-tbl-summary { margin-left:auto; font-weight:800; font-size:13px; color:var(--text-secondary); white-space:nowrap; }
 .sf-tbl-code { display:inline-block; background:var(--bg-strong); color:var(--text-secondary); font-weight:800; font-size:11px; padding:1px 6px; border-radius:6px; margin-right:6px; }
 .sf-send-table tbody tr:nth-child(even) td { background:rgba(127,127,127,.06); }
+.sf-cellbody { display:inline-block; }
+
+/* ── จอแคบ: ตารางกลายเป็นการ์ดต่อสาขา ──
+   ตารางตั้ง min-width 480px ไว้ จอ 430px จึงต้องเลื่อนซ้ายขวาอ่านทีละคอลัมน์
+   และช่อง "สาเหตุที่ส่งช้า" ถูกบีบอยู่ในคอลัมน์กว้าง 28% จนอ่านไม่ออก
+   แบบการ์ด: ชื่อสาขาเป็นหัว แล้วไล่ทีละรอบลงมา สาเหตุได้เต็มความกว้าง */
+@media (max-width:640px) {
+  .sf-tbl-wrap { overflow:visible; border:0; box-shadow:none; border-radius:0; }
+  .sf-send-table { min-width:0; display:block; table-layout:auto; font-size:13px; }
+  .sf-send-table colgroup, .sf-send-table thead { display:none; }
+  .sf-send-table tbody { display:block; }
+  .sf-send-table tr {
+    display:block; background:var(--surface);
+    border:1px solid var(--border); border-radius:12px;
+    margin-bottom:8px; overflow:hidden;
+  }
+  .sf-send-table tbody tr:nth-child(even) td { background:transparent; }
+  .sf-send-table td {
+    display:flex; align-items:flex-start; gap:10px;
+    padding:9px 12px; border-bottom:1px solid var(--border);
+    text-align:left !important;
+  }
+  .sf-send-table tr td:last-child { border-bottom:0; }
+  .sf-send-table td[data-label]::before {
+    content:attr(data-label);
+    flex:0 0 84px; font-size:11.5px; font-weight:800;
+    color:var(--text-secondary); padding-top:1px;
+  }
+  .sf-send-table td .sf-cellbody { flex:1; min-width:0; }
+  /* หัวการ์ด = ชื่อสาขา · ไม่มีป้ายนำหน้า จึงกินเต็มแถว */
+  .sf-tbl-branch { display:block; background:var(--bg-strong); padding:9px 12px; font-size:13px; }
+  .sf-tbl-reason { margin-top:6px; text-align:left; }
+  .sf-tbl-summary { margin-left:0; width:100%; order:9; }
+  .sf-tbl-dateinput { flex:1; min-width:0; }
+}
 .sf-send-table tbody tr:hover td { background:var(--bg-strong); }
 .sf-tbl-manage { display:inline-flex; align-items:center; gap:4px; padding:7px 12px; border:1px solid var(--border); border-radius:9px; background:var(--bg); color:var(--text); cursor:pointer; font-family:inherit; font-size:12.5px; font-weight:700; }
 .sf-tbl-manage:hover { background:var(--bg-strong); }
@@ -5158,6 +5232,49 @@ html.fab-sso-pending #login-screen { display: none !important; }
 .sfc-now small { font-size:10px; color:var(--text-tertiary); margin-left:2px; }
 .sfc-chart svg { display:block; width:100%; }
 .sfc-gl { stroke:var(--border); stroke-width:1; }
+/* ── กราฟแนวโน้ม: ตัวหนังสือแกนอยู่นอก SVG ──
+   ของเดิมเขียนตัวเลขแกนไว้ใน SVG ที่ไม่กำหนดความสูง ภาพจึงยืดตามความกว้างกรอบ
+   (กรอบ 1,126px → ภาพสูง 458px) ตัวเลขแกนโตตามจนใหญ่กว่าตัวเลขในการ์ดสถิติ
+   ตอนนี้ความสูงคงที่ ตัวหนังสือเป็น HTML ขนาดจึงไม่ขึ้นกับความกว้างจอ */
+.sfc-plot { display:flex; gap:7px; height:150px; }
+.sfc-yaxis { position:relative; width:26px; flex:0 0 auto; }
+.sfc-y {
+  position:absolute; right:0; transform:translateY(-50%);
+  font-size:10px; font-weight:700; color:var(--text-tertiary);
+  font-variant-numeric:tabular-nums;
+}
+.sfc-canvas { position:relative; flex:1; min-width:0; }
+.sfc-grid, .sfc-target {
+  position:absolute; left:0; right:0; height:0; border-top:1px solid var(--border);
+}
+.sfc-target { border-top:1px dashed var(--border-strong); }
+.sfc-tglb {
+  position:absolute; left:4px; transform:translateY(-115%);
+  font-size:10px; font-weight:700; color:var(--text-tertiary);
+  background:var(--surface); padding:0 4px; border-radius:4px;
+}
+.sfc-svg { position:absolute; inset:0; width:100%; height:100%; display:block; }
+.sfc-lastdot {
+  position:absolute; width:9px; height:9px; border-radius:50%;
+  background:var(--primary); box-shadow:0 0 0 2px var(--surface);
+  transform:translate(-60%,-50%);
+}
+.sfc-xaxis {
+  display:flex; align-items:center; justify-content:space-between; gap:8px;
+  margin-top:7px; padding-left:33px;
+  font-size:10.5px; font-weight:600; color:var(--text-tertiary);
+}
+.sfc-delta { font-weight:700; }
+.sfc-delta.up { color:var(--success); }
+.sfc-delta.down { color:var(--danger); }
+.sr-only { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); }
+@media (max-width:640px) {
+  .sfc-plot { height:126px; }
+  .sfc-xaxis { font-size:10px; }
+  /* จอแคบ ข้อความตรงกลางเบียดวันที่สองข้าง — ตกลงมาอยู่บรรทัดล่างแทน */
+  .sfc-xaxis { flex-wrap:wrap; }
+  .sfc-delta { order:3; width:100%; text-align:center; margin-top:3px; }
+}
 .sfc-thr { stroke:var(--border-strong); stroke-width:1; stroke-dasharray:4 4; }
 .sfc-ln { fill:none; stroke:var(--primary); stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
 .sfc-ar { fill:var(--primary); opacity:.10; }
@@ -5827,6 +5944,7 @@ body.in-audit #ck-page-head { display:none; }
         </select>
         <input type="date" id="daily-filter-date" onchange="renderDailyList()">
       </div>
+      <div id="daily-month-strip"></div>
       <div class="audit-list" id="daily-list"></div>
       <div id="daily-history-more" style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:16px;"></div>
     </div>
@@ -8439,56 +8557,113 @@ function hideAllScreens() {
    แกนตั้งไม่เริ่มที่ 0 — ช่วงล่างแทบไม่เคยเกิดและกินที่จนเส้นแบนอ่านไม่ออก
    เขียนตัวเลขกำกับแกนไว้ทุกขีดกันเข้าใจผิดว่าเริ่มจากศูนย์
    เส้นเดียวจึงไม่ต้องมีกล่องคำอธิบายสี · ป้ายตัวเลขติดเฉพาะค่าล่าสุด */
+/* คะแนนของเช็คลิสต์รายวัน 1 ใบ — คิดจากข้อที่ตอบมาจริง
+   เช็คลิสต์รายวันไม่เคยเก็บฟิลด์ passPct (มีเฉพาะใบตรวจ OSS แบบเก่า)
+   ของเดิมอ่าน r.passPct ตรง ๆ แล้ว || 0 → ได้ศูนย์ทั้ง 3,141 ใบ
+   กราฟจึงแบนติดขอบล่าง และคะแนนรายสาขาขึ้น 0% ทุกสาขามาตั้งแต่วันแรกที่มีฟีเจอร์นี้
+   ทำเป็นตัวเดียวใช้ร่วมกัน จะได้ไม่มีที่ไหนคิดคะแนนคนละแบบอีก */
+function _ckDailyPct(r) {
+  if (!r) return null;
+  if (r.passPct != null && !isNaN(Number(r.passPct))) return Number(r.passPct);
+  var it = r.items || [], pass = 0, fail = 0;
+  for (var i = 0; i < it.length; i++) {
+    if (!it[i]) continue;
+    if (it[i].status === 'pass') pass++;
+    else if (it[i].status === 'fail') fail++;
+  }
+  return (pass + fail) > 0 ? (pass / (pass + fail) * 100) : null;   /* ยังไม่ตอบสักข้อ = ไม่มีคะแนน ไม่ใช่ศูนย์ */
+}
+
+/* คะแนนเฉลี่ยรายวัน 14 วันหลังสุดที่มีข้อมูล
+
+   แกนตั้งขยับตามข้อมูลจริง ไม่ตรึง 60–100
+   คะแนนจริงวิ่งแถว 96–100 ถ้าตรึงกรอบกว้าง เส้นจะแบนติดเพดานอ่านไม่ออกพอกัน
+   กับตอนที่มันแบนติดพื้น · เส้นเกณฑ์โผล่เฉพาะตอนที่อยู่ในกรอบ
+   ถ้าทุกวันอยู่เหนือเกณฑ์ก็บอกเป็นตัวหนังสือแทน ไม่ต้องถ่างกรอบมารับ
+
+   ตัวหนังสือแกนย้ายออกมาอยู่นอก SVG
+   ของเดิมเขียนไว้ใน SVG ที่ไม่กำหนดความสูง พอกรอบกว้าง 1,126px
+   ภาพถูกยืดเป็นสูง 458px ตัวเลขแกนโตตามจนใหญ่กว่าตัวเลขในการ์ดสถิติ */
 function _sfTrendHTML(records) {
   const byDate = {};
   (records || []).forEach(function (r) {
     const d = r && r.date;
     if (!d) return;
+    const v = _ckDailyPct(r);
+    if (v == null) return;
     if (!byDate[d]) byDate[d] = { sum: 0, n: 0 };
-    byDate[d].sum += Number(r.passPct) || 0;
+    byDate[d].sum += v;
     byDate[d].n++;
   });
   const days = Object.keys(byDate).sort().slice(-14)
-    .map(function (d) { return { d: d, v: Math.round(byDate[d].sum / byDate[d].n) }; });
+    .map(function (d) { return { d: d, v: Math.round(byDate[d].sum / byDate[d].n * 10) / 10 }; });
   if (days.length < 2) {
     return '<div class="jd-dash-empty">ยังมีข้อมูลไม่พอวาดกราฟ — ต้องมีอย่างน้อย 2 วัน</div>';
   }
 
-  const W = 300, H = 122, PL = 26, PR = 16, PT = 12, PB = 22;
-  const lo = 60, hi = 100, target = 80;
-  const x = function (i) { return PL + (W - PL - PR) * i / (days.length - 1); };
-  const y = function (v) {
-    const c = Math.max(lo, Math.min(hi, v));
-    return PT + (H - PT - PB) * (1 - (c - lo) / (hi - lo));
-  };
+  const target = 80;
+  const vals = days.map(function (p) { return p.v; });
+  const mn = Math.min.apply(null, vals), mx = Math.max.apply(null, vals);
+  /* ขั้นแกนละเอียดตามช่วงของข้อมูล
+     คะแนนจริงแกว่งแค่ 99.4–100 ถ้าขั้นละ 5 เส้นจะแบนติดเพดาน อ่านความต่างไม่ออก */
+  const span = mx - mn;
+  const step = span > 20 ? 10 : span > 8 ? 5 : span > 3 ? 2 : span > 1 ? 0.5 : 0.2;
+  let lo = Math.max(0, Math.floor((mn - step) / step) * step);
+  let hi = Math.min(100, Math.ceil((mx + step) / step) * step);
+  if (hi - lo < step * 2) { lo = Math.max(0, hi - step * 2); }
+  lo = Math.round(lo * 10) / 10; hi = Math.round(hi * 10) / 10;
+  const showTarget = target > lo && target < hi;
+
+  /* SVG วาดเฉพาะรูป · ยืดตามกรอบได้เต็มที่เพราะไม่มีตัวหนังสืออยู่ข้างใน
+     เส้นใช้ non-scaling-stroke ความหนาจึงคงที่ ไม่บางลงเวลาถูกยืด */
+  const W = 100, H = 100;
+  const x = function (i) { return W * i / (days.length - 1); };
+  const y = function (v) { return H * (1 - (Math.max(lo, Math.min(hi, v)) - lo) / (hi - lo)); };
   const path = days.map(function (p, i) {
-    return (i ? 'L' : 'M') + x(i).toFixed(1) + ' ' + y(p.v).toFixed(1);
+    return (i ? 'L' : 'M') + x(i).toFixed(2) + ' ' + y(p.v).toFixed(2);
   }).join(' ');
-  const area = path + ' L' + x(days.length - 1).toFixed(1) + ' ' + (H - PB) +
-               ' L' + PL + ' ' + (H - PB) + ' Z';
-  const grid = [lo, 80, hi].map(function (v) {
-    return '<line class="sfc-gl" x1="' + PL + '" x2="' + (W - PR) + '" y1="' + y(v) + '" y2="' + y(v) + '"/>' +
-           '<text class="sfc-tk" x="' + (PL - 6) + '" y="' + (y(v) + 3) + '" text-anchor="end">' + v + '</text>';
-  }).join('');
+  const area = path + ' L' + W + ' ' + H + ' L0 ' + H + ' Z';
+  const fmtV = function (v) { return (Math.round(v * 10) / 10).toFixed(1).replace(/\.0$/, ''); };
+  const ticks = [hi, Math.round((hi + lo) / 2 * 10) / 10, lo];
+  const pctTop = function (v) { return (1 - (v - lo) / (hi - lo)) * 100; };
   const last = days[days.length - 1];
-  const hits = days.map(function (p, i) {
-    return '<title>' + escapeHtml(fmtDateDMY(p.d)) + ' · ' + p.v + '%</title>';
-  });
+  const first = days[0];
+  const diff = last.v - first.v;
+
   return '' +
   '<div class="sfc-chart">' +
     '<div class="sfc-h"><span class="sfc-t">คะแนนเฉลี่ยรายวัน</span>' +
       '<span class="sfc-s">' + days.length + ' วันล่าสุด</span>' +
-      '<span class="sfc-now">' + last.v + '<small>%</small></span></div>' +
-    '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="กราฟคะแนนเฉลี่ยรายวัน ค่าล่าสุด ' + last.v + ' เปอร์เซ็นต์">' +
-      grid +
-      '<path class="sfc-ar" d="' + area + '"/>' +
-      '<line class="sfc-thr" x1="' + PL + '" x2="' + (W - PR) + '" y1="' + y(target) + '" y2="' + y(target) + '"/>' +
-      '<text class="sfc-tk sfc-thrlb" x="' + (PL + 3) + '" y="' + (y(target) - 5) + '">เกณฑ์ ' + target + '%</text>' +
-      '<path class="sfc-ln" d="' + path + '"/>' +
-      '<circle class="sfc-dot" cx="' + x(days.length - 1).toFixed(1) + '" cy="' + y(last.v).toFixed(1) + '" r="4.5"/>' +
-      '<text class="sfc-tk" x="' + PL + '" y="' + (H - 6) + '">' + escapeHtml(fmtDateDMY(days[0].d)) + '</text>' +
-      '<text class="sfc-tk" x="' + (W - PR) + '" y="' + (H - 6) + '" text-anchor="end">' + escapeHtml(fmtDateDMY(last.d)) + '</text>' +
-    '</svg>' +
+      '<span class="sfc-now">' + fmtV(last.v) + '<small>%</small></span></div>' +
+    '<div class="sfc-plot">' +
+      '<div class="sfc-yaxis">' +
+        ticks.map(function (v) {
+          return '<span class="sfc-y" style="top:' + pctTop(v).toFixed(1) + '%">' + fmtV(v) + '</span>';
+        }).join('') +
+      '</div>' +
+      '<div class="sfc-canvas">' +
+        ticks.map(function (v) {
+          return '<i class="sfc-grid" style="top:' + pctTop(v).toFixed(1) + '%"></i>';
+        }).join('') +
+        (showTarget ? '<i class="sfc-target" style="top:' + pctTop(target).toFixed(1) + '%"></i>' +
+                      '<span class="sfc-tglb" style="top:' + pctTop(target).toFixed(1) + '%">เกณฑ์ ' + target + '%</span>' : '') +
+        '<svg class="sfc-svg" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" aria-hidden="true">' +
+          '<path class="sfc-ar" d="' + area + '"/>' +
+          '<path class="sfc-ln" d="' + path + '" vector-effect="non-scaling-stroke"/>' +
+        '</svg>' +
+        /* จุดค่าล่าสุดเป็น element ธรรมดา ไม่ใช่ <circle> — วงกลมใน SVG ที่ถูกยืดจะกลายเป็นวงรี */
+        '<i class="sfc-lastdot" style="left:100%;top:' + pctTop(last.v).toFixed(1) + '%"></i>' +
+        '<span class="sr-only">กราฟคะแนนเฉลี่ยรายวัน ค่าล่าสุด ' + fmtV(last.v) + ' เปอร์เซ็นต์</span>' +
+      '</div>' +
+    '</div>' +
+    '<div class="sfc-xaxis">' +
+      '<span>' + escapeHtml(fmtDateDMY(first.d)) + '</span>' +
+      '<span class="sfc-delta ' + (diff > 0 ? 'up' : diff < 0 ? 'down' : '') + '">' +
+        (showTarget ? '' : 'ทุกวันอยู่เหนือเกณฑ์ ' + target + '% · ') +
+        (diff > 0 ? '▲ +' : diff < 0 ? '▼ ' : '± ') + fmtV(Math.abs(diff)) + '% จากวันแรก' +
+      '</span>' +
+      '<span>' + escapeHtml(fmtDateDMY(last.d)) + '</span>' +
+    '</div>' +
   '</div>';
 }
 
@@ -8501,7 +8676,7 @@ function _sfBranchRankHTML(records) {
     const k = String((r && r.branchCode) || '');
     if (!k) return;
     if (!by[k]) by[k] = { name: r.branchName || k, sum: 0, n: 0, fail: 0 };
-    by[k].sum += Number(r.passPct) || 0;
+    by[k].sum += _ckDailyPct(r) || 0;
     by[k].n++;
     by[k].fail += Number(r.failCount) || 0;
   });
@@ -9268,8 +9443,10 @@ function _sfDailyTableHTML() {
   let openCount = 0, closeCount = 0;
   roster.forEach(b => { const s = subs[String(b.code)]; if (s && s.open) openCount++; if (s && s.close) closeCount++; });
   const total = roster.length;
+  /* เนื้อในช่องห่อไว้ก้อนเดียวเสมอ — บนมือถือช่องถูกจัดเป็น "ป้ายรอบ | เนื้อหา"
+     ถ้าไม่ห่อ สาเหตุที่ส่งช้าจะหลุดไปเรียงข้างเวลาแทนที่จะอยู่ใต้เวลา */
   const cell = (rec) => {
-    if (!rec) return '<span class="sf-tbl-none">— ยังไม่ส่ง</span>';
+    if (!rec) return '<span class="sf-cellbody"><span class="sf-tbl-none">— ยังไม่ส่ง</span></span>';
     const t = fmtT(rec.submittedAt);
     const late = _isDailyLate(rec);
     const reason = (rec.lateReason || '').trim();
@@ -9278,14 +9455,18 @@ function _sfDailyTableHTML() {
       h += '<span class="sf-tbl-late">เกินเวลา</span>';
       if (reason) h += '<div class="sf-tbl-reason"><b>เหตุ:</b> ' + escapeHtml(reason) + '</div>';
     }
-    return h;
+    return '<span class="sf-cellbody">' + h + '</span>';
   };
-  const td = (rec) => rec && rec.id
-    ? '<td class="sf-td-click" onclick="showDailyDetail(\'' + escapeAttr(rec.id) + '\')">' + cell(rec) + '</td>'
-    : '<td>' + cell(rec) + '</td>';
+  const td = (rec, shift) => {
+    const lb = shift === 'open' ? '🌅 เปิดร้าน' : '🌙 ปิดร้าน';
+    const attr = ' data-label="' + lb + '"';
+    return rec && rec.id
+      ? '<td class="sf-td-click"' + attr + ' onclick="showDailyDetail(\'' + escapeAttr(rec.id) + '\')">' + cell(rec) + '</td>'
+      : '<td' + attr + '>' + cell(rec) + '</td>';
+  };
   const rows = roster.map(b => {
     const s = subs[String(b.code)] || {};
-    return '<tr><td class="sf-tbl-branch"><span class="sf-tbl-code">' + escapeHtml(String(b.code)) + '</span>' + escapeHtml(b.name) + '</td>' + td(s.open) + td(s.close) + '</tr>';
+    return '<tr><td class="sf-tbl-branch"><span class="sf-tbl-code">' + escapeHtml(String(b.code)) + '</span>' + escapeHtml(b.name) + '</td>' + td(s.open, 'open') + td(s.close, 'close') + '</tr>';
   }).join('');
   const controls = '<div class="sf-tbl-controls">' +
     '<button type="button" class="sf-tbl-nav" onclick="_sfTableDay(-1)" title="วันก่อนหน้า"><span class="material-symbols-rounded">chevron_left</span></button>' +
@@ -9565,6 +9746,92 @@ function _dailySentLabel(d) {
   } catch (_) { return ''; }
 }
 
+/* ═══ แถบสรุปทั้งเดือนของสาขา ═══
+   รายการ "ส่งล่าสุด" ขึ้นเฉพาะวันที่เคยส่ง วันที่ลืมส่งจึงหายไปเงียบ ๆ
+   สาขามองไม่ออกว่าเดือนนี้ตกไปกี่วัน ต้องไล่นับวันที่ขาดเอาเอง
+   แถบนี้กางทั้งเดือนให้เห็นทีเดียว ช่องว่าง = วันที่ไม่ได้ส่ง
+   จุดบน = รอบเปิด · จุดล่าง = รอบปิด · กดวันไหนก็กรองรายการลงไปวันนั้น */
+let _dailyMonth = '';        /* 'YYYY-MM' — ว่าง = เดือนปัจจุบัน */
+
+function _dailyMonthKey() {
+  if (_dailyMonth) return _dailyMonth;
+  const t = todayDateStr();
+  return t.slice(0, 7);
+}
+function _dailyMonthShift(n) {
+  const k = _dailyMonthKey();
+  const d = new Date(Number(k.slice(0, 4)), Number(k.slice(5, 7)) - 1 + n, 1);
+  const nk = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+  if (nk > todayDateStr().slice(0, 7)) return;      /* ไม่ให้ไปข้างหน้าเกินเดือนนี้ */
+  _dailyMonth = nk;
+  renderDailyList();
+}
+function _dailyPickDay(date) {
+  const el = document.getElementById('daily-filter-date');
+  if (!el) return;
+  el.value = (el.value === date) ? '' : date;       /* กดซ้ำ = ยกเลิกการกรอง */
+  renderDailyList();
+}
+
+function _dailyMonthStripHTML(list) {
+  const key = _dailyMonthKey();
+  const y = Number(key.slice(0, 4)), m = Number(key.slice(5, 7));
+  const days = new Date(y, m, 0).getDate();
+  const today = todayDateStr();
+
+  /* เอาเฉพาะของเดือนนี้ · list ที่ส่งเข้ามาผ่านตัวกรองสาขามาแล้ว
+     แต่ยังไม่ผ่านตัวกรองวัน/รอบ จะได้ไม่ทำให้แถบเดือนเปลี่ยนตามตัวกรองไปด้วย */
+  const by = {};
+  (list || []).forEach(function (d) {
+    if (!d || !d.date || d.date.slice(0, 7) !== key) return;
+    const k = d.date;
+    if (!by[k]) by[k] = { open: null, close: null };
+    by[k][d.shift === 'close' ? 'close' : 'open'] = d;
+  });
+
+  let full = 0, part = 0, miss = 0;
+  const cells = [];
+  for (let i = 1; i <= days; i++) {
+    const date = y + '-' + String(m).padStart(2, '0') + '-' + String(i).padStart(2, '0');
+    const rec = by[date] || {};
+    const future = date > today;
+    const n = (rec.open ? 1 : 0) + (rec.close ? 1 : 0);
+    if (!future) { if (n === 2) full++; else if (n === 1) part++; else miss++; }
+    const st = function (r) {
+      if (!r) return future ? 'f' : 'x';
+      return _isDailyLate(r) ? 'l' : 'o';
+    };
+    const cls = ['dm-cell', future ? 'is-future' : (n === 2 ? 'is-full' : n === 1 ? 'is-part' : 'is-miss'),
+                 date === today ? 'is-today' : ''].join(' ');
+    const tip = fmtDateDMY(date) + ' · เปิด: ' + (rec.open ? (_isDailyLate(rec.open) ? 'เกินเวลา' : 'ส่งแล้ว') : (future ? '—' : 'ไม่ได้ส่ง')) +
+                ' · ปิด: ' + (rec.close ? (_isDailyLate(rec.close) ? 'เกินเวลา' : 'ส่งแล้ว') : (future ? '—' : 'ไม่ได้ส่ง'));
+    cells.push('<button type="button" class="' + cls + '" title="' + escapeAttr(tip) + '"' +
+      (future ? ' disabled' : ' onclick="_dailyPickDay(\'' + date + '\')"') + '>' +
+      '<span class="dm-d">' + i + '</span>' +
+      '<span class="dm-dots"><i class="dm-' + st(rec.open) + '"></i><i class="dm-' + st(rec.close) + '"></i></span>' +
+      '</button>');
+  }
+
+  const monthName = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน',
+                     'กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'][m - 1];
+  const atNow = key >= today.slice(0, 7);
+  return '<div class="dm-wrap">' +
+    '<div class="dm-head">' +
+      '<button type="button" class="dm-nav" onclick="_dailyMonthShift(-1)" title="เดือนก่อน"><span class="material-symbols-rounded">chevron_left</span></button>' +
+      '<span class="dm-title">' + monthName + ' ' + (y + 543) + '</span>' +
+      '<button type="button" class="dm-nav" onclick="_dailyMonthShift(1)"' + (atNow ? ' disabled' : '') + ' title="เดือนถัดไป"><span class="material-symbols-rounded">chevron_right</span></button>' +
+      '<span class="dm-sum"><b>' + full + '</b> ครบ · <b>' + part + '</b> ขาดรอบ · <b>' + miss + '</b> ไม่ได้ส่ง</span>' +
+    '</div>' +
+    '<div class="dm-grid">' + cells.join('') + '</div>' +
+    '<div class="dm-key">' +
+      '<span><i class="dm-o"></i> ส่งตรงเวลา</span>' +
+      '<span><i class="dm-l"></i> เกินเวลา</span>' +
+      '<span><i class="dm-x"></i> ไม่ได้ส่ง</span>' +
+      '<span class="dm-key-note">จุดบน = เปิดร้าน · จุดล่าง = ปิดร้าน</span>' +
+    '</div>' +
+  '</div>';
+}
+
 function renderDailyList() {
   const search = document.getElementById('daily-filter-search').value.trim().toLowerCase();
   const shiftFilter = document.getElementById('daily-filter-shift').value;
@@ -9572,6 +9839,14 @@ function renderDailyList() {
 
   let list = getVisibleDailyChecklists();
   if (search) list = list.filter(d => branchLabel(d.branchCode, d.branchName).toLowerCase().includes(search));
+  /* แถบเดือน — ใช้ตอนที่ดูอยู่สาขาเดียว (สาขาเอง หรือ role อื่นที่ค้นจนเหลือสาขาเดียว)
+     หลายสาขาปนกันแล้วช่องว่างจะแปลไม่ได้ว่าใครขาด · ส่ง list ก่อนกรองวัน/รอบ แถบจะได้ไม่ขยับตามตัวกรอง */
+  const _stripEl = document.getElementById('daily-month-strip');
+  if (_stripEl) {
+    const _codes = new Set(list.map(d => String(d.branchCode || d.branchName || '')));
+    const _one = currentUser.role === 'branch' || _codes.size === 1;
+    _stripEl.innerHTML = _one ? _dailyMonthStripHTML(list) : '';
+  }
   if (shiftFilter) list = list.filter(d => d.shift === shiftFilter);
   if (dateFilter) list = list.filter(d => d.date === dateFilter);
 
