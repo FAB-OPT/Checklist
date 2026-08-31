@@ -5033,65 +5033,55 @@ html.fab-sso-pending #login-screen { display: none !important; }
 .sf-tf-branch-chip .material-symbols-rounded { font-size:14px; }
 
 /* การ์ดเวลาการส่ง · เปิด/ปิดร้าน (รายสาขา) */
-.sf-time-day { margin-bottom:18px; }
-.sf-time-day:last-child { margin-bottom:0; }
-.sf-time-day-head { display:flex; align-items:center; gap:6px; font-weight:800; font-size:13px; color:var(--text-secondary); margin:0 0 10px; }
-.sf-time-day-head .material-symbols-rounded { font-size:18px; }
+/* ── สรุปการส่ง · รายสาขา ── */
+.sfs-head { display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; margin-bottom:11px; }
+.sfs-h-t { font-size:13px; font-weight:800; color:var(--text); }
+.sfs-h-s { font-size:11.5px; font-weight:600; color:var(--text-tertiary); }
+.sfs-list { display:flex; flex-direction:column; gap:7px; }
+.sfs-row { border:1px solid var(--border); border-left:3px solid var(--border-strong);
+  border-radius:11px; padding:9px 12px; background:var(--surface); }
+.sfs-row.ok   { border-left-color:var(--success); }
+.sfs-row.warn { border-left-color:var(--warning); }
+.sfs-row.bad  { border-left-color:var(--danger); }
+.sfs-top { display:flex; align-items:baseline; gap:8px; }
+.sfs-code { background:var(--bg-strong); color:var(--text-secondary); font-weight:800; font-size:11px;
+  padding:1px 6px; border-radius:6px; flex:0 0 auto; }
+.sfs-name { flex:1; min-width:0; font-size:13px; font-weight:700; color:var(--text);
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.sfs-pct { font-size:15px; font-weight:800; color:var(--text); font-variant-numeric:tabular-nums; }
+.sfs-pct small { font-size:10px; color:var(--text-tertiary); margin-left:1px; }
+/* แถบเดียวแบ่งสามช่วง — ไม่ต้องอ่านตัวเลขสามตัวก็เห็นสัดส่วน */
+.sfs-bar { display:flex; height:6px; border-radius:999px; overflow:hidden;
+  background:var(--border); margin:8px 0 7px; }
+.sfs-bar i { display:block; height:100%; }
+.sfs-bar i.on { background:var(--success); }
+.sfs-bar i.lt { background:var(--warning); }
+.sfs-bar i.ms { background:var(--danger); opacity:.55; }
+.sfs-meta { display:flex; align-items:center; gap:11px; flex-wrap:wrap;
+  font-size:11.5px; font-weight:600; color:var(--text-secondary); }
+.sfs-meta span { display:inline-flex; align-items:center; gap:5px; }
+.sfs-meta i.k { width:8px; height:8px; border-radius:2px; display:block; }
+.sfs-meta i.k.on { background:var(--success); }
+.sfs-meta i.k.lt { background:var(--warning); }
+.sfs-meta i.k.ms { background:var(--danger); opacity:.55; }
+.sfs-avg { margin-left:auto; color:var(--text-tertiary); font-variant-numeric:tabular-nums; }
+@media (max-width:640px) {
+  .sfs-avg { margin-left:0; width:100%; }
+  .sfs-name { font-size:12.5px; }
+}
 .sf-time-branch { border:1px solid var(--border); border-radius:14px; padding:12px 14px; margin-bottom:10px; background:var(--surface); box-shadow:0 1px 2px rgba(15,23,42,.04); }
 .sf-time-branch:last-child { margin-bottom:0; }
 .sf-time-branch-name { display:flex; align-items:center; gap:7px; font-weight:800; font-size:14px; color:var(--text); margin-bottom:10px; }
 .sf-time-branch-name .material-symbols-rounded { font-size:19px; color:var(--primary); }
 /* เวลาส่ง — สาขา + กรอบรอบเปิด/ปิด แยกชัด */
-.sf-time-line { display:flex; flex-direction:column; align-items:stretch; gap:9px; padding:11px 13px; border:1px solid var(--border); border-radius:14px; background:var(--surface); margin-bottom:8px; box-shadow:0 1px 2px rgba(15,23,42,.04); }
-.sf-time-line:last-child { margin-bottom:0; }
-.sf-tline-branch { display:inline-flex; align-items:center; gap:6px; font-weight:800; font-size:13.5px; color:var(--text); align-self:flex-start; }
-.sf-tline-branch .material-symbols-rounded { font-size:18px; color:var(--primary); }
-.sf-shift-boxes { display:grid; grid-template-columns:1fr 1fr; gap:8px; min-width:0; }
-@media (max-width:600px){ .sf-shift-boxes { grid-template-columns:1fr; } }
-.sf-shift-box { min-width:0; border:1px solid var(--border); border-left:3px solid var(--border); border-radius:12px; padding:11px 13px; background:var(--surface-2); display:flex; flex-direction:column; gap:8px; }
-.sf-shift-box.sf-shift-open { border-left-color:#E8862F; }
-.sf-shift-box.sf-shift-close { border-left-color:#7B88C9; }
-.sf-shift-box.is-ok { border-color:var(--success); background:var(--success-bg); }
-.sf-shift-box.is-ok.sf-shift-open { border-left-color:#C2620F; }
-.sf-shift-box.is-ok.sf-shift-close { border-left-color:#4A5A99; }
-.sf-shift-box.is-late { border-color:#F0B9AE; background:var(--danger-bg); border-left-color:var(--danger); }
-.sf-shift-box.is-empty { background:transparent; }
-.sf-shift-box.is-clickable { cursor:pointer; transition:transform .12s ease, box-shadow .12s ease; }
-.sf-shift-box.is-clickable:hover { box-shadow:0 4px 14px rgba(15,23,42,.10); transform:translateY(-1px); }
-.sf-shift-box.is-clickable:active { transform:scale(.99); }
-.sf-shift-head { display:flex; align-items:center; gap:6px; }
-.sf-shift-head > .material-symbols-rounded { font-size:18px; }
-.sf-shift-open .sf-shift-head > .material-symbols-rounded { color:#C2620F; }
-.sf-shift-close .sf-shift-head > .material-symbols-rounded { color:#4A5A99; }
-.sf-shift-label { font-weight:800; font-size:13px; color:var(--text); }
-.sf-shift-head .sf-score-pill { margin-left:auto; }
-.sf-shift-body { display:flex; align-items:center; gap:7px; flex-wrap:wrap; }
-.sf-shift-time { display:inline-flex; align-items:center; gap:4px; font-size:12.5px; font-weight:700; color:var(--text-secondary); font-variant-numeric:tabular-nums; }
-.sf-shift-time .material-symbols-rounded { font-size:15px; }
-.sf-shift-box.is-empty .sf-shift-time { color:var(--text-tertiary); font-style:italic; }
-.sf-late-chip { font-size:10.5px; font-weight:800; color:#fff; background:var(--danger); padding:2px 9px; border-radius:999px; letter-spacing:.2px; }
-.sf-box-go { font-size:18px; color:var(--text-tertiary); margin-left:auto; }
-.sf-box-reason { display:flex; align-items:flex-start; gap:5px; padding-top:8px; border-top:1px dashed rgba(214,54,34,.28); font-size:11.5px; font-weight:600; color:var(--danger); line-height:1.35; }
-.sf-box-reason .material-symbols-rounded { font-size:15px; flex-shrink:0; margin-top:1px; }
-.sf-box-reason b { font-weight:800; }
 
 /* หมายเหตุระบบ — บอกว่าที่ยังไม่ส่งเพราะระบบมีปัญหา ไม่ใช่สาขาไม่ทำ
    ใช้สีน้ำเงินให้ต่างจากสีแดงของ "เกินเวลา" ซึ่งเป็นความผิดสาขา */
-.sf-shift-box.has-sysnote { border-color: rgba(59,130,246,0.45); background: rgba(59,130,246,0.05); }
-.sf-box-sysnote {
   display:flex; align-items:flex-start; gap:5px; margin-top:8px; padding-top:8px;
   border-top:1px dashed rgba(59,130,246,0.35);
   font-size:11.5px; line-height:1.5; color:#1d4ed8; font-weight:600;
 }
-.sf-box-sysnote .material-symbols-rounded { font-size:15px; flex-shrink:0; margin-top:1px; }
 .sf-tline-reason { width:100%; font-size:11.5px; color:var(--danger); font-weight:600; }
-.sf-score-pill { font-weight:900; font-size:12px; padding:2px 9px; border-radius:999px; border:1.5px solid var(--border); background:var(--surface); font-variant-numeric:tabular-nums; }
-.sf-score-pill.is-good { color:#1E6B36; border-color:var(--success); }
-.sf-score-pill.is-warn { color:#B45309; border-color:#F59E0B; }
-.sf-score-pill.is-bad { color:var(--danger); border-color:var(--danger); }
-.sf-time-day-head .material-symbols-rounded,
-.sf-tline-branch .material-symbols-rounded,
-.sf-shift-head > .material-symbols-rounded { font-variation-settings: 'FILL' 1, 'wght' 500, 'GRAD' 0, 'opsz' 24; }
 @media (max-width:560px){ .sf-tline-branch { min-width:100%; } }
 
 /* ── ตารางการส่ง · เปิด/ปิดร้าน (รายสาขา + สาเหตุส่งช้า) ── */
@@ -5898,7 +5888,7 @@ body.in-audit #ck-page-head { display:none; }
           <div id="sf-daily-table"><div class="jd-dash-empty">กำลังโหลด…</div></div>
         </div>
         <div class="card">
-          <div class="card-header"><span class="material-symbols-rounded" style="color:#0E7490;">schedule</span><h2>เวลาการส่ง · เปิด/ปิดร้าน</h2></div>
+          <div class="card-header"><span class="material-symbols-rounded" style="color:#0E7490;">schedule</span><h2>สรุปการส่ง <span class="card-header-en">รายสาขา · เรียงสาขาที่ต้องตามก่อน</span></h2></div>
           <div id="sf-daily-times"><div class="jd-dash-empty">กำลังโหลด…</div></div>
         </div>
         <div style="text-align:center;margin-top:4px;">
@@ -8748,7 +8738,7 @@ function renderSfChecklistTab() {
   if (brEl) brEl.innerHTML = _sfBranchRankHTML(dailies);
   if (tfEl) tfEl.innerHTML = _sfDailyTopFailsHTML(dailies);
   if (tblEl) tblEl.innerHTML = _sfDailyTableHTML();
-  if (tEl)  tEl.innerHTML  = _sfDailyTimesHTML(dailies);
+  if (tEl)  tEl.innerHTML  = _sfDailySummaryHTML(dailies);
 }
 
 // ───── ฟิลเตอร์วันที่ (วันนี้/อาทิตย์/เดือน/ทั้งหมด/กำหนดเอง) ─────
@@ -9488,69 +9478,100 @@ function _sfDailyTableHTML() {
   return controls + table;
 }
 
-// เวลาการส่ง · เปิด/ปิดร้าน — จัดกลุ่มตามวันที่ → รายสาขา (ใหม่สุดก่อน)
-function _sfDailyTimesHTML(dailies) {
-  if (!dailies.length) return '<div class="jd-dash-empty">ยังไม่มีเช็คลิสต์รายวัน</div>';
-  const fmtT = (iso) => { if (!iso) return null; const dd = new Date(iso); return String(dd.getHours()).padStart(2, '0') + ':' + String(dd.getMinutes()).padStart(2, '0'); };
-  // group: date → branch → {open, close}
-  const byDate = {};
-  dailies.forEach(d => {
-    const date = d.date || '-';
-    const bc = d.branchCode || d.branchName || '-';
-    if (!byDate[date]) byDate[date] = {};
-    if (!byDate[date][bc]) byDate[date][bc] = { name: branchLabel(d.branchCode, d.branchName), open: null, close: null };
-    byDate[date][bc][d.shift === 'close' ? 'close' : 'open'] = d;
+/* ═══ สรุปการส่ง · รายสาขา ═══
+   ของเดิมชื่อ "เวลาการส่ง" ไล่พิมพ์ทุกวัน × ทุกสาขา (31 วัน × ~52 สาขา ≈ 1,600 แถว)
+   ทำให้หน้าแดชบอร์ดสูง 273,000 px และมี element 75,000 ตัว — เปิดบนมือถือแล้วหนืด
+   ที่แย่กว่าคือมันไม่ได้ตอบคำถามอะไร ต้องกวาดตาเองว่าสาขาไหนมีปัญหา
+
+   เปลี่ยนเป็นสรุปต่อสาขา แถวละสาขา เรียงสาขาที่มีปัญหามากที่สุดขึ้นก่อน
+   1,600 แถว → เท่าจำนวนสาขา · ตอบได้ทันทีว่าต้องไปคุยกับสาขาไหน
+
+   ตัวหาร = "รอบที่ควรส่ง" นับจากวันที่มีสาขาใดสาขาหนึ่งส่งจริงในช่วงที่เลือก × 2 รอบ
+   ไม่ยึดปฏิทิน เพราะวันหยุด/วันที่ระบบล่ม ไม่ควรนับเป็นความผิดของสาขา */
+function _sfDailySummaryHTML(dailies) {
+  const roster = _visibleBranchRoster();
+  if (!roster.length) return '<div class="jd-dash-empty">ไม่มีสาขาในขอบเขตที่ดูอยู่</div>';
+
+  const opDays = {};
+  (dailies || []).forEach(function (d) { if (d && d.date) opDays[d.date] = 1; });
+  const nDays = Object.keys(opDays).length;
+  if (!nDays) return '<div class="jd-dash-empty">ยังไม่มีเช็คลิสต์รายวันในช่วงที่เลือก</div>';
+  const expect = nDays * 2;
+
+  const by = {};
+  roster.forEach(function (b) {
+    by[String(b.code)] = { code: String(b.code), name: branchLabel(b.code, b.name),   /* มีรหัสนำหน้ามาแล้ว */
+                           sent: 0, late: 0, openT: [], closeT: [] };
   });
-  const dates = Object.keys(byDate).sort((a, b) => b.localeCompare(a));
-
-  // กรอบแต่ละรอบ (เปิด/ปิด) — แยกชัด มีหัว + เวลา + คะแนนสี
-  const shiftBox = (rec, shift, date) => {
-    const icon = shift === 'open' ? 'wb_sunny' : 'bedtime';
-    const label = shift === 'open' ? 'เปิดร้าน' : 'ปิดร้าน';
-    const cls = shift === 'open' ? 'sf-shift-open' : 'sf-shift-close';
-    if (!rec) {
-      // มีหมายเหตุระบบของวัน+รอบนี้ไหม (เช่น ระบบล่ม สาขาส่งไม่ได้)
-      // ยังขึ้น "ยังไม่ส่ง" ตามจริง แค่บอกเหตุผลเพิ่ม — ไม่นับเป็นส่งแล้ว
-      const note = ckSysNote(date, shift);
-      return '<div class="sf-shift-box ' + cls + ' is-empty' + (note ? ' has-sysnote' : '') + '">' +
-        '<div class="sf-shift-head"><span class="material-symbols-rounded sf-ico-fill">' + icon + '</span><span class="sf-shift-label">' + label + '</span></div>' +
-        '<div class="sf-shift-body"><span class="sf-shift-time"><span class="material-symbols-rounded">schedule</span>ยังไม่ส่ง</span></div>' +
-        (note ? '<div class="sf-box-sysnote"><span class="material-symbols-rounded">info</span><span>' + escapeHtml(note) + '</span></div>' : '') +
-      '</div>';
+  (dailies || []).forEach(function (d) {
+    const r = by[String(d.branchCode || '')];
+    if (!r) return;                       /* ใบของสาขานอกขอบเขตที่ดูอยู่ */
+    r.sent++;
+    if (_isDailyLate(d)) r.late++;
+    const iso = d.submittedAt || d.startedAt;
+    if (iso) {
+      const dt = new Date(iso);
+      if (!isNaN(dt)) (d.shift === 'close' ? r.closeT : r.openT).push(dt.getHours() * 60 + dt.getMinutes());
     }
-    const t = fmtT(rec.submittedAt);
-    const late = _isDailyLate(rec);
-    const stateCls = late ? 'is-late' : (t ? 'is-ok' : '');
-    const it = rec.items || [];
-    const pass = it.filter(x => x.status === 'pass').length;
-    const fail = it.filter(x => x.status === 'fail').length;
-    const pct = (pass + fail) > 0 ? (pass / (pass + fail) * 100) : null;
-    const sTier = pct == null ? '' : (pct >= 90 ? 'is-good' : pct < 70 ? 'is-bad' : 'is-warn');
-    const scoreHtml = pct != null ? '<span class="sf-score-pill ' + sTier + '">' + pct.toFixed(0) + '%</span>' : '';
-    const reasonHtml = (late && (rec.lateReason || '').trim())
-      ? '<div class="sf-box-reason"><span class="material-symbols-rounded">schedule</span><span><b>เกินเวลา:</b> ' + escapeHtml(rec.lateReason) + '</span></div>'
-      : '';
-    const clickAttr = rec.id ? ' onclick="showDailyDetail(\'' + escapeAttr(rec.id) + '\')"' : '';
-    const clickCls = rec.id ? ' is-clickable' : '';
-    return '<div class="sf-shift-box ' + cls + ' ' + stateCls + clickCls + '"' + clickAttr + '>' +
-      '<div class="sf-shift-head"><span class="material-symbols-rounded sf-ico-fill">' + icon + '</span><span class="sf-shift-label">' + label + '</span>' + scoreHtml + '</div>' +
-      '<div class="sf-shift-body"><span class="sf-shift-time"><span class="material-symbols-rounded">schedule</span>' + (t ? ('ส่ง ' + t + ' น.') : 'ยังไม่ส่ง') + '</span>' + (late ? '<span class="sf-late-chip">เกินเวลา</span>' : '') + (rec.id ? '<span class="material-symbols-rounded sf-box-go">chevron_right</span>' : '') + '</div>' +
-      reasonHtml +
-    '</div>';
-  };
+  });
 
-  return dates.map(date => {
-    const branches = Object.values(byDate[date]).sort((a, b) => a.name.localeCompare(b.name, 'th'));
-    return '<div class="sf-time-day">' +
-      '<div class="sf-time-day-head"><span class="material-symbols-rounded sf-ico-fill">event</span> ' + escapeHtml(fmtDateDMY(date)) + '</div>' +
-      branches.map(b =>
-        '<div class="sf-time-line">' +
-          '<span class="sf-tline-branch"><span class="material-symbols-rounded sf-ico-fill">storefront</span> ' + escapeHtml(b.name) + '</span>' +
-          '<div class="sf-shift-boxes">' + shiftBox(b.open, 'open', date) + shiftBox(b.close, 'close', date) + '</div>' +
-        '</div>'
-      ).join('') +
+  const avgT = function (arr) {
+    if (!arr.length) return '—';
+    const m = Math.round(arr.reduce(function (s, v) { return s + v; }, 0) / arr.length);
+    return String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
+  };
+  const rows = Object.keys(by).map(function (k) {
+    const r = by[k];
+    r.miss = Math.max(0, expect - r.sent);
+    r.onTime = r.sent - r.late;
+    r.pct = expect > 0 ? Math.round(r.onTime / expect * 100) : 0;
+    return r;
+  }).sort(function (a, b) {
+    /* ขาดส่งถือว่าหนักกว่าส่งช้า — เรียงตามที่ต้องไปตามก่อน ไม่ใช่เรียงตามรหัสสาขา */
+    const wa = a.miss * 2 + a.late, wb = b.miss * 2 + b.late;
+    if (wb !== wa) return wb - wa;
+    return String(a.code).localeCompare(String(b.code));
+  });
+
+  const tot = rows.reduce(function (s, r) {
+    s.sent += r.sent; s.late += r.late; s.miss += r.miss; return s;
+  }, { sent: 0, late: 0, miss: 0 });
+  const totExpect = expect * rows.length;
+
+  const head = '<div class="sfs-head">' +
+    '<span class="sfs-h-t">' + nDays + ' วัน · ' + rows.length + ' สาขา</span>' +
+    '<span class="sfs-h-s">ควรส่ง ' + totExpect.toLocaleString() + ' รอบ · ส่งจริง ' + tot.sent.toLocaleString() +
+      ' · เกินเวลา ' + tot.late.toLocaleString() + ' · ไม่ได้ส่ง ' + tot.miss.toLocaleString() + '</span>' +
+  '</div>';
+
+  const body = rows.map(function (r) {
+    /* คิดเป็นสัดส่วน ไม่ใช่ "ขาดแม้รอบเดียวก็แดง"
+       รอบที่ควรส่งมี 62 รอบต่อเดือน ขาดหนึ่งรอบแล้วแดงทันที = ทุกสาขาแดงหมด สีจึงไม่ได้บอกอะไร */
+    const tone = r.pct >= 95 ? 'ok' : (r.pct >= 85 ? 'warn' : 'bad');
+    const wOn = expect ? (r.onTime / expect * 100) : 0;
+    const wLate = expect ? (r.late / expect * 100) : 0;
+    const wMiss = expect ? (r.miss / expect * 100) : 0;
+    return '<div class="sfs-row ' + tone + '">' +
+      '<div class="sfs-top">' +
+        '<span class="sfs-name">' + escapeHtml(r.name) + '</span>' +
+        '<span class="sfs-pct">' + r.pct + '<small>%</small></span>' +
+      '</div>' +
+      /* แถบเดียวแบ่งสามช่วง — เห็นสัดส่วนตรงเวลา/สาย/ขาด โดยไม่ต้องอ่านตัวเลขสามตัว */
+      '<div class="sfs-bar">' +
+        '<i class="on" style="width:' + wOn.toFixed(1) + '%"></i>' +
+        '<i class="lt" style="width:' + wLate.toFixed(1) + '%"></i>' +
+        '<i class="ms" style="width:' + wMiss.toFixed(1) + '%"></i>' +
+      '</div>' +
+      '<div class="sfs-meta">' +
+        '<span><i class="k on"></i>ตรงเวลา ' + r.onTime + '</span>' +
+        (r.late ? '<span><i class="k lt"></i>เกินเวลา ' + r.late + '</span>' : '') +
+        (r.miss ? '<span><i class="k ms"></i>ไม่ได้ส่ง ' + r.miss + '</span>' : '') +
+        '<span class="sfs-avg">เฉลี่ย เปิด ' + avgT(r.openT) + ' · ปิด ' + avgT(r.closeT) + '</span>' +
+      '</div>' +
     '</div>';
   }).join('');
+
+  return head + '<div class="sfs-list">' + body + '</div>';
 }
 
 function branchLabel(code, name) {
