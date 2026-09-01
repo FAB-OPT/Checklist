@@ -9929,17 +9929,33 @@ function _dailyMonthKey() {
   const t = todayDateStr();
   return t.slice(0, 7);
 }
+/* ปฏิทินอยู่สองที่แล้ว — หน้าประวัติกับหน้าแดชบอร์ด
+   ปุ่มเลื่อนเดือนจึงต้องสั่งวาดใหม่เฉพาะหน้าที่เปิดอยู่จริง
+   ของเดิมเรียก renderDailyList() อย่างเดียว กดบนแดชบอร์ดแล้วเดือนไม่ขยับ */
 function _dailyMonthShift(n) {
   const k = _dailyMonthKey();
   const d = new Date(Number(k.slice(0, 4)), Number(k.slice(5, 7)) - 1 + n, 1);
   const nk = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
   if (nk > todayDateStr().slice(0, 7)) return;      /* ไม่ให้ไปข้างหน้าเกินเดือนนี้ */
   _dailyMonth = nk;
-  renderDailyList();
+  _dailyRepaintMonth();
+}
+function _dailyRepaintMonth() {
+  const onDash = document.getElementById('sf-cl-month');
+  const onHub = document.getElementById('daily-list');
+  if (onDash && onDash.offsetParent !== null && typeof renderSfChecklistTab === 'function') renderSfChecklistTab();
+  else if (onHub && typeof renderDailyList === 'function') renderDailyList();
 }
 function _dailyPickDay(date) {
+  /* บนแดชบอร์ดไม่มีช่องกรองวันของหน้าประวัติ — กดวันแล้วให้ไปเปลี่ยนวันของตารางการส่งแทน */
   const el = document.getElementById('daily-filter-date');
-  if (!el) return;
+  if (!el || el.offsetParent === null) {
+    if (typeof sfTableDate !== 'undefined') {
+      sfTableDate = (sfTableDate === date) ? '' : date;
+      if (typeof _renderSfTable === 'function') _renderSfTable();
+    }
+    return;
+  }
   el.value = (el.value === date) ? '' : date;       /* กดซ้ำ = ยกเลิกการกรอง */
   renderDailyList();
 }
@@ -9963,7 +9979,20 @@ function _dailyMonthHM(iso) {
    ยังตอบคำถามเดิมได้ว่าวันไหนของสัปดาห์เป็นปัญหา แต่ตอบในระดับทั้งขอบเขตแทน */
 function _dailyMonthStripHTML(list, nBranch) {
   const many = (nBranch || 1) > 1;
-  const key = _dailyMonthKey();
+  /* เปิดแดชบอร์ดวันที่ 1 ของเดือนแล้วเจอปฏิทินว่างทั้งแผง ดูเหมือนระบบพัง
+     ถ้าเดือนปัจจุบันยังไม่มีใบเลย ให้ถอยไปเดือนล่าสุดที่มีข้อมูลแทน
+     (เฉพาะตอนที่ผู้ใช้ยังไม่ได้กดเลือกเดือนเอง) */
+  let key = _dailyMonthKey();
+  if (!_dailyMonth) {
+    const hasNow = (list || []).some(function (d) { return d && d.date && d.date.slice(0, 7) === key; });
+    if (!hasNow) {
+      let latest = '';
+      (list || []).forEach(function (d) {
+        if (d && d.date && d.date.slice(0, 7) > latest) latest = d.date.slice(0, 7);
+      });
+      if (latest) key = latest;
+    }
+  }
   const y = Number(key.slice(0, 4)), m = Number(key.slice(5, 7));
   const days = new Date(y, m, 0).getDate();
   const today = todayDateStr();
