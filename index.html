@@ -3769,27 +3769,25 @@ input[type="time"].jd-form-input {
 }
 
 /* Daily history (ประวัติ) — grouped by date, two cards per day */
+/* หนึ่งวัน = การ์ดใบเดียว หัวการ์ดคือวันที่ แถวรอบเป็นบรรทัดข้างใน
+   ของเดิมหัววันลอยอยู่นอกการ์ด แล้วแต่ละรอบเป็นกล่องมีขอบของตัวเอง
+   กลายเป็นกล่องซ้อนกล่อง วันหนึ่งมีสองรอบก็เห็นสามกรอบ */
 .daily-history-group {
-  margin-bottom: 22px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 11px 13px 12px;
+  margin-bottom: 10px;
 }
 .daily-history-date {
-  display: inline-flex; align-items: center; gap: 6px;
-  font-size: 13px; font-weight: 800;
-  color: var(--text); letter-spacing: 0.3px;
-  margin: 0 0 10px 4px;
-  text-transform: uppercase;
+  display: flex; align-items: baseline; gap: 8px;
+  font-size: 13.5px; font-weight: 800;
+  color: var(--text); letter-spacing: 0;
+  margin: 0 0 8px;
+  text-transform: none;
 }
-.daily-history-date .material-symbols-rounded {
-  font-size: 16px; color: var(--primary);
-}
-.daily-history-cards {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 10px;
-}
-@media (min-width: 720px) {
-  .daily-history-cards { grid-template-columns: 1fr 1fr; }
-}
+.daily-history-date .material-symbols-rounded { display: none; }
+.daily-history-cards { display: block; }
 .daily-history-card {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -5405,12 +5403,12 @@ body.in-audit #ck-page-head { display:none; }
 .ck-shift.is-done { background:var(--bg); color:var(--text-tertiary); box-shadow:none; }
 .ck-shift.is-done .ck-shift-s { color:var(--success); opacity:1; }
 
-.ck-row { background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:11px 13px;
-  box-shadow:var(--shadow-sm); position:relative; overflow:hidden; cursor:pointer; }
-.ck-row + .ck-row { margin-top:8px; }
-.ck-row::before { content:''; position:absolute; left:0; top:0; bottom:0; width:3px; background:var(--primary); }
-.ck-row.r-ok::before  { background:var(--success); }
-.ck-row.r-bad::before { background:var(--danger); }
+.ck-row { background:none; border:0; border-radius:0; padding:7px 2px; position:relative; cursor:pointer; }
+.ck-row + .ck-row { margin-top:0; }
+.ck-row::before { display:none; }
+#jaedaeng-hub-screen .ck-row, #jd-history-list .ck-row {
+  background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:11px 13px; }
+#jaedaeng-hub-screen .ck-row + .ck-row, #jd-history-list .ck-row + .ck-row { margin-top:8px; }
 .ck-row-top { display:flex; align-items:center; gap:9px; }
 .ck-row-nm { font-size:13px; font-weight:700; flex:1; min-width:0;
   white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
@@ -10175,7 +10173,12 @@ function renderDailyList() {
     if (!byDate[d.date]) byDate[d.date] = [];
     byDate[d.date].push(d);
   });
-  Object.values(byDate).forEach(arr => arr.sort((a, b) => _sentTime(b).localeCompare(_sentTime(a))));
+  /* ในวันเดียวกันเรียงตามลำดับที่เกิดจริง เปิดร้านก่อนปิดร้าน
+     ของเดิมเรียงตามเวลาที่กดส่งจากใหม่ไปเก่า ปิดร้านเลยมาก่อนเปิดร้านทุกวัน
+     ซึ่งอ่านแล้วสะดุด เพราะไม่มีใครปิดร้านก่อนเปิด */
+  const _shiftOrder = d => (d.shift === 'close' ? 1 : 0);
+  Object.values(byDate).forEach(arr => arr.sort((a, b) =>
+    (_shiftOrder(a) - _shiftOrder(b)) || _sentTime(a).localeCompare(_sentTime(b))));
   const dates = Object.keys(byDate).sort((a, b) => b.localeCompare(a));
 
   const container = document.getElementById('daily-list');
@@ -14782,8 +14785,10 @@ const SFRep = {
 /* จำนวนรอบของวันนั้น + แถวของรอบที่ยังไม่ส่ง */
 .dh-round { margin-left:auto; font-size:11px; font-weight:700; color:var(--text-tertiary);
   font-variant-numeric:tabular-nums; }
-.ck-row.r-miss { background:var(--danger-bg); border-color:transparent; cursor:default; }
-.ck-row.r-miss .ck-row-nm { color:var(--danger); }
+/* รอบที่ยังไม่ส่ง — เป็นบรรทัดปกติ ให้ป้ายแดงเล็ก ๆ เป็นตัวบอก
+   ถมพื้นแดงทั้งแถบทำให้วันที่ขาดรอบเดียวดูหนักกว่าวันที่ไม่ส่งเลยทั้งวัน */
+.ck-row.r-miss { background:none; cursor:default; }
+.ck-row.r-miss .ck-row-nm { color:var(--text-tertiary); }
 
 /* แถวรอบในประวัติ — บรรทัดเดียว ไอคอน + ชื่อรอบ/เวลา + คะแนน */
 .ck-row-top { display:flex; align-items:center; gap:8px; }
