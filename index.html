@@ -5936,13 +5936,15 @@ body.in-audit #ck-page-head { display:none; }
         <div id="sf-cl-items"></div>
         <!-- สองคอลัมน์บนจอกว้าง — ทั้งคู่เป็นลิสต์สั้น ๆ วางเรียงลงมาแล้วต้องเลื่อนเปล่า ๆ -->
         <div class="sf-two">
-          <div class="card">
-            <div class="card-header"><span class="material-symbols-rounded" style="color:var(--danger);">priority_high</span><h2>หัวข้อที่ตกบ่อย</h2></div>
-            <div id="sf-daily-topfails"><div class="jd-dash-empty">กำลังโหลด…</div></div>
+          <div>
+            <div class="sfc-sec sub"><span class="sfc-sec-t">หัวข้อที่ตกบ่อย</span>
+              <span class="sfc-sec-x" id="sf-fail-n"></span></div>
+            <div class="card"><div id="sf-daily-topfails"><div class="jd-dash-empty">กำลังโหลด…</div></div></div>
           </div>
-          <div class="card">
-            <div class="card-header"><span class="material-symbols-rounded" style="color:var(--text-tertiary);">remove_circle</span><h2>หัวข้อที่ตอบ N/A บ่อย</h2></div>
-            <div id="sf-daily-topna"><div class="jd-dash-empty">กำลังโหลด…</div></div>
+          <div>
+            <div class="sfc-sec sub"><span class="sfc-sec-t">หัวข้อที่ตอบ N/A บ่อย</span>
+              <span class="sfc-sec-x" id="sf-na-n"></span></div>
+            <div class="card"><div id="sf-daily-topna"><div class="jd-dash-empty">กำลังโหลด…</div></div></div>
           </div>
         </div>
 
@@ -8741,6 +8743,15 @@ function renderSfChecklistTab() {
   if (tfEl) tfEl.innerHTML = _sfDailyTopFailsHTML(dailies);
   const naEl = document.getElementById('sf-daily-topna');
   if (naEl) naEl.innerHTML = _sfDailyTopNaHTML(dailies);
+  /* จำนวนไปอยู่ที่หัวข้อ ไม่ต้องมีบรรทัดสรุปใต้รายการอีก */
+  let _nf = 0, _nn = 0;
+  dailies.forEach(function (d) { (d.items || []).forEach(function (it) {
+    if (!it) return;
+    if (it.status === 'fail') _nf++; else if (it.status === 'na') _nn++; }); });
+  const fnEl = document.getElementById('sf-fail-n');
+  const nnEl = document.getElementById('sf-na-n');
+  if (fnEl) fnEl.textContent = _nf.toLocaleString('th-TH') + ' ข้อ';
+  if (nnEl) nnEl.textContent = _nn.toLocaleString('th-TH') + ' ข้อ';
   const tCard = document.getElementById('sf-daily-times-card');
   const _many = _sfTodayScopeRoster().length > 1;
   if (tCard) tCard.style.display = _many ? '' : 'none';
@@ -9937,10 +9948,12 @@ function _dailyMonthStripHTML(list, nBranch) {
       '<button type="button" class="dm-nav" onclick="_dailyMonthShift(-1)" title="เดือนก่อน"><span class="material-symbols-rounded">chevron_left</span></button>' +
       '<span class="dm-title">' + monthName + ' ' + (y + 543) + '</span>' +
       '<button type="button" class="dm-nav" onclick="_dailyMonthShift(1)"' + (atNow ? ' disabled' : '') + ' title="เดือนถัดไป"><span class="material-symbols-rounded">chevron_right</span></button>' +
-      '<span class="dm-sum">' + (many
-        ? ('<b>' + nBranch + '</b> สาขา · ส่งแล้ว <b>' + sentAll.toLocaleString() + '</b> จาก '
-           + needAll.toLocaleString() + ' รอบ')
-        : ('<b>' + full + '</b> ครบ · <b>' + part + '</b> ขาดรอบ · <b>' + miss + '</b> ไม่ได้ส่ง')) + '</span>' +
+      /* บอกเฉพาะจำนวนที่ขาด — "0 ครบ · 1 ขาดรอบ · 0 ไม่ได้ส่ง" ต้องบวกลบเองถึงจะรู้ว่าขาดกี่ครั้ง
+         ทั้งที่คำตอบเดียวที่ต้องการคือขาดเท่าไร ถ้าไม่ขาดเลยก็บอกไปตรง ๆ */
+      '<span class="dm-sum">' + (function () {
+        const gap = many ? (needAll - sentAll) : (part + miss * 2);
+        return gap > 0 ? 'ขาด <b>' + gap.toLocaleString('th-TH') + '</b> ครั้ง' : 'ส่งครบทุกครั้ง';
+      })() + '</span>' +
     '</div>' +
     '<div class="dm-dow">' + ['จ','อ','พ','พฤ','ศ','ส','อา'].map(function (d) {
         return '<span>' + d + '</span>'; }).join('') + '</div>' +
@@ -14527,6 +14540,13 @@ const SFRep = {
   border-top:1px solid var(--border); font-size:11.5px; font-weight:700; color:var(--text-secondary); }
 .ck-prog-ph .material-symbols-rounded { font-size:16px; color:var(--text-tertiary); }
 .ck-prog-ph b { font-weight:800; color:var(--text); }
+
+/* หัวข้อระดับรอง — ใช้กับรายการย่อยในหมวด ตัวเล็กกว่าหัวหมวด เส้นบางกว่า */
+.sfc-sec.sub { border-top-width:1px; padding-top:9px; margin:0 2px 9px; }
+.sfc-sec.sub .sfc-sec-t { font-size:13.5px; }
+/* กันการ์ดสองใบชนกันตอนตกบรรทัดบนจอแคบ */
+.sf-two { margin-top:16px; }
+.sfk-three + .sf-two { margin-top:18px; }
 </style>
 <!-- ══════════ กล่องออกรายงาน (ซานตาเฟ่) ══════════ -->
 <div class="sfrep-ov" id="sfrep-ov">
