@@ -5874,8 +5874,8 @@ body.in-audit #ck-page-head { display:none; }
          ปุ่มสลับแบรนด์ย้ายลงมาอยู่ใต้การ์ด เพราะมันคือ "กำลังดูแบรนด์ไหน"
          ซึ่งเป็นเรื่องเดียวกับที่การ์ดบอก ควรอยู่ด้วยกัน -->
     <div id="ck-page-head" class="no-print">
-      <!-- หัวจอกดได้ — ลูกศรกางแผงที่บอกว่าเข้าใช้ในชื่อใคร และให้สลับแบรนด์
-           ของเดิมโชว์ชื่อผู้ใช้ค้างไว้ตลอด ทั้งที่เป็นข้อมูลที่ดูแค่ตอนสงสัย -->
+      <!-- หัวจอกดได้เฉพาะคนที่สลับแบรนด์ได้ — ลูกศรกางแผงปุ่มสลับแบรนด์
+           คนที่มีแบรนด์เดียวไม่มีอะไรให้กาง ลูกศรจึงไม่ขึ้นและกดไม่ได้ -->
       <button type="button" class="ck-hd" id="ck-hd-btn" aria-expanded="false" onclick="_ckToggleHead()">
         <div class="ck-hd-ic">
           <img id="ck-hd-logo" alt="">
@@ -5888,7 +5888,6 @@ body.in-audit #ck-page-head { display:none; }
         <span class="material-symbols-rounded ck-hd-chev">expand_more</span>
       </button>
       <div class="ck-hd-panel" id="ck-hd-panel" hidden>
-        <div class="ck-hd-who">เข้าใช้ในชื่อ <b id="ck-hd-user">—</b></div>
         <div class="ck-hd-tools" id="ck-hd-tools"></div>
       </div>
     </div>
@@ -8643,11 +8642,17 @@ function _ckPaintPageHead() {
     }
     sub.textContent = scope;
   }
-  const user = document.getElementById('ck-hd-user');
-  if (user && currentUser) {
-    /* ชื่อเล่นพอ — ช่องนี้แคบ และคนใช้รู้อยู่แล้วว่าตัวเองเป็นใคร
-       มีไว้เพื่อยืนยันว่าไม่ได้ค้างอยู่ในบัญชีคนอื่นเท่านั้น */
-    user.textContent = currentUser.nick || currentUser.name || '—';
+  /* หัวจอกดได้เฉพาะคนที่สลับแบรนด์ได้ — คนอื่นไม่มีอะไรให้กาง */
+  const canSwitch = !!(currentUser && currentUser.crossBrand);
+  const hdBtn = document.getElementById('ck-hd-btn');
+  if (hdBtn) {
+    hdBtn.classList.toggle('is-static', !canSwitch);
+    hdBtn.disabled = !canSwitch;
+    if (!canSwitch) {
+      hdBtn.setAttribute('aria-expanded', 'false');
+      const pn = document.getElementById('ck-hd-panel');
+      if (pn) pn.setAttribute('hidden', '');
+    }
   }
 }
 
@@ -14487,8 +14492,8 @@ const SFRep = {
 .ck-hd-chev { font-size:22px; color:var(--text-tertiary); flex:0 0 auto; transition:transform .18s; }
 .ck-hd[aria-expanded="true"] .ck-hd-chev { transform:rotate(180deg); }
 .ck-hd-panel { padding:11px 2px 13px; border-bottom:1px solid var(--border); }
-.ck-hd-who { font-size:12px; font-weight:600; color:var(--text-tertiary); margin-bottom:9px; }
-.ck-hd-who b { color:var(--text); font-weight:800; }
+.ck-hd.is-static { cursor:default; }
+.ck-hd.is-static .ck-hd-chev { display:none; }
 .tools-label { font-size:10.5px; font-weight:800; color:var(--text-tertiary);
   letter-spacing:.06em; padding:0 2px 6px; }
 #ck-hd-tools .header-view-toggle { display:flex; gap:6px; flex-wrap:wrap; }
