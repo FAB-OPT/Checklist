@@ -429,16 +429,22 @@ body {
   font-size: 12px; font-weight: 700; color: var(--danger);
   margin-bottom: 8px; display: flex; align-items: center; gap: 4px;
 }
+/* ยังไม่แนบ = เส้นทึบแดง บอกว่าติดอยู่ตรงนี้ · แนบแล้ว = เส้นประเทา แค่เพิ่มได้อีก
+   ของเดิมเป็นสีแบรนด์ทั้งสองสถานะ ซึ่งไม่ได้บอกว่าอันไหนติดอันไหนผ่านแล้ว */
 .photo-upload-btn {
   display: inline-flex; align-items: center; gap: 6px;
-  padding: 10px 16px; background: var(--primary-50);
-  border: 1.5px dashed var(--primary); border-radius: var(--r-sm);
-  font-size: 13px; font-weight: 700; cursor: pointer;
-  color: var(--primary); font-family: inherit;
-  min-height: 40px;
+  padding: 9px 14px; background: var(--surface);
+  border: 1px dashed var(--border-strong); border-radius: var(--r-sm);
+  font-size: 12.5px; font-weight: 700; cursor: pointer;
+  color: var(--text-secondary); font-family: inherit;
+  min-height: 38px;
   transition: background 0.18s;
 }
-.photo-upload-btn:hover { background: var(--primary-100); }
+.photo-upload-btn.is-required {
+  border-style: solid; border-color: var(--danger); color: var(--danger);
+  background: var(--surface);
+}
+.photo-upload-btn:hover { background: var(--bg-strong); }
 .photo-preview { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
 .photo-thumb {
   position: relative; width: 76px; height: 76px;
@@ -4079,30 +4085,33 @@ input[type="time"].jd-form-input {
 }
 .daily-choice {
   display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-  padding: 12px 8px;
-  min-height: 48px;
+  padding: 11px 8px;
+  min-height: 44px;
   border-radius: var(--r-md);
-  border: 1.5px solid var(--border);
+  border: 1px solid var(--border);
   background: var(--surface);
-  color: var(--text-secondary);
-  font-weight: 700; font-size: 14px;
+  color: var(--text-tertiary);
+  font-weight: 700; font-size: 13.5px;
   font-family: inherit;
   cursor: pointer;
   transition: all 0.18s;
 }
 .daily-choice:hover { background: var(--bg); border-color: var(--border-strong); }
 .daily-choice:active { transform: scale(0.96); }
-.daily-choice .material-symbols-rounded { font-size: 20px; }
+
+/* ที่เลือกไว้ใช้พื้นอ่อน ไม่ใช่ถมสีทึบ — ในหมวดหนึ่งมี 11 ข้อ ตอบครบแล้ว
+   จะได้แถบสีทึบเรียงกัน 11 แถบ กลบทั้งหน้าจนอ่านข้อความข้อไม่ออก
+   พื้นอ่อนบอกได้เท่ากันว่าเลือกอะไรไว้ โดยไม่แย่งสายตาไปจากตัวคำถาม */
 .daily-choice.active.pass {
-  background: var(--success); color: white; border-color: var(--success);
-  box-shadow: 0 4px 12px rgba(45,122,74,0.25);
+  background: var(--success-bg); color: var(--success); border-color: transparent;
+  box-shadow: none;
 }
 .daily-choice.active.fail {
-  background: var(--danger); color: white; border-color: var(--danger);
-  box-shadow: 0 4px 12px rgba(199,50,35,0.25);
+  background: var(--danger-bg); color: var(--danger); border-color: transparent;
+  box-shadow: none;
 }
 .daily-choice.active.na {
-  background: var(--text-secondary); color: white; border-color: var(--text-secondary);
+  background: var(--bg-strong); color: var(--text-secondary); border-color: transparent;
 }
 .daily-note-input {
   width: 100%; margin-top: 12px;
@@ -6035,24 +6044,8 @@ body.in-audit #ck-page-head { display:none; }
 
     <!-- DAILY FORM SCREEN -->
     <div id="daily-form-screen" style="display:none;">
-      <div class="card daily-form-head-card" id="daily-form-head">
-        <div class="daily-form-head-top">
-          <div class="daily-form-shift-icon" id="daily-form-shift-icon">
-            <span class="material-symbols-rounded" id="daily-form-icon">wb_sunny</span>
-          </div>
-          <div class="daily-form-titles">
-            <div class="daily-form-title-row">
-              <h2 id="daily-form-title">เช็ค Open</h2>
-              <div class="daily-form-date" id="daily-form-date-chip">—</div>
-            </div>
-          </div>
-        </div>
-        <span class="daily-form-branch-hidden" id="daily-form-branch" style="display:none;"></span>
-        <span class="daily-form-branch-hidden" id="daily-form-bzm-chip" style="display:none;"></span>
-      </div>
-
-      <!-- ความคืบหน้าอยู่บนสุดและติดหน้าจอ — คำถามที่คนตรวจถามตัวเองตลอดคือ
-           "เหลืออีกกี่ข้อ" ถ้าต้องเลื่อนขึ้นไปดูก็เท่ากับไม่ได้ตอบ -->
+      <!-- การ์ดหัวฟอร์มเดิมบอก "เช็ค Open" กับวันที่ ซึ่งซ้ำกับการ์ดความคืบหน้าข้างล่าง
+           ที่บอกชื่อรอบ สาขา และขนาดฟอร์มครบแล้ว · เอาออกทั้งใบ -->
       <!-- ห่อความคืบหน้ากับแถบหมวดไว้ด้วยกัน จะได้เลื่อนตามจอเป็นก้อนเดียว
            ของเดิมต่างคน sticky คนละ top พอการ์ดความคืบหน้าสูงขึ้นก็ทับกัน -->
       <div class="ck-stick">
@@ -10647,11 +10640,6 @@ async function startDailyShift(shift) {
   document.body.classList.add('in-audit');
   const isEdit = !!existing;
   const shiftLabel = shift === 'open' ? 'Open' : 'Close';
-  document.getElementById('daily-form-title').textContent = (isEdit ? 'แก้ไข ' : 'เช็ค ') + shiftLabel;
-  document.getElementById('daily-form-icon').textContent = shift === 'open' ? 'wb_sunny' : 'bedtime';
-  document.getElementById('daily-form-branch').textContent = branchLabel(_target.code, _target.name);
-  document.getElementById('daily-form-date-chip').innerHTML = `<span class="material-symbols-rounded">calendar_today</span><span>${fmtDateDMY(today)}</span>`;
-  document.getElementById('daily-form-head').className = 'card daily-form-head-card ' + (shift === 'open' ? 'is-open' : 'is-close');
   renderDailyForm();
 }
 
@@ -10777,10 +10765,10 @@ function renderDailyForm() {
       let photosHtml = '';
       if (showPhotos) {
         const missing = photos.length === 0;
-        const reqLabel = isFail ? 'ต้องถ่ายรูปหลักฐาน (ไม่ผ่าน)' : 'ต้องถ่ายรูปหลักฐาน';
+        /* ปุ่มเดียวจบ — ของเดิมมีบรรทัด "ต้องถ่ายรูปหลักฐาน" อยู่เหนือปุ่ม "ถ่ายรูป"
+           ซึ่งบอกสองรอบว่าต้องถ่าย ย้ายคำว่าบังคับไปไว้บนปุ่มเลย */
         photosHtml = '<div class="photo-section ' + (missing ? 'is-missing' : '') + '" style="margin-top:10px;">' +
-          '<div class="photo-required-label"><span class="material-symbols-rounded" style="font-size:16px;">photo_camera</span> ' + reqLabel + '</div>' +
-          '<button type="button" class="photo-upload-btn' + (missing ? ' is-required' : '') + '" onclick="openJDCamera(' + globalIdx + ',\'daily\')"><span class="material-symbols-rounded" style="font-size:18px;">photo_camera</span> ถ่ายรูป</button>' +
+          '<button type="button" class="photo-upload-btn' + (missing ? ' is-required' : '') + '" onclick="openJDCamera(' + globalIdx + ',\'daily\')"><span class="material-symbols-rounded" style="font-size:17px;">photo_camera</span> ' + (missing ? 'แนบรูป (บังคับ)' : 'เพิ่มรูป') + '</button>' +
           '<div class="photo-preview">' +
           photos.map((p, pi) => '<div class="photo-thumb"><img src="'+p+'"><button class="remove-btn" onclick="removeDailyPhoto('+globalIdx+','+pi+')"><span class="material-symbols-rounded" style="font-size:14px;">close</span></button></div>').join('') +
           '</div></div>';
@@ -10815,21 +10803,16 @@ function renderDailyForm() {
       html += `<div class="daily-item ${isPass?'is-pass':''} ${isFail?'is-fail':''} ${isNA?'is-na':''} ${isRequired?'is-required-photo':''}">
         <div class="daily-item-q">
           <span class="daily-item-num">${iIdx+1}</span>
-          <span class="daily-item-text">${escapeHtml(text)}${(isRequired && !isNA) ? '<span class="daily-item-photo-badge">📷 ต้องแนบรูป</span>' : ''}${Array.isArray(item.fills) ? '<span class="daily-item-fill-badge">✍️ ' + (item.fills.length === 1 ? 'ต้องระบุชื่อ' : 'ต้องกรอก ' + item.fills.length + ' ช่อง') + '</span>' : ''}</span>
+          <!-- ป้าย "ต้องแนบรูป" ตัดออก — ปุ่มแนบรูปที่โผล่ใต้ข้อบอกเรื่องเดียวกันอยู่แล้ว
+               และป้ายไปต่อท้ายข้อความข้อ ทำให้อ่านประโยคสะดุด -->
+          <span class="daily-item-text">${escapeHtml(text)}${Array.isArray(item.fills) ? '<span class="daily-item-fill-badge">ต้องกรอก ' + (item.fills.length === 1 ? 'ชื่อ' : item.fills.length + ' ช่อง') + '</span>' : ''}</span>
         </div>
+        <!-- ตัวหนังสือล้วน ไม่มีไอคอน — ปุ่มแคบ 1 ใน 3 ของแถว ไอคอนกับข้อความ
+             เบียดกันจนตัวหนังสือหด และไอคอนก็ไม่ได้บอกอะไรที่คำว่า "ผ่าน" ไม่ได้บอก -->
         <div class="daily-item-actions">
-          <button type="button" class="daily-choice pass ${isPass ? 'active' : ''}" onclick="setDailyItem(${globalIdx},'pass')">
-            <span class="material-symbols-rounded">check_circle</span>
-            <span>ผ่าน</span>
-          </button>
-          <button type="button" class="daily-choice fail ${isFail ? 'active' : ''}" onclick="setDailyItem(${globalIdx},'fail')">
-            <span class="material-symbols-rounded">cancel</span>
-            <span>ไม่ผ่าน</span>
-          </button>
-          <button type="button" class="daily-choice na ${isNA ? 'active' : ''}" onclick="setDailyItem(${globalIdx},'na')">
-            <span class="material-symbols-rounded">remove_circle</span>
-            <span>N/A</span>
-          </button>
+          <button type="button" class="daily-choice pass ${isPass ? 'active' : ''}" onclick="setDailyItem(${globalIdx},'pass')">ผ่าน</button>
+          <button type="button" class="daily-choice fail ${isFail ? 'active' : ''}" onclick="setDailyItem(${globalIdx},'fail')">ไม่ผ่าน</button>
+          <button type="button" class="daily-choice na ${isNA ? 'active' : ''}" onclick="setDailyItem(${globalIdx},'na')">N/A</button>
         </div>
         <input type="text" class="daily-note-input${noteMissing ? ' is-required' : ''}" placeholder="${isNA ? 'ระบุเหตุผลที่ N/A (จำเป็น)' : 'ระบุเหตุผล / Action ที่ไม่ผ่าน (จำเป็น)'}" value="${escapeAttr(item.note || '')}" oninput="setDailyNote(${globalIdx}, this.value)" style="display:${needNote ? 'block' : 'none'};" id="daily-note-${globalIdx}">
         ${fillsHtml}
@@ -11028,11 +11011,6 @@ function editDailyChecklist(id) {
   document.getElementById('daily-form-screen').style.display = 'block';
   document.body.classList.add('in-audit');
   const shift = d.shift;
-  document.getElementById('daily-form-title').textContent = 'แก้ไข ' + (shift === 'open' ? 'Open' : 'Close');
-  document.getElementById('daily-form-icon').textContent = shift === 'open' ? 'wb_sunny' : 'bedtime';
-  document.getElementById('daily-form-branch').textContent = branchLabel(d.branchCode, d.branchName);
-  document.getElementById('daily-form-date-chip').innerHTML = `<span class="material-symbols-rounded">calendar_today</span><span>${fmtDateDMY(d.date)}</span>`;
-  document.getElementById('daily-form-head').className = 'card daily-form-head-card ' + (shift === 'open' ? 'is-open' : 'is-close');
   renderDailyForm();
 }
 
