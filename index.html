@@ -8992,9 +8992,13 @@ function _sfBenchHTML(scopeDailies) {
   if (me == null || all == null) return '';
 
   var zone = null, zoneName = '';
-  if (sfClFilter.branch !== 'all') {
-    /* กรองเหลือสาขาเดียว — แทรกค่าเฉลี่ยของโซนตัวเองเข้ามาอีกเส้น */
-    zoneName = _sfBranchZone(sfClFilter.branch) || '';
+  /* เหลือสาขาเดียว ไม่ว่าจะมาจากการกรองหรือเพราะเป็นบัญชีสาขาเอง
+     ให้แทรกค่าเฉลี่ยของโซนตัวเองเข้ามาอีกเส้น
+     เทียบกับทั้งแบรนด์อย่างเดียวไม่พอ — โซนคือคนที่มาตามงานจริง */
+  var oneCode = (sfClFilter.branch !== 'all') ? sfClFilter.branch
+              : (scopeRoster === 1 && scopeList[0] ? scopeList[0].code : null);
+  if (oneCode) {
+    zoneName = _sfBranchZone(oneCode) || '';
     if (zoneName) {
       var codes = _sfCodeSet(brandList.filter(function (b) { return _sfBranchZone(b.code) === zoneName; }));
       zone = _sfRate(brandAll, codes);
@@ -9006,11 +9010,26 @@ function _sfBenchHTML(scopeDailies) {
   if (zone != null) rows.push({ l: 'โซน' + zoneName, v: zone });
   rows.push({ l: 'ทั้งแบรนด์', v: all });
 
-  var gap = me - all;
+  /* เทียบกับเส้นที่ใกล้ตัวที่สุดที่มี — มีโซนก็เทียบโซน เพราะโซนคือคนที่มาตามงานจริง
+     ไม่มีก็เทียบทั้งแบรนด์ */
+  var refV = (zone != null) ? zone : all;
+  var refName = (zone != null) ? ('ค่าเฉลี่ยโซน' + zoneName) : 'ค่าเฉลี่ยแบรนด์';
+  var gap = me - refV;
   var word = gap >= 0 ? 'สูงกว่า' : 'ต่ำกว่า';
-  var note = 'ที่ดูอยู่ <b>' + (Math.round(me * 10) / 10) + '%</b> ' + word
-    + 'ค่าเฉลี่ยแบรนด์ <b>' + (Math.round(Math.abs(gap) * 10) / 10) + ' จุด</b>'
-    + (me < GOAL ? ' · ยังห่างเป้า ' + GOAL + '% อีก <b>' + (Math.round((GOAL - me) * 10) / 10) + ' จุด</b>' : '');
+  var meName = rows[0].l;
+
+  /* ห่างเป้าอีกกี่ "ครั้ง" ไม่ใช่กี่ "จุด" — จุดเอาไปทำอะไรต่อไม่ได้
+     แต่ "ส่งให้ครบอีก 3 ครั้ง" คือสิ่งที่ลงมือทำได้พรุ่งนี้ */
+  var scopeDays = {};
+  (scopeDailies || []).forEach(function (d) { if (d && d.date && scopeCodes[String(d.branchCode)]) scopeDays[d.date] = 1; });
+  var meNeed = Object.keys(scopeDays).length * scopeRoster * 2;
+  var shortBy = meNeed ? Math.ceil(meNeed * GOAL / 100 - meNeed * me / 100) : 0;
+
+  var note = '<b>' + escapeHtml(meName) + ' ' + (Math.round(me * 10) / 10) + '%</b> ' + word
+    + escapeHtml(refName) + ' <b>' + (Math.round(Math.abs(gap) * 10) / 10) + ' จุด</b>'
+    + (me < GOAL && shortBy > 0
+        ? ' · ส่งให้ครบอีก <b>' + shortBy.toLocaleString('th-TH') + ' ครั้ง</b> ก็ถึงเป้า ' + GOAL + '%'
+        : (me >= GOAL ? ' · ถึงเป้าแล้ว' : ''));
 
   return '<div class="sfb">'
     + '<div class="sfb-h">' + (ckHasLate() ? 'ส่งครบตรงเวลา' : 'ส่งครบ') + ' — เทียบกับที่อื่น'
@@ -14447,12 +14466,17 @@ const SFRep = {
 .dm-h.dm-x { background:var(--danger-bg); color:var(--danger); }
 .dm-h.dm-f { background:var(--bg-strong); color:var(--text-tertiary); }
 /* ช่องแคบ: ตัดตัวหนังสือทิ้ง เหลือแถบสีสองแถบเหมือนเดิม */
+/* ช่องแคบ: ตัดเฉพาะป้าย "เปิด/ปิด" ทิ้ง แต่เก็บเวลาไว้
+   เวลาที่ส่งคือสิ่งที่ทำให้ปฏิทินมีค่ามากกว่าแถบสี — 06:40 กับ 11:29 คนละเรื่องกัน
+   แถวบนคือเปิดร้าน แถวล่างคือปิดร้าน เขียนบอกไว้ใต้ปฏิทินแล้ว */
 @media (max-width:560px){
   .dm-grid, .dm-dow { gap:3px; }
-  .dm-h { min-height:9px; padding:0; }
-  .dm-h i, .dm-h em { display:none; }
+  .dm-cell { border-radius:7px; }
+  .dm-h { min-height:13px; padding:1px 2px; justify-content:center; }
+  .dm-h i { display:none; }
+  .dm-h em { margin-left:0; font-size:8.5px; letter-spacing:-.3px; }
   .dm-h + .dm-h { border-top:1px solid var(--surface); }
-  .dm-d { padding:2px 4px 1px; font-size:10px; }
+  .dm-d { padding:2px 4px 1px; font-size:9.5px; }
 }
 
 /* ═══ แถบเทียบ ═══ */
