@@ -5963,6 +5963,9 @@ body.in-audit #ck-page-head { display:none; }
             <option value="">— เลือกสาขาที่จะตรวจ —</option>
           </select>
         </div>
+        <!-- กติกาเวลาของแบรนด์ — ต้องรู้ก่อนกดเริ่ม ไม่ใช่รู้ตอนโดนตีธงว่าสาย
+             แบรนด์ที่ไม่มีเวลาตัดก็บอกไปตรง ๆ ว่าไม่มี จะได้ไม่ต้องเดา -->
+        <div class="ck-cut" id="daily-cut-note"></div>
         <div class="ck-shifts daily-hub-actions">
           <button type="button" class="ck-shift" id="daily-open-btn" onclick="startDailyShift('open')">
             <span class="material-symbols-rounded">wb_sunny</span>
@@ -9879,8 +9882,9 @@ function showDailyHub() {
     else { picker.style.display = 'block'; _setupDailyBranchOptions(); }
   }
   _refreshDailyActions();
+  _paintDailyCutNote();
 
-  document.getElementById('daily-list-title').textContent = 'ส่งล่าสุด';
+  document.getElementById('daily-list-title').textContent = 'ผลการส่งล่าสุด';
   _ckPaintPageHead();
   // Branch users only see their own branch; the search field is useless to them
   const searchInput = document.getElementById('daily-filter-search');
@@ -9969,6 +9973,15 @@ function _dailyMonthShift(n) {
   _dailyMonth = nk;
   _dailyRepaintMonth();
 }
+/* บรรทัดกติกาเวลาใต้การ์ดรอบ */
+function _paintDailyCutNote() {
+  const el = document.getElementById('daily-cut-note');
+  if (!el) return;
+  el.innerHTML = ckHasLate()
+    ? '<span class="material-symbols-rounded">schedule</span>นับส่งช้าจากเวลาที่เริ่มตรวจ — ' + ckCutoffText()
+    : '<span class="material-symbols-rounded">schedule</span>แบรนด์นี้ไม่มีเวลาตัด ส่งเมื่อไรก็ไม่นับว่าช้า';
+}
+
 function _dailyRepaintMonth() {
   const onDash = document.getElementById('sf-cl-month');
   const onHub = document.getElementById('daily-list');
@@ -10146,6 +10159,8 @@ function renderDailyList() {
   }
 
   const isBranch = currentUser.role === 'branch';
+  /* กรองจนเหลือสาขาเดียวก็นับรอบที่ขาดได้เหมือนบัญชีสาขา */
+  const _oneBranchView = new Set(list.map(d => String(d.branchCode || ''))).size === 1;
   container.innerHTML = dates.map(date => {
     const dayItems = byDate[date];
     const cards = dayItems.map(d => {
@@ -10194,12 +10209,31 @@ function renderDailyList() {
       </div>`;
     }).join('');
 
+    /* รอบที่ยังไม่ส่งของวันนั้น — ของเดิมไม่แสดงเลย เห็นแต่รอบที่ส่งแล้ว
+       วันที่ส่งแค่รอบเดียวจึงหน้าตาเหมือนวันที่ส่งครบ ต้องนับเองว่าขาดรอบไหน
+       แสดงเฉพาะตอนดูสาขาเดียว หลายสาขาปนกันแล้วบอกไม่ได้ว่าใครขาด */
+    let missHtml = '', roundTxt = '';
+    if (isBranch || _oneBranchView) {
+      const got = {};
+      dayItems.forEach(function (x) { got[x.shift === 'close' ? 'close' : 'open'] = 1; });
+      const future = date > todayDateStr();
+      const miss = ['open', 'close'].filter(function (s) { return !got[s]; });
+      roundTxt = '<span class="dh-round">' + (2 - miss.length) + '/2 รอบ</span>';
+      if (!future) {
+        missHtml = miss.map(function (s) {
+          return '<div class="ck-row r-miss"><div class="ck-row-top">' +
+            '<span class="ck-row-nm">' + (s === 'open' ? 'เปิดร้าน' : 'ปิดร้าน') + '</span>' +
+            '<span class="ck-chip bad">ยังไม่ส่ง</span></div></div>';
+        }).join('');
+      }
+    }
     return `<div class="daily-history-group">
       <div class="daily-history-date">
         <span class="material-symbols-rounded">calendar_today</span>
         <span>${escapeHtml(fmtDateThaiShort(date))}</span>
+        ${roundTxt}
       </div>
-      <div class="daily-history-cards">${cards}</div>
+      <div class="daily-history-cards">${cards}${missHtml}</div>
     </div>`;
   }).join('');
 }
@@ -14709,6 +14743,16 @@ const SFRep = {
 /* กันการ์ดสองใบชนกันตอนตกบรรทัดบนจอแคบ */
 .sf-two { margin-top:16px; }
 .sfk-three + .sf-two { margin-top:18px; }
+
+/* กติกาเวลาใต้การ์ดรอบ */
+.ck-cut { display:flex; align-items:center; gap:6px; margin:0 2px 10px;
+  font-size:11.5px; font-weight:600; color:var(--text-tertiary); line-height:1.5; }
+.ck-cut .material-symbols-rounded { font-size:16px; flex:0 0 auto; }
+/* จำนวนรอบของวันนั้น + แถวของรอบที่ยังไม่ส่ง */
+.dh-round { margin-left:auto; font-size:11px; font-weight:700; color:var(--text-tertiary);
+  font-variant-numeric:tabular-nums; }
+.ck-row.r-miss { background:var(--danger-bg); border-color:transparent; cursor:default; }
+.ck-row.r-miss .ck-row-nm { color:var(--danger); }
 </style>
 <!-- ══════════ กล่องออกรายงาน (ซานตาเฟ่) ══════════ -->
 <div class="sfrep-ov" id="sfrep-ov">
