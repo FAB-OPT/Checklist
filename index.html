@@ -5982,12 +5982,20 @@ body.in-audit #ck-page-head { display:none; }
 
       <div class="sfc-sec"><span class="sfc-sec-bar"></span>
         <span class="sfc-sec-t" id="daily-list-title">ส่งล่าสุด</span></div>
+      <!-- ตั้งต้นที่ 7 วันล่าสุด — เปิดมาแล้วเจอ 90 วันรวดคือเลื่อนหาไม่เจอ
+           อยากดูไกลกว่านั้นค่อยเลือกเอง -->
       <div class="filter-bar" id="daily-filter-bar">
-        <input type="text" id="daily-filter-search" placeholder="ค้นหาสาขา..." oninput="renderDailyList()">
+        <input type="text" id="daily-filter-search" placeholder="🔍 ค้นหาสาขา" oninput="renderDailyList()">
+        <select id="daily-filter-range" onchange="_dailySetRange(this.value)">
+          <option value="7">7 วันล่าสุด</option>
+          <option value="30">30 วันล่าสุด</option>
+          <option value="month">เดือนนี้</option>
+          <option value="all">ทั้งหมด</option>
+        </select>
         <select id="daily-filter-shift" onchange="renderDailyList()">
-          <option value="">ทุก shift</option>
-          <option value="open">Open</option>
-          <option value="close">Close</option>
+          <option value="">ทุกรอบ</option>
+          <option value="open">เปิดร้าน</option>
+          <option value="close">ปิดร้าน</option>
         </select>
         <input type="date" id="daily-filter-date" onchange="renderDailyList()">
       </div>
@@ -9982,6 +9990,13 @@ function _paintDailyCutNote() {
     : '<span class="material-symbols-rounded">schedule</span>แบรนด์นี้ไม่มีเวลาตัด ส่งเมื่อไรก็ไม่นับว่าช้า';
 }
 
+function _dailySetRange(v) {
+  /* เลือกช่วงแล้วต้องล้างวันเจาะจงทิ้ง ไม่งั้นกรองสองชั้นแล้วว่างเปล่า */
+  const el = document.getElementById('daily-filter-date');
+  if (el) el.value = '';
+  renderDailyList();
+}
+
 function _dailyRepaintMonth() {
   const onDash = document.getElementById('sf-cl-month');
   const onHub = document.getElementById('daily-list');
@@ -10140,6 +10155,18 @@ function renderDailyList() {
   if (search) list = list.filter(d => branchLabel(d.branchCode, d.branchName).toLowerCase().includes(search));
   if (shiftFilter) list = list.filter(d => d.shift === shiftFilter);
   if (dateFilter) list = list.filter(d => d.date === dateFilter);
+  /* ช่วงวันที่ — เลือกวันเจาะจงชนะช่วงเสมอ */
+  const rangeEl = document.getElementById('daily-filter-range');
+  const range = rangeEl ? rangeEl.value : '7';
+  if (!dateFilter && range !== 'all') {
+    let from;
+    if (range === 'month') from = todayDateStr().slice(0, 7) + '-01';
+    else {
+      const dt = new Date(); dt.setDate(dt.getDate() - (Number(range) - 1));
+      from = dt.getFullYear() + '-' + String(dt.getMonth() + 1).padStart(2, '0') + '-' + String(dt.getDate()).padStart(2, '0');
+    }
+    list = list.filter(d => d && d.date && d.date >= from);
+  }
 
   // จัดกลุ่มตามวัน (วันใหม่สุดอยู่บน) · ภายในวันเรียงตามเวลาที่ส่งล่าสุดก่อน
   const _sentTime = d => d.submittedAt || d.updatedAt || d.startedAt || '';
@@ -10192,18 +10219,21 @@ function renderDailyList() {
          ของเดิมเป็นการ์ดสูงเกือบ 200px ต่อใบ มีทั้งแถบคะแนนและตัวเลขสามช่อง
          ซึ่งเป็นการเล่าคะแนนซ้ำสามรอบ พอมีหลายสาขาต่อวันเลยต้องปัดจอทั้งวัน
          รายละเอียดยังอยู่ครบในหน้ารายละเอียด แตะแถวเข้าไปดูได้ */
+      /* บรรทัดเดียวจบ — ไอคอนรอบ · ชื่อรอบ · เวลาที่ส่ง · คะแนนชิดขวา
+         ของเดิมแยกเป็นสองบรรทัด บรรทัดล่างเป็นชิปสามอัน (เวลา / ครบ / ตรวจช้า)
+         ชิป "ครบ" บอกสิ่งที่คะแนน 100% บอกอยู่แล้ว และชิปเวลาไม่ต้องมีกรอบก็อ่านได้
+         สี่บรรทัดต่อวันเหลือสองบรรทัด เห็นได้หลายวันกว่าเดิมในจอเดียว */
       const shiftThaiFull = d.shift === 'open' ? 'เปิดร้าน' : 'ปิดร้าน';
       const rowTone = failItems > 0 ? 'r-bad' : (pending > 0 ? '' : 'r-ok');
       const sentAt = _dailySentLabel(d).replace(' · ส่ง ', '').replace(' น.', '');
       return `<div class="ck-row ${rowTone}" onclick="showDailyDetail('${escapeAttr(d.id)}')">
         <div class="ck-row-top">
-          <span class="ck-row-nm">${shiftThaiFull}${isBranch ? '' : ' · ' + escapeHtml(branchLabel(d.branchCode, d.branchName))}</span>
+          <span class="material-symbols-rounded ck-row-ic">${shiftIcon}</span>
+          <span class="ck-row-nm">${shiftThaiFull}${sentAt ? ' · ' + escapeHtml(sentAt) + ' น.' : ''}${isBranch ? '' : ' · ' + escapeHtml(branchLabel(d.branchCode, d.branchName))}</span>
+          ${late ? '<span class="ck-chip bad">เกินเวลา</span>' : ''}
+          ${failItems > 0 ? `<span class="ck-chip bad">ตก ${failItems}</span>` : ''}
+          ${pending > 0 ? `<span class="ck-chip">รอ ${pending}</span>` : ''}
           <span class="ck-row-pc" style="color:${scoreColor};">${scorePct.toFixed(0)}<small>%</small></span>
-        </div>
-        <div class="ck-row-ft">
-          ${sentAt ? `<span class="ck-chip"><span class="material-symbols-rounded">schedule</span>${escapeHtml(sentAt)}</span>` : ''}
-          <span class="ck-chip ${failItems > 0 ? 'bad' : (pending > 0 ? '' : 'ok')}">${escapeHtml(status)}</span>
-          ${late ? '<span class="ck-chip bad"><span class="material-symbols-rounded">timer</span>ตรวจช้า</span>' : ''}
         </div>
         ${lateHtml}
       </div>`;
@@ -10222,6 +10252,7 @@ function renderDailyList() {
       if (!future) {
         missHtml = miss.map(function (s) {
           return '<div class="ck-row r-miss"><div class="ck-row-top">' +
+            '<span class="material-symbols-rounded ck-row-ic">' + (s === 'open' ? 'wb_sunny' : 'bedtime') + '</span>' +
             '<span class="ck-row-nm">' + (s === 'open' ? 'เปิดร้าน' : 'ปิดร้าน') + '</span>' +
             '<span class="ck-chip bad">ยังไม่ส่ง</span></div></div>';
         }).join('');
@@ -14753,6 +14784,13 @@ const SFRep = {
   font-variant-numeric:tabular-nums; }
 .ck-row.r-miss { background:var(--danger-bg); border-color:transparent; cursor:default; }
 .ck-row.r-miss .ck-row-nm { color:var(--danger); }
+
+/* แถวรอบในประวัติ — บรรทัดเดียว ไอคอน + ชื่อรอบ/เวลา + คะแนน */
+.ck-row-top { display:flex; align-items:center; gap:8px; }
+.ck-row-ic { font-size:17px; color:var(--text-tertiary); flex:0 0 auto; }
+.ck-row-nm { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.ck-row-pc { flex:0 0 auto; }
+.ck-row.r-miss .ck-row-ic { color:var(--danger); opacity:.65; }
 </style>
 <!-- ══════════ กล่องออกรายงาน (ซานตาเฟ่) ══════════ -->
 <div class="sfrep-ov" id="sfrep-ov">
