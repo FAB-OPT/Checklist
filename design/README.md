@@ -19,6 +19,7 @@
 | `ck-forms.html` | เทียบหน้าตรวจ 3 แบรนด์ + ตารางว่าเงื่อนไขต่างกันตรงไหน |
 | `make-shots.js` | ทำภาพ `s-*.png` ใหม่จาก `ck-all.html` (ต้องมี puppeteer-core + Chrome) |
 | `check-rules.js` | เทสต์กติกาที่ลงในแอปแล้ว — ดึงโค้ดจริงจาก `../index.html` มารัน ไม่ได้ก๊อปมาวาง (`node design/check-rules.js`) |
+| `check-theme.js` | สแกนหน้าจริงหาจุดที่ยังใช้สีแบรนด์ทั้งที่ไม่ควร (`node design/serve.js` ค้างไว้ แล้วรัน) |
 | `serve.js` + `screenshot-real.js` | เปิด**แอปจริง**มาดูโดยไม่ต้องล็อกอิน — `node design/serve.js` แล้วอีกหน้าต่างรัน `node design/screenshot-real.js` (ฉีด `fab_session` + ข้อมูลจำลองให้ตรงทะเบียนสาขาจริง) |
 | `make-preview.js` | สร้าง `prev-kpi.html` ไว้ดูกล่อง "ภาพรวมการส่ง" ของจริงโดยไม่ต้องล็อกอิน — ดึง CSS กับฟังก์ชันจาก `../index.html` แล้วป้อนข้อมูลจำลอง 5 เคส |
 
