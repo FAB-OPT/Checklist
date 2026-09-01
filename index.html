@@ -6097,16 +6097,28 @@ body.in-audit #ck-page-head { display:none; }
     <!-- JAE DAENG DASHBOARD -->
     <div id="jaedaeng-dashboard-screen" style="display:none;">
       <div class="jd-dash-scope" id="jd-dash-scope"></div>
-      <div class="jd-dash-date-filter" id="jd-dash-date-chips"></div>
-      <div class="jd-dash-filter" id="jd-dash-filter" style="display:none;">
-        <select id="jd-dash-scope-select" class="jd-form-input" onchange="setJaedaengDashScope(this.value)">
-          <option value="all">ดูทุกโซน · ทุกสาขา</option>
-        </select>
+      <!-- แถบเครื่องมืออยู่บนสุดเหมือนแดชบอร์ดซานตาเฟ่ — เป็นสิ่งที่กำหนดว่า
+           ตัวเลขทั้งหน้าคิดจากช่วงไหน ต้องเห็นก่อนอ่านตัวเลข -->
+      <div class="sf-toolbar">
+        <div class="jd-dash-date-filter" id="jd-dash-date-chips"></div>
+        <div class="jd-dash-filter" id="jd-dash-filter" style="display:none;">
+          <select id="jd-dash-scope-select" class="jd-form-input" onchange="setJaedaengDashScope(this.value)">
+            <option value="all">ดูทุกโซน · ทุกสาขา</option>
+          </select>
+        </div>
       </div>
+
+      <!-- ══ 1 · ภาพรวมการลงตรวจ ══ -->
+      <div class="sfc-sec"><span class="sfc-sec-bar"></span>
+        <span class="sfc-sec-t">ภาพรวมการลงตรวจ</span></div>
       <div class="jd-dash-kpis" id="jd-dash-kpis"></div>
       <!-- ความครอบคลุม + ปฏิทินการลงตรวจ — เจ๊แดงไม่มีรอบต่อวัน
            คำถามจึงไม่ใช่ "ใครไม่ส่ง" แต่เป็น "สาขาไหนยังไม่ถูกตรวจ" -->
       <div id="jd-dash-cover"></div>
+
+      <!-- ══ 2 · คะแนนและข้อที่ตก ══ -->
+      <div class="sfc-sec"><span class="sfc-sec-bar"></span>
+        <span class="sfc-sec-t">คะแนนและข้อที่ตก</span></div>
       <div class="card" id="jd-dash-zone-card">
         <div class="card-header">
           <span class="material-symbols-rounded" style="color:#0E7490;">groups</span>
