@@ -60,18 +60,21 @@
   --danger: #C73223;
   --danger-bg: #FFE3DC;
   /* ── สีกลาง ──
-     ของเดิมเป็นครีมอมส้ม ซึ่งเป็นโทนของซานตาเฟ่ พอเปิดด้วยยามะจัง (น้ำเงิน)
-     พื้นครีมกับหัวน้ำเงินจะตีกัน · ให้สีกลางอมสีแบรนด์นิดเดียวแทน
-     ทุกแบรนด์จึงได้พื้นที่เข้ากับสีของตัวเองโดยใช้สูตรเดียวกัน */
-  --bg:             color-mix(in srgb, var(--brand)  4%, #FBFBFC);
-  --bg-strong:      color-mix(in srgb, var(--brand)  8%, #F4F5F7);
+     รอบก่อนให้สีกลางอมสีแบรนด์นิดหน่อย เพื่อให้ทุกแบรนด์ได้พื้นเข้ากับสีตัวเอง
+     ผลคือสลับแบรนด์ทีหน้าเปลี่ยนสีทั้งหน้า ทั้งที่ข้อมูลโครงเดียวกัน
+     และสีสถานะ (ครบ/ช้า/ไม่ส่ง) ต้องไปแข่งกับสีที่ไม่ได้แปลว่าอะไร
+
+     ตอนนี้สีกลางเป็นเทาล้วน ไม่ผสมแบรนด์ — สีในหน้าจอจึงเหลือความหมายเดียว
+     คือสถานะ ส่วนแบรนด์อยู่ที่ไทล์ ปุ่ม และแถบที่เลือกอยู่ ซึ่งพอให้รู้ว่าเปิดอะไรอยู่ */
+  --bg: #F7F8F9;
+  --bg-strong: #EFF1F3;
   --surface: #FFFFFF;
-  --surface-2:      color-mix(in srgb, var(--brand)  3%, #FCFCFD);
-  --text:           color-mix(in srgb, var(--brand) 10%, #14161A);
-  --text-secondary: color-mix(in srgb, var(--brand)  9%, #596068);
-  --text-tertiary:  color-mix(in srgb, var(--brand)  7%, #98A0A8);
-  --border:         color-mix(in srgb, var(--brand)  9%, #ECEEF1);
-  --border-strong:  color-mix(in srgb, var(--brand) 17%, #DEE2E7);
+  --surface-2: #FCFCFD;
+  --text: #14171B;
+  --text-secondary: #565E67;
+  --text-tertiary: #8E959D;
+  --border: #E3E6EA;
+  --border-strong: #D3D8DE;
   /* Shadows — warm tint */
   /* เงาสีกลาง — ของเดิมเป็นเงาน้ำตาลอมส้มซึ่งเป็นโทนซานตาเฟ่
      ใช้กับแบรนด์อื่นแล้วการ์ดดูขุ่นเหมือนกระดาษเก่า */
@@ -7006,6 +7009,29 @@ function jdBranchMatchesLocation(selectedName, locationName) {
 
 // ============ JAE DAENG CHECKLIST ============
 // Items in this set are never picked for the random photo-required selection.
+/* ── กติกาแนบรูป แยกตามแบรนด์ ──
+   photoPick = สุ่มขอรูปกี่ข้อต่อหนึ่งหมวด → รูปขั้นต่ำต่อรอบ = photoPick × จำนวนหมวด
+   photoExempt = ข้อที่ขึ้นต้นด้วยข้อความนี้ ไม่ถูกสุ่ม และตอบไม่ผ่านก็ไม่ต้องแนบรูป
+
+   ยึด "ข้อความ" ไม่ใช่เลขข้อ เพราะแทรกข้อใหม่ในหมวดเมื่อไรเลขก็เลื่อนไปทับข้ออื่นทันที
+   ผลพลอยได้คือรอบปิดร้านของยามะจังไม่มีข้อขึ้นต้นแบบนี้ จึงสุ่มได้เต็มเองโดยไม่ต้องเขียนเงื่อนไขแยก */
+const CK_PHOTO_RULES = {
+  santafe:  { pick: 1 },
+  /* ข้อสุ่มชิมวัตถุดิบเป็นการชิม ถ่ายรูปแล้วไม่ได้ความ แต่ต้องกรอกว่าชิมอะไร */
+  yamachan: { pick: 5, exempt: ['สุ่มชิมวัตถุดิบ'] },
+  jaedaeng: { pick: 1 },
+};
+function ckPhotoRule(brandKey) {
+  return CK_PHOTO_RULES[brandKey || currentBrand] || { pick: 1 };
+}
+/* ข้อนี้ยกเว้นการแนบรูปไหม — ใช้ทั้งตอนสุ่ม ตอนวาดฟอร์ม และตอนตรวจก่อนบันทึก
+   ต้องเป็นฟังก์ชันเดียวกันทั้งสามที่ ไม่งั้นฟอร์มไม่ขอรูปแต่ตอนกดส่งกลับบล็อก */
+function ckPhotoExempt(text, brandKey) {
+  const ex = ckPhotoRule(brandKey).exempt;
+  if (!ex) return false;
+  const s = String(text || '').trim();
+  return ex.some(pre => s.indexOf(pre) === 0);
+}
 const JAEDAENG_PHOTO_EXEMPT = new Set([
   "พนักงานต้องมีความรู้เรื่องการใช้ถังดับเพลิง",
   "เปิดเพลงและโทรทัศน์โฆษณาตลอดเวลาทำการขาย ตามที่บริษัทฯ กำหนด",
@@ -7176,6 +7202,21 @@ function ckCutoffMin(branchCode, shift) {
   if (!c) return null;
   const m = (shift === 'close') ? c.close : c.open;
   return (typeof m === 'number') ? m : null;
+}
+/* แบรนด์นี้มีเวลาตัดไหม
+   ยามะจังกับเจ๊แดงไม่ได้ตั้ง cutoff ไว้ คำว่า "ตรงเวลา/สาย" จึงไม่มีความหมายกับสองแบรนด์นี้
+   ต้องซ่อนป้าย คอลัมน์ และหมายเหตุทิ้งไปเลย ไม่ใช่โชว์เลข 0 ค้างไว้ให้คนอ่านนึกว่าไม่มีใครส่งสาย */
+function ckHasLate(brandKey) {
+  const b = CK_BRANDS[brandKey || currentBrand];
+  return !!(b && b.cutoff);
+}
+/* ข้อความอธิบายเวลาตัด — สร้างจากค่าจริงของแบรนด์ ไม่ฮาร์ดโค้ด
+   ของเดิมเขียนเวลาซานตาเฟ่ตายตัวไว้ในรายงาน ออกรายงานยามะจังจะได้ข้อความที่ไม่จริง */
+function ckCutoffText(brandKey) {
+  const c = (CK_BRANDS[brandKey || currentBrand] || {}).cutoff;
+  if (!c) return '';
+  const f = m => String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
+  return 'รอบเปิดหลัง ' + f(c.open) + ' น. รอบปิดหลัง ' + f(c.close) + ' น.';
 }
 function ckBrandOfBranch(code) {
   const c = String(code || '');
@@ -8885,8 +8926,12 @@ function _sfTodayStatusHTML() {
     + '</div>'
     + '<div class="sft-bar"><div class="sft-bar-fill" style="width:' + Math.min(100, pct) + '%"></div></div>'
     + '<div class="sft-legend">'
-    +   '<span class="sft-l ok"><i></i>ตรงเวลา ' + (st.done - st.late) + '</span>'
-    +   '<span class="sft-l warn"><i></i>เกินเวลา ' + st.late + '</span>'
+    /* แบรนด์ที่ไม่มีเวลาตัด ไม่มีทางมีรอบที่ "เกินเวลา" ป้ายนั้นจะค้างที่ 0 ตลอด
+       ยุบเหลือ "ส่งแล้ว" ทีเดียว จะได้ไม่ชวนให้เข้าใจว่าทุกสาขาส่งตรงเวลาเป๊ะ */
+    +   (ckHasLate()
+        ? '<span class="sft-l ok"><i></i>ตรงเวลา ' + (st.done - st.late) + '</span>'
+          + '<span class="sft-l warn"><i></i>เกินเวลา ' + st.late + '</span>'
+        : '<span class="sft-l ok"><i></i>ส่งแล้ว ' + st.done + '</span>')
     +   '<span class="sft-l miss"><i></i>ยังไม่ส่ง ' + st.miss + '</span>'
     + '</div>'
     + (missRows.length
@@ -8945,9 +8990,14 @@ function _sfDailyKpisHTML(dailies) {
   return tile('neutral', 'fact_check', 'การส่งทั้งหมด', total, ' ครั้ง',
               single ? ('รอบเปิด ' + nOpen + ' · รอบปิด ' + nClose)
                      : (branches + ' สาขา' + (rosterN ? ' จาก ' + rosterN : '')))
-    + tile(total === 0 ? 'neutral' : (pctOn >= 90 ? 'good' : (pctOn >= 70 ? 'warn' : 'danger')),
-           'schedule', 'ส่งตรงเวลา', total ? pctOn : '—', total ? '%' : '',
-           late > 0 ? ('เกินเวลา ' + late + ' ครั้ง') : 'ไม่มีที่เกินเวลา')
+    /* การ์ดนี้มีเฉพาะแบรนด์ที่ตั้งเวลาตัดไว้
+       แบรนด์ที่ไม่มี cutoff จะได้ onTime = total เสมอ การ์ดจะขึ้น 100% ทุกวันโดยไม่ได้แปลว่าอะไร
+       ตัดทิ้งไปเลยดีกว่าโชว์ตัวเลขที่ไม่มีทางเป็นอย่างอื่น */
+    + (ckHasLate()
+        ? tile(total === 0 ? 'neutral' : (pctOn >= 90 ? 'good' : (pctOn >= 70 ? 'warn' : 'danger')),
+               'schedule', 'ส่งตรงเวลา', total ? pctOn : '—', total ? '%' : '',
+               late > 0 ? ('เกินเวลา ' + late + ' ครั้ง') : 'ไม่มีที่เกินเวลา')
+        : '')
     + tile(checked === 0 ? 'neutral' : (pctPass >= 95 ? 'good' : (pctPass >= 85 ? 'warn' : 'danger')),
            'verified', 'ข้อที่ผ่าน', checked ? pctPass : '—', checked ? '%' : '',
            checked ? ('ผ่าน ' + pass.toLocaleString() + ' จาก ' + checked.toLocaleString() + ' ข้อ') : 'ยังไม่มีข้อมูล')
@@ -9541,7 +9591,8 @@ function _sfDailySummaryHTML(dailies) {
   const head = '<div class="sfs-head">' +
     '<span class="sfs-h-t">' + nDays + ' วัน · ' + rows.length + ' สาขา</span>' +
     '<span class="sfs-h-s">ควรส่ง ' + totExpect.toLocaleString() + ' รอบ · ส่งจริง ' + tot.sent.toLocaleString() +
-      ' · เกินเวลา ' + tot.late.toLocaleString() + ' · ไม่ได้ส่ง ' + tot.miss.toLocaleString() + '</span>' +
+      (ckHasLate() ? ' · เกินเวลา ' + tot.late.toLocaleString() : '') +
+      ' · ไม่ได้ส่ง ' + tot.miss.toLocaleString() + '</span>' +
   '</div>';
 
   const body = rows.map(function (r) {
@@ -9563,7 +9614,7 @@ function _sfDailySummaryHTML(dailies) {
         '<i class="ms" style="width:' + wMiss.toFixed(1) + '%"></i>' +
       '</div>' +
       '<div class="sfs-meta">' +
-        '<span><i class="k on"></i>ตรงเวลา ' + r.onTime + '</span>' +
+        '<span><i class="k on"></i>' + (ckHasLate() ? 'ตรงเวลา ' : 'ส่งแล้ว ') + r.onTime + '</span>' +
         (r.late ? '<span><i class="k lt"></i>เกินเวลา ' + r.late + '</span>' : '') +
         (r.miss ? '<span><i class="k ms"></i>ไม่ได้ส่ง ' + r.miss + '</span>' : '') +
         '<span class="sfs-avg">เฉลี่ย เปิด ' + avgT(r.openT) + ' · ปิด ' + avgT(r.closeT) + '</span>' +
@@ -9845,8 +9896,8 @@ function _dailyMonthStripHTML(list) {
     '</div>' +
     '<div class="dm-grid">' + cells.join('') + '</div>' +
     '<div class="dm-key">' +
-      '<span><i class="dm-o"></i> ส่งตรงเวลา</span>' +
-      '<span><i class="dm-l"></i> เกินเวลา</span>' +
+      '<span><i class="dm-o"></i> ' + (ckHasLate() ? 'ส่งตรงเวลา' : 'ส่งแล้ว') + '</span>' +
+      (ckHasLate() ? '<span><i class="dm-l"></i> เกินเวลา</span>' : '') +
       '<span><i class="dm-x"></i> ไม่ได้ส่ง</span>' +
       '<span class="dm-key-note">จุดบน = เปิดร้าน · จุดล่าง = ปิดร้าน</span>' +
     '</div>' +
@@ -10123,18 +10174,28 @@ async function startDailyShift(shift) {
     });
   });
 
-  // สุ่ม "ต้องแนบรูป" 1 ข้อต่อ 1 หมวด (global index ของข้อที่สุ่มได้ในแต่ละหมวด)
+  // สุ่ม "ต้องแนบรูป" กี่ข้อต่อหมวด ขึ้นกับแบรนด์ (ยามะจัง 5 · ที่เหลือ 1)
   // เก็บไว้กับเรคคอร์ด → แก้ไขรอบเดิมได้ข้อเดิม · รอบใหม่สุ่มใหม่ (กันใช้รูปซ้ำ)
   let requiredPhotos;
   if (existing && Array.isArray(existing.requiredPhotos) && existing.requiredPhotos.length) {
     requiredPhotos = existing.requiredPhotos.slice();
   } else {
+    const pick = ckPhotoRule().pick;
     requiredPhotos = [];
     let _gi = 0;
     template.forEach(sec => {
-      const n = sec.items.length;
-      if (n > 0) requiredPhotos.push(_gi + Math.floor(Math.random() * n));
-      _gi += n;
+      // สุ่มจากเฉพาะข้อที่ไม่ได้ยกเว้น · ถ้าหมวดมีข้อน้อยกว่าที่จะสุ่ม ก็เอาเท่าที่มี
+      const pool = [];
+      sec.items.forEach((raw, i) => {
+        const txt = (raw && typeof raw === 'object') ? raw.text : raw;
+        if (!ckPhotoExempt(txt)) pool.push(_gi + i);
+      });
+      for (let k = pool.length - 1; k > 0; k--) {
+        const j = Math.floor(Math.random() * (k + 1));
+        const tmp = pool[k]; pool[k] = pool[j]; pool[j] = tmp;
+      }
+      pool.slice(0, pick).forEach(gi => requiredPhotos.push(gi));
+      _gi += sec.items.length;
     });
     requiredPhotos.sort((a, b) => a - b);
   }
@@ -10284,7 +10345,8 @@ function renderDailyForm() {
       const isNA = item.status === 'na';
       const photos = item.photos || [];
       const isRequired = (currentDaily.requiredPhotos || []).includes(globalIdx);
-      const showPhotos = (isRequired && !isNA) || isFail;   // รูปบังคับ: ข้อสุ่ม + ข้อไม่ผ่าน · N/A ไม่ต้องรูป
+      // รูปบังคับ: ข้อสุ่ม + ข้อไม่ผ่าน · N/A ไม่ต้องรูป · ข้อที่ยกเว้นไม่ต้องรูปเลยแม้จะตก
+      const showPhotos = !ckPhotoExempt(item.text) && ((isRequired && !isNA) || isFail);
       let photosHtml = '';
       if (showPhotos) {
         const missing = photos.length === 0;
@@ -10420,10 +10482,18 @@ async function submitDailyShift() {
   }
   const badNote = items.findIndex(it => (it.status === 'fail' || it.status === 'na') && !(it.note || '').trim());
   if (badNote >= 0) { _scrollTo(badNote, 'ระบุเหตุผลไม่ครบ', 'ข้อที่ "ไม่ผ่าน" หรือ "N/A" ต้องระบุเหตุผลก่อนบันทึก'); return; }
-  const failNoPhoto = items.findIndex(it => it.status === 'fail' && (!it.photos || it.photos.length === 0));
+  const failNoPhoto = items.findIndex(it => it.status === 'fail' && !ckPhotoExempt(it.text)
+    && (!it.photos || it.photos.length === 0));
   if (failNoPhoto >= 0) { _scrollTo(failNoPhoto, 'ถ่ายรูปไม่ครบ', 'ข้อที่ "ไม่ผ่าน" ต้องถ่ายรูปหลักฐานก่อนบันทึก'); return; }
   // 3) ข้อสุ่มต้องมีรูป — ยกเว้นข้อที่ตอบ N/A (ไม่ต้องแนบรูป)
-  const missingPhoto = required.filter(idx => { const it = items[idx]; if (it && it.status === 'na') return false; return !it || !it.photos || it.photos.length === 0; });
+  // เรคคอร์ดเก่าที่สุ่มไว้ก่อนมีกติกายกเว้น อาจมีข้อที่ยกเว้นติดอยู่ใน requiredPhotos
+  // กรองซ้ำตรงนี้ด้วย ไม่งั้นกลับมาแก้รอบเก่าแล้วจะกดส่งไม่ผ่านโดยไม่มีช่องแนบรูปให้กด
+  const missingPhoto = required.filter(idx => {
+    const it = items[idx];
+    if (it && it.status === 'na') return false;
+    if (it && ckPhotoExempt(it.text)) return false;
+    return !it || !it.photos || it.photos.length === 0;
+  });
   if (missingPhoto.length > 0) { _scrollTo(missingPhoto[0], 'ถ่ายรูปไม่ครบ', `ยังมีข้อที่ต้องถ่ายรูปอีก ${missingPhoto.length} ข้อ`); return; }
   currentDaily.manager = manager;
   currentDaily.submittedAt = new Date().toISOString();
@@ -13596,7 +13666,9 @@ const SFRep = {
   },
   pct(v) { return v == null ? '—' : (Math.round(v * 10) / 10) + '%'; },
   stPill(s) {
-    return s === 'ok' ? '<span class="sfr-pill ok">ตรงเวลา</span>'
+    /* แบรนด์ที่ไม่มีเวลาตัดจะไม่มีสถานะ late อยู่แล้ว และคำว่า "ตรงเวลา" ก็ไม่มีความหมาย
+       เหลือแค่ ส่งแล้ว / ยังไม่ส่ง */
+    return s === 'ok' ? '<span class="sfr-pill ok">' + (ckHasLate() ? 'ตรงเวลา' : 'ส่งแล้ว') + '</span>'
       : s === 'late' ? '<span class="sfr-pill late">สาย</span>'
       : '<span class="sfr-pill miss">ยังไม่ส่ง</span>';
   },
@@ -13605,16 +13677,21 @@ const SFRep = {
     const d = this.dataSubmit();
     if (!d.rows.length) return this.head() + '<div class="sfr-empty">ช่วงที่เลือกไม่มีสาขาหรือไม่มีวันให้แสดง</div>';
     const s = d.sum;
+    /* ไม่มีเวลาตัด = ไม่มีช่อง "ตรงเวลา/ส่งสาย" ให้แยก เหลือ ส่งแล้ว กับ ยังไม่ส่ง */
+    const late = ckHasLate();
     let h = this.head() + this.figs([
       { v: s.need, l: 'รอบที่ต้องส่ง' },
       { v: s.sent, l: 'ส่งแล้ว', c: 'ok' },
+    ].concat(late ? [
       { v: s.onTime, l: 'ตรงเวลา', c: 'ok' },
       { v: s.late, l: 'ส่งสาย', c: 'warn' },
+    ] : []).concat([
       { v: s.miss, l: 'ยังไม่ส่ง', c: 'bad' },
-    ]);
+    ]));
     const w = (n) => s.need ? (n / s.need * 100) : 0;
-    h += `<div class="sfr-band"><i class="ok" style="width:${w(s.onTime)}%"></i>`
-      + `<i class="warn" style="width:${w(s.late)}%"></i><i class="bad" style="width:${w(s.miss)}%"></i></div>`;
+    h += `<div class="sfr-band"><i class="ok" style="width:${w(late ? s.onTime : s.sent)}%"></i>`
+      + (late ? `<i class="warn" style="width:${w(s.late)}%"></i>` : '')
+      + `<i class="bad" style="width:${w(s.miss)}%"></i></div>`;
     const shifts = d.rows[0].shifts;
     const byDate = {};
     d.rows.forEach((r) => { (byDate[r.date] = byDate[r.date] || []).push(r); });
@@ -13676,7 +13753,9 @@ const SFRep = {
       h += '</tbody></table>';
       }
     });
-    return h + this.foot('นับ “ส่งสาย” จากเวลาที่เริ่มทำเช็คลิสต์ — รอบเปิดหลัง 11:30 น. รอบปิดหลัง 22:00 น.');
+    return h + this.foot(ckHasLate()
+      ? 'นับ “ส่งสาย” จากเวลาที่เริ่มทำเช็คลิสต์ — ' + ckCutoffText()
+      : 'แบรนด์นี้ไม่มีเวลาตัด — ส่งเมื่อไรก็ไม่นับว่าสาย');
   },
 
   docPeriod() {
@@ -13685,19 +13764,24 @@ const SFRep = {
     const t = d.total;
     let h = this.head(`<span>จำนวนวัน <b>${d.days}</b> วัน</span>`) + this.figs([
       { v: this.pct(t.sentPct), l: 'อัตราการส่ง', c: 'ok' },
+    ].concat(ckHasLate() ? [
       { v: this.pct(t.onTimePct), l: 'ส่งตรงเวลา', c: 'ok' },
+    ] : []).concat([
       { v: this.pct(t.passPct), l: 'ผ่านเกณฑ์', c: 'ok' },
       { v: t.fail, l: 'ข้อที่ตก', c: 'bad' },
       { v: t.need - t.sent, l: 'รอบที่ขาด', c: 'bad' },
-    ]);
+    ]));
+    /* ไม่มีเวลาตัด = คอลัมน์ "ตรงเวลา" กับ "% ตรงเวลา" ไม่มีความหมาย ตัดทิ้งทั้งคอลัมน์
+       แล้วแบ่งความกว้างที่เหลือให้คอลัมน์อื่น ไม่ใช่ปล่อยช่องว่างค้างไว้ */
+    const late = ckHasLate();
     h += `<table class="sfr-tb"><colgroup>
-      <col style="width:8%"><col style="width:24%"><col style="width:9%"><col style="width:9%">
-      <col style="width:9%"><col style="width:10%"><col style="width:10%"><col style="width:10%"><col style="width:11%">
+      <col style="width:8%"><col style="width:${late ? 24 : 32}%"><col style="width:${late ? 9 : 12}%"><col style="width:${late ? 9 : 12}%">
+      <col style="width:${late ? 9 : 12}%">${late ? '<col style="width:10%"><col style="width:10%">' : ''}<col style="width:${late ? 10 : 12}%"><col style="width:${late ? 11 : 12}%">
       </colgroup><thead><tr>
       <th>รหัส</th><th>สาขา</th><th class="c">ต้องส่ง</th><th class="c">ส่งแล้ว</th><th class="c">% ส่ง</th>
-      <th class="c">ตรงเวลา</th><th class="c">% ตรงเวลา</th><th class="c">ข้อที่ตก</th><th class="c">% ผ่าน</th>
+      ${late ? '<th class="c">ตรงเวลา</th><th class="c">% ตรงเวลา</th>' : ''}<th class="c">ข้อที่ตก</th><th class="c">% ผ่าน</th>
       </tr></thead><tbody>`;
-    const nCol = 9;
+    const nCol = late ? 9 : 7;
     let curZone = null;
     d.rows.forEach((r) => {
       if (r.zone !== curZone) {
@@ -13708,12 +13792,12 @@ const SFRep = {
       }
       h += `<tr><td class="nw">${escapeHtml(String(r.code))}</td><td>${escapeHtml(r.name)}</td>
         <td class="n">${r.need}</td><td class="n">${r.sent}</td><td class="n">${this.pct(r.sentPct)}</td>
-        <td class="n">${r.onTime}</td><td class="n">${this.pct(r.onTimePct)}</td>
+        ${late ? `<td class="n">${r.onTime}</td><td class="n">${this.pct(r.onTimePct)}</td>` : ''}
         <td class="n">${r.fail}</td><td class="n">${this.pct(r.passPct)}</td></tr>`;
     });
     h += `<tr class="sum"><td colspan="2">รวมทั้งหมด ${d.rows.length} สาขา</td>
       <td class="n">${t.need}</td><td class="n">${t.sent}</td><td class="n">${this.pct(t.sentPct)}</td>
-      <td class="n">${t.onTime}</td><td class="n">${this.pct(t.onTimePct)}</td>
+      ${late ? `<td class="n">${t.onTime}</td><td class="n">${this.pct(t.onTimePct)}</td>` : ''}
       <td class="n">${t.fail}</td><td class="n">${this.pct(t.passPct)}</td></tr></tbody></table>`;
     if (this.deep()) {
       /* สรุปรายหมวด — ตอบว่าปัญหากองอยู่หมวดไหน ซึ่งตารางรายสาขาข้างบนมองไม่เห็น */
