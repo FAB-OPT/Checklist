@@ -5852,10 +5852,11 @@ body.in-audit #ck-page-head { display:none; }
         <div class="sfc-sec"><span class="sfc-sec-bar"></span>
           <span class="sfc-sec-t">ภาพรวมการส่ง</span>
           <span class="sfc-sec-x" id="sf-cl-period">ทั้งหมด</span>
-          <span class="sfc-sec-d">เดือนนี้ส่งครบแค่ไหน วันไหนขาด และสาขาไหนต้องตามก่อน</span></div>
+          <span class="sfc-sec-d" id="sf-cl-lead">เดือนนี้ส่งครบแค่ไหน วันไหนขาด และสาขาไหนต้องตามก่อน</span></div>
         <div class="jd-dash-kpis" id="sf-cl-kpis"></div>
         <div id="sf-cl-month"></div>
-        <div class="card">
+        <!-- ซ่อนเมื่อดูสาขาเดียว — ตารางเรียง "สาขาที่ต้องตามก่อน" ที่มีแถวเดียวไม่ได้บอกอะไร -->
+        <div class="card" id="sf-daily-times-card">
           <div class="card-header"><span class="material-symbols-rounded" style="color:#0E7490;">schedule</span><h2>สรุปการส่ง <span class="card-header-en">รายสาขา · เรียงสาขาที่ต้องตามก่อน</span></h2></div>
           <div id="sf-daily-times"><div class="jd-dash-empty">กำลังโหลด…</div></div>
         </div>
@@ -5864,25 +5865,24 @@ body.in-audit #ck-page-head { display:none; }
              คนละเรื่องกับการส่ง — ส่งครบแล้วยังตกข้อได้ จึงต้องแยกหมวด -->
         <div class="sfc-sec"><span class="sfc-sec-bar"></span>
           <span class="sfc-sec-t">หัวข้อที่ตก · N/A · คะแนนเฉลี่ย</span>
-          <span class="sfc-sec-d">ข้อไหนตกบ่อย ข้อไหนถูกข้ามประจำ และคะแนนขยับไปทางไหน</span></div>
+          <span class="sfc-sec-d">ข้อไหนตกบ่อย ข้อไหนถูกข้ามประจำ</span></div>
         <div id="sf-cl-items"></div>
-        <div class="card">
-          <div class="card-header"><span class="material-symbols-rounded" style="color:var(--danger);">priority_high</span><h2>หัวข้อที่ตกบ่อย <span class="card-header-en">Top failed items · รายวัน เปิด-ปิดร้าน</span></h2></div>
-          <div id="sf-daily-topfails"><div class="jd-dash-empty">กำลังโหลด…</div></div>
-        </div>
-        <div class="card">
-          <div class="card-header"><h2>แนวโน้มคะแนน <span class="card-header-en">Score trend</span></h2></div>
-          <div id="sf-cl-trend"><div class="jd-dash-empty">กำลังโหลด…</div></div>
-        </div>
-        <div class="card">
-          <div class="card-header"><h2>คะแนนเฉลี่ยต่อสาขา <span class="card-header-en">Average by branch</span></h2></div>
-          <div id="sf-cl-branches"><div class="jd-dash-empty">กำลังโหลด…</div></div>
+        <!-- สองคอลัมน์บนจอกว้าง — ทั้งคู่เป็นลิสต์สั้น ๆ วางเรียงลงมาแล้วต้องเลื่อนเปล่า ๆ -->
+        <div class="sf-two">
+          <div class="card">
+            <div class="card-header"><span class="material-symbols-rounded" style="color:var(--danger);">priority_high</span><h2>หัวข้อที่ตกบ่อย <span class="card-header-en">ข้อไหนตกซ้ำ ๆ</span></h2></div>
+            <div id="sf-daily-topfails"><div class="jd-dash-empty">กำลังโหลด…</div></div>
+          </div>
+          <div class="card">
+            <div class="card-header"><span class="material-symbols-rounded" style="color:var(--text-tertiary);">remove_circle</span><h2>หัวข้อที่ตอบ N/A บ่อย <span class="card-header-en">ข้อที่ข้ามประจำ อาจต้องทบทวน</span></h2></div>
+            <div id="sf-daily-topna"><div class="jd-dash-empty">กำลังโหลด…</div></div>
+          </div>
         </div>
 
         <!-- ══ 3 · เครื่องมือและรายละเอียด ══ -->
         <div class="sfc-sec"><span class="sfc-sec-bar"></span>
           <span class="sfc-sec-t">เครื่องมือและรายละเอียด</span>
-          <span class="sfc-sec-d">สถานะวันนี้ ตัวกรอง ออกรายงาน และตารางรายวัน</span></div>
+          <span class="sfc-sec-d">สถานะวันนี้ ตัวกรองช่วงเวลา และออกรายงาน</span></div>
         <!-- สถานะวันนี้ — เรื่องเดียวที่ต้องรู้ทันทีตอนเปิดหน้า: ใครยังไม่ส่ง
              ของเดิมบอกแต่ "ส่งไปแล้วกี่ครั้ง" ซึ่งตอบไม่ได้ว่าขาดใครบ้าง -->
         <div id="sf-today-status"></div>
@@ -5897,10 +5897,6 @@ body.in-audit #ck-page-head { display:none; }
           <select id="sf-cl-scope-select" class="jd-form-input" onchange="setSfClScope(this.value)">
             <option value="all">ดูทุกโซน · ทุกสาขา</option>
           </select>
-        </div>
-        <div class="card">
-          <div class="card-header"><span class="material-symbols-rounded" style="color:#0E7490;">table_chart</span><h2>ตารางการส่ง · เปิด/ปิดร้าน <span class="card-header-en">รายสาขา + สาเหตุที่ส่งช้า</span></h2></div>
-          <div id="sf-daily-table"><div class="jd-dash-empty">กำลังโหลด…</div></div>
         </div>
         <div style="text-align:center;margin-top:4px;">
           <button type="button" class="btn btn-secondary" onclick="showDailyHub()"><span class="material-symbols-rounded">checklist</span> ดูรายละเอียดที่ "การตรวจ"</button>
@@ -7456,7 +7452,6 @@ function _mergeDailyDocs(map, docs) {
 /* วาดหน้าจอใหม่เท่าที่เปิดอยู่ — เรียกได้ทุกจังหวะที่ข้อมูลมาถึง */
 function _repaintDaily() {
   try {
-    if (document.getElementById('sf-daily-table')) _renderSfTable();
     /* renderDailyList() อ่านค่าจากช่องกรองตรง ๆ ถ้าหน้านั้นยังไม่ถูกวาดจะพัง
        จึงเช็คจากช่องค้นหาซึ่งเป็นตัวแรกที่มันอ่าน */
     if (document.getElementById('daily-filter-search')) renderDailyList();
@@ -8591,14 +8586,6 @@ function hideAllScreens() {
 
 // ============ DASHBOARD ============
 
-/* ═══════════ แนวโน้มคะแนน + คะแนนต่อสาขา ═══════════
-   สองอย่างที่แดชบอร์ดเดิมไม่มี — เดิมบอกได้แค่ "ตอนนี้เท่าไร"
-   แต่ไม่บอกว่า "ดีขึ้นหรือแย่ลง" และ "สาขาไหนเป็นตัวถ่วง" */
-
-/* คะแนนเฉลี่ยรายวัน 14 วันหลังสุดที่มีข้อมูล
-   แกนตั้งไม่เริ่มที่ 0 — ช่วงล่างแทบไม่เคยเกิดและกินที่จนเส้นแบนอ่านไม่ออก
-   เขียนตัวเลขกำกับแกนไว้ทุกขีดกันเข้าใจผิดว่าเริ่มจากศูนย์
-   เส้นเดียวจึงไม่ต้องมีกล่องคำอธิบายสี · ป้ายตัวเลขติดเฉพาะค่าล่าสุด */
 /* คะแนนของเช็คลิสต์รายวัน 1 ใบ — คิดจากข้อที่ตอบมาจริง
    เช็คลิสต์รายวันไม่เคยเก็บฟิลด์ passPct (มีเฉพาะใบตรวจ OSS แบบเก่า)
    ของเดิมอ่าน r.passPct ตรง ๆ แล้ว || 0 → ได้ศูนย์ทั้ง 3,141 ใบ
@@ -8614,144 +8601,6 @@ function _ckDailyPct(r) {
     else if (it[i].status === 'fail') fail++;
   }
   return (pass + fail) > 0 ? (pass / (pass + fail) * 100) : null;   /* ยังไม่ตอบสักข้อ = ไม่มีคะแนน ไม่ใช่ศูนย์ */
-}
-
-/* คะแนนเฉลี่ยรายวัน 14 วันหลังสุดที่มีข้อมูล
-
-   แกนตั้งขยับตามข้อมูลจริง ไม่ตรึง 60–100
-   คะแนนจริงวิ่งแถว 96–100 ถ้าตรึงกรอบกว้าง เส้นจะแบนติดเพดานอ่านไม่ออกพอกัน
-   กับตอนที่มันแบนติดพื้น · เส้นเกณฑ์โผล่เฉพาะตอนที่อยู่ในกรอบ
-   ถ้าทุกวันอยู่เหนือเกณฑ์ก็บอกเป็นตัวหนังสือแทน ไม่ต้องถ่างกรอบมารับ
-
-   ตัวหนังสือแกนย้ายออกมาอยู่นอก SVG
-   ของเดิมเขียนไว้ใน SVG ที่ไม่กำหนดความสูง พอกรอบกว้าง 1,126px
-   ภาพถูกยืดเป็นสูง 458px ตัวเลขแกนโตตามจนใหญ่กว่าตัวเลขในการ์ดสถิติ */
-function _sfTrendHTML(records) {
-  const byDate = {};
-  (records || []).forEach(function (r) {
-    const d = r && r.date;
-    if (!d) return;
-    const v = _ckDailyPct(r);
-    if (v == null) return;
-    if (!byDate[d]) byDate[d] = { sum: 0, n: 0 };
-    byDate[d].sum += v;
-    byDate[d].n++;
-  });
-  const days = Object.keys(byDate).sort().slice(-14)
-    .map(function (d) { return { d: d, v: Math.round(byDate[d].sum / byDate[d].n * 10) / 10 }; });
-  if (days.length < 2) {
-    return '<div class="jd-dash-empty">ยังมีข้อมูลไม่พอวาดกราฟ — ต้องมีอย่างน้อย 2 วัน</div>';
-  }
-
-  const target = 80;
-  const vals = days.map(function (p) { return p.v; });
-  const mn = Math.min.apply(null, vals), mx = Math.max.apply(null, vals);
-  /* ขั้นแกนละเอียดตามช่วงของข้อมูล
-     คะแนนจริงแกว่งแค่ 99.4–100 ถ้าขั้นละ 5 เส้นจะแบนติดเพดาน อ่านความต่างไม่ออก */
-  const span = mx - mn;
-  const step = span > 20 ? 10 : span > 8 ? 5 : span > 3 ? 2 : span > 1 ? 0.5 : 0.2;
-  let lo = Math.max(0, Math.floor((mn - step) / step) * step);
-  let hi = Math.min(100, Math.ceil((mx + step) / step) * step);
-  if (hi - lo < step * 2) { lo = Math.max(0, hi - step * 2); }
-  lo = Math.round(lo * 10) / 10; hi = Math.round(hi * 10) / 10;
-  const showTarget = target > lo && target < hi;
-
-  /* SVG วาดเฉพาะรูป · ยืดตามกรอบได้เต็มที่เพราะไม่มีตัวหนังสืออยู่ข้างใน
-     เส้นใช้ non-scaling-stroke ความหนาจึงคงที่ ไม่บางลงเวลาถูกยืด */
-  const W = 100, H = 100;
-  const x = function (i) { return W * i / (days.length - 1); };
-  const y = function (v) { return H * (1 - (Math.max(lo, Math.min(hi, v)) - lo) / (hi - lo)); };
-  const path = days.map(function (p, i) {
-    return (i ? 'L' : 'M') + x(i).toFixed(2) + ' ' + y(p.v).toFixed(2);
-  }).join(' ');
-  const area = path + ' L' + W + ' ' + H + ' L0 ' + H + ' Z';
-  const fmtV = function (v) { return (Math.round(v * 10) / 10).toFixed(1).replace(/\.0$/, ''); };
-  const ticks = [hi, Math.round((hi + lo) / 2 * 10) / 10, lo];
-  const pctTop = function (v) { return (1 - (v - lo) / (hi - lo)) * 100; };
-  const last = days[days.length - 1];
-  const first = days[0];
-  const diff = last.v - first.v;
-
-  return '' +
-  '<div class="sfc-chart">' +
-    '<div class="sfc-h"><span class="sfc-t">คะแนนเฉลี่ยรายวัน</span>' +
-      '<span class="sfc-s">' + days.length + ' วันล่าสุด</span>' +
-      '<span class="sfc-now">' + fmtV(last.v) + '<small>%</small></span></div>' +
-    '<div class="sfc-plot">' +
-      '<div class="sfc-yaxis">' +
-        ticks.map(function (v) {
-          return '<span class="sfc-y" style="top:' + pctTop(v).toFixed(1) + '%">' + fmtV(v) + '</span>';
-        }).join('') +
-      '</div>' +
-      '<div class="sfc-canvas">' +
-        ticks.map(function (v) {
-          return '<i class="sfc-grid" style="top:' + pctTop(v).toFixed(1) + '%"></i>';
-        }).join('') +
-        (showTarget ? '<i class="sfc-target" style="top:' + pctTop(target).toFixed(1) + '%"></i>' +
-                      '<span class="sfc-tglb" style="top:' + pctTop(target).toFixed(1) + '%">เกณฑ์ ' + target + '%</span>' : '') +
-        '<svg class="sfc-svg" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" aria-hidden="true">' +
-          '<path class="sfc-ar" d="' + area + '"/>' +
-          '<path class="sfc-ln" d="' + path + '" vector-effect="non-scaling-stroke"/>' +
-        '</svg>' +
-        /* จุดค่าล่าสุดเป็น element ธรรมดา ไม่ใช่ <circle> — วงกลมใน SVG ที่ถูกยืดจะกลายเป็นวงรี */
-        '<i class="sfc-lastdot" style="left:100%;top:' + pctTop(last.v).toFixed(1) + '%"></i>' +
-        '<span class="sr-only">กราฟคะแนนเฉลี่ยรายวัน ค่าล่าสุด ' + fmtV(last.v) + ' เปอร์เซ็นต์</span>' +
-      '</div>' +
-    '</div>' +
-    '<div class="sfc-xaxis">' +
-      '<span>' + escapeHtml(fmtDateDMY(first.d)) + '</span>' +
-      '<span class="sfc-delta ' + (diff > 0 ? 'up' : diff < 0 ? 'down' : '') + '">' +
-        (showTarget ? '' : 'ทุกวันอยู่เหนือเกณฑ์ ' + target + '% · ') +
-        (diff > 0 ? '▲ +' : diff < 0 ? '▼ ' : '± ') + fmtV(Math.abs(diff)) + '% จากวันแรก' +
-      '</span>' +
-      '<span>' + escapeHtml(fmtDateDMY(last.d)) + '</span>' +
-    '</div>' +
-  '</div>';
-}
-
-/* คะแนนเฉลี่ยต่อสาขา เรียงจากมากไปน้อย
-   แถบสีซ้ายบอกระดับ (ดี/กลาง/ต้องปรับปรุง) โดยมีตัวหนังสือกำกับเสมอ
-   ไม่ได้ใช้สีบอกอย่างเดียว */
-function _sfBranchRankHTML(records) {
-  const by = {};
-  (records || []).forEach(function (r) {
-    const k = String((r && r.branchCode) || '');
-    if (!k) return;
-    if (!by[k]) by[k] = { name: r.branchName || k, sum: 0, n: 0, fail: 0 };
-    by[k].sum += _ckDailyPct(r) || 0;
-    by[k].n++;
-    by[k].fail += Number(r.failCount) || 0;
-  });
-  const rows = Object.keys(by).map(function (k) {
-    const b = by[k];
-    return { code: k, name: b.name, pct: Math.round(b.sum / b.n), n: b.n, fail: b.fail };
-  }).sort(function (a, b) { return b.pct - a.pct; });
-  if (!rows.length) return '<div class="jd-dash-empty">ยังไม่มีผลตรวจในช่วงที่เลือก</div>';
-
-  /* สาขาเยอะ (>10) โชว์ 5 บนกับ 5 ล่าง — ตรงกลางไม่ใช่สิ่งที่ต้องตัดสินใจอะไร
-     และบอกไว้ด้วยว่าตัดตรงกลางออกกี่สาขา ไม่ใช่เงียบ ๆ */
-  let show = rows, cut = 0;
-  if (rows.length > 10) { show = rows.slice(0, 5).concat(rows.slice(-5)); cut = rows.length - 10; }
-
-  return show.map(function (b, i) {
-    const rank = (cut && i >= 5) ? (rows.length - 5 + (i - 5) + 1) : (i + 1);
-    const tone = b.pct >= 90 ? 'ok' : (b.pct < 80 ? 'bad' : '');
-    const tier = b.pct >= 90 ? 'ดีเยี่ยม' : (b.pct >= 80 ? 'ดี' : 'ปรับปรุง');
-    return (cut && i === 5 ? '<div class="sfc-cut">ตัดกลางออก ' + cut + ' สาขา</div>' : '') +
-      '<div class="sfc-rank ' + tone + '">' +
-        '<div class="sfc-rank-top">' +
-          '<span class="sfc-rank-no">' + rank + '</span>' +
-          '<span class="sfc-rank-nm">' + escapeHtml(b.name) + '</span>' +
-          '<span class="sfc-rank-pc">' + b.pct + '<small>%</small></span>' +
-        '</div>' +
-        '<div class="sfc-bar"><i style="width:' + Math.max(0, Math.min(100, b.pct)) + '%"></i></div>' +
-        '<div class="sfc-rank-ft">' +
-          '<span class="sfc-chip">ส่ง ' + b.n + ' ครั้ง</span>' +
-          (b.fail ? '<span class="sfc-chip is-bad">ตก ' + b.fail + ' ข้อ</span>' : '<span class="sfc-chip is-ok">ผ่านทุกข้อ</span>') +
-          '<span class="sfc-chip is-tone">' + tier + '</span>' +
-        '</div>' +
-      '</div>';
-  }).join('');
 }
 
 function showDashboard() {
@@ -8777,7 +8626,6 @@ function renderSfChecklistTab() {
   const kEl  = document.getElementById('sf-cl-kpis');
   const tfEl = document.getElementById('sf-daily-topfails');
   const tEl  = document.getElementById('sf-daily-times');
-  const tblEl = document.getElementById('sf-daily-table');
   const pdEl = document.getElementById('sf-cl-period');
   if (pdEl) {
     const _pd = { today:'วันนี้', week:'อาทิตย์นี้', month:'เดือนนี้', all:'ทั้งหมด', custom:'ช่วงที่เลือก' };
@@ -8794,13 +8642,18 @@ function renderSfChecklistTab() {
     mEl.innerHTML = _dailyMonthStripHTML(applySfClScopeFilter(
       (typeof getVisibleDailyChecklists === 'function') ? getVisibleDailyChecklists() : []), _n);
   }
-  const trEl = document.getElementById('sf-cl-trend');
-  const brEl = document.getElementById('sf-cl-branches');
-  if (trEl) trEl.innerHTML = _sfTrendHTML(dailies);
-  if (brEl) brEl.innerHTML = _sfBranchRankHTML(dailies);
   if (tfEl) tfEl.innerHTML = _sfDailyTopFailsHTML(dailies);
-  if (tblEl) tblEl.innerHTML = _sfDailyTableHTML();
-  if (tEl)  tEl.innerHTML  = _sfDailySummaryHTML(dailies);
+  const naEl = document.getElementById('sf-daily-topna');
+  if (naEl) naEl.innerHTML = _sfDailyTopNaHTML(dailies);
+  const tCard = document.getElementById('sf-daily-times-card');
+  const _many = _sfTodayScopeRoster().length > 1;
+  /* ดูสาขาเดียวแล้วยังเขียนว่า "สาขาไหนต้องตามก่อน" อ่านแล้วงงว่าให้ไปตามใคร */
+  const leadEl = document.getElementById('sf-cl-lead');
+  if (leadEl) leadEl.textContent = _many
+    ? 'เดือนนี้ส่งครบแค่ไหน วันไหนขาด และสาขาไหนต้องตามก่อน'
+    : 'เดือนนี้ส่งครบแค่ไหน วันไหนขาด และเทียบกับที่อื่นแล้วอยู่ตรงไหน';
+  if (tCard) tCard.style.display = _many ? '' : 'none';
+  if (tEl && _many) tEl.innerHTML = _sfDailySummaryHTML(dailies);
 }
 
 // ───── ฟิลเตอร์วันที่ (วันนี้/อาทิตย์/เดือน/ทั้งหมด/กำหนดเอง) ─────
@@ -9146,6 +8999,41 @@ function _sfBenchHTML(scopeDailies) {
 }
 
 // สรุปหมวดที่ตก (รายวัน) — จัดกลุ่มตามหมวดของ Daily checklist (จุดเตรียมงาน/PASTA/STEAK…)
+/* ═══ หัวข้อที่ตอบ N/A บ่อย ═══
+   N/A ไม่ได้ถูกนับเป็นข้อตก แต่ก็ไม่ได้ถูกนับว่าผ่าน มันหายไปจากคะแนนเฉลี่ยเฉย ๆ
+   ข้อที่ถูกข้ามซ้ำ ๆ ทุกวันแปลว่าอย่างใดอย่างหนึ่ง — ข้อนั้นใช้ไม่ได้กับสาขานี้จริง
+   หรือคนกรอกเลี่ยงเพราะทำไม่ได้ ทั้งสองแบบต้องรู้ ไม่ใช่ปล่อยให้เงียบ */
+function _sfDailyTopNaHTML(dailies) {
+  if (!dailies.length) return '<div class="jd-dash-empty">ยังไม่มีเช็คลิสต์รายวัน</div>';
+  const stat = {};
+  let answered = 0;
+  dailies.forEach(function (d) {
+    (d.items || []).forEach(function (it) {
+      if (!it || !it.status) return;
+      answered++;
+      if (it.status !== 'na') return;
+      const key = (it.section || '-') + '||' + it.text;
+      if (!stat[key]) stat[key] = { text: it.text, section: it.section || '', n: 0, br: {} };
+      stat[key].n++;
+      stat[key].br[branchLabel(d.branchCode, d.branchName)] = 1;
+    });
+  });
+  const rows = Object.keys(stat).map(function (k) { return stat[k]; })
+    .sort(function (a, b) { return b.n - a.n; }).slice(0, 8);
+  if (!rows.length) return '<div class="jd-dash-empty">ไม่มีข้อที่ตอบ N/A</div>';
+  const mx = rows[0].n;
+  const totalNa = rows.reduce(function (s, r) { return s + r.n; }, 0);
+  return '<div class="sfna">' + rows.map(function (r) {
+    return '<div class="sfna-r"><div class="sfna-t">' + escapeHtml(r.text) +
+      (r.section ? '<s>' + escapeHtml(r.section) + '</s>' : '') + '</div>' +
+      '<div class="sfna-b"><i style="width:' + (r.n / mx * 100) + '%"></i></div>' +
+      '<div class="sfna-n">' + r.n.toLocaleString('th-TH') +
+        '<em>' + Object.keys(r.br).length + ' สาขา</em></div></div>';
+  }).join('') + '</div>' +
+  '<div class="sfk-note" style="margin:2px 14px 13px">แปดข้อนี้รวม <b>' + totalNa.toLocaleString('th-TH') +
+    '</b> ครั้ง จากทั้งหมด ' + answered.toLocaleString('th-TH') + ' ข้อที่ตอบ</div>';
+}
+
 function _sfDailyTopFailsHTML(dailies) {
   if (!dailies.length) return '<div class="jd-dash-empty">ยังไม่มีเช็คลิสต์รายวัน</div>';
   const catStats = {}, itemStats = {};
@@ -9227,7 +9115,9 @@ const CK_ACTION_GROUPS = [
   { id: 'branch', label: 'ฝั่งสาขา' },
 ];
 const CK_ACTIONS = [
-  { id: 'view-dash',     group: 'menu',   label: 'แดชบอร์ด (ซานตาเฟ่)',  roles: ['admin','coo','vp','bzm'] },
+  /* สาขาเห็นแดชบอร์ดได้แล้ว — getVisibleDailyChecklists() กรองให้เหลือสาขาตัวเองอยู่แล้ว
+     เดิมสาขาเข้าได้แต่หน้าตรวจกับประวัติ ไม่มีที่ไหนบอกว่าเดือนนี้ตัวเองส่งครบแค่ไหน */
+  { id: 'view-dash',     group: 'menu',   label: 'แดชบอร์ด (ซานตาเฟ่)',  roles: ['admin','coo','vp','bzm','branch'] },
   { id: 'view-daily',    group: 'menu',   label: 'ตรวจร้าน (ซานตาเฟ่)',  roles: ['admin','coo','vp','bzm','branch'] },
   { id: 'view-jd-dash',  group: 'menu',   label: 'แดชบอร์ด (เจ๊แดง)',    roles: ['admin','coo','vp','bzm'] },
   { id: 'view-jd-hub',   group: 'menu',   label: 'ตรวจร้าน (เจ๊แดง)',    roles: ['admin','coo','vp','bzm','branch'] },
@@ -9399,8 +9289,7 @@ async function loadSfBranches() {
     if (list.length) {
       _applySfBranches(list);
       try { localStorage.setItem(SF_BRANCHES_KEY, JSON.stringify(BRANCHES)); } catch (_) {}
-      if (document.getElementById('sf-daily-table')) _renderSfTable();
-      console.log('[sfBranches] จาก HUB ' + list.length + ' สาขา (ปิด ' + list.filter(b => b.closed).length + ')');
+        console.log('[sfBranches] จาก HUB ' + list.length + ' สาขา (ปิด ' + list.filter(b => b.closed).length + ')');
       return;
     }
     console.warn('[sfBranches] HUB ไม่มีข้อมูลสาขา — ใช้ Firestore ต่อ');
@@ -9414,8 +9303,7 @@ async function loadSfBranches() {
       if (d && Array.isArray(d.list) && d.list.length) {
         _applySfBranches(d.list);
         try { localStorage.setItem(SF_BRANCHES_KEY, JSON.stringify(BRANCHES)); } catch (_) {}
-        if (document.getElementById('sf-daily-table')) _renderSfTable();
-      }
+          }
     }
   } catch (e) { console.warn('loadSfBranches failed', e); }
 }
@@ -9442,8 +9330,7 @@ async function loadCkSysNotes() {
       const d = doc.data() || {};
       CK_SYS_NOTES = (d && typeof d.notes === 'object' && d.notes) ? d.notes : {};
       try { localStorage.setItem(CK_SYS_NOTES_KEY, JSON.stringify(CK_SYS_NOTES)); } catch (_) {}
-      if (document.getElementById('sf-daily-table')) _renderSfTable();
-    }
+      }
   } catch (e) { console.warn('[sysNotes] โหลดไม่ได้', e); }
 }
 function ckIsAdmin() {
@@ -9557,7 +9444,6 @@ async function _sysNoteSave() {
   const r2 = await ckSetSysNote(_sysNoteDate, 'close', c);
   if (r1 && r2) { msg.textContent = '✓ บันทึกแล้ว — ทุกสาขาเห็นตรงกัน'; msg.className = 'sn-msg ok'; }
   else { msg.textContent = '⚠ บันทึกในเครื่องนี้แล้ว แต่ขึ้นคลาวด์ไม่สำเร็จ — เครื่องอื่นยังไม่เห็น'; msg.className = 'sn-msg warn'; }
-  _renderSfTable();
   _sysNotePreview();
 }
 async function _sysNoteClear() {
@@ -9576,7 +9462,6 @@ async function ckSetSysNote(date, shift, text) {
   if (text && String(text).trim()) CK_SYS_NOTES[key] = String(text).trim();
   else delete CK_SYS_NOTES[key];
   try { localStorage.setItem(CK_SYS_NOTES_KEY, JSON.stringify(CK_SYS_NOTES)); } catch (_) {}
-  if (document.getElementById('sf-daily-table')) _renderSfTable();
   if (!firebaseDb) { console.warn('[sysNotes] ยังไม่ต่อ Firestore — บันทึกเฉพาะเครื่องนี้'); return false; }
   try {
     await firebaseDb.collection('appConfig').doc('sysNotes')
@@ -9588,19 +9473,6 @@ async function ckSetSysNote(date, shift, text) {
 
 // หมายเหตุ: หน้าจัดการสาขาของ Checklist ถูกยกออก — สาขาจัดการที่ HUB (⚙️ → จัดการสาขา) ที่เดียว
 // ระบบนี้อ่านอย่างเดียวผ่าน loadSfBranches() ด้านบน
-
-// ── ตารางการส่ง · เปิด/ปิดร้าน — เลือกวันได้ · แสดงทุกสาขา (รหัสครบ) + สาเหตุส่งช้า ──
-let sfTableDate = todayDateStr();
-function _ymd(d) { const m = String(d.getMonth() + 1).padStart(2, '0'); const day = String(d.getDate()).padStart(2, '0'); return d.getFullYear() + '-' + m + '-' + day; }
-function _sfTableSetDate(v) { if (v) { sfTableDate = v; _renderSfTable(); } }
-function _sfTableDay(delta) { const d = new Date(sfTableDate); d.setDate(d.getDate() + delta); sfTableDate = _ymd(d); _renderSfTable(); }
-function _renderSfTable() { const el = document.getElementById('sf-daily-table'); if (el) el.innerHTML = _sfDailyTableHTML(); }
-// สาขาที่ผู้ใช้เห็น (admin/vp/coo=ทุกสาขา · bzm=สาขาที่ดูแล · branch=ของตัวเอง)
-// ตัดสาขาที่ปิดแล้วออกจากงานประจำ — แต่ยังอยู่ใน BRANCHES ให้ค้นชื่อจากรหัสได้ (รายงานย้อนหลัง)
-/* สาขาที่เปิดอยู่ "ของแบรนด์ที่กำลังดู"
-   ทะเบียนสาขารวมทุกแบรนด์ไว้ก้อนเดียว จึงต้องกรองด้วยรหัสนำหน้าเสมอ
-   กรองที่นี่จุดเดียว ไม่ใช่ไปไล่กรองตอนเอาไปใช้ — ของเดิมมีที่เรียก 6 ที่
-   กรองแค่บางที่ ตัวเลือกโซน/สาขาบนแดชบอร์ดเลยยังมีสาขาแบรนด์อื่นโผล่มา */
 function _openBranches() { return ckBrandBranches(BRANCHES.filter(b => !b.closed)); }
 function _visibleBranchRoster() {
   const src = _openBranches();   // กรองตามแบรนด์ให้แล้วในตัว
@@ -9608,62 +9480,6 @@ function _visibleBranchRoster() {
   if (currentUser.role === 'branch') return src.filter(b => String(b.code) === String(currentUser.branchCode || ''));
   if (currentUser.role === 'bzm') return src.filter(b => b.manager === currentUser.name || b.managerNick === currentUser.nick || b.managerNick === currentUser.name);
   return src;
-}
-function _sfDailyTableHTML() {
-  const roster = _visibleBranchRoster().slice().sort((a, b) => String(a.code).localeCompare(String(b.code)));
-  const day = sfTableDate;
-  const subs = {};
-  getVisibleDailyChecklists().filter(d => d && d.date === day).forEach(d => {
-    const bc = String(d.branchCode || '');
-    (subs[bc] = subs[bc] || { open: null, close: null })[d.shift === 'close' ? 'close' : 'open'] = d;
-  });
-  const fmtT = (iso) => { if (!iso) return null; const dd = new Date(iso); return String(dd.getHours()).padStart(2, '0') + ':' + String(dd.getMinutes()).padStart(2, '0'); };
-  let openCount = 0, closeCount = 0;
-  roster.forEach(b => { const s = subs[String(b.code)]; if (s && s.open) openCount++; if (s && s.close) closeCount++; });
-  const total = roster.length;
-  /* เนื้อในช่องห่อไว้ก้อนเดียวเสมอ — บนมือถือช่องถูกจัดเป็น "ป้ายรอบ | เนื้อหา"
-     ถ้าไม่ห่อ สาเหตุที่ส่งช้าจะหลุดไปเรียงข้างเวลาแทนที่จะอยู่ใต้เวลา */
-  const cell = (rec) => {
-    if (!rec) return '<span class="sf-cellbody"><span class="sf-tbl-none">— ยังไม่ส่ง</span></span>';
-    const t = fmtT(rec.submittedAt);
-    const late = _isDailyLate(rec);
-    const reason = (rec.lateReason || '').trim();
-    let h = '<span class="sf-tbl-time ' + (late ? 'is-late' : 'is-ok') + '">' + (t ? t + ' น.' : 'ส่งแล้ว') + '</span>';
-    if (late) {
-      h += '<span class="sf-tbl-late">เกินเวลา</span>';
-      if (reason) h += '<div class="sf-tbl-reason"><b>เหตุ:</b> ' + escapeHtml(reason) + '</div>';
-    }
-    return '<span class="sf-cellbody">' + h + '</span>';
-  };
-  const td = (rec, shift) => {
-    const lb = shift === 'open' ? '🌅 เปิดร้าน' : '🌙 ปิดร้าน';
-    const attr = ' data-label="' + lb + '"';
-    return rec && rec.id
-      ? '<td class="sf-td-click"' + attr + ' onclick="showDailyDetail(\'' + escapeAttr(rec.id) + '\')">' + cell(rec) + '</td>'
-      : '<td' + attr + '>' + cell(rec) + '</td>';
-  };
-  const rows = roster.map(b => {
-    const s = subs[String(b.code)] || {};
-    return '<tr><td class="sf-tbl-branch"><span class="sf-tbl-code">' + escapeHtml(String(b.code)) + '</span>' + escapeHtml(b.name) + '</td>' + td(s.open, 'open') + td(s.close, 'close') + '</tr>';
-  }).join('');
-  const controls = '<div class="sf-tbl-controls">' +
-    '<button type="button" class="sf-tbl-nav" onclick="_sfTableDay(-1)" title="วันก่อนหน้า"><span class="material-symbols-rounded">chevron_left</span></button>' +
-    '<input type="date" class="sf-tbl-dateinput" value="' + escapeAttr(day) + '" onchange="_sfTableSetDate(this.value)">' +
-    '<button type="button" class="sf-tbl-nav" onclick="_sfTableDay(1)" title="วันถัดไป"><span class="material-symbols-rounded">chevron_right</span></button>' +
-    '<span class="sf-tbl-summary">🌅 ส่งแล้ว ' + openCount + '/' + total + ' · 🌙 ' + closeCount + '/' + total + '</span>' +
-    // ปุ่มหมายเหตุระบบ — เฉพาะ admin (ใช้ตอนระบบล่มจนสาขาส่งไม่ได้)
-    (ckIsAdmin()
-      ? '<button type="button" class="sf-tbl-note' + (ckDayHasNote(day) ? ' has-note' : '') + '"'
-        + ' onclick="openSysNoteModal(\'' + escapeAttr(day) + '\')" title="หมายเหตุระบบของวันนี้">'
-        + '<span class="material-symbols-rounded">edit_note</span>หมายเหตุระบบ'
-        + (ckDayHasNote(day) ? '<span class="sf-note-dot"></span>' : '') + '</button>'
-      : '') +
-  '</div>';
-  const table = '<div class="sf-tbl-wrap"><table class="sf-send-table">' +
-    '<colgroup><col class="c-branch"><col class="c-shift"><col class="c-shift"></colgroup>' +
-    '<thead><tr><th>สาขา</th><th>🌅 เปิดร้าน</th><th>🌙 ปิดร้าน</th></tr></thead>' +
-    '<tbody>' + rows + '</tbody></table></div>';
-  return controls + table;
 }
 
 /* ═══ สรุปการส่ง · รายสาขา ═══
@@ -9989,9 +9805,14 @@ function _dailyPickDay(date) {
   /* บนแดชบอร์ดไม่มีช่องกรองวันของหน้าประวัติ — กดวันแล้วให้ไปเปลี่ยนวันของตารางการส่งแทน */
   const el = document.getElementById('daily-filter-date');
   if (!el || el.offsetParent === null) {
-    if (typeof sfTableDate !== 'undefined') {
-      sfTableDate = (sfTableDate === date) ? '' : date;
-      if (typeof _renderSfTable === 'function') _renderSfTable();
+    /* อยู่บนแดชบอร์ด — พาไปหน้าประวัติแล้วกรองเฉพาะวันนั้น
+       เป็นที่เดียวที่ดูได้ว่าวันนั้นสาขาไหนส่ง สาขาไหนขาด */
+    if (typeof showDailyHub === 'function') {
+      showDailyHub();
+      setTimeout(function () {
+        const e2 = document.getElementById('daily-filter-date');
+        if (e2) { e2.value = date; if (typeof renderDailyList === 'function') renderDailyList(); }
+      }, 60);
     }
     return;
   }
@@ -14621,6 +14442,22 @@ const SFRep = {
 .jdv.zero { background:var(--bg-strong); color:var(--text-tertiary); justify-content:center; padding:7px 6px; }
 .jdv s { text-decoration:none; }
 @media (max-width:560px){ .jdv { padding:0; min-height:11px; } .jdv b, .jdv em, .jdv s { display:none; } }
+
+/* สองคอลัมน์บนจอกว้าง */
+.sf-two { display:grid; gap:14px; }
+@media (min-width:900px){ .sf-two { grid-template-columns:1fr 1fr; align-items:start; } }
+/* หัวข้อที่ตอบ N/A บ่อย */
+.sfna { padding:4px 14px 2px; }
+.sfna-r { display:grid; grid-template-columns:1fr 84px 62px; gap:11px; align-items:center;
+  padding:9px 0; border-bottom:1px solid var(--border); }
+.sfna-r:last-child { border-bottom:0; }
+.sfna-t { font-size:12.5px; font-weight:600; color:var(--text-secondary); line-height:1.4; min-width:0; }
+.sfna-t s { text-decoration:none; display:block; font-size:10.5px; font-weight:700; color:var(--text-tertiary); margin-top:2px; }
+.sfna-b { height:6px; border-radius:999px; background:var(--bg-strong); overflow:hidden; }
+.sfna-b i { display:block; height:100%; border-radius:999px; background:var(--text-tertiary); }
+.sfna-n { text-align:right; font-size:14px; font-weight:800; font-variant-numeric:tabular-nums; color:var(--text-secondary); }
+.sfna-n em { font-style:normal; display:block; font-size:10px; font-weight:700; color:var(--text-tertiary); }
+@media (max-width:520px){ .sfna-r { grid-template-columns:1fr 54px 52px; gap:8px; } }
 </style>
 <!-- ══════════ กล่องออกรายงาน (ซานตาเฟ่) ══════════ -->
 <div class="sfrep-ov" id="sfrep-ov">
