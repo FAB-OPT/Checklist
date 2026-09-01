@@ -5517,7 +5517,7 @@ body.in-audit #ck-page-head { display:none; }
   color:#fff; font-size:14.5px; font-weight:800; padding:14px; border-radius:14px;
   box-shadow:0 6px 18px color-mix(in srgb, var(--primary) 30%, transparent); }
 #daily-form-screen .form-action-bar .btn-secondary { flex:0 0 auto; min-width:0; padding:14px 16px; border-radius:14px; }
-#daily-form-screen .sticky-tabs { top:52px; }
+/* ไม่ต้องตั้ง top ให้แถบหมวดอีกแล้ว — อยู่ในก้อน .ck-stick เดียวกับความคืบหน้า */
 /* แถบปุ่มส่งลอยติดล่างจอ ข้อสุดท้ายจึงถูกทับ — เว้นที่ให้เท่าความสูงของแถบ
    บน iOS ยังต้องบวก safe-area อีก ไม่งั้นโดนแถบล่างของ Safari กินไปอีกชั้น */
 #daily-form-screen #daily-sections-container { padding-bottom: calc(12px + env(safe-area-inset-bottom)); }
@@ -6049,14 +6049,13 @@ body.in-audit #ck-page-head { display:none; }
         </div>
         <span class="daily-form-branch-hidden" id="daily-form-branch" style="display:none;"></span>
         <span class="daily-form-branch-hidden" id="daily-form-bzm-chip" style="display:none;"></span>
-        <div class="daily-form-input-row">
-          <label class="daily-form-input-label">Manager on duty <span class="req">*</span></label>
-          <input type="text" class="jd-form-input" id="daily-manager" placeholder="ชื่อผู้รับผิดชอบ shift">
-        </div>
       </div>
 
       <!-- ความคืบหน้าอยู่บนสุดและติดหน้าจอ — คำถามที่คนตรวจถามตัวเองตลอดคือ
            "เหลืออีกกี่ข้อ" ถ้าต้องเลื่อนขึ้นไปดูก็เท่ากับไม่ได้ตอบ -->
+      <!-- ห่อความคืบหน้ากับแถบหมวดไว้ด้วยกัน จะได้เลื่อนตามจอเป็นก้อนเดียว
+           ของเดิมต่างคน sticky คนละ top พอการ์ดความคืบหน้าสูงขึ้นก็ทับกัน -->
+      <div class="ck-stick">
       <div class="ck-prog" id="daily-prog">
         <div class="ck-prog-top">
           <span class="ck-prog-t" id="daily-prog-t">เช็คลิสต์</span>
@@ -6070,6 +6069,7 @@ body.in-audit #ck-page-head { display:none; }
       </div>
 
       <div class="sticky-tabs"><div class="chip-row daily-section-tabs" id="daily-section-tabs"></div></div>
+      </div>
 
       <div id="daily-sections-container"></div>
 
@@ -10525,6 +10525,14 @@ async function startDailyShift(shift) {
   const id = `${_target.code}_${today}_${shift}`;
   const existing = allDailyChecklists.find(d => d.id === id);
 
+  /* ถามชื่อผู้ตรวจก่อนเข้าฟอร์ม — กดยกเลิกก็ไม่เข้า
+     กลับมาทำต่อรอบเดิมที่มีชื่ออยู่แล้วไม่ต้องถามซ้ำ */
+  let _mgr = (existing && (existing.manager || '').trim()) || '';
+  if (!_mgr) {
+    _mgr = await _askManager(_ckLastManager());
+    if (!_mgr) return;
+  }
+
   // ── กติกาเวลา (ตรวจเฉพาะตอนเริ่มครั้งแรก): รอบเปิด ≤ 11:30 · รอบปิด ≤ 22:00 ──
   //    เทียบกับเวลาจริงของเครื่องตอนกดเริ่มตรวจ · เกิน → ป็อปอัพเตือน + บังคับใส่เหตุผล
   const _now = new Date();
@@ -10616,7 +10624,7 @@ async function startDailyShift(shift) {
     bzm: (currentUser.role === 'branch') ? (currentUser.bzm || '') : (_brInfo ? (_brInfo.manager || _brInfo.managerNick || '') : ''), // เก็บเป็นชื่อ (ไม่ใช่ชื่อเล่น) ให้ตรงกับ filter ของ BZM
     date: today,
     shift,
-    manager: existing ? (existing.manager || '') : '',
+    manager: _mgr,
     items,
     requiredPhotos,
     submittedBy: currentUser.code,
@@ -10647,7 +10655,6 @@ async function startDailyShift(shift) {
   document.getElementById('daily-form-branch').textContent = branchLabel(_target.code, _target.name);
   document.getElementById('daily-form-date-chip').innerHTML = `<span class="material-symbols-rounded">calendar_today</span><span>${fmtDateDMY(today)}</span>`;
   document.getElementById('daily-form-head').className = 'card daily-form-head-card ' + (shift === 'open' ? 'is-open' : 'is-close');
-  document.getElementById('daily-manager').value = currentDaily.manager;
   renderDailyForm();
 }
 
@@ -10888,17 +10895,13 @@ function removeDailyPhoto(idx, photoIdx) {
 
 async function submitDailyShift() {
   if (!currentDaily) return;
-  const managerInput = document.getElementById('daily-manager');
-  const manager = managerInput.value.trim();
+  /* ชื่อผู้ตรวจถามไปตั้งแต่ก่อนเริ่มแล้ว ตรงนี้เหลือเป็นตาข่ายกันเหนียว
+     เผื่อใบเก่าที่บันทึกไว้ก่อนมีป๊อปอัป กลับมาแก้แล้วยังไม่มีชื่อ */
+  let manager = (currentDaily.manager || '').trim();
   if (!manager) {
-    showModal('กรุณากรอก Manager on duty', 'ระบุชื่อผู้รับผิดชอบ shift ก่อนบันทึก', () => {
-      managerInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      managerInput.focus({ preventScroll: true });
-      managerInput.classList.remove('input-flash'); void managerInput.offsetWidth;
-      managerInput.classList.add('input-flash');
-      setTimeout(() => managerInput.classList.remove('input-flash'), 1800);
-    });
-    return;
+    manager = await _askManager(_ckLastManager());
+    if (!manager) return;
+    currentDaily.manager = manager;
   }
   const items = currentDaily.items || [];
   const required = currentDaily.requiredPhotos || [];
@@ -11052,7 +11055,6 @@ function editDailyChecklist(id) {
   document.getElementById('daily-form-branch').textContent = branchLabel(d.branchCode, d.branchName);
   document.getElementById('daily-form-date-chip').innerHTML = `<span class="material-symbols-rounded">calendar_today</span><span>${fmtDateDMY(d.date)}</span>`;
   document.getElementById('daily-form-head').className = 'card daily-form-head-card ' + (shift === 'open' ? 'is-open' : 'is-close');
-  document.getElementById('daily-manager').value = currentDaily.manager || '';
   renderDailyForm();
 }
 
@@ -12338,6 +12340,74 @@ function showConfirm(title, bodyHtml, opts) {
     const onCancel = () => { restore(); resolve(false); };
     okBtn.addEventListener('click', onOk, { once: true });
     cancelBtn.addEventListener('click', onCancel, { once: true });
+  });
+}
+
+/* ═══ ถามชื่อผู้ตรวจก่อนเริ่ม ═══
+   ของเดิมช่องกรอกชื่ออยู่กลางฟอร์ม แล้วบล็อกตอนกดส่ง
+   ซึ่งเป็นตอนที่เดินตรวจจนจบแล้ว ต้องเลื่อนกลับขึ้นไปหาช่องที่ลืมกรอก
+   ถามตั้งแต่ก่อนเริ่มจบกว่า และเป็นคำถามเดียวที่ต้องตอบก่อนลงมือ
+
+   จำชื่อล่าสุดไว้เติมให้ คนเดิมตรวจซ้ำทุกวันจะได้กดยืนยันผ่านเลย */
+const CK_LAST_MANAGER_KEY = 'ck_last_manager';
+function _ckLastManager() {
+  try { return localStorage.getItem(CK_LAST_MANAGER_KEY) || ''; } catch (_) { return ''; }
+}
+function _askManager(preset) {
+  const titleEl = document.getElementById('modal-title');
+  const bodyEl = document.getElementById('modal-body');
+  const okBtn = document.getElementById('modal-ok');
+  const cancelBtn = document.getElementById('modal-cancel');
+  const modal = document.getElementById('modal');
+  titleEl.textContent = 'ใครเป็นคนตรวจรอบนี้';
+  bodyEl.innerHTML = '<div class="ask-mgr">' +
+    '<input type="text" id="ask-mgr-input" class="jd-form-input" autocomplete="name" ' +
+      'placeholder="ชื่อผู้รับผิดชอบรอบนี้" value="' + escapeAttr(preset || '') + '">' +
+    '<div class="ask-mgr-hint">ชื่อนี้จะติดไปกับผลตรวจ ใช้ตอนตามเรื่องย้อนหลัง</div>' +
+    '<div class="ask-mgr-err" id="ask-mgr-err">ต้องใส่ชื่อก่อนถึงจะเริ่มตรวจได้</div></div>';
+  const okOrig = okBtn.textContent, cancelOrig = cancelBtn.textContent, okCls = okBtn.className;
+  /* ปุ่มตกลงมี onclick="closeModal()" เขียนไว้ในแท็ก ซึ่งทำงานก่อน listener ที่เพิ่มทีหลังเสมอ
+     หน้าต่างเลยปิดไปทั้งที่ยังไม่ได้กรอกชื่อ · ถอดออกชั่วคราวแล้วคืนให้ตอนจบ */
+  const okInline = okBtn.onclick;
+  okBtn.onclick = null;
+  okBtn.textContent = 'เริ่มตรวจ';
+  cancelBtn.textContent = 'ยกเลิก';
+  cancelBtn.style.display = '';
+  okBtn.className = okCls.replace('btn-block', '').trim();
+  okBtn.style.flex = '1'; cancelBtn.style.flex = '1';
+  modal.classList.add('show');
+  const input = document.getElementById('ask-mgr-input');
+  setTimeout(function () { if (input) { input.focus(); input.select(); } }, 60);
+
+  return new Promise(function (resolve) {
+    const restore = () => {
+      okBtn.onclick = okInline;
+      okBtn.textContent = okOrig; cancelBtn.textContent = cancelOrig;
+      cancelBtn.style.display = 'none'; okBtn.className = okCls;
+      okBtn.style.flex = ''; cancelBtn.style.flex = '';
+      okBtn.removeEventListener('click', onOk);
+      cancelBtn.removeEventListener('click', onCancel);
+      if (input) input.removeEventListener('keydown', onKey);
+    };
+    const onOk = () => {
+      const v = (input && input.value || '').trim();
+      if (!v) {
+        /* ว่างอยู่ = ไม่ปิดหน้าต่าง ชี้ให้เห็นว่าต้องกรอก */
+        const err = document.getElementById('ask-mgr-err');
+        if (err) err.classList.add('show');
+        if (input) { input.classList.add('input-flash'); input.focus();
+          setTimeout(function () { input.classList.remove('input-flash'); }, 1200); }
+        okBtn.addEventListener('click', onOk, { once: true });   /* ผูกใหม่ เพราะ once ถูกใช้ไปแล้ว */
+        return;
+      }
+      try { localStorage.setItem(CK_LAST_MANAGER_KEY, v); } catch (_) {}
+      restore(); closeModal(); resolve(v);
+    };
+    const onCancel = () => { restore(); resolve(null); };
+    const onKey = (e) => { if (e.key === 'Enter') { e.preventDefault(); okBtn.click(); } };
+    okBtn.addEventListener('click', onOk, { once: true });
+    cancelBtn.addEventListener('click', onCancel, { once: true });
+    if (input) input.addEventListener('keydown', onKey);
   });
 }
 
@@ -14931,6 +15001,20 @@ const SFRep = {
 .ck-row-nm { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .ck-row-pc { flex:0 0 auto; }
 .ck-row.r-miss .ck-row-ic { color:var(--danger); opacity:.65; }
+
+/* ป๊อปอัปถามชื่อผู้ตรวจ */
+.ask-mgr { text-align:left; }
+.ask-mgr input { width:100%; font-size:15px; }
+.ask-mgr-hint { font-size:11.5px; font-weight:600; color:var(--text-tertiary); margin-top:7px; line-height:1.5; }
+.ask-mgr-err { display:none; font-size:11.5px; font-weight:700; color:var(--danger); margin-top:7px; }
+.ask-mgr-err.show { display:block; }
+/* แถบความคืบหน้ากับแถบหมวดต้องเลื่อนตามจอไปด้วยกัน
+   ของเดิมต่างคนต่าง sticky ที่ top ต่างกัน พอการ์ดความคืบหน้าสูงขึ้น
+   แถบหมวดก็ไปซ้อนทับ ห่อรวมเป็นก้อนเดียวจึงไม่ต้องเดาความสูง */
+.ck-stick { position:sticky; top:0; z-index:52; background:var(--bg); }
+.ck-stick .ck-prog { position:static; margin:0 -14px; }
+.ck-stick .sticky-tabs { position:static; box-shadow:none; margin-bottom:0; padding-bottom:9px; }
+.ck-stick::after { content:''; display:block; height:1px; background:var(--border); margin:0 -14px; }
 </style>
 <!-- ══════════ กล่องออกรายงาน (ซานตาเฟ่) ══════════ -->
 <div class="sfrep-ov" id="sfrep-ov">
