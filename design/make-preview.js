@@ -15,7 +15,7 @@ let css='';
 src.replace(/<style[^>]*>([\s\S]*?)<\/style>/g,(m,b)=>{css+=b+'\n';return m;});
 
 const fn=[grabFn('_sfDailyKpisHTML'),grabFn('_dailyMonthHM'),grabFn('_dailyMonthStripHTML'),
-          grabFn('_sfRate'),grabFn('_sfCodeSet'),grabFn('_sfBenchHTML')].join('\n');
+          grabFn('_sfRate'),grabFn('_sfCodeSet'),grabFn('_sfBenchHTML'),grabFn('_jdCoverHTML')].join('\n');
 
 /* ปฏิทินหนึ่งเดือนของสาขาเดียว — ใส่เวลาส่งจริงเข้าไปด้วย */
 function monthOf(y,m,pOk,pLate,late){
@@ -89,6 +89,8 @@ h2.sec{font-size:15px;font-weight:800;max-width:1180px;margin:30px auto 12px;col
 <div class="wrap" id="w"></div>
 <h2 class="sec">แถบเทียบ</h2>
 <div class="wrap" id="bn"></div>
+<h2 class="sec">เจ๊แดง · ความครอบคลุม + ปฏิทินการลงตรวจ</h2>
+<div class="wrap" id="jd"></div>
 <h2 class="sec">ปฏิทินการส่งทั้งเดือน</h2>
 <div class="wrap" id="cal"></div>
 <script>
@@ -131,6 +133,26 @@ document.getElementById('bn').innerHTML=[
   var h=_sfBenchHTML(scope);
   return '<div class="case"><h2>'+c.t+'</h2><div class="in">'+(h||'<div style="font-size:12px;color:#8E959D;font-weight:700">— ไม่แสดง (ถูกต้อง) —</div>')+'</div></div>';
 }).join('');
+/* เจ๊แดง: 11 สาขา ตรวจไป 9 · เว้นศุกร์-เสาร์ */
+var JD_ROSTER=['สามย่านมิตรทาวน์','เซ็นทรัลเวิลด์','สยามสแควร์ ซ.5','เอ็มบีเค เซ็นเตอร์',
+  'เซ็นทรัล พระราม 3','ท่าพระ','บางรัก','อโศก','ลาดพร้าว 71','รัชดา 32','บางแค'];
+function getJaedaengBranchesForUser(){ return JD_ROSTER.map(function(n){return {name:n};}); }
+function jdAudits(){
+  var out=[], done=JD_ROSTER.slice(0,9);
+  for(var d=1;d<=31;d++){
+    var wd=new Date(2026,7,d).getDay();
+    if(wd===5||wd===6) continue;
+    var n=1+Math.floor(Math.random()*3);
+    for(var i=0;i<n;i++) out.push({date:'2026-08-'+String(d).padStart(2,'0'),
+      storeName:done[Math.floor(Math.random()*done.length)],passPct:88+Math.random()*10,failCount:Math.floor(Math.random()*6)});
+  }
+  return out;
+}
+document.getElementById('jd').innerHTML=(function(){
+  var recs=jdAudits();
+  return '<div class="case" style="grid-column:1/-1"><h2>โซนพี่กัส · 11 สาขา ตรวจไปแล้ว 9</h2>'+
+    '<div class="in">'+_jdCoverHTML(recs)+'</div></div>';
+})();
 document.getElementById('cal').innerHTML=MONTHS.map(function(c){
   _LATE=!!c.late;
   return '<div class="case"><h2>'+c.t+'</h2><div class="in">'+_dailyMonthStripHTML(c.d,c.n)+'</div></div>';

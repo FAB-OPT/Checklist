@@ -6025,6 +6025,9 @@ body.in-audit #ck-page-head { display:none; }
         </select>
       </div>
       <div class="jd-dash-kpis" id="jd-dash-kpis"></div>
+      <!-- ความครอบคลุม + ปฏิทินการลงตรวจ — เจ๊แดงไม่มีรอบต่อวัน
+           คำถามจึงไม่ใช่ "ใครไม่ส่ง" แต่เป็น "สาขาไหนยังไม่ถูกตรวจ" -->
+      <div id="jd-dash-cover"></div>
       <div class="card" id="jd-dash-zone-card">
         <div class="card-header">
           <span class="material-symbols-rounded" style="color:#0E7490;">groups</span>
@@ -11408,6 +11411,77 @@ function renderJaedaengTopFails() {
   topFailsEl.innerHTML = overview + cards;
 }
 
+/* ═══ ความครอบคลุมการตรวจ + ปฏิทินการลงตรวจ (เจ๊แดง) ═══
+   เจ๊แดงไม่มีรอบต่อวัน จึงไม่มีตัวหารแบบ "รอบที่ควรส่ง" และคิดเปอร์เซ็นต์การส่งไม่ได้
+   คำถามที่ตอบได้จริงคือ "เดือนนี้ยังไม่ได้ไปสาขาไหนบ้าง"
+   KPI เดิมบอกแค่ "ตรวจแล้ว 41 จาก 49" ซึ่งรู้ว่าขาด 8 แต่ไม่รู้ว่าสาขาไหน
+   จึงเอาไปวางแผนลงพื้นที่ต่อไม่ได้ ต้องไล่เปิดดูเองทีละสาขา
+
+   ปฏิทินก็เปลี่ยนความหมาย — ไม่ใช่ "ส่งครบไหม" แต่เป็น "ลงตรวจกี่ครั้งในวันนั้น"
+   ทำให้เห็นจังหวะการลงพื้นที่ เช่น ไม่เคยลงวันหยุด หรือกองอยู่ปลายเดือน */
+function _jdCoverHTML(records) {
+  const roster = (typeof getJaedaengBranchesForUser === 'function') ? getJaedaengBranchesForUser() : [];
+  if (!roster.length) return '';
+  const seen = {};
+  (records || []).forEach(function (r) { if (r && r.storeName) seen[r.storeName] = (seen[r.storeName] || 0) + 1; });
+  const done = roster.filter(function (b) { return seen[b.name]; });
+  const todo = roster.filter(function (b) { return !seen[b.name]; });
+  const cov = roster.length ? (done.length / roster.length * 100) : 0;
+
+  /* ปฏิทินการลงตรวจ — เดือนล่าสุดที่มีข้อมูลในชุดที่กรองอยู่ */
+  const dates = (records || []).map(function (r) { return r.date || ''; }).filter(Boolean).sort();
+  const key = dates.length ? dates[dates.length - 1].slice(0, 7) : '';
+  let cal = '';
+  if (key) {
+    const y = Number(key.slice(0, 4)), m = Number(key.slice(5, 7));
+    const days = new Date(y, m, 0).getDate();
+    const today = todayDateStr();
+    const per = {};
+    (records || []).forEach(function (r) {
+      if (r && r.date && r.date.slice(0, 7) === key) per[r.date] = (per[r.date] || 0) + 1;
+    });
+    let mx = 0;
+    Object.keys(per).forEach(function (k) { if (per[k] > mx) mx = per[k]; });
+    const offset = (new Date(y, m - 1, 1).getDay() + 6) % 7;
+    let cells = '';
+    for (let i = 0; i < offset; i++) cells += '<span class="dm-cell is-empty"></span>';
+    for (let i = 1; i <= days; i++) {
+      const date = y + '-' + String(m).padStart(2, '0') + '-' + String(i).padStart(2, '0');
+      const n = per[date] || 0;
+      const future = date > today;
+      cells += '<span class="dm-cell' + (future ? ' is-future' : '') + (date === today ? ' is-today' : '') +
+        '" title="' + escapeAttr(fmtDateDMY(date) + ' · ลงตรวจ ' + n + ' ครั้ง') + '">' +
+        '<span class="dm-d">' + i + '</span>' +
+        '<span class="jdv' + (n ? '' : ' zero') + '">' +
+          (n ? '<b>' + n + '</b><em>ครั้ง</em><i style="width:' + (mx ? (n / mx * 100) : 0) + '%"></i>'
+             : (future ? '' : '<s>—</s>')) +
+        '</span></span>';
+    }
+    const monthName = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน',
+                       'กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'][m - 1];
+    cal = '<div class="dm-wrap" style="margin:12px 0 0">' +
+      '<div class="dm-head"><span class="dm-title">ลงตรวจวันไหนบ้าง · ' + monthName + ' ' + (y + 543) + '</span>' +
+        '<span class="dm-sum">รวม <b>' + (records || []).filter(function (r) {
+            return r && r.date && r.date.slice(0, 7) === key; }).length + '</b> ครั้ง</span></div>' +
+      '<div class="dm-dow">' + ['จ','อ','พ','พฤ','ศ','ส','อา'].map(function (d) {
+          return '<span>' + d + '</span>'; }).join('') + '</div>' +
+      '<div class="dm-grid">' + cells + '</div></div>';
+  }
+
+  return '<div class="jdc">' +
+    '<div class="jdc-h">ความครอบคลุม<span>ตรวจแล้ว ' + done.length + ' จาก ' + roster.length + ' สาขา</span></div>' +
+    '<div class="sfk-bar" style="margin-bottom:10px">' +
+      '<i class="ok" style="width:' + cov.toFixed(1) + '%"></i>' +
+      '<i class="miss" style="width:' + (100 - cov).toFixed(1) + '%"></i></div>' +
+    (todo.length
+      ? '<div class="jdc-t">ยังไม่ได้ตรวจเลยในช่วงที่เลือก <b>' + todo.length + '</b> สาขา</div>' +
+        '<div class="jdc-list">' + todo.map(function (b) {
+            return '<span class="jdc-chip">' + escapeHtml(b.name) + '</span>'; }).join('') + '</div>'
+      : '<div class="jdc-t ok">ตรวจครบทุกสาขาในช่วงที่เลือกแล้ว</div>') +
+    cal +
+  '</div>';
+}
+
 function renderJaedaengDashboard() {
   let records = getVisibleJaedaengAudits();  // bzm ได้เฉพาะของตัวเองอยู่แล้ว
   // กรองตาม dropdown (ทุก role) — bzm เลือกได้เฉพาะสาขาตัวเอง
@@ -11429,6 +11503,8 @@ function renderJaedaengDashboard() {
 
   if (records.length === 0) {
     kpis.innerHTML = '';
+    const _cv = document.getElementById('jd-dash-cover');
+    if (_cv) _cv.innerHTML = '';
     branchesEl.innerHTML = '<div class="jd-dash-empty">ยังไม่มีข้อมูลการตรวจ</div>';
     topFailsEl.innerHTML = '<div class="jd-dash-empty">ยังไม่มีข้อมูลการตรวจ</div>';
     byBzmEl.innerHTML = '<div class="jd-dash-empty">ยังไม่มีข้อมูลการตรวจ</div>';
@@ -11452,6 +11528,9 @@ function renderJaedaengDashboard() {
     <div class="jd-kpi is-danger"><div class="jd-kpi-label">รวมข้อไม่ผ่าน</div><div class="jd-kpi-value">${totalFails}</div><div class="jd-kpi-sub">NCRs</div></div>
     <div class="jd-kpi"><div class="jd-kpi-label">สาขาที่ตรวจแล้ว</div><div class="jd-kpi-value">${distinctBranches}</div><div class="jd-kpi-sub">จาก ${getJaedaengBranchesForUser().length} สาขา</div></div>
   `;
+
+  const coverEl = document.getElementById('jd-dash-cover');
+  if (coverEl) coverEl.innerHTML = _jdCoverHTML(records);
 
   // Branch leaderboard — sort by avg pass%
   const byBranch = {};
@@ -14453,6 +14532,27 @@ const SFRep = {
   font-variant-numeric:tabular-nums; color:var(--text-tertiary); }
 .sfb-v.me { color:var(--text); font-size:14.5px; }
 @media (max-width:520px){ .sfb-l { width:78px; font-size:11.5px; } }
+
+/* ═══ ความครอบคลุมการตรวจ (เจ๊แดง) ═══ */
+.jdc { background:var(--surface); border:1px solid var(--border); border-radius:var(--r-lg);
+  padding:14px 15px; margin-top:12px; }
+.jdc-h { display:flex; align-items:baseline; gap:9px; font-size:14px; font-weight:800; margin-bottom:10px; }
+.jdc-h span { margin-left:auto; font-size:11.5px; font-weight:700; color:var(--text-tertiary); }
+.jdc-t { font-size:12px; font-weight:700; color:var(--danger); margin-bottom:8px; }
+.jdc-t.ok { color:var(--success); }
+.jdc-t b { font-weight:800; }
+.jdc-list { display:flex; flex-wrap:wrap; gap:6px; }
+.jdc-chip { font-size:11.5px; font-weight:700; padding:5px 11px; border-radius:var(--r-pill);
+  background:var(--danger-bg); color:var(--danger); }
+/* ช่องปฏิทินแบบนับครั้ง */
+.jdv { position:relative; display:flex; align-items:baseline; gap:4px; padding:4px 6px 7px;
+  font-size:10px; font-weight:800; color:var(--success); background:var(--success-bg); }
+.jdv b { font-size:14px; line-height:1; font-variant-numeric:tabular-nums; }
+.jdv em { font-style:normal; font-size:9px; font-weight:700; }
+.jdv i { position:absolute; left:0; bottom:0; height:3px; background:var(--success); }
+.jdv.zero { background:var(--bg-strong); color:var(--text-tertiary); justify-content:center; padding:7px 6px; }
+.jdv s { text-decoration:none; }
+@media (max-width:560px){ .jdv { padding:0; min-height:11px; } .jdv b, .jdv em, .jdv s { display:none; } }
 </style>
 <!-- ══════════ กล่องออกรายงาน (ซานตาเฟ่) ══════════ -->
 <div class="sfrep-ov" id="sfrep-ov">
