@@ -147,24 +147,27 @@ body {
 }
 @media (max-width: 1023px) {
   .app-header { padding: 11px 14px; padding-top: calc(11px + env(safe-area-inset-top)); }
-  .app-header h1 { font-size: 14px; }
-  .app-header .app-user-line { font-size: 11px; }
+  .app-header h1.app-user-line { font-size: 15px; }
+  .app-eyebrow { font-size: 11px; }
 }
-.app-header-inner { display:flex; justify-content:space-between; align-items:center; gap:12px; }
-.app-header-inner > div:first-child { flex: 1; min-width: 0; }
-.app-header h1 {
-  font-size: 16px;
-  font-weight: 800;
-  letter-spacing: -0.2px; line-height: 1.3;
-  margin: 0;
+.app-header-inner { display:flex; align-items:center; gap:11px; }
+.app-header-stack { flex: 1; min-width: 0; }
+.hdr-tile {
+  width: 40px; height: 40px; border-radius: 11px; flex: 0 0 auto;
+  display: grid; place-items: center;
+  color: #fff; font-weight: 800; font-size: 13px; letter-spacing: .02em;
 }
-.app-header h1 .app-title-text { display: block; }
-.app-header .app-user-line {
-  font-size: 12px; font-weight: 700;
+.app-eyebrow {
+  font-size: 11.5px; font-weight: 700;
   color: var(--text-tertiary);
-  margin-top: 2px;
-  letter-spacing: 0.1px;
-  text-align: left;
+  line-height: 1.25;
+}
+.app-header h1.app-user-line {
+  font-size: 15.5px; font-weight: 800;
+  color: var(--text);
+  letter-spacing: -0.2px; line-height: 1.3;
+  margin: 1px 0 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .header-tools {
   display: flex; align-items: center; gap: 8px;
@@ -4830,6 +4833,7 @@ body:has(#login-screen.active) {
 
   /* Hide header user-chip on desktop — info now lives in the sidebar */
   .user-chip { display: none; }
+  .hdr-tile { display: none; }   /* แถบข้างมีไทล์แบรนด์อยู่แล้ว ไม่ต้องซ้ำ */
   .app-header-inner { justify-content: flex-start; }
 
   /* Logout pinned to bottom */
@@ -5352,8 +5356,10 @@ body.in-audit #ck-page-head { display:none; }
 
 .ck-hd { display:flex; align-items:center; gap:11px; background:var(--surface);
   border:1px solid var(--border); border-radius:14px; padding:12px 13px; box-shadow:var(--shadow-sm); }
-.ck-hd-ic { width:38px; height:38px; border-radius:11px; background:var(--primary-100);
-  color:var(--primary-dark); display:grid; place-items:center; flex:0 0 auto; }
+/* ไทล์เป็นสีแบรนด์เต็ม — เป็นหนึ่งในสองที่ในระบบที่ยังใช้สีแบรนด์
+   (อีกที่คือจุดในปุ่มสลับแบรนด์) พอให้รู้ว่าเปิดแบรนด์ไหนอยู่โดยไม่ต้องอ่าน */
+.ck-hd-ic { width:40px; height:40px; border-radius:11px; background:var(--primary);
+  color:#fff; display:grid; place-items:center; flex:0 0 auto; }
 .ck-hd-ic .material-symbols-rounded { font-size:21px; }
 /* มีโลโก้ก็ใช้โลโก้ ไอคอนเป็นตัวสำรองตอนไฟล์โหลดไม่ขึ้น
    พื้นเป็นสีขาวเมื่อใส่โลโก้ เพราะโลโก้แต่ละแบรนด์มีสีของตัวเอง
@@ -5366,8 +5372,13 @@ body.in-audit #ck-page-head { display:none; }
 .ck-hd-ic img { display:none; width:100%; height:100%; object-fit:contain; border-radius:8px; }
 .ck-hd-ic.has-logo img { display:block; }
 .ck-hd-ic.has-logo .material-symbols-rounded { display:none; }
-.ck-hd-t { font-size:14px; font-weight:800; letter-spacing:-.2px; }
-.ck-hd-s { font-size:11px; font-weight:600; color:var(--text-tertiary); margin-top:1px;
+/* ชื่อระบบเป็นบรรทัดเล็กด้านบน ขอบเขตที่ดูอยู่เป็นตัวเด่น
+   ของเดิมสลับกัน — "Operations Checklist" ตัวโต ทั้งที่คนเปิดรู้อยู่แล้วว่าเปิดอะไรอยู่
+   สิ่งที่ต้องยืนยันคือกำลังดูสาขาไหน โซนไหน แบรนด์ไหน */
+/* ให้ชื่อสาขาได้ที่ที่เหลือทั้งหมด ไม่งั้นถูกป้ายชื่อผู้ใช้บีบจนตัดคำทิ้ง */
+.ck-hd-txt { flex:1; min-width:0; }
+.ck-hd-t { font-size:11.5px; font-weight:700; color:var(--text-tertiary); line-height:1.25; }
+.ck-hd-s { font-size:15px; font-weight:800; color:var(--text); letter-spacing:-.2px; margin-top:1px;
   white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .ck-hd-chip { margin-left:auto; font-size:11px; font-weight:700; padding:5px 10px; border-radius:999px;
   background:var(--bg); border:1px solid var(--border); color:var(--text-secondary); white-space:nowrap; }
@@ -5827,9 +5838,13 @@ body.in-audit #ck-page-head { display:none; }
 <div id="app-screen" class="screen">
   <div class="app-header">
     <div class="app-header-inner">
+      <!-- ไทล์แบรนด์ + ชื่อสาขาเป็นตัวเด่น ชื่อระบบเป็นบรรทัดเล็กด้านบน
+           ของเดิมสลับกัน คนเปิดมาเจอ "Operations Checklist" ตัวโต ทั้งที่รู้อยู่แล้วว่าเปิดอะไรอยู่
+           สิ่งที่ต้องยืนยันคือ "ตอนนี้ดูสาขาไหน แบรนด์ไหนอยู่" -->
+      <div class="hdr-tile" id="app-hdr-tile">SF</div>
       <div class="app-header-stack">
-        <h1><span class="app-title-text" id="app-title-text">Operations Checklist</span></h1>
-        <div class="app-user-line" id="app-user-line">—</div>
+        <div class="app-eyebrow"><span class="app-title-text" id="app-title-text">Operations Checklist</span></div>
+        <h1 class="app-user-line" id="app-user-line">—</h1>
         <div class="subtitle" id="header-subtitle" style="display:none;">ระบบตรวจสอบมาตรฐานการทำงาน</div>
       </div>
       <div class="header-tools" id="header-tools">
@@ -5856,7 +5871,7 @@ body.in-audit #ck-page-head { display:none; }
           <img id="ck-hd-logo" alt="">
           <span class="material-symbols-rounded" id="ck-hd-icon">restaurant</span>
         </div>
-        <div style="min-width:0;">
+        <div class="ck-hd-txt">
           <div class="ck-hd-t">Operations Checklist</div>
           <div class="ck-hd-s" id="ck-hd-sub">—</div>
         </div>
@@ -8370,6 +8385,13 @@ function applyBrandHeader() {
   document.querySelectorAll('.brand-eyebrow-label').forEach(el => {
     el.textContent = eyebrow;
   });
+  /* ไทล์แบรนด์ — ตัวย่อกับสีเปลี่ยนตามแบรนด์ที่เปิดอยู่ */
+  const tileEl = document.getElementById('app-hdr-tile');
+  if (tileEl) {
+    const TILE = { santafe: 'SF', yamachan: 'YM', jaedaeng: 'JD' };
+    tileEl.textContent = TILE[view] || (_b && _b.short ? _b.short.slice(0, 2) : '—');
+    tileEl.style.background = (_b && _b.color) ? _b.color : 'var(--primary)';
+  }
   _ckPaintPageHead();
   // Row 3 ของ header: "<ชื่อ> (<ตำแหน่ง>)" — ตัดคำนำหน้า · ไม่มี "คุณ"
   const userLineEl = document.getElementById('app-user-line');
@@ -8581,8 +8603,32 @@ function _ckPaintPageHead() {
       tile.classList.remove('has-logo');
     }
   }
+  /* บรรทัดเด่น = ขอบเขตที่กำลังดูอยู่ ต่างกันตามสิทธิ์
+     สาขาเห็นชื่อสาขาตัวเอง · BZM เห็นชื่อโซน · แอดมินเห็นแบรนด์กับจำนวนสาขา */
   const sub = document.getElementById('ck-hd-sub');
-  if (sub) sub.textContent = b ? b.name : 'ระบบตรวจสอบมาตรฐานการทำงาน';
+  if (sub) {
+    let scope = b ? (b.short || b.name) : 'ระบบตรวจสอบมาตรฐานการทำงาน';
+    if (currentUser) {
+      if (currentUser.role === 'branch') {
+        /* session จากฮับบางทีมีแต่รหัสสาขา ไม่มีชื่อ — branchLabel() จะคืนรหัสเปล่า ๆ
+           หาชื่อจากทะเบียนสาขาให้ก่อน จะได้ไม่ขึ้นว่า "5069" ห้วน ๆ */
+        let bn = currentUser.branchName;
+        if (!bn && typeof _openBranches === 'function') {
+          const hit = _openBranches().find(x => String(x.code) === String(currentUser.branchCode));
+          if (hit) bn = hit.name;
+        }
+        /* ไม่ใช้ branchLabel() เพราะมันเติมชื่อแบรนด์นำหน้าให้ ซึ่งจำเป็นตอนอยู่ในลิสต์
+           ที่หลายแบรนด์ปนกัน แต่บนหัวจอมีไทล์แบรนด์บอกอยู่แล้ว เติมอีกก็ยาวเปล่า */
+        scope = bn ? (currentUser.branchCode + ' ' + bn) : String(currentUser.branchCode || '');
+      } else if (currentUser.role === 'bzm') {
+        scope = scope + ' · โซน' + (currentUser.nick || currentUser.name || '');
+      } else if (typeof _openBranches === 'function') {
+        const n = _openBranches().length;
+        if (n) scope = scope + ' · ' + n + ' สาขา';
+      }
+    }
+    sub.textContent = scope;
+  }
   const user = document.getElementById('ck-hd-user');
   if (user && currentUser) {
     /* ชื่อเล่นพอ — ช่องนี้แคบ และคนใช้รู้อยู่แล้วว่าตัวเองเป็นใคร
