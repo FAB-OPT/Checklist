@@ -9171,8 +9171,10 @@ function _sfBenchHTML(scopeDailies) {
         : (me >= GOAL ? ' · ถึงเป้าแล้ว' : ''));
 
   return '<div class="sfb">'
+    /* ไม่ต้องอธิบายว่าเส้นดำคืออะไร — บรรทัดสรุปข้างล่างพูดถึงเป้า 95% อยู่แล้ว
+       และเส้นที่ตั้งอยู่ตำแหน่งเดียวกันทุกแถบก็อ่านออกเองว่าเป็นหมุดเทียบ */
     + '<div class="sfb-h">' + (ckHasLate() ? 'ส่งครบตรงเวลา' : 'ส่งครบ') + ' — เทียบกับที่อื่น'
-    +   '<span>' + (fromSummary ? _ckMonthLabel(mon) + ' · ' : '') + 'เส้นดำ = เป้า ' + GOAL + '%</span></div>'
+    +   (fromSummary ? '<span>' + _ckMonthLabel(mon) + '</span>' : '') + '</div>'
     + rows.map(function (r) {
         return '<div class="sfb-r"><span class="sfb-l">' + escapeHtml(r.l) + '</span>'
           + '<span class="sfb-t"><i class="sfb-f' + (r.me ? ' me' : '') + '" style="width:'
