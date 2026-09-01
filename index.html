@@ -5920,30 +5920,28 @@ body.in-audit #ck-page-head { display:none; }
              กล่องสรุป → ปฏิทินทั้งเดือน → สรุปรายสาขา -->
         <div class="sfc-sec"><span class="sfc-sec-bar"></span>
           <span class="sfc-sec-t">ภาพรวมการส่ง</span>
-          <span class="sfc-sec-x" id="sf-cl-period">ทั้งหมด</span>
-          <span class="sfc-sec-d" id="sf-cl-lead">เดือนนี้ส่งครบแค่ไหน วันไหนขาด และสาขาไหนต้องตามก่อน</span></div>
+          <span class="sfc-sec-x" id="sf-cl-period">ทั้งหมด</span></div>
         <div class="jd-dash-kpis" id="sf-cl-kpis"></div>
         <div id="sf-cl-month"></div>
         <!-- ซ่อนเมื่อดูสาขาเดียว — ตารางเรียง "สาขาที่ต้องตามก่อน" ที่มีแถวเดียวไม่ได้บอกอะไร -->
         <div class="card" id="sf-daily-times-card">
-          <div class="card-header"><span class="material-symbols-rounded" style="color:#0E7490;">schedule</span><h2>สรุปการส่ง <span class="card-header-en">รายสาขา · เรียงสาขาที่ต้องตามก่อน</span></h2></div>
+          <div class="card-header"><span class="material-symbols-rounded" style="color:#0E7490;">schedule</span><h2>สรุปการส่ง</h2></div>
           <div id="sf-daily-times"><div class="jd-dash-empty">กำลังโหลด…</div></div>
         </div>
 
         <!-- ══ 2 · หัวข้อที่ตก · N/A · คะแนนเฉลี่ย ══
              คนละเรื่องกับการส่ง — ส่งครบแล้วยังตกข้อได้ จึงต้องแยกหมวด -->
         <div class="sfc-sec"><span class="sfc-sec-bar"></span>
-          <span class="sfc-sec-t">หัวข้อที่ตก · N/A · คะแนนเฉลี่ย</span>
-          <span class="sfc-sec-d">ข้อไหนตกบ่อย ข้อไหนถูกข้ามประจำ</span></div>
+          <span class="sfc-sec-t">หัวข้อที่ตก · N/A · คะแนนเฉลี่ย</span></div>
         <div id="sf-cl-items"></div>
         <!-- สองคอลัมน์บนจอกว้าง — ทั้งคู่เป็นลิสต์สั้น ๆ วางเรียงลงมาแล้วต้องเลื่อนเปล่า ๆ -->
         <div class="sf-two">
           <div class="card">
-            <div class="card-header"><span class="material-symbols-rounded" style="color:var(--danger);">priority_high</span><h2>หัวข้อที่ตกบ่อย <span class="card-header-en">ข้อไหนตกซ้ำ ๆ</span></h2></div>
+            <div class="card-header"><span class="material-symbols-rounded" style="color:var(--danger);">priority_high</span><h2>หัวข้อที่ตกบ่อย</h2></div>
             <div id="sf-daily-topfails"><div class="jd-dash-empty">กำลังโหลด…</div></div>
           </div>
           <div class="card">
-            <div class="card-header"><span class="material-symbols-rounded" style="color:var(--text-tertiary);">remove_circle</span><h2>หัวข้อที่ตอบ N/A บ่อย <span class="card-header-en">ข้อที่ข้ามประจำ อาจต้องทบทวน</span></h2></div>
+            <div class="card-header"><span class="material-symbols-rounded" style="color:var(--text-tertiary);">remove_circle</span><h2>หัวข้อที่ตอบ N/A บ่อย</h2></div>
             <div id="sf-daily-topna"><div class="jd-dash-empty">กำลังโหลด…</div></div>
           </div>
         </div>
@@ -6095,21 +6093,21 @@ body.in-audit #ck-page-head { display:none; }
       <div class="card" id="jd-dash-zone-card">
         <div class="card-header">
           <span class="material-symbols-rounded" style="color:#0E7490;">groups</span>
-          <h2>คะแนนเฉลี่ยต่อโซน <span class="card-header-en">Average score by zone</span></h2>
+          <h2>คะแนนเฉลี่ยต่อโซน</h2>
         </div>
         <div id="jd-dash-by-bzm"></div>
       </div>
       <div class="card">
         <div class="card-header">
           <span class="material-symbols-rounded" style="color:var(--primary);">leaderboard</span>
-          <h2>คะแนนเฉลี่ยต่อสาขา <span class="card-header-en">Average score by branch</span></h2>
+          <h2>คะแนนเฉลี่ยต่อสาขา</h2>
         </div>
         <div id="jd-dash-branches"></div>
       </div>
       <div class="card">
         <div class="card-header">
           <span class="material-symbols-rounded" style="color:var(--danger);">priority_high</span>
-          <h2>หัวข้อที่ตกบ่อย <span class="card-header-en">Top failed items</span></h2>
+          <h2>หัวข้อที่ตกบ่อย</h2>
         </div>
         <div id="jd-dash-top-fails"></div>
       </div>
@@ -8745,11 +8743,6 @@ function renderSfChecklistTab() {
   if (naEl) naEl.innerHTML = _sfDailyTopNaHTML(dailies);
   const tCard = document.getElementById('sf-daily-times-card');
   const _many = _sfTodayScopeRoster().length > 1;
-  /* ดูสาขาเดียวแล้วยังเขียนว่า "สาขาไหนต้องตามก่อน" อ่านแล้วงงว่าให้ไปตามใคร */
-  const leadEl = document.getElementById('sf-cl-lead');
-  if (leadEl) leadEl.textContent = _many
-    ? 'เดือนนี้ส่งครบแค่ไหน วันไหนขาด และสาขาไหนต้องตามก่อน'
-    : 'เดือนนี้ส่งครบแค่ไหน วันไหนขาด และเทียบกับที่อื่นแล้วอยู่ตรงไหน';
   if (tCard) tCard.style.display = _many ? '' : 'none';
   if (tEl && _many) tEl.innerHTML = _sfDailySummaryHTML(dailies);
 }
@@ -8902,8 +8895,8 @@ function _sfDailyKpisHTML(dailies) {
   }
 
   return '<div class="sfk">'
-    + '<div class="sfk-top"><b>' + f(need) + '</b><em>รอบที่ควรส่ง</em>'
-    +   '<s>' + rosterN + ' สาขา · ' + nDays + ' วันที่มีการส่ง</s></div>'
+    + '<div class="sfk-top"><b>' + f(need) + '</b><em>ครั้งที่ควรส่ง</em>'
+    +   '<s>' + (rosterN > 1 ? rosterN + ' สาขา · ' : '') + nDays + ' วันที่มีการส่ง</s></div>'
     + '<div class="sfk-bar">'
     +   rows.map(function (r) {
           return '<i class="' + r.k + '" style="width:' + pct(r.v).toFixed(2) + '%"></i>';
@@ -8913,11 +8906,7 @@ function _sfDailyKpisHTML(dailies) {
         return '<div class="sfk-r ' + r.k + '"><u></u><span>' + r.l + '</span>'
           + '<b>' + f(r.v) + '</b><em>' + pct(r.v).toFixed(1) + '%</em></div>';
       }).join('')
-    + '</div>'
-    + '<div class="sfk-note">ส่งไปแล้ว <b>' + f(total) + '</b> จาก ' + f(need) + ' รอบ'
-    +   (nDays ? ' · เฉลี่ยวันละ <b>' + (Math.round(total / nDays * 10) / 10) + '</b> ครั้ง' : '')
-    +   '</div>'
-    ;
+    + '</div>';
 }
 
 /* สามตัวเลขฝั่งเนื้อหา — คนละเรื่องกับการส่ง จึงอยู่คนละหมวด
@@ -8945,9 +8934,7 @@ function _sfItemKpisHTML(dailies) {
     + '<span class="sfk-m miss"><b>' + f(fail) + '</b>ข้อที่ตก'
     +   (nFailBr && rosterN > 1 ? ' · ' + nFailBr + ' สาขา' : '') + '</span>'
     + '<span class="sfk-m na"><b>' + f(na) + '</b>N/A · ' + naPct + '%</span>'
-    + '</div>'
-    + '<div class="sfk-note">ผ่าน <b>' + f(pass) + '</b> จาก ' + f(checked) + ' ข้อที่ตัดสินผ่าน/ไม่ผ่าน'
-    +   ' · ข้อที่ตอบ N/A ไม่ถูกนำมาคิดคะแนน</div>';
+    + '</div>';
 }
 
 /* ═══ แถบเทียบ ═══
@@ -9051,16 +9038,14 @@ function _sfDailyTopNaHTML(dailies) {
     .sort(function (a, b) { return b.n - a.n; }).slice(0, 8);
   if (!rows.length) return '<div class="jd-dash-empty">ไม่มีข้อที่ตอบ N/A</div>';
   const mx = rows[0].n;
-  const totalNa = rows.reduce(function (s, r) { return s + r.n; }, 0);
+  const many = _sfTodayScopeRoster().length > 1;
   return '<div class="sfna">' + rows.map(function (r) {
     return '<div class="sfna-r"><div class="sfna-t">' + escapeHtml(r.text) +
       (r.section ? '<s>' + escapeHtml(r.section) + '</s>' : '') + '</div>' +
       '<div class="sfna-b"><i style="width:' + (r.n / mx * 100) + '%"></i></div>' +
       '<div class="sfna-n">' + r.n.toLocaleString('th-TH') +
-        '<em>' + Object.keys(r.br).length + ' สาขา</em></div></div>';
-  }).join('') + '</div>' +
-  '<div class="sfk-note" style="margin:2px 14px 13px">แปดข้อนี้รวม <b>' + totalNa.toLocaleString('th-TH') +
-    '</b> ครั้ง จากทั้งหมด ' + answered.toLocaleString('th-TH') + ' ข้อที่ตอบ</div>';
+        (many ? '<em>' + Object.keys(r.br).length + ' สาขา</em>' : '') + '</div></div>';
+  }).join('') + '</div>';
 }
 
 function _sfDailyTopFailsHTML(dailies) {
