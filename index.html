@@ -5346,7 +5346,7 @@ html.fab-sso-pending #login-screen { display: none !important; }
 /* แถบบนเดิมถูกแทนด้วยการ์ดหัวหน้าจอทั้งแถบ (ดู #ck-page-head)
    บนคอมแถบนี้ถูกซ่อนอยู่แล้วเพราะมี sidebar ทำหน้าที่เดียวกัน */
 .app-header { display:none; }
-#ck-page-head { padding-top: env(safe-area-inset-top); margin-bottom:14px; }
+#ck-page-head { padding-top: env(safe-area-inset-top); margin-bottom:16px; }
 .ck-hd-tools { display:flex; align-items:center; gap:8px; margin-top:10px; }
 .ck-hd-tools:empty { display:none; }
 /* คอมมี sidebar บอกแบรนด์และผู้ใช้อยู่แล้ว การ์ดนี้จะกลายเป็นของซ้ำ */
@@ -5354,8 +5354,13 @@ html.fab-sso-pending #login-screen { display: none !important; }
 /* ในฟอร์มตรวจไม่ต้องมี — ฟอร์มมีหัวของตัวเองและต้องการที่ให้คำถาม */
 body.in-audit #ck-page-head { display:none; }
 
-.ck-hd { display:flex; align-items:center; gap:11px; background:var(--surface);
-  border:1px solid var(--border); border-radius:14px; padding:12px 13px; box-shadow:var(--shadow-sm); }
+/* หัวจอไม่ใช่การ์ด — มันคือป้ายบอกว่าอยู่ที่ไหน ไม่ใช่เนื้อหาชิ้นหนึ่ง
+   ของเดิมเป็นกล่องขาวมีขอบมีเงา วางซ้อนอยู่เหนือกล่องขาวมีขอบมีเงาอันถัดไป
+   เห็นเป็นกรอบสองชั้นซ้อนกันโดยที่ชั้นบนไม่ได้มีเนื้อหาอะไร
+   เหลือแค่เส้นคั่นบาง ๆ ด้านล่างพอ */
+.ck-hd { display:flex; align-items:center; gap:11px; background:none;
+  border:0; border-bottom:1px solid var(--border); border-radius:0;
+  padding:2px 2px 13px; box-shadow:none; }
 /* ไทล์เป็นสีแบรนด์เต็ม — เป็นหนึ่งในสองที่ในระบบที่ยังใช้สีแบรนด์
    (อีกที่คือจุดในปุ่มสลับแบรนด์) พอให้รู้ว่าเปิดแบรนด์ไหนอยู่โดยไม่ต้องอ่าน */
 .ck-hd-ic { width:40px; height:40px; border-radius:11px; background:var(--primary);
