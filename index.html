@@ -14436,10 +14436,18 @@ const SFRep = {
 .sfk-m.ok { background:var(--success-bg); color:var(--success); }
 .sfk-m.miss { background:var(--danger-bg); color:var(--danger); }
 .sfk-m.na { background:var(--bg-strong); color:var(--text-secondary); }
+/* สามช่องต้องอยู่บรรทัดเดียวกันเสมอ — ตกบรรทัดแล้วช่องที่สามกว้างเป็นสองเท่า
+   ทั้งที่เป็นตัวเลขระดับเดียวกัน อ่านแล้วเหมือนสำคัญกว่าอีกสองช่อง
+   ย่อตัวอักษรลงแทนการปล่อยให้ตกบรรทัด */
 @media (max-width:520px){
-  .sfk-three { flex-wrap:wrap; }
-  .sfk-m { flex:1 1 calc(50% - 4px); }
+  .sfk-three { flex-wrap:nowrap; gap:6px; }
+  .sfk-m { flex:1 1 0; padding:10px 9px; font-size:10px; }
+  .sfk-m b { font-size:16px; }
   .sfk-top b { font-size:24px; }
+}
+@media (max-width:380px){
+  .sfk-m { padding:9px 7px; font-size:9.5px; }
+  .sfk-m b { font-size:15px; }
 }
 
 /* ═══ ปฏิทินการส่งทั้งเดือน ═══
