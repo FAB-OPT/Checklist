@@ -8732,6 +8732,11 @@ function renderSfChecklistTab() {
   if (kEl)  kEl.innerHTML  = _sfDailyKpisHTML(dailies) + _sfBenchHTML(dailies);
   const itEl = document.getElementById('sf-cl-items');
   if (itEl) itEl.innerHTML = _sfItemKpisHTML(dailies);
+
+  /* คนที่มีข้อมูลครบเขียนสรุปทิ้งไว้ · สาขาอ่านไปใช้ทำแถบเทียบ */
+  const _mon = _ckActiveMonth(allDailyChecklists);
+  if (currentUser && currentUser.role === 'branch') _ckLoadSummary(_mon);
+  else _ckWriteSummary(_mon);
   /* ปฏิทินใช้ข้อมูลก่อนกรองวัน จะได้เห็นทั้งเดือนเสมอ ไม่หดตามตัวกรองช่วงเวลา */
   const mEl = document.getElementById('sf-cl-month');
   if (mEl) {
@@ -8948,6 +8953,119 @@ function _sfItemKpisHTML(dailies) {
     + '</div>';
 }
 
+/* ═══ สรุปรายเดือนสำหรับแถบเทียบ ═══
+   บัญชีสาขาโหลดเฉพาะใบของสาขาตัวเอง (ดู loadDailyChecklists) เพราะดึงทุกสาขา
+   คือ 22MB มือถือแครช ผลคือเครื่องสาขาไม่มีทางคำนวณค่าเฉลี่ยโซนหรือทั้งแบรนด์ได้
+   แถบเทียบจึงไม่เคยขึ้นในบัญชีสาขา ทั้งที่เป็นคนที่ต้องการรู้ที่สุด
+
+   ทางออกคือให้คนที่มีข้อมูลครบอยู่แล้ว (แอดมิน/VP/COO เปิดแดชบอร์ดทีก็โหลดมาทั้งหมด)
+   เขียนสรุปทิ้งไว้เป็นเอกสารเล็ก ๆ เดือนละใบ แล้วสาขาอ่านแค่ใบเดียว
+   ไม่ต้องโหลดใบตรวจของสาขาอื่นเลยสักใบ
+
+   BZM มีข้อมูลแค่โซนตัวเอง จึงเขียนได้เฉพาะช่องโซนของตัวเอง (merge)
+   ห้ามเขียนค่าเฉลี่ยทั้งแบรนด์ ไม่งั้นจะกลายเป็นค่าเฉลี่ยของโซนเดียวปลอมเป็นทั้งแบรนด์ */
+const CK_SUMMARY_COLLECTION = 'dailySummary';
+let _ckSummary = {};
+let _ckSummaryAsked = {};
+
+function _ckSummaryId(month) { return ckViewBrandKey() + '_' + month; }
+function _ckMonthLabel(m) {
+  const N = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน',
+             'กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+  const y = Number(String(m).slice(0, 4)), i = Number(String(m).slice(5, 7)) - 1;
+  return (N[i] || '') + ' ' + (y + 543);
+}
+
+/* เดือนที่หน้าจอกำลังพูดถึง — ผู้ใช้เลือกเองก็ตามนั้น ไม่เลือกก็เดือนนี้
+   ถ้าเดือนนี้ยังไม่มีใบเลยให้ถอยไปเดือนล่าสุดที่มี (กติกาเดียวกับปฏิทิน) */
+function _ckActiveMonth(list) {
+  if (typeof _dailyMonth !== 'undefined' && _dailyMonth) return _dailyMonth;
+  const now = todayDateStr().slice(0, 7);
+  const has = (list || []).some(function (d) { return d && d.date && d.date.slice(0, 7) === now; });
+  if (has) return now;
+  let latest = '';
+  (list || []).forEach(function (d) {
+    if (d && d.date && d.date.slice(0, 7) > latest) latest = d.date.slice(0, 7);
+  });
+  return latest || now;
+}
+
+function _ckMonthRate(dailies, codes, month) {
+  const mine = (dailies || []).filter(function (d) {
+    return d && d.date && d.date.slice(0, 7) === month && codes[String(d.branchCode)];
+  });
+  const days = {};
+  mine.forEach(function (d) { days[d.date] = 1; });
+  const nDays = Object.keys(days).length;
+  const need = Object.keys(codes).length * nDays * 2;
+  if (!need) return null;
+  const late = ckHasLate() ? mine.filter(_isDailyLate).length : 0;
+  return Math.round(Math.min(100, (mine.length - late) / need * 100) * 10) / 10;
+}
+
+/* เขียนสรุปของเดือนที่กำลังดูอยู่ — เขียนเมื่อค่าเปลี่ยนจริง หรือใบเดิมเก่าเกิน 6 ชั่วโมง
+   จะได้ไม่ยิงเขียนทุกครั้งที่เปิดหน้า */
+async function _ckWriteSummary(month) {
+  if (!firebaseDb || testMode || !currentUser) return;
+  const role = currentUser.role;
+  if (role === 'branch') return;
+  const full = (role === 'admin' || role === 'vp' || role === 'coo');
+  const id = _ckSummaryId(month);
+  try {
+    const brandList = _openBranches();
+    const payload = { brand: ckViewBrandKey(), month: month, updatedAt: new Date().toISOString() };
+    if (full) {
+      const r = _ckMonthRate(allDailyChecklists, _sfCodeSet(brandList), month);
+      if (r == null) return;
+      payload.brandRate = r;
+      payload.branches = brandList.length;
+      const zones = {};
+      brandList.forEach(function (b) {
+        const z = _sfBranchZone(b.code); if (!z) return;
+        if (!zones[z]) zones[z] = [];
+        zones[z].push(b);
+      });
+      payload.zones = {};
+      Object.keys(zones).forEach(function (z) {
+        const v = _ckMonthRate(allDailyChecklists, _sfCodeSet(zones[z]), month);
+        if (v != null) payload.zones[z] = v;
+      });
+    } else {
+      const mine = _visibleBranchRoster();
+      if (!mine.length) return;
+      const z = _sfBranchZone(mine[0].code);
+      if (!z) return;
+      const v = _ckMonthRate(allDailyChecklists, _sfCodeSet(mine), month);
+      if (v == null) return;
+      payload.zones = {}; payload.zones[z] = v;
+    }
+    const prev = _ckSummary[id];
+    if (prev && prev.updatedAt && (Date.now() - new Date(prev.updatedAt).getTime()) < 6 * 3600 * 1000) {
+      const same = full
+        ? (prev.brandRate === payload.brandRate)
+        : Object.keys(payload.zones).every(function (k) { return prev.zones && prev.zones[k] === payload.zones[k]; });
+      if (same) return;
+    }
+    await firebaseDb.collection(CK_SUMMARY_COLLECTION).doc(id).set(payload, { merge: true });
+    _ckSummary[id] = Object.assign({}, prev || {}, payload,
+      { zones: Object.assign({}, (prev && prev.zones) || {}, payload.zones || {}) });
+  } catch (e) { /* เขียนไม่ได้ก็ไม่เป็นไร แถบเทียบแค่ไม่อัปเดต ไม่ทำให้หน้าพัง */ }
+}
+
+/* อ่านสรุป — ใช้ตอนเครื่องนี้ไม่มีข้อมูลของสาขาอื่น (คือบัญชีสาขา) */
+async function _ckLoadSummary(month) {
+  const id = _ckSummaryId(month);
+  if (_ckSummary[id] || _ckSummaryAsked[id] || !firebaseDb || testMode) return;
+  _ckSummaryAsked[id] = 1;
+  try {
+    const snap = await firebaseDb.collection(CK_SUMMARY_COLLECTION).doc(id).get();
+    if (snap.exists) {
+      _ckSummary[id] = snap.data() || {};
+      if (typeof renderSfChecklistTab === 'function') renderSfChecklistTab();
+    }
+  } catch (e) { /* อ่านไม่ได้ก็ไม่ต้องมีแถบเทียบ */ }
+}
+
 /* ═══ แถบเทียบ ═══
    ตัวเลขของตัวเองอย่างเดียวตอบไม่ได้ว่าควรร้อนใจหรือยัง
    "โซนนี้ส่งครบ 54%" จะแย่หรือไม่ ขึ้นกับว่าที่อื่นได้เท่าไร
@@ -8983,27 +9101,34 @@ function _sfBenchHTML(scopeDailies) {
   var brandRoster = brandList.length, scopeRoster = scopeList.length;
   /* ขอบเขตที่ดูอยู่ = ทั้งแบรนด์แล้ว ไม่มีอะไรให้เทียบ */
   if (!brandRoster || scopeRoster >= brandRoster) return '';
-  /* เครื่องนี้มีข้อมูลแค่ของขอบเขตตัวเอง เทียบไปก็ได้เลขเดียวกัน */
-  var brandBranches = new Set(brandAll.map(function (d) { return String(d.branchCode); })).size;
-  if (brandBranches <= scopeRoster) return '';
 
-  var me = _sfRate(scopeDailies, scopeCodes);
-  var all = _sfRate(brandAll, brandCodes);
-  if (me == null || all == null) return '';
-
-  var zone = null, zoneName = '';
-  /* เหลือสาขาเดียว ไม่ว่าจะมาจากการกรองหรือเพราะเป็นบัญชีสาขาเอง
-     ให้แทรกค่าเฉลี่ยของโซนตัวเองเข้ามาอีกเส้น
-     เทียบกับทั้งแบรนด์อย่างเดียวไม่พอ — โซนคือคนที่มาตามงานจริง */
   var oneCode = (sfClFilter.branch !== 'all') ? sfClFilter.branch
               : (scopeRoster === 1 && scopeList[0] ? scopeList[0].code : null);
-  if (oneCode) {
-    zoneName = _sfBranchZone(oneCode) || '';
+  var zoneName = oneCode ? (_sfBranchZone(oneCode) || '') : '';
+
+  var brandBranches = new Set(brandAll.map(function (d) { return String(d.branchCode); })).size;
+  var me, all, zone = null, fromSummary = false, mon = '';
+
+  if (brandBranches > scopeRoster) {
+    /* เครื่องนี้มีข้อมูลของสาขาอื่นอยู่แล้ว (BZM/แอดมิน) คิดเองได้เลย */
+    me = _sfRate(scopeDailies, scopeCodes);
+    all = _sfRate(brandAll, brandCodes);
     if (zoneName) {
       var codes = _sfCodeSet(brandList.filter(function (b) { return _sfBranchZone(b.code) === zoneName; }));
       zone = _sfRate(brandAll, codes);
     }
+  } else {
+    /* บัญชีสาขา — เครื่องนี้มีแค่ใบของตัวเอง ต้องอ่านค่าเฉลี่ยจากใบสรุปที่คนอื่นเขียนไว้
+       และคิดของตัวเองด้วยกติกาเดียวกัน (เดือนเดียวกัน) ไม่งั้นเทียบคนละฐาน */
+    mon = _ckActiveMonth(allDailyChecklists);
+    var sm = _ckSummary[_ckSummaryId(mon)];
+    if (!sm || sm.brandRate == null) return '';
+    me = _ckMonthRate(scopeDailies, scopeCodes, mon);
+    all = sm.brandRate;
+    if (zoneName && sm.zones && sm.zones[zoneName] != null) zone = sm.zones[zoneName];
+    fromSummary = true;
   }
+  if (me == null || all == null) return '';
 
   var GOAL = 95;
   var rows = [{ l: scopeRoster === 1 ? 'สาขานี้' : 'ขอบเขตที่ดูอยู่', v: me, me: 1 }];
@@ -9021,7 +9146,12 @@ function _sfBenchHTML(scopeDailies) {
   /* ห่างเป้าอีกกี่ "ครั้ง" ไม่ใช่กี่ "จุด" — จุดเอาไปทำอะไรต่อไม่ได้
      แต่ "ส่งให้ครบอีก 3 ครั้ง" คือสิ่งที่ลงมือทำได้พรุ่งนี้ */
   var scopeDays = {};
-  (scopeDailies || []).forEach(function (d) { if (d && d.date && scopeCodes[String(d.branchCode)]) scopeDays[d.date] = 1; });
+  (scopeDailies || []).forEach(function (d) {
+    if (!d || !d.date || !scopeCodes[String(d.branchCode)]) return;
+    /* ใช้ฐานเดียวกับที่คิด me — ถ้า me มาจากใบสรุป (คิดรายเดือน) ก็ต้องนับเฉพาะเดือนนั้น */
+    if (fromSummary && d.date.slice(0, 7) !== mon) return;
+    scopeDays[d.date] = 1;
+  });
   var meNeed = Object.keys(scopeDays).length * scopeRoster * 2;
   var shortBy = meNeed ? Math.ceil(meNeed * GOAL / 100 - meNeed * me / 100) : 0;
 
@@ -9033,7 +9163,7 @@ function _sfBenchHTML(scopeDailies) {
 
   return '<div class="sfb">'
     + '<div class="sfb-h">' + (ckHasLate() ? 'ส่งครบตรงเวลา' : 'ส่งครบ') + ' — เทียบกับที่อื่น'
-    +   '<span>เส้นดำ = เป้า ' + GOAL + '%</span></div>'
+    +   '<span>' + (fromSummary ? _ckMonthLabel(mon) + ' · ' : '') + 'เส้นดำ = เป้า ' + GOAL + '%</span></div>'
     + rows.map(function (r) {
         return '<div class="sfb-r"><span class="sfb-l">' + escapeHtml(r.l) + '</span>'
           + '<span class="sfb-t"><i class="sfb-f' + (r.me ? ' me' : '') + '" style="width:'
