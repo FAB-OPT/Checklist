@@ -5844,6 +5844,9 @@ body.in-audit #ck-page-head { display:none; }
           <span class="sfc-sec-t">ภาพรวม</span>
           <span class="sfc-sec-x" id="sf-cl-period">ทั้งหมด</span></div>
         <div class="jd-dash-kpis" id="sf-cl-kpis"></div>
+        <!-- ปฏิทินทั้งเดือน — โผล่เฉพาะตอนกรองเหลือสาขาเดียว
+             หลายสาขาปนกันแล้วช่องว่างในปฏิทินแปลไม่ได้ว่าใครขาด -->
+        <div id="sf-cl-month"></div>
         <div class="card">
           <div class="card-header"><h2>แนวโน้มคะแนน <span class="card-header-en">Score trend</span></h2></div>
           <div id="sf-cl-trend"><div class="jd-dash-empty">กำลังโหลด…</div></div>
@@ -8760,6 +8763,14 @@ function renderSfChecklistTab() {
     pdEl.textContent = _pd[sfClDate.type] || 'ทั้งหมด';
   }
   if (kEl)  kEl.innerHTML  = _sfDailyKpisHTML(dailies) + _sfBenchHTML(dailies);
+  /* ปฏิทินใช้ข้อมูลก่อนกรองวัน จะได้เห็นทั้งเดือนเสมอ ไม่หดตามตัวกรองช่วงเวลา */
+  const mEl = document.getElementById('sf-cl-month');
+  if (mEl) {
+    /* แสดงเสมอ ไม่ว่าจะดูกี่สาขา — สาขาเดียวบอกเวลาที่ส่ง หลายสาขาบอกจำนวนสาขาที่ส่ง */
+    const _n = _sfTodayScopeRoster().length;
+    mEl.innerHTML = _dailyMonthStripHTML(applySfClScopeFilter(
+      (typeof getVisibleDailyChecklists === 'function') ? getVisibleDailyChecklists() : []), _n);
+  }
   const trEl = document.getElementById('sf-cl-trend');
   const brEl = document.getElementById('sf-cl-branches');
   if (trEl) trEl.innerHTML = _sfTrendHTML(dailies);
@@ -9944,7 +9955,11 @@ function _dailyMonthHM(iso) {
   if (isNaN(d)) return '';
   return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
 }
-function _dailyMonthStripHTML(list) {
+/* nBranch > 1 = ดูหลายสาขาพร้อมกัน — ช่องหนึ่งวันแทนสาขาเดียวไม่ได้แล้ว
+   เปลี่ยนเป็นบอกว่าวันนั้นมีกี่สาขาส่ง เช่น "52/64" และให้สีตามสัดส่วน
+   ยังตอบคำถามเดิมได้ว่าวันไหนของสัปดาห์เป็นปัญหา แต่ตอบในระดับทั้งขอบเขตแทน */
+function _dailyMonthStripHTML(list, nBranch) {
+  const many = (nBranch || 1) > 1;
   const key = _dailyMonthKey();
   const y = Number(key.slice(0, 4)), m = Number(key.slice(5, 7));
   const days = new Date(y, m, 0).getDate();
@@ -9956,11 +9971,12 @@ function _dailyMonthStripHTML(list) {
   (list || []).forEach(function (d) {
     if (!d || !d.date || d.date.slice(0, 7) !== key) return;
     const k = d.date;
-    if (!by[k]) by[k] = { open: null, close: null };
-    by[k][d.shift === 'close' ? 'close' : 'open'] = d;
+    if (!by[k]) by[k] = { open: null, close: null, nOpen: 0, nClose: 0 };
+    if (d.shift === 'close') { by[k].close = d; by[k].nClose++; }
+    else { by[k].open = d; by[k].nOpen++; }
   });
 
-  let full = 0, part = 0, miss = 0;
+  let full = 0, part = 0, miss = 0, sentAll = 0, needAll = 0;
   /* วันแรกของเดือนตรงกับวันอะไร — ปฏิทินเริ่มที่วันจันทร์ ไม่ใช่อาทิตย์ */
   const offset = (new Date(y, m - 1, 1).getDay() + 6) % 7;
   const cells = [];
@@ -9971,12 +9987,22 @@ function _dailyMonthStripHTML(list) {
     const rec = by[date] || {};
     const future = date > today;
     const n = (rec.open ? 1 : 0) + (rec.close ? 1 : 0);
-    if (!future) { if (n === 2) full++; else if (n === 1) part++; else miss++; }
+    if (!future) {
+      if (many) { sentAll += (rec.nOpen || 0) + (rec.nClose || 0); needAll += nBranch * 2; }
+      else if (n === 2) full++; else if (n === 1) part++; else miss++;
+    }
     const st = function (r) {
       if (!r) return future ? 'f' : 'x';
       return _isDailyLate(r) ? 'l' : 'o';
     };
-    const half = function (r, label) {
+    const half = function (r, label, cnt) {
+      if (many) {
+        /* สีตามสัดส่วนสาขาที่ส่ง ไม่ใช่ส่ง/ไม่ส่งแบบสาขาเดียว */
+        const ratio = nBranch ? cnt / nBranch : 0;
+        const s = future ? 'f' : (ratio >= 0.95 ? 'o' : ratio >= 0.7 ? 'l' : 'x');
+        return '<span class="dm-h dm-' + s + '"><i>' + label + '</i>' +
+               '<em>' + (future ? '' : cnt + '/' + nBranch) + '</em></span>';
+      }
       const s = st(r);
       const tm = r ? _dailyMonthHM(r.submittedAt || r.startedAt) : '';
       return '<span class="dm-h dm-' + s + '"><i>' + label + '</i>' +
@@ -9993,7 +10019,7 @@ function _dailyMonthStripHTML(list) {
     cells.push('<button type="button" class="' + cls + '" title="' + escapeAttr(tip) + '"' +
       (future ? ' disabled' : ' onclick="_dailyPickDay(\'' + date + '\')"') + '>' +
       '<span class="dm-d">' + i + '</span>' +
-      half(rec.open, 'เปิด') + half(rec.close, 'ปิด') +
+      half(rec.open, 'เปิด', rec.nOpen || 0) + half(rec.close, 'ปิด', rec.nClose || 0) +
       '</button>');
   }
 
@@ -10005,7 +10031,10 @@ function _dailyMonthStripHTML(list) {
       '<button type="button" class="dm-nav" onclick="_dailyMonthShift(-1)" title="เดือนก่อน"><span class="material-symbols-rounded">chevron_left</span></button>' +
       '<span class="dm-title">' + monthName + ' ' + (y + 543) + '</span>' +
       '<button type="button" class="dm-nav" onclick="_dailyMonthShift(1)"' + (atNow ? ' disabled' : '') + ' title="เดือนถัดไป"><span class="material-symbols-rounded">chevron_right</span></button>' +
-      '<span class="dm-sum"><b>' + full + '</b> ครบ · <b>' + part + '</b> ขาดรอบ · <b>' + miss + '</b> ไม่ได้ส่ง</span>' +
+      '<span class="dm-sum">' + (many
+        ? ('<b>' + nBranch + '</b> สาขา · ส่งแล้ว <b>' + sentAll.toLocaleString() + '</b> จาก '
+           + needAll.toLocaleString() + ' รอบ')
+        : ('<b>' + full + '</b> ครบ · <b>' + part + '</b> ขาดรอบ · <b>' + miss + '</b> ไม่ได้ส่ง')) + '</span>' +
     '</div>' +
     '<div class="dm-dow">' + ['จ','อ','พ','พฤ','ศ','ส','อา'].map(function (d) {
         return '<span>' + d + '</span>'; }).join('') + '</div>' +
@@ -10014,7 +10043,9 @@ function _dailyMonthStripHTML(list) {
       '<span><i class="dm-o"></i> ' + (ckHasLate() ? 'ส่งตรงเวลา' : 'ส่งแล้ว') + '</span>' +
       (ckHasLate() ? '<span><i class="dm-l"></i> เกินเวลา</span>' : '') +
       '<span><i class="dm-x"></i> ไม่ได้ส่ง</span>' +
-      '<span class="dm-key-note">ในช่องบอกเวลาที่ส่ง · แถวบน = เปิดร้าน แถวล่าง = ปิดร้าน</span>' +
+      '<span class="dm-key-note">' + (many
+        ? 'ในช่องบอกจำนวนสาขาที่ส่ง · แถวบน = เปิดร้าน แถวล่าง = ปิดร้าน'
+        : 'ในช่องบอกเวลาที่ส่ง · แถวบน = เปิดร้าน แถวล่าง = ปิดร้าน') + '</span>' +
     '</div>' +
   '</div>';
 }
@@ -14377,6 +14408,7 @@ const SFRep = {
    7 คอลัมน์เรียงตามวันในสัปดาห์ เริ่มวันจันทร์
    ในช่องแบ่งสองแถว เปิด/ปิด พร้อมเวลาที่ส่ง
    จอแคบตัวหนังสือหายเหลือแถบสี เพราะช่องกว้าง ~50px ใส่เวลาไม่ไหว */
+#sf-cl-month .dm-wrap { margin-top:12px; margin-bottom:0; }
 .dm-dow { display:grid; grid-template-columns:repeat(7,1fr); gap:5px; margin-bottom:5px; }
 .dm-dow span { text-align:center; font-size:10.5px; font-weight:800; color:var(--text-tertiary); }
 .dm-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:5px; }

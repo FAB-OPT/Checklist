@@ -32,10 +32,18 @@ function monthOf(y,m,pOk,pLate,late){
   }
   return out;
 }
+/* หลายสาขารวมกัน — ทำใบของ 12 สาขาในเดือนเดียว */
+function monthMany(nb,pOk,pLate){
+  let out=[];
+  for(let b=0;b<nb;b++) out=out.concat(monthOf(2026,8,pOk,pLate,1).map(function(d){
+    return Object.assign({},d,{branchCode:'50'+String(b).padStart(2,'0')});}));
+  return out;
+}
 const MONTHS=[
-  {t:'สาขาที่ส่งดี · มีเวลาตัด',late:1,d:monthOf(2026,8,.90,.05,1)},
-  {t:'สาขาที่ขาดบ่อย',late:1,d:monthOf(2026,8,.45,.12,1)},
-  {t:'ยามะจัง · ไม่มีเวลาตัด',late:0,d:monthOf(2026,8,.82,0,0)},
+  {t:'สาขาเดียว · ส่งดี — บอกเวลาที่ส่ง',late:1,n:1,d:monthOf(2026,8,.90,.05,1)},
+  {t:'สาขาเดียว · ขาดบ่อย',late:1,n:1,d:monthOf(2026,8,.45,.12,1)},
+  {t:'ยามะจัง · ไม่มีเวลาตัด',late:0,n:1,d:monthOf(2026,8,.82,0,0)},
+  {t:'12 สาขารวมกัน — บอกจำนวนสาขาที่ส่ง',late:1,n:12,d:monthMany(12,.78,.10)},
 ];
 
 /* ข้อมูลจำลอง: สัดส่วนตามของจริง ส.ค. 2569 — 64 สาขา 31 วัน ครบ 66% ช้า 12% ไม่ส่ง 22% */
@@ -125,7 +133,7 @@ document.getElementById('bn').innerHTML=[
 }).join('');
 document.getElementById('cal').innerHTML=MONTHS.map(function(c){
   _LATE=!!c.late;
-  return '<div class="case"><h2>'+c.t+'</h2><div class="in">'+_dailyMonthStripHTML(c.d)+'</div></div>';
+  return '<div class="case"><h2>'+c.t+'</h2><div class="in">'+_dailyMonthStripHTML(c.d,c.n)+'</div></div>';
 }).join('');
 </script>`;
 fs.writeFileSync(__dirname+'/prev-kpi.html',html);
