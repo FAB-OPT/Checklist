@@ -4686,22 +4686,27 @@ body:has(#login-screen.active) {
   .nav-tools {
     display: flex; flex-direction: column; gap: 8px;
     order: 97; margin-top: auto; margin-bottom: 8px;  /* เว้นจากปุ่มกลับเมนูหลัก */
-    padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.25);
+    padding-top: 14px; border-top: 1px solid var(--border);
   }
   .nav-tools:empty { border-top: none; padding-top: 0; margin-bottom: 0; }
-  /* สลับแบรนด์ — กล่องเต็มแถบ คอนทราสต์ชัด */
+  /* สลับแบรนด์ในแถบข้าง — รายการแนวตั้งเหมือนเมนู ไม่ใช่ปุ่มสามอันเบียดกัน
+     ชื่อแบรนด์ยาวไม่เท่ากัน ("Santa Fe'" กับ "เจ๊แดง") เรียงแนวนอนแล้วบีบจนอ่านยาก
+     และรายการแนวตั้งเข้าพวกกับเมนูด้านบนซึ่งอยู่ในแถบเดียวกัน */
   .nav-tools .header-view-toggle {
-    background: rgba(0,0,0,0.28); width: 100%; justify-content: center;
-    padding: 5px; border-radius: 12px; gap: 5px;
+    display: flex; flex-direction: column; gap: 1px;
+    background: none; width: 100%; padding: 0; border-radius: 0;
   }
   .nav-tools .header-view-pill {
-    color: var(--text-secondary); flex: 1; text-align: center; justify-content: center;
-    padding: 9px 10px; font-size: 13px; font-weight: 800; border-radius: 9px;
+    color: var(--text-secondary); width: 100%; text-align: left; justify-content: flex-start;
+    padding: 9px 11px; font-size: 13px; font-weight: 700; border-radius: 9px;
+    border: 0; background: none;
   }
+  .nav-tools .header-view-pill:hover { background: var(--bg-strong); color: var(--text); }
   .nav-tools .header-view-pill.active {
-    background: var(--bg-strong); color: var(--text);
+    background: var(--bg-strong); color: var(--text); font-weight: 800;
     box-shadow: none;
   }
+  .nav-tools .hvp-dot { width: 9px; height: 9px; margin-right: 9px; }
   /* ปุ่มโหมดทดสอบ — กล่องเต็มแถบ · ปิดอยู่=เหลือง · เปิดอยู่=ส้มแดงชัด */
   .nav-tools .test-mode-toggle {
     width: 100%; justify-content: center;
@@ -5385,8 +5390,6 @@ body.in-audit #ck-page-head { display:none; }
 .ck-hd-t { font-size:11.5px; font-weight:700; color:var(--text-tertiary); line-height:1.25; }
 .ck-hd-s { font-size:15px; font-weight:800; color:var(--text); letter-spacing:-.2px; margin-top:1px;
   white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.ck-hd-chip { margin-left:auto; font-size:11px; font-weight:700; padding:5px 10px; border-radius:999px;
-  background:var(--bg); border:1px solid var(--border); color:var(--text-secondary); white-space:nowrap; }
 
 .ck-shifts { display:grid; grid-template-columns:1fr 1fr; gap:11px; }
 .ck-shift { border:1px solid var(--border); border-radius:14px; padding:16px 12px; background:var(--surface);
@@ -5871,7 +5874,9 @@ body.in-audit #ck-page-head { display:none; }
          ปุ่มสลับแบรนด์ย้ายลงมาอยู่ใต้การ์ด เพราะมันคือ "กำลังดูแบรนด์ไหน"
          ซึ่งเป็นเรื่องเดียวกับที่การ์ดบอก ควรอยู่ด้วยกัน -->
     <div id="ck-page-head" class="no-print">
-      <div class="ck-hd">
+      <!-- หัวจอกดได้ — ลูกศรกางแผงที่บอกว่าเข้าใช้ในชื่อใคร และให้สลับแบรนด์
+           ของเดิมโชว์ชื่อผู้ใช้ค้างไว้ตลอด ทั้งที่เป็นข้อมูลที่ดูแค่ตอนสงสัย -->
+      <button type="button" class="ck-hd" id="ck-hd-btn" aria-expanded="false" onclick="_ckToggleHead()">
         <div class="ck-hd-ic">
           <img id="ck-hd-logo" alt="">
           <span class="material-symbols-rounded" id="ck-hd-icon">restaurant</span>
@@ -5880,9 +5885,12 @@ body.in-audit #ck-page-head { display:none; }
           <div class="ck-hd-t">Operations Checklist</div>
           <div class="ck-hd-s" id="ck-hd-sub">—</div>
         </div>
-        <span class="ck-hd-chip" id="ck-hd-user">—</span>
+        <span class="material-symbols-rounded ck-hd-chev">expand_more</span>
+      </button>
+      <div class="ck-hd-panel" id="ck-hd-panel" hidden>
+        <div class="ck-hd-who">เข้าใช้ในชื่อ <b id="ck-hd-user">—</b></div>
+        <div class="ck-hd-tools" id="ck-hd-tools"></div>
       </div>
-      <div class="ck-hd-tools" id="ck-hd-tools"></div>
     </div>
     <!-- DASHBOARD (admin/bzm) -->
     <div id="dashboard-screen" style="display:none;">
@@ -8566,7 +8574,8 @@ function _toolsHtml(view) {
   if (currentUser.crossBrand) {
     /* สร้างจากทะเบียนแบรนด์ ไม่เขียนปุ่มตายตัว — เพิ่มแบรนด์ใหม่แล้ว
        ลืมมาเติมปุ่มตรงนี้ คนข้ามแบรนด์จะสลับเข้าแบรนด์นั้นไม่ได้เลย */
-    html += '<div class="header-view-toggle">' +
+    html += '<div class="tools-label">แบรนด์</div>' +
+      '<div class="header-view-toggle">' +
       Object.keys(CK_BRANDS).map(k =>
         /* จุดสีคือที่เดียวที่บอกว่าเป็นแบรนด์ไหน ตัวหนังสือเป็นสีหมึกเหมือนกันหมด
            ของเดิมถมสีแบรนด์เต็มปุ่ม ปุ่มสลับแบรนด์เลยเด่นกว่าตัวเลขในหน้า */
@@ -8640,6 +8649,16 @@ function _ckPaintPageHead() {
        มีไว้เพื่อยืนยันว่าไม่ได้ค้างอยู่ในบัญชีคนอื่นเท่านั้น */
     user.textContent = currentUser.nick || currentUser.name || '—';
   }
+}
+
+/* กาง/พับแผงใต้หัวจอ — ชื่อผู้ใช้กับปุ่มสลับแบรนด์อยู่ในนั้น */
+function _ckToggleHead() {
+  const p = document.getElementById('ck-hd-panel');
+  const b = document.getElementById('ck-hd-btn');
+  if (!p || !b) return;
+  const open = p.hasAttribute('hidden');
+  if (open) p.removeAttribute('hidden'); else p.setAttribute('hidden', '');
+  b.setAttribute('aria-expanded', open ? 'true' : 'false');
 }
 
 function setActiveNav(id) {
@@ -14462,6 +14481,17 @@ const SFRep = {
   .sf-toolbar .jd-dash-filter { flex:1 1 100%; }
   .sf-toolbar .sf-rep-btn { margin-left:0; flex:1 1 100%; justify-content:center; }
 }
+
+/* หัวจอกดได้ — เป็นปุ่ม จึงต้องล้างสไตล์ปุ่มของเบราว์เซอร์ */
+.ck-hd { width:100%; font-family:inherit; text-align:left; cursor:pointer; }
+.ck-hd-chev { font-size:22px; color:var(--text-tertiary); flex:0 0 auto; transition:transform .18s; }
+.ck-hd[aria-expanded="true"] .ck-hd-chev { transform:rotate(180deg); }
+.ck-hd-panel { padding:11px 2px 13px; border-bottom:1px solid var(--border); }
+.ck-hd-who { font-size:12px; font-weight:600; color:var(--text-tertiary); margin-bottom:9px; }
+.ck-hd-who b { color:var(--text); font-weight:800; }
+.tools-label { font-size:10.5px; font-weight:800; color:var(--text-tertiary);
+  letter-spacing:.06em; padding:0 2px 6px; }
+#ck-hd-tools .header-view-toggle { display:flex; gap:6px; flex-wrap:wrap; }
 </style>
 <!-- ══════════ กล่องออกรายงาน (ซานตาเฟ่) ══════════ -->
 <div class="sfrep-ov" id="sfrep-ov">
