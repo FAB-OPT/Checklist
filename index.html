@@ -2002,10 +2002,12 @@ input[type="time"].jd-form-input {
   letter-spacing: 0.1px;
 }
 .jd-dash-date-chip:hover { border-color: var(--border-strong); color: var(--text); }
+/* ชิปที่เลือกอยู่เป็นสีหมึก ไม่ใช่สีแบรนด์
+   สีแบรนด์เต็มปุ่มดึงสายตาแรงกว่าสีสถานะทั้งหน้า ทั้งที่มันแค่บอกว่ากรองอะไรอยู่ */
 .jd-dash-date-chip.active {
-  background: var(--primary);
-  border-color: var(--primary);
-  color: white;
+  background: var(--text);
+  border-color: var(--text);
+  color: #fff;
 }
 .jd-dash-date-range {
   display: inline-flex; align-items: center; gap: 6px;
@@ -5846,6 +5848,20 @@ body.in-audit #ck-page-head { display:none; }
              ส่วนสถานะวันนี้ ปุ่มออกรายงาน และตัวกรอง ย้ายลงไปอยู่ล่าง
              ของพวกนี้เป็นเครื่องมือ ไม่ใช่คำตอบ จึงไม่ควรมาบังคำตอบ
              ช่วงเวลาที่กรองอยู่เขียนไว้ในหัวข้อ "ภาพรวม" แล้ว จะได้รู้ว่าตัวเลขคิดจากช่วงไหน -->
+        <!-- ตัวเลือกช่วงเวลาอยู่บนสุด — เป็นสิ่งที่กำหนดว่าตัวเลขทั้งหน้าคิดจากช่วงไหน
+             ของเดิมอยู่ล่างสุด คนอ่านตัวเลขไปครึ่งหน้าแล้วถึงเจอว่ากรองอะไรอยู่ -->
+        <div class="sf-toolbar">
+          <div class="jd-dash-date-filter" id="sf-cl-date-chips"></div>
+          <div class="jd-dash-filter" id="sf-cl-filter" style="display:none;">
+            <select id="sf-cl-scope-select" class="jd-form-input" onchange="setSfClScope(this.value)">
+              <option value="all">ดูทุกโซน · ทุกสาขา</option>
+            </select>
+          </div>
+          <button type="button" class="btn btn-secondary sf-rep-btn" data-ck-action="report-sf" onclick="SFRep.open()">
+            <span class="material-symbols-rounded">download</span> ออกรายงาน
+          </button>
+        </div>
+
         <!-- ══ 1 · ภาพรวมการส่ง ══
              ทุกอย่างในหมวดนี้ตอบคำถามเดียว: เดือนนี้ส่งครบไหม ใครต้องตาม
              กล่องสรุป → ปฏิทินทั้งเดือน → สรุปรายสาขา -->
@@ -5879,28 +5895,6 @@ body.in-audit #ck-page-head { display:none; }
           </div>
         </div>
 
-        <!-- ══ 3 · เครื่องมือและรายละเอียด ══ -->
-        <div class="sfc-sec"><span class="sfc-sec-bar"></span>
-          <span class="sfc-sec-t">เครื่องมือและรายละเอียด</span>
-          <span class="sfc-sec-d">สถานะวันนี้ ตัวกรองช่วงเวลา และออกรายงาน</span></div>
-        <!-- สถานะวันนี้ — เรื่องเดียวที่ต้องรู้ทันทีตอนเปิดหน้า: ใครยังไม่ส่ง
-             ของเดิมบอกแต่ "ส่งไปแล้วกี่ครั้ง" ซึ่งตอบไม่ได้ว่าขาดใครบ้าง -->
-        <div id="sf-today-status"></div>
-        <div class="sfrep-open" data-ck-action="report-sf">
-          <div class="sfrep-open-t">ต้องส่งให้ผู้บริหาร หรือเก็บไว้เป็นหลักฐาน — ออกเป็นไฟล์ได้ทั้ง PDF และ Excel</div>
-          <button type="button" class="btn btn-secondary" onclick="SFRep.open()">
-            <span class="material-symbols-rounded">download</span> ออกรายงาน
-          </button>
-        </div>
-        <div class="jd-dash-date-filter" id="sf-cl-date-chips"></div>
-        <div class="jd-dash-filter" id="sf-cl-filter" style="display:none;margin-bottom:14px;">
-          <select id="sf-cl-scope-select" class="jd-form-input" onchange="setSfClScope(this.value)">
-            <option value="all">ดูทุกโซน · ทุกสาขา</option>
-          </select>
-        </div>
-        <div style="text-align:center;margin-top:4px;">
-          <button type="button" class="btn btn-secondary" onclick="showDailyHub()"><span class="material-symbols-rounded">checklist</span> ดูรายละเอียดที่ "การตรวจ"</button>
-        </div>
       </div>
     </div>
 
@@ -5941,7 +5935,6 @@ body.in-audit #ck-page-head { display:none; }
         </select>
         <input type="date" id="daily-filter-date" onchange="renderDailyList()">
       </div>
-      <div id="daily-month-strip"></div>
       <div class="audit-list" id="daily-list"></div>
       <div id="daily-history-more" style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:16px;"></div>
     </div>
@@ -8621,8 +8614,6 @@ function renderSfChecklistTab() {
   setupSfClScope();
   dailies = applySfClScopeFilter(dailies);
   dailies = applySfClDateFilter(dailies);
-  const stEl = document.getElementById('sf-today-status');
-  if (stEl) stEl.innerHTML = _sfTodayStatusHTML();
   const kEl  = document.getElementById('sf-cl-kpis');
   const tfEl = document.getElementById('sf-daily-topfails');
   const tEl  = document.getElementById('sf-daily-times');
@@ -8748,75 +8739,6 @@ function _sfTodayScopeRoster() {
     return true;
   });
 }
-function _sfTodayStatus() {
-  var today = todayDateStr();
-  var roster = _sfTodayScopeRoster();
-  var all = (typeof getVisibleDailyChecklists === 'function') ? getVisibleDailyChecklists() : [];
-  var mine = {};
-  all.forEach(function (d) {
-    if (!d || d.date !== today) return;
-    var k = String(d.branchCode) + '|' + (d.shift || 'open');
-    /* เก็บอันที่ "ส่งแล้ว" ไว้ก่อน ถ้ามีทั้งร่างและตัวส่งจริงของรอบเดียวกัน */
-    if (!mine[k] || (!mine[k].submittedAt && d.submittedAt)) mine[k] = d;
-  });
-  var rows = roster.map(function (b) {
-    var o = mine[String(b.code) + '|open'];
-    var c = mine[String(b.code) + '|close'];
-    var st = function (rec) {
-      if (!rec || !rec.submittedAt) return 'none';
-      return _isDailyLate(rec) ? 'late' : 'ontime';
-    };
-    return { code: b.code, name: b.name, open: st(o), close: st(c), openRec: o, closeRec: c };
-  });
-  var done = 0, late = 0, miss = 0;
-  rows.forEach(function (r) {
-    [r.open, r.close].forEach(function (v) {
-      if (v === 'none') miss++; else { done++; if (v === 'late') late++; }
-    });
-  });
-  return { today: today, rows: rows, expected: roster.length * 2, done: done, late: late, miss: miss };
-}
-function _sfTodayStatusHTML() {
-  var st = _sfTodayStatus();
-  if (!st.expected) return '';
-  var pct = Math.round(st.done / st.expected * 100);
-  var tone = pct >= 100 ? 'good' : (pct >= 70 ? 'warn' : 'bad');
-  var missRows = st.rows.filter(function (r) { return r.open === 'none' || r.close === 'none'; });
-
-  var chip = function (r) {
-    var need = [];
-    if (r.open === 'none') need.push('เปิด');
-    if (r.close === 'none') need.push('ปิด');
-    return '<span class="sft-chip"><span class="material-symbols-rounded">storefront</span>'
-      + escapeHtml(branchLabel(r.code, r.name))
-      + '<b>ยังไม่ส่งรอบ' + need.join('/') + '</b></span>';
-  };
-
-  return '<div class="sft-card" data-tone="' + tone + '">'
-    + '<div class="sft-head">'
-    +   '<div class="sft-title">สถานะวันนี้'
-    +     '<span class="sft-date">' + escapeHtml(fmtDateThaiShort(st.today)) + '</span></div>'
-    +   '<div class="sft-score"><b>' + st.done + '</b><span>/ ' + st.expected + ' รอบ</span></div>'
-    + '</div>'
-    + '<div class="sft-bar"><div class="sft-bar-fill" style="width:' + Math.min(100, pct) + '%"></div></div>'
-    + '<div class="sft-legend">'
-    /* แบรนด์ที่ไม่มีเวลาตัด ไม่มีทางมีรอบที่ "เกินเวลา" ป้ายนั้นจะค้างที่ 0 ตลอด
-       ยุบเหลือ "ส่งแล้ว" ทีเดียว จะได้ไม่ชวนให้เข้าใจว่าทุกสาขาส่งตรงเวลาเป๊ะ */
-    +   (ckHasLate()
-        ? '<span class="sft-l ok"><i></i>ตรงเวลา ' + (st.done - st.late) + '</span>'
-          + '<span class="sft-l warn"><i></i>เกินเวลา ' + st.late + '</span>'
-        : '<span class="sft-l ok"><i></i>ส่งแล้ว ' + st.done + '</span>')
-    +   '<span class="sft-l miss"><i></i>ยังไม่ส่ง ' + st.miss + '</span>'
-    + '</div>'
-    + (missRows.length
-        ? '<details class="sft-miss"' + (missRows.length <= 6 ? ' open' : '') + '>'
-          + '<summary>ยังไม่ส่ง <b>' + missRows.length + '</b> สาขา'
-          + '<span class="material-symbols-rounded sft-chev">expand_more</span></summary>'
-          + '<div class="sft-chips">' + missRows.map(chip).join('') + '</div></details>'
-        : '<div class="sft-done"><span class="material-symbols-rounded">task_alt</span> ส่งครบทุกสาขาแล้ววันนี้</div>')
-    + '</div>';
-}
-
 // แถบ KPI สรุปด้านบนของแท็บ Operations Checklist
 /* เปลี่ยนจาก "จำนวนดิบ" เป็น "อัตราส่วน + ตัวหาร"
    ของเดิมบอกว่า "ข้อที่ตก 42 ข้อ" ซึ่งเทียบข้ามช่วงเวลาไม่ได้เลย
@@ -9949,14 +9871,6 @@ function renderDailyList() {
 
   let list = getVisibleDailyChecklists();
   if (search) list = list.filter(d => branchLabel(d.branchCode, d.branchName).toLowerCase().includes(search));
-  /* แถบเดือน — ใช้ตอนที่ดูอยู่สาขาเดียว (สาขาเอง หรือ role อื่นที่ค้นจนเหลือสาขาเดียว)
-     หลายสาขาปนกันแล้วช่องว่างจะแปลไม่ได้ว่าใครขาด · ส่ง list ก่อนกรองวัน/รอบ แถบจะได้ไม่ขยับตามตัวกรอง */
-  const _stripEl = document.getElementById('daily-month-strip');
-  if (_stripEl) {
-    const _codes = new Set(list.map(d => String(d.branchCode || d.branchName || '')));
-    const _one = currentUser.role === 'branch' || _codes.size === 1;
-    _stripEl.innerHTML = _one ? _dailyMonthStripHTML(list) : '';
-  }
   if (shiftFilter) list = list.filter(d => d.shift === shiftFilter);
   if (dateFilter) list = list.filter(d => d.date === dateFilter);
 
@@ -14458,6 +14372,17 @@ const SFRep = {
 .sfna-n { text-align:right; font-size:14px; font-weight:800; font-variant-numeric:tabular-nums; color:var(--text-secondary); }
 .sfna-n em { font-style:normal; display:block; font-size:10px; font-weight:700; color:var(--text-tertiary); }
 @media (max-width:520px){ .sfna-r { grid-template-columns:1fr 54px 52px; gap:8px; } }
+
+/* แถบเครื่องมือบนสุด — ช่วงเวลา · ขอบเขต · ออกรายงาน */
+.sf-toolbar { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin:0 2px 4px; }
+.sf-toolbar .jd-dash-date-filter { margin:0; }
+.sf-toolbar .jd-dash-filter { margin:0; min-width:200px; }
+.sf-toolbar .sf-rep-btn { margin-left:auto; }
+@media (max-width:640px){
+  .sf-toolbar { gap:8px; }
+  .sf-toolbar .jd-dash-filter { flex:1 1 100%; }
+  .sf-toolbar .sf-rep-btn { margin-left:0; flex:1 1 100%; justify-content:center; }
+}
 </style>
 <!-- ══════════ กล่องออกรายงาน (ซานตาเฟ่) ══════════ -->
 <div class="sfrep-ov" id="sfrep-ov">
