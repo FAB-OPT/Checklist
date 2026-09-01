@@ -6063,9 +6063,6 @@ body.in-audit #ck-page-head { display:none; }
           <span class="ck-prog-c" id="daily-prog-c">0 / 0</span>
         </div>
         <div class="ck-prog-tr"><i id="daily-prog-i" style="width:0%"></i></div>
-        <!-- บอกตั้งแต่ต้นว่าต้องเตรียมถ่ายกี่รูป — เดิมรู้ตอนกดส่งแล้วโดนบล็อก
-             ซึ่งเป็นตอนที่เดินออกจากจุดนั้นมาแล้ว ต้องเดินกลับไปถ่ายใหม่ -->
-        <div class="ck-prog-ph" id="daily-prog-ph"></div>
       </div>
 
       <div class="sticky-tabs"><div class="chip-row daily-section-tabs" id="daily-section-tabs"></div></div>
@@ -10747,25 +10744,6 @@ function _paintDailyProgress() {
     x.textContent = (bn ? bn + ' · ' : '') + items.length + ' ข้อ · ' + secs.length + ' หมวด';
   }
 
-  /* รูปที่ต้องแนบขั้นต่ำ = ข้อที่ระบบสุ่มมา (ยังไม่รวมข้อที่จะตอบ "ไม่ผ่าน") */
-  const ph = document.getElementById('daily-prog-ph');
-  if (ph) {
-    const req = (currentDaily.requiredPhotos || []).filter(function (gi) {
-      const it = items[gi];
-      return it && !ckPhotoExempt(it.text);
-    });
-    const have = req.filter(function (gi) {
-      const it = items[gi];
-      return it && it.status === 'na' ? true : (it && it.photos && it.photos.length);
-    }).length;
-    if (!req.length) { ph.textContent = ''; ph.style.display = 'none'; }
-    else {
-      ph.style.display = '';
-      ph.innerHTML = '<span class="material-symbols-rounded">photo_camera</span>' +
-        'ต้องแนบรูปอย่างน้อย <b>' + req.length + '</b> รูป — ระบบสุ่มมาหมวดละ <b>' +
-        ckPhotoRule().pick + '</b> ข้อ · แนบแล้ว <b>' + have + '</b>';
-    }
-  }
 }
 
 function renderDailyForm() {
@@ -14970,11 +14948,6 @@ const SFRep = {
 /* บรรทัดกลางในการ์ดความคืบหน้า — สาขา + ขนาดฟอร์ม */
 .ck-prog-x { flex:0 0 100%; order:3; font-size:11.5px; font-weight:600; color:var(--text-tertiary);
   margin-top:2px; }
-/* บรรทัดบอกจำนวนรูปที่ต้องแนบ */
-.ck-prog-ph { display:flex; align-items:center; gap:6px; margin-top:9px; padding-top:9px;
-  border-top:1px solid var(--border); font-size:11.5px; font-weight:700; color:var(--text-secondary); }
-.ck-prog-ph .material-symbols-rounded { font-size:16px; color:var(--text-tertiary); }
-.ck-prog-ph b { font-weight:800; color:var(--text); }
 
 /* หัวข้อระดับรอง — ใช้กับรายการย่อยในหมวด ตัวเล็กกว่าหัวหมวด เส้นบางกว่า */
 .sfc-sec.sub { border-top-width:1px; padding-top:9px; margin:0 2px 9px; }
