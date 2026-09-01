@@ -9017,13 +9017,16 @@ function _ckActiveMonth(list) {
   return latest || now;
 }
 
+/* กติกาเดียวกับ _sfRate — ตัดวันนี้ทิ้ง และต้องมีอย่างน้อย 3 วันถึงจะเอาไปเทียบ */
 function _ckMonthRate(dailies, codes, month) {
+  const today = todayDateStr();
   const mine = (dailies || []).filter(function (d) {
-    return d && d.date && d.date.slice(0, 7) === month && codes[String(d.branchCode)];
+    return d && d.date && d.date !== today && d.date.slice(0, 7) === month && codes[String(d.branchCode)];
   });
   const days = {};
   mine.forEach(function (d) { days[d.date] = 1; });
   const nDays = Object.keys(days).length;
+  if (nDays < CK_MIN_CMP_DAYS) return null;
   const need = Object.keys(codes).length * nDays * 2;
   if (!need) return null;
   const late = ckHasLate() ? mine.filter(_isDailyLate).length : 0;
@@ -9103,11 +9106,26 @@ async function _ckLoadSummary(month) {
 /* ตัวเศษกับตัวหารต้องมาจากชุดสาขาเดียวกัน
    ถ้านับใบของสาขาที่ไม่อยู่ในทะเบียนแล้ว (เช่นสาขาที่ปิดไปแต่ยังมีประวัติเก่า)
    ตัวเศษจะโตกว่าตัวหารจนได้เกิน 100% ซึ่งอ่านแล้วเหมือนหน้าจอพัง */
+/* จำนวนวันขั้นต่ำที่ยอมให้เอามาเทียบกัน — น้อยกว่านี้ตัวเลขเหวี่ยงจนไม่มีความหมาย */
+var CK_MIN_CMP_DAYS = 3;
+
+/* ตัวเศษกับตัวหารต้องมาจากชุดสาขาเดียวกัน
+   ถ้านับใบของสาขาที่ไม่อยู่ในทะเบียนแล้ว (เช่นสาขาที่ปิดไปแต่ยังมีประวัติเก่า)
+   ตัวเศษจะโตกว่าตัวหารจนได้เกิน 100% ซึ่งอ่านแล้วเหมือนหน้าจอพัง
+
+   และต้องตัด "วันนี้" ทิ้งเสมอ — วันยังไม่จบ รอบปิดร้านของเกือบทุกสาขายังไม่เกิด
+   แต่ตัวหารนับไปแล้วทั้งสองรอบ เอามาเทียบกับสาขาที่เพิ่งส่งรอบเปิดไปเมื่อเช้า
+   จะได้ "สาขานี้ 100% · ทั้งแบรนด์ 0.8%" ซึ่งไม่ได้แปลว่าแบรนด์แย่
+   แปลว่าวันยังไม่จบเท่านั้น */
 function _sfRate(dailies, codes) {
-  var mine = (dailies || []).filter(function (d) { return d && codes[String(d.branchCode)]; });
+  var today = todayDateStr();
+  var mine = (dailies || []).filter(function (d) {
+    return d && codes[String(d.branchCode)] && d.date && d.date !== today;
+  });
   var days = {};
-  mine.forEach(function (d) { if (d.date) days[d.date] = 1; });
+  mine.forEach(function (d) { days[d.date] = 1; });
   var nDays = Object.keys(days).length;
+  if (nDays < CK_MIN_CMP_DAYS) return null;
   var need = Object.keys(codes).length * nDays * 2;
   if (!need) return null;
   var late = ckHasLate() ? mine.filter(_isDailyLate).length : 0;
@@ -9177,6 +9195,7 @@ function _sfBenchHTML(scopeDailies) {
     if (!d || !d.date || !scopeCodes[String(d.branchCode)]) return;
     /* ใช้ฐานเดียวกับที่คิด me — ถ้า me มาจากใบสรุป (คิดรายเดือน) ก็ต้องนับเฉพาะเดือนนั้น */
     if (fromSummary && d.date.slice(0, 7) !== mon) return;
+    if (d.date === todayDateStr()) return;      /* วันนี้ยังไม่จบ ไม่นับเข้าฐาน */
     scopeDays[d.date] = 1;
   });
   var meNeed = Object.keys(scopeDays).length * scopeRoster * 2;
