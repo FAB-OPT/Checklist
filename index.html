@@ -5099,31 +5099,18 @@ html.fab-sso-pending #login-screen { display: none !important; }
 .dm-sum { margin-left:auto; font-size:11.5px; color:var(--text-secondary); font-weight:600; white-space:nowrap; }
 .dm-sum b { color:var(--text); font-weight:800; }
 
-/* ช่องกว้างเท่ากันทุกช่อง ตกบรรทัดเอง — ไม่ยึด 7 คอลัมน์แบบปฏิทิน
-   เพราะที่ต้องการคือ "เดือนนี้ขาดกี่วัน" ไม่ใช่ "วันนี้ตรงกับวันอะไร" */
-.dm-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(38px, 1fr)); gap:5px; }
-.dm-cell { display:flex; flex-direction:column; align-items:center; gap:3px; padding:5px 2px 6px;
-  border:1px solid var(--border); border-radius:9px; background:var(--bg); cursor:pointer;
-  font-family:inherit; }
-.dm-cell:disabled { opacity:.4; cursor:default; }
-.dm-cell.is-full { background:var(--success-bg); border-color:transparent; }
-.dm-cell.is-part { background:var(--warning-bg); border-color:transparent; }
-.dm-cell.is-miss { background:var(--danger-bg); border-color:transparent; }
-.dm-cell.is-today { outline:2px solid var(--primary); outline-offset:-2px; }
-.dm-d { font-size:11.5px; font-weight:800; color:var(--text); font-variant-numeric:tabular-nums; line-height:1; }
-.dm-dots { display:flex; flex-direction:column; gap:2px; }
-.dm-dots i { width:12px; height:3px; border-radius:2px; display:block; }
-.dm-o { background:var(--success); }
-.dm-l { background:var(--warning); }
-.dm-x { background:rgba(127,127,127,.34); }
-.dm-f { background:rgba(127,127,127,.16); }
+/* หน้าตาช่องปฏิทินอยู่ท้ายไฟล์ (ดู "ปฏิทินการส่งทั้งเดือน")
+   ตรงนี้เหลือเฉพาะสีในคำอธิบายใต้ปฏิทิน */
+.dm-cell:disabled { cursor:default; }
+.dm-key i.dm-o { background:var(--success); }
+.dm-key i.dm-l { background:var(--warning); }
+.dm-key i.dm-x { background:var(--danger); }
 .dm-key { display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-top:10px;
   font-size:11px; color:var(--text-tertiary); font-weight:600; }
 .dm-key span { display:inline-flex; align-items:center; gap:5px; }
 .dm-key i { width:12px; height:3px; border-radius:2px; display:block; }
 .dm-key-note { margin-left:auto; }
 @media (max-width:640px) {
-  .dm-grid { grid-template-columns:repeat(auto-fill, minmax(34px, 1fr)); gap:4px; }
   .dm-sum { margin-left:0; width:100%; }
   .dm-key-note { margin-left:0; width:100%; }
 }
@@ -8772,7 +8759,7 @@ function renderSfChecklistTab() {
     const _pd = { today:'วันนี้', week:'อาทิตย์นี้', month:'เดือนนี้', all:'ทั้งหมด', custom:'ช่วงที่เลือก' };
     pdEl.textContent = _pd[sfClDate.type] || 'ทั้งหมด';
   }
-  if (kEl)  kEl.innerHTML  = _sfDailyKpisHTML(dailies);
+  if (kEl)  kEl.innerHTML  = _sfDailyKpisHTML(dailies) + _sfBenchHTML(dailies);
   const trEl = document.getElementById('sf-cl-trend');
   const brEl = document.getElementById('sf-cl-branches');
   if (trEl) trEl.innerHTML = _sfTrendHTML(dailies);
@@ -9026,6 +9013,83 @@ function _sfDailyKpisHTML(dailies) {
     + '</div>'
     + '<div class="sfk-note">ผ่าน <b>' + f(pass) + '</b> จาก ' + f(checked) + ' ข้อที่ตัดสินผ่าน/ไม่ผ่าน'
     +   ' · ข้อที่ตอบ N/A ไม่ถูกนำมาคิดคะแนน</div>';
+}
+
+/* ═══ แถบเทียบ ═══
+   ตัวเลขของตัวเองอย่างเดียวตอบไม่ได้ว่าควรร้อนใจหรือยัง
+   "โซนนี้ส่งครบ 54%" จะแย่หรือไม่ ขึ้นกับว่าที่อื่นได้เท่าไร
+   สามบรรทัดนี้เปลี่ยนหน้าจอจาก "เราขาด 191 รอบ" เป็น "เราต่ำกว่าค่าเฉลี่ยแบรนด์ 11 จุด"
+
+   โผล่เฉพาะตอนที่มีของให้เทียบจริง — ถ้าขอบเขตที่ดูอยู่คือทั้งแบรนด์แล้ว
+   หรือเครื่องนี้ยังไม่มีข้อมูลของสาขาอื่น ก็ไม่ต้องแสดง */
+/* ตัวเศษกับตัวหารต้องมาจากชุดสาขาเดียวกัน
+   ถ้านับใบของสาขาที่ไม่อยู่ในทะเบียนแล้ว (เช่นสาขาที่ปิดไปแต่ยังมีประวัติเก่า)
+   ตัวเศษจะโตกว่าตัวหารจนได้เกิน 100% ซึ่งอ่านแล้วเหมือนหน้าจอพัง */
+function _sfRate(dailies, codes) {
+  var mine = (dailies || []).filter(function (d) { return d && codes[String(d.branchCode)]; });
+  var days = {};
+  mine.forEach(function (d) { if (d.date) days[d.date] = 1; });
+  var nDays = Object.keys(days).length;
+  var need = Object.keys(codes).length * nDays * 2;
+  if (!need) return null;
+  var late = ckHasLate() ? mine.filter(_isDailyLate).length : 0;
+  return Math.min(100, (mine.length - late) / need * 100);
+}
+function _sfCodeSet(list) {
+  var s = {};
+  (list || []).forEach(function (b) { s[String(b.code)] = 1; });
+  return s;
+}
+function _sfBenchHTML(scopeDailies) {
+  if (!Array.isArray(allDailyChecklists) || !allDailyChecklists.length) return '';
+  var view = (typeof ckViewBrandKey === 'function') ? ckViewBrandKey() : currentBrand;
+  var brandAll = applySfClDateFilter(
+    allDailyChecklists.filter(function (d) { return d && ckBrandOfBranch(d.branchCode) === view; }));
+  var brandList = _openBranches(), scopeList = _sfTodayScopeRoster();
+  var brandCodes = _sfCodeSet(brandList), scopeCodes = _sfCodeSet(scopeList);
+  var brandRoster = brandList.length, scopeRoster = scopeList.length;
+  /* ขอบเขตที่ดูอยู่ = ทั้งแบรนด์แล้ว ไม่มีอะไรให้เทียบ */
+  if (!brandRoster || scopeRoster >= brandRoster) return '';
+  /* เครื่องนี้มีข้อมูลแค่ของขอบเขตตัวเอง เทียบไปก็ได้เลขเดียวกัน */
+  var brandBranches = new Set(brandAll.map(function (d) { return String(d.branchCode); })).size;
+  if (brandBranches <= scopeRoster) return '';
+
+  var me = _sfRate(scopeDailies, scopeCodes);
+  var all = _sfRate(brandAll, brandCodes);
+  if (me == null || all == null) return '';
+
+  var zone = null, zoneName = '';
+  if (sfClFilter.branch !== 'all') {
+    /* กรองเหลือสาขาเดียว — แทรกค่าเฉลี่ยของโซนตัวเองเข้ามาอีกเส้น */
+    zoneName = _sfBranchZone(sfClFilter.branch) || '';
+    if (zoneName) {
+      var codes = _sfCodeSet(brandList.filter(function (b) { return _sfBranchZone(b.code) === zoneName; }));
+      zone = _sfRate(brandAll, codes);
+    }
+  }
+
+  var GOAL = 95;
+  var rows = [{ l: scopeRoster === 1 ? 'สาขานี้' : 'ขอบเขตที่ดูอยู่', v: me, me: 1 }];
+  if (zone != null) rows.push({ l: 'โซน' + zoneName, v: zone });
+  rows.push({ l: 'ทั้งแบรนด์', v: all });
+
+  var gap = me - all;
+  var word = gap >= 0 ? 'สูงกว่า' : 'ต่ำกว่า';
+  var note = 'ที่ดูอยู่ <b>' + (Math.round(me * 10) / 10) + '%</b> ' + word
+    + 'ค่าเฉลี่ยแบรนด์ <b>' + (Math.round(Math.abs(gap) * 10) / 10) + ' จุด</b>'
+    + (me < GOAL ? ' · ยังห่างเป้า ' + GOAL + '% อีก <b>' + (Math.round((GOAL - me) * 10) / 10) + ' จุด</b>' : '');
+
+  return '<div class="sfb">'
+    + '<div class="sfb-h">' + (ckHasLate() ? 'ส่งครบตรงเวลา' : 'ส่งครบ') + ' — เทียบกับที่อื่น'
+    +   '<span>เส้นดำ = เป้า ' + GOAL + '%</span></div>'
+    + rows.map(function (r) {
+        return '<div class="sfb-r"><span class="sfb-l">' + escapeHtml(r.l) + '</span>'
+          + '<span class="sfb-t"><i class="sfb-f' + (r.me ? ' me' : '') + '" style="width:'
+          +   Math.max(0, Math.min(100, r.v)).toFixed(1) + '%"></i><i class="sfb-m"></i></span>'
+          + '<span class="sfb-v' + (r.me ? ' me' : '') + '">' + (Math.round(r.v * 10) / 10) + '%</span></div>';
+      }).join('')
+    + '<div class="sfk-note" style="margin-top:8px">' + note + '</div>'
+    + '</div>';
 }
 
 // สรุปหมวดที่ตก (รายวัน) — จัดกลุ่มตามหมวดของ Daily checklist (จุดเตรียมงาน/PASTA/STEAK…)
@@ -9866,6 +9930,20 @@ function _dailyPickDay(date) {
   renderDailyList();
 }
 
+/* ═══ ปฏิทินการส่งทั้งเดือน ═══
+   ของเดิมเป็นแถบเรียงวันที่ 1-31 ติดกัน แต่ละวันมีจุดสองจุด
+   อ่านได้ว่าวันไหนขาด แต่ตอบไม่ได้ว่า "ขาดวันไหนของสัปดาห์"
+   ซึ่งเป็นคำถามที่ตามงานได้จริง — สาขาที่ขาดทุกวันอาทิตย์กับขาดกระจายคนละปัญหากัน
+
+   เปลี่ยนเป็นปฏิทิน 7 คอลัมน์เรียงตามวันในสัปดาห์ และในช่องบอกเวลาที่ส่งจริง
+   เวลาสำคัญเพราะรอบเปิดที่ส่ง 11:29 กับ 06:40 ต่างกันมาก ทั้งที่นับว่า "ตรงเวลา" เหมือนกัน
+   จอแคบกว่า 560px ตัวหนังสือในช่องจะหายไปเหลือแค่แถบสี (ช่องกว้าง ~55px ใส่เวลาไม่ไหว) */
+function _dailyMonthHM(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (isNaN(d)) return '';
+  return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+}
 function _dailyMonthStripHTML(list) {
   const key = _dailyMonthKey();
   const y = Number(key.slice(0, 4)), m = Number(key.slice(5, 7));
@@ -9873,7 +9951,7 @@ function _dailyMonthStripHTML(list) {
   const today = todayDateStr();
 
   /* เอาเฉพาะของเดือนนี้ · list ที่ส่งเข้ามาผ่านตัวกรองสาขามาแล้ว
-     แต่ยังไม่ผ่านตัวกรองวัน/รอบ จะได้ไม่ทำให้แถบเดือนเปลี่ยนตามตัวกรองไปด้วย */
+     แต่ยังไม่ผ่านตัวกรองวัน/รอบ จะได้ไม่ทำให้ปฏิทินเปลี่ยนตามตัวกรองไปด้วย */
   const by = {};
   (list || []).forEach(function (d) {
     if (!d || !d.date || d.date.slice(0, 7) !== key) return;
@@ -9883,7 +9961,11 @@ function _dailyMonthStripHTML(list) {
   });
 
   let full = 0, part = 0, miss = 0;
+  /* วันแรกของเดือนตรงกับวันอะไร — ปฏิทินเริ่มที่วันจันทร์ ไม่ใช่อาทิตย์ */
+  const offset = (new Date(y, m - 1, 1).getDay() + 6) % 7;
   const cells = [];
+  for (let i = 0; i < offset; i++) cells.push('<span class="dm-cell is-empty"></span>');
+
   for (let i = 1; i <= days; i++) {
     const date = y + '-' + String(m).padStart(2, '0') + '-' + String(i).padStart(2, '0');
     const rec = by[date] || {};
@@ -9894,14 +9976,24 @@ function _dailyMonthStripHTML(list) {
       if (!r) return future ? 'f' : 'x';
       return _isDailyLate(r) ? 'l' : 'o';
     };
+    const half = function (r, label) {
+      const s = st(r);
+      const tm = r ? _dailyMonthHM(r.submittedAt || r.startedAt) : '';
+      return '<span class="dm-h dm-' + s + '"><i>' + label + '</i>' +
+             '<em>' + (tm || (future ? '' : '—')) + '</em></span>';
+    };
     const cls = ['dm-cell', future ? 'is-future' : (n === 2 ? 'is-full' : n === 1 ? 'is-part' : 'is-miss'),
                  date === today ? 'is-today' : ''].join(' ');
-    const tip = fmtDateDMY(date) + ' · เปิด: ' + (rec.open ? (_isDailyLate(rec.open) ? 'เกินเวลา' : 'ส่งแล้ว') : (future ? '—' : 'ไม่ได้ส่ง')) +
-                ' · ปิด: ' + (rec.close ? (_isDailyLate(rec.close) ? 'เกินเวลา' : 'ส่งแล้ว') : (future ? '—' : 'ไม่ได้ส่ง'));
+    const lateTxt = function (r) {
+      if (!r) return future ? '—' : 'ไม่ได้ส่ง';
+      const tm = _dailyMonthHM(r.submittedAt || r.startedAt);
+      return (_isDailyLate(r) ? 'เกินเวลา' : 'ส่งแล้ว') + (tm ? ' ' + tm : '');
+    };
+    const tip = fmtDateDMY(date) + ' · เปิด: ' + lateTxt(rec.open) + ' · ปิด: ' + lateTxt(rec.close);
     cells.push('<button type="button" class="' + cls + '" title="' + escapeAttr(tip) + '"' +
       (future ? ' disabled' : ' onclick="_dailyPickDay(\'' + date + '\')"') + '>' +
       '<span class="dm-d">' + i + '</span>' +
-      '<span class="dm-dots"><i class="dm-' + st(rec.open) + '"></i><i class="dm-' + st(rec.close) + '"></i></span>' +
+      half(rec.open, 'เปิด') + half(rec.close, 'ปิด') +
       '</button>');
   }
 
@@ -9915,12 +10007,14 @@ function _dailyMonthStripHTML(list) {
       '<button type="button" class="dm-nav" onclick="_dailyMonthShift(1)"' + (atNow ? ' disabled' : '') + ' title="เดือนถัดไป"><span class="material-symbols-rounded">chevron_right</span></button>' +
       '<span class="dm-sum"><b>' + full + '</b> ครบ · <b>' + part + '</b> ขาดรอบ · <b>' + miss + '</b> ไม่ได้ส่ง</span>' +
     '</div>' +
+    '<div class="dm-dow">' + ['จ','อ','พ','พฤ','ศ','ส','อา'].map(function (d) {
+        return '<span>' + d + '</span>'; }).join('') + '</div>' +
     '<div class="dm-grid">' + cells.join('') + '</div>' +
     '<div class="dm-key">' +
       '<span><i class="dm-o"></i> ' + (ckHasLate() ? 'ส่งตรงเวลา' : 'ส่งแล้ว') + '</span>' +
       (ckHasLate() ? '<span><i class="dm-l"></i> เกินเวลา</span>' : '') +
       '<span><i class="dm-x"></i> ไม่ได้ส่ง</span>' +
-      '<span class="dm-key-note">จุดบน = เปิดร้าน · จุดล่าง = ปิดร้าน</span>' +
+      '<span class="dm-key-note">ในช่องบอกเวลาที่ส่ง · แถวบน = เปิดร้าน แถวล่าง = ปิดร้าน</span>' +
     '</div>' +
   '</div>';
 }
@@ -14278,6 +14372,55 @@ const SFRep = {
   .sfk-m { flex:1 1 calc(50% - 4px); }
   .sfk-top b { font-size:24px; }
 }
+
+/* ═══ ปฏิทินการส่งทั้งเดือน ═══
+   7 คอลัมน์เรียงตามวันในสัปดาห์ เริ่มวันจันทร์
+   ในช่องแบ่งสองแถว เปิด/ปิด พร้อมเวลาที่ส่ง
+   จอแคบตัวหนังสือหายเหลือแถบสี เพราะช่องกว้าง ~50px ใส่เวลาไม่ไหว */
+.dm-dow { display:grid; grid-template-columns:repeat(7,1fr); gap:5px; margin-bottom:5px; }
+.dm-dow span { text-align:center; font-size:10.5px; font-weight:800; color:var(--text-tertiary); }
+.dm-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:5px; }
+.dm-cell { display:flex; flex-direction:column; gap:0; padding:0; overflow:hidden;
+  border:1px solid var(--border); border-radius:9px; background:var(--surface); cursor:pointer; text-align:left; }
+.dm-cell.is-empty { border:0; background:none; cursor:default; }
+.dm-cell.is-future { opacity:.45; }
+.dm-cell.is-today { outline:2px solid var(--primary); outline-offset:-1px; }
+.dm-d { display:block; font-size:10.5px; font-weight:800; color:var(--text-secondary);
+  text-align:right; padding:3px 6px 2px; font-variant-numeric:tabular-nums; line-height:1.15; }
+.dm-h { display:flex; align-items:center; gap:4px; padding:3px 6px; font-size:9.5px; font-weight:800; min-height:17px; }
+.dm-h + .dm-h { border-top:1px solid rgba(255,255,255,.55); }
+.dm-h i { font-style:normal; width:19px; flex:0 0 auto; }
+.dm-h em { font-style:normal; margin-left:auto; font-variant-numeric:tabular-nums; font-weight:700; font-size:9px; }
+.dm-h.dm-o { background:var(--success-bg); color:var(--success); }
+.dm-h.dm-l { background:var(--warning-bg); color:#8C5613; }
+.dm-h.dm-x { background:var(--danger-bg); color:var(--danger); }
+.dm-h.dm-f { background:var(--bg-strong); color:var(--text-tertiary); }
+/* ช่องแคบ: ตัดตัวหนังสือทิ้ง เหลือแถบสีสองแถบเหมือนเดิม */
+@media (max-width:560px){
+  .dm-grid, .dm-dow { gap:3px; }
+  .dm-h { min-height:9px; padding:0; }
+  .dm-h i, .dm-h em { display:none; }
+  .dm-h + .dm-h { border-top:1px solid var(--surface); }
+  .dm-d { padding:2px 4px 1px; font-size:10px; }
+}
+
+/* ═══ แถบเทียบ ═══ */
+.sfb { background:var(--surface); border:1px solid var(--border); border-radius:var(--r-lg);
+  padding:13px 15px 14px; margin-top:12px; }
+.sfb-h { display:flex; align-items:baseline; gap:8px; font-size:13px; font-weight:800; margin-bottom:10px; }
+.sfb-h span { margin-left:auto; font-size:11px; font-weight:700; color:var(--text-tertiary); }
+.sfb-r { display:flex; align-items:center; gap:10px; margin-bottom:8px; }
+.sfb-r:last-of-type { margin-bottom:0; }
+.sfb-l { width:104px; flex:0 0 auto; font-size:12px; font-weight:700; color:var(--text-secondary);
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.sfb-t { flex:1; min-width:0; position:relative; height:19px; background:var(--bg-strong); border-radius:6px; overflow:hidden; }
+.sfb-f { position:absolute; left:0; top:0; bottom:0; border-radius:6px; background:var(--text-tertiary); opacity:.42; }
+.sfb-f.me { background:var(--success); opacity:1; }
+.sfb-m { position:absolute; left:95%; top:0; bottom:0; width:2.5px; background:var(--text); border-radius:2px; }
+.sfb-v { width:52px; flex:0 0 auto; text-align:right; font-size:12.5px; font-weight:800;
+  font-variant-numeric:tabular-nums; color:var(--text-tertiary); }
+.sfb-v.me { color:var(--text); font-size:14.5px; }
+@media (max-width:520px){ .sfb-l { width:78px; font-size:11.5px; } }
 </style>
 <!-- ══════════ กล่องออกรายงาน (ซานตาเฟ่) ══════════ -->
 <div class="sfrep-ov" id="sfrep-ov">
