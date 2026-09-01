@@ -5409,18 +5409,23 @@ body.in-audit #ck-page-head { display:none; }
   white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 
 .ck-shifts { display:grid; grid-template-columns:1fr 1fr; gap:11px; }
-.ck-shift { border:1px solid var(--border); border-radius:14px; padding:16px 12px; background:var(--surface);
-  text-align:center; box-shadow:var(--shadow-sm); cursor:pointer; font-family:inherit; color:var(--text);
-  display:block; width:100%; transition:.15s; }
+/* การ์ดรอบ — ชิดซ้าย ไอคอนอยู่บนหัวเหมือนหัวข้อ ไม่ใช่วางกลางการ์ด
+   รอบที่ยังไม่ส่งใช้ "กรอบสีแบรนด์" ไม่ใช่ถมสีเต็มใบ
+   ถมเต็มใบทำให้การ์ดนี้เป็นของที่สีจัดที่สุดในหน้า แข่งกับสีสถานะที่มีความหมายจริง
+   รอบที่ส่งแล้วใช้พื้นเขียวอ่อน อ่านออกทันทีว่าอันไหนเสร็จแล้ว */
+.ck-shift { border:1px solid var(--border); border-radius:14px; padding:13px 14px 14px; background:var(--surface);
+  text-align:left; font-family:inherit; cursor:pointer; color:var(--text); transition:transform .12s;
+  display:block; width:100%; }
 .ck-shift:active { transform:scale(.98); }
-.ck-shift .material-symbols-rounded { font-size:27px; margin-bottom:7px; display:block; }
-.ck-shift-t { font-size:14px; font-weight:800; }
-.ck-shift-s { font-size:11px; font-weight:600; opacity:.85; margin-top:2px; }
-.ck-shift.is-brand { background:var(--primary); border-color:var(--primary); color:#fff;
-  box-shadow:0 6px 18px color-mix(in srgb, var(--primary) 30%, transparent); }
-.ck-shift.is-brand .ck-shift-s { opacity:.9; }
-.ck-shift.is-done { background:var(--bg); color:var(--text-tertiary); box-shadow:none; }
-.ck-shift.is-done .ck-shift-s { color:var(--success); opacity:1; }
+.ck-shift .material-symbols-rounded { font-size:24px; margin-bottom:9px; display:block; color:var(--text-tertiary); }
+.ck-shift-t { font-size:14.5px; font-weight:800; }
+.ck-shift-s { font-size:11.5px; font-weight:700; margin-top:3px; color:var(--text-tertiary); }
+.ck-shift.is-brand { background:var(--surface); border-color:var(--primary); border-width:1.5px; padding:12.5px 13.5px 13.5px; }
+.ck-shift.is-brand .material-symbols-rounded { color:var(--primary); }
+.ck-shift.is-brand .ck-shift-s { color:var(--text-secondary); }
+.ck-shift.is-done { background:var(--success-bg); border-color:transparent; box-shadow:none; }
+.ck-shift.is-done .material-symbols-rounded { color:var(--success); }
+.ck-shift.is-done .ck-shift-s { color:var(--success); }
 
 .ck-row { background:none; border:0; border-radius:0; padding:7px 2px; position:relative; cursor:pointer; }
 .ck-row + .ck-row { margin-top:0; }
@@ -10014,8 +10019,17 @@ function _refreshDailyActions() {
   const _hhmm = d => { const t = d && (d.submittedAt || d.updatedAt); if (!t) return '';
     const dt = new Date(t); return isNaN(dt.getTime()) ? ''
       : ' ' + String(dt.getHours()).padStart(2,'0') + ':' + String(dt.getMinutes()).padStart(2,'0'); };
-  if (oS) oS.textContent = !target ? 'เลือกสาขาก่อน' : (openDone ? 'ส่งแล้ว' + _hhmm(openDone) : 'ยังไม่ได้ส่ง');
-  if (cS) cS.textContent = !target ? 'เลือกสาขาก่อน' : (closeDone ? 'ส่งแล้ว' + _hhmm(closeDone) : 'ยังไม่ได้ส่ง');
+  /* ส่งแล้วบอกเวลากับคะแนน · ยังไม่ส่งบอกว่าให้ทำอะไรต่อ
+     "ยังไม่ได้ส่ง" เป็นการรายงานสถานะ ส่วน "แตะเพื่อเริ่มตรวจ" บอกวิธีทำต่อ
+     ซึ่งเป็นสิ่งที่คนเปิดหน้านี้มาต้องการ */
+  const _sub = (rec) => {
+    if (!target) return 'เลือกสาขาก่อน';
+    if (!rec) return 'แตะเพื่อเริ่มตรวจ';
+    const p = (typeof _ckDailyPct === 'function') ? _ckDailyPct(rec) : null;
+    return '✓ ส่งแล้ว' + _hhmm(rec) + ' น.' + (p == null ? '' : ' · ' + Math.round(p) + '%');
+  };
+  if (oS) oS.textContent = _sub(openDone);
+  if (cS) cS.textContent = _sub(closeDone);
   if (oL) oL.textContent = 'เปิดร้าน';
   if (cL) cL.textContent = 'ปิดร้าน';
   const _paint = (btn, done) => {
