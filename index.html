@@ -4266,19 +4266,31 @@ input[type="time"].jd-form-input {
 .audit-item:hover { transform: translateX(3px); box-shadow: var(--shadow-lg); }
 .audit-item:active { transform: scale(0.99); }
 
+/* แถวตัวกรอง ไม่ใช่การ์ด — ของเดิมเป็นกล่องขาวมีเงาครอบ dropdown สองอัน
+   กลายเป็นการ์ดเปล่าที่ไม่มีเนื้อหา วางอยู่เหนือการ์ดจริงอีกที
+   และช่องเลือกวันที่ที่ยังไม่ได้เลือกจะเป็นกรอบว่างเปล่าบน iOS
+   (Safari ไม่แสดง placeholder ให้ input[type=date] ที่ยังว่าง) */
 .filter-bar {
-  display: flex; gap: 10px; flex-wrap: wrap;
-  background: var(--surface); padding: 14px; border-radius: var(--r-md);
-  margin-bottom: 14px; box-shadow: var(--shadow);
+  display: flex; gap: 8px; flex-wrap: wrap;
+  background: none; padding: 0; border-radius: 0;
+  margin: 0 0 12px; box-shadow: none;
 }
 .filter-bar select, .filter-bar input {
-  padding: 10px 14px; border: 1.5px solid var(--border);
-  border-radius: var(--r-sm); font-size: 14px; font-family: inherit;
-  flex: 1; min-width: 140px;
-  min-height: 42px;
+  padding: 9px 12px; border: 1px solid var(--border);
+  border-radius: var(--r-sm); font-size: 13.5px; font-family: inherit;
+  flex: 1; min-width: 128px;
+  min-height: 40px;
   background: var(--surface); color: var(--text);
   transition: border-color 0.18s;
 }
+/* ช่องวันที่โผล่เฉพาะตอนที่มีวันเลือกอยู่จริง (มาจากการกดวันในปฏิทิน)
+   ไม่งั้นเป็นกรอบว่างกินที่เต็มแถวโดยไม่ได้ทำอะไร */
+.filter-bar input[type="date"] { display: none; }
+.filter-bar.has-date input[type="date"] { display: block; flex: 1 1 100%; }
+.filter-clear { flex: 0 0 auto; min-height: 40px; padding: 0 13px; border-radius: var(--r-sm);
+  border: 1px solid var(--border); background: var(--surface); color: var(--text-secondary);
+  font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer; display: none; }
+.filter-bar.has-date .filter-clear { display: inline-flex; align-items: center; gap: 5px; }
 .filter-bar select:focus, .filter-bar input:focus {
   outline: none; border-color: var(--primary);
 }
@@ -5497,6 +5509,9 @@ body.in-audit #ck-page-head { display:none; }
   box-shadow:0 6px 18px color-mix(in srgb, var(--primary) 30%, transparent); }
 #daily-form-screen .form-action-bar .btn-secondary { flex:0 0 auto; min-width:0; padding:14px 16px; border-radius:14px; }
 #daily-form-screen .sticky-tabs { top:52px; }
+/* แถบปุ่มส่งลอยติดล่างจอ ข้อสุดท้ายจึงถูกทับ — เว้นที่ให้เท่าความสูงของแถบ
+   บน iOS ยังต้องบวก safe-area อีก ไม่งั้นโดนแถบล่างของ Safari กินไปอีกชั้น */
+#daily-form-screen #daily-sections-container { padding-bottom: calc(12px + env(safe-area-inset-bottom)); }
 
 
 /* ปุ่มใหญ่ปุ่มเดียว — เจ๊แดงมีงานเดียวคือ "เริ่มตรวจ" จึงไม่ต้องแบ่งเป็นสองปุ่มแบบกะเปิด/ปิด */
@@ -6002,6 +6017,8 @@ body.in-audit #ck-page-head { display:none; }
           <option value="close">ปิดร้าน</option>
         </select>
         <input type="date" id="daily-filter-date" onchange="renderDailyList()">
+        <button type="button" class="filter-clear" onclick="_dailyClearDate()">
+          <span class="material-symbols-rounded" style="font-size:16px">close</span>ล้างวันที่</button>
       </div>
       <div class="audit-list" id="daily-list"></div>
       <div id="daily-history-more" style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:16px;"></div>
@@ -10029,6 +10046,12 @@ function _paintDailyCutNote() {
     : '<span class="material-symbols-rounded">schedule</span>แบรนด์นี้ไม่มีเวลาตัด ส่งเมื่อไรก็ไม่นับว่าช้า';
 }
 
+function _dailyClearDate() {
+  const el = document.getElementById('daily-filter-date');
+  if (el) el.value = '';
+  renderDailyList();
+}
+
 function _dailySetRange(v) {
   /* เลือกช่วงแล้วต้องล้างวันเจาะจงทิ้ง ไม่งั้นกรองสองชั้นแล้วว่างเปล่า */
   const el = document.getElementById('daily-filter-date');
@@ -10189,6 +10212,9 @@ function renderDailyList() {
   const search = document.getElementById('daily-filter-search').value.trim().toLowerCase();
   const shiftFilter = document.getElementById('daily-filter-shift').value;
   const dateFilter = document.getElementById('daily-filter-date').value;
+  /* มีวันเลือกอยู่ถึงจะโชว์ช่องวันที่กับปุ่มล้าง */
+  const fbar = document.getElementById('daily-filter-bar');
+  if (fbar) fbar.classList.toggle('has-date', !!dateFilter);
 
   let list = getVisibleDailyChecklists();
   if (search) list = list.filter(d => branchLabel(d.branchCode, d.branchName).toLowerCase().includes(search));
