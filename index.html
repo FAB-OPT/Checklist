@@ -9929,6 +9929,31 @@ function fmtDateDMY(iso) {
 }
 
 const THAI_MONTH_SHORT = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+/* ชื่อวันในสัปดาห์ + เดือนเต็ม — ใช้กับหัวข้อที่วันที่เป็นข้อมูลหลัก
+   คนตรวจร้านนึกเป็น "วันพุธ" ไม่ใช่ "วันที่ 2" ตอนวางแผนว่าวันไหนต้องส่งอะไร
+   และวันในสัปดาห์เป็นตัวช่วยจับรูปแบบ เช่นสาขาที่ขาดทุกวันอาทิตย์ */
+const THAI_DOW_FULL = ['อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์'];
+const THAI_MONTH_FULL = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน',
+                         'กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+function _thaiDow(iso) {
+  const p = String(iso || '').split('-');
+  if (p.length !== 3) return '';
+  const d = new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2]));
+  return isNaN(d.getTime()) ? '' : THAI_DOW_FULL[d.getDay()];
+}
+/* เต็มรูป — "พุธ 2 กันยายน 2569" */
+function fmtDateThaiFull(iso) {
+  const p = String(iso || '').split('-');
+  if (p.length !== 3) return iso || '';
+  const dow = _thaiDow(iso);
+  const mon = THAI_MONTH_FULL[parseInt(p[1], 10) - 1] || p[1];
+  return (dow ? dow + ' ' : '') + parseInt(p[2], 10) + ' ' + mon + ' ' + (parseInt(p[0], 10) + 543);
+}
+/* ย่อแต่มีชื่อวัน — "พุธ 2 ก.ย. 69" ใช้กับหัวการ์ดในรายการที่มีหลายวัน */
+function fmtDateThaiDow(iso) {
+  const dow = _thaiDow(iso);
+  return (dow ? dow + ' ' : '') + fmtDateThaiShort(iso);
+}
 function fmtDateThaiShort(iso) {
   if (!iso || typeof iso !== 'string') return iso || '';
   const parts = iso.split('-');
@@ -9973,7 +9998,7 @@ function showDailyHub() {
   const picker = document.getElementById('daily-branch-picker');
   const isBranch = currentUser.role === 'branch';
   branchActions.style.display = 'block';   // ทุก role มีเมนูตรวจร้าน
-  document.getElementById('daily-today-label').textContent = fmtDateThaiShort(todayDateStr());
+  document.getElementById('daily-today-label').textContent = fmtDateThaiFull(todayDateStr());
   if (picker) {
     if (isBranch) { picker.style.display = 'none'; }
     else { picker.style.display = 'block'; _setupDailyBranchOptions(); }
@@ -10373,7 +10398,7 @@ function renderDailyList() {
     return `<div class="daily-history-group">
       <div class="daily-history-date">
         <span class="material-symbols-rounded">calendar_today</span>
-        <span>${escapeHtml(fmtDateThaiShort(date))}</span>
+        <span>${escapeHtml(fmtDateThaiDow(date))}</span>
         ${roundTxt}
       </div>
       <div class="daily-history-cards">${cards}${missHtml}</div>
