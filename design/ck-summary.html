@@ -1,0 +1,58 @@
+<!doctype html><html lang="th"><meta charset="utf-8">
+<title>Operations Checklist · สรุปหน้าตาทั้งหมด</title>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#EDEFF2;font-family:Sarabun,system-ui,sans-serif;color:#14171B;-webkit-font-smoothing:antialiased}
+.top{position:sticky;top:0;z-index:20;background:rgba(247,248,249,.94);backdrop-filter:blur(10px);border-bottom:1px solid #DCE0E5}
+.topin{max-width:1560px;margin:0 auto;padding:15px 24px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.topin h1{margin:0;font-size:18px;font-weight:800;letter-spacing:-.02em}
+.topin .t{font-size:12px;color:#7C8794;font-weight:600}
+.bsw{margin-left:auto;display:flex;gap:7px}
+.bsw button{display:flex;align-items:center;gap:8px;border:1px solid #D7DCE1;background:#fff;border-radius:999px;
+ padding:7px 15px;font-family:inherit;font-size:12.5px;font-weight:700;color:#565E67;cursor:pointer}
+.bsw button i{width:11px;height:11px;border-radius:4px}
+.bsw button s{text-decoration:none;font-size:10.5px;font-weight:700;color:#A0894A;background:#FBF0D8;
+ border-radius:999px;padding:1px 7px}
+.bsw button.on{border-color:#14171B;color:#14171B;box-shadow:0 0 0 3px rgba(20,23,27,.07)}
+.w{max-width:1560px;margin:0 auto;padding:24px 24px 100px}
+.lede{font-size:13px;color:#565E67;line-height:1.7;margin:0 0 20px;max-width:960px}
+.lede b{color:#14171B}
+.rule{background:#fff;border:1px solid #DCE0E5;border-radius:16px;padding:16px 19px;margin-bottom:22px}
+.rule-h{display:flex;align-items:baseline;gap:11px;flex-wrap:wrap;margin-bottom:9px}
+.rule-h b{font-size:16px;font-weight:800;letter-spacing:-.02em}
+.rule-h span{font-size:12.5px;color:#565E67;font-weight:600;font-family:ui-monospace,Menlo,monospace}
+.rule ul{margin:0;padding-left:19px}
+.rule li{font-size:12.5px;color:#565E67;font-weight:600;line-height:1.8}
+.rule p{margin:11px 0 0;font-size:12px;font-weight:700;border-radius:9px;padding:8px 12px}
+.rule p.ok{background:#E3F1E8;color:#1E7A45}
+.rule p.warn{background:#FBEBD4;color:#8C5613}
+.role{background:#fff;border:1px solid #DCE0E5;border-radius:18px;overflow:hidden;margin-bottom:22px}
+.rh{display:flex;align-items:center;gap:12px;padding:15px 19px;border-bottom:1px solid #EDEFF2;flex-wrap:wrap}
+.rh .tag{background:#14171B;color:#fff;font-size:12.5px;font-weight:800;padding:4px 13px;border-radius:999px}
+.rh .d{font-size:12.5px;color:#7C8794;font-weight:600;flex:1 1 300px;min-width:0;line-height:1.6}
+.rh .d b{color:#14171B}
+.rb{display:flex;gap:18px;padding:18px;background:#F4F6F8;align-items:flex-start;flex-wrap:wrap}
+.u{margin:0}
+.u figcaption{font-size:10.5px;font-weight:800;color:#8E959D;letter-spacing:.04em;margin-bottom:8px}
+.u img{display:block;width:100%;border-radius:11px;border:1px solid #DEE2E7;background:#fff}
+.u.d{flex:1 1 660px;min-width:400px}
+.u.m{flex:0 0 236px}
+.foot{font-size:12px;color:#8E959D;line-height:1.8;margin-top:26px}
+.foot b{color:#565E67}
+</style>
+<div class="top"><div class="topin">
+ <h1>Operations Checklist</h1>
+ <span class="t">ธีมหมึก · ทุกสิทธิ์ × คอม/มือถือ × 3 แบรนด์</span>
+ <div class="bsw" id="bsw"></div>
+</div></div>
+<div class="w">
+<p class="lede">พื้น เส้น และตัวหนังสือเป็น<b>เทาล้วน ไม่ผสมสีแบรนด์</b> สีในหน้าจอจึงเหลือความหมายเดียวคือสถานะ —
+<b style="color:#1E7A45">ส่งครบ</b> · <b style="color:#C87914">ส่งช้า</b> · <b style="color:#CE2020">ไม่ได้ส่ง</b> · <b style="color:#7C8794">N/A</b><br>
+สามแบรนด์<b>ไม่ได้ต่างกันแค่สี</b> — ต่างกันที่มีอะไรให้วัด จำนวนหน้าจอจึงไม่เท่ากัน</p>
+<div id="body"></div>
+<p class="foot">เงื่อนไขแบรนด์อ่านจาก <b>CK_BRANDS</b> ในแอปจริง (index.html บรรทัด 7108–7116) ·
+หน้าจอคอมย่อจาก 1400px · มือถือ 430px</p>
+</div>
+<script src="manifest.js"></script>
+<script src="ck-summary.js"></script>
