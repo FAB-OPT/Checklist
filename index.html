@@ -3422,6 +3422,8 @@ input[type="time"].jd-form-input {
 }
 .chip-badge-fail { background: var(--danger); color: white; }
 .chip-badge-done { background: var(--success); color: white; }
+.daily-section-chip.is-done .chip-count { background: var(--success-bg); color: var(--success); }
+.daily-section-chip.is-done.active .chip-count { background: rgba(255,255,255,0.25); color: white; }
 
 /* Daily detail (รายละเอียดประวัติ) — header + meta + stats + sections */
 .detail-head-card { padding: 22px 24px 18px; }
@@ -3779,11 +3781,15 @@ input[type="time"].jd-form-input {
   padding: 11px 13px 12px;
   margin-bottom: 10px;
 }
+/* วันที่คือหัวของการ์ด ไม่ใช่ป้ายกำกับ — คนกวาดตาหาวันก่อน แล้วค่อยอ่านรอบข้างใน
+   ของเดิม 13.5px เท่าตัวหนังสือในแถวรอบ เลยไม่มีอะไรบอกว่าอันไหนเป็นหัว */
 .daily-history-date {
   display: flex; align-items: baseline; gap: 8px;
-  font-size: 13.5px; font-weight: 800;
-  color: var(--text); letter-spacing: 0;
+  font-size: 16px; font-weight: 800;
+  color: var(--text); letter-spacing: -.02em;
   margin: 0 0 8px;
+  padding: 0 0 8px;
+  border-bottom: 1px solid var(--border);
   text-transform: none;
 }
 .daily-history-date .material-symbols-rounded { display: none; }
@@ -10528,12 +10534,14 @@ function renderDailySectionTabs() {
     const failCount = sectionItems.filter(i => i.status === 'fail').length;
     const doneCount = sectionItems.filter(i => i.status).length;
     const allDone = doneCount === sectionItems.length;
-    let badgeHtml = '';
-    if (failCount) badgeHtml = `<span class="chip-badge chip-badge-fail">${failCount}</span>`;
-    else if (allDone) badgeHtml = `<span class="chip-badge chip-badge-done">✓</span>`;
-    return `<button type="button" class="chip daily-section-chip" onclick="scrollToDailySection(${sIdx})">
+    /* ตอบครบแล้วไม่ต้องเขียน "11/11" — เลขเดียวกันสองครั้ง อ่านแล้วสะดุด
+       เหลือเลขเดียวกับเครื่องหมายถูก และตัดป้ายติ๊กถูกอีกอันที่บอกเรื่องเดียวกันทิ้ง
+       ป้ายจำนวนข้อที่ตกยังอยู่ เพราะเป็นคนละเรื่องกับความคืบหน้า */
+    const badgeHtml = failCount ? `<span class="chip-badge chip-badge-fail">${failCount}</span>` : '';
+    const countTxt = allDone ? `${sectionItems.length} ✓` : `${doneCount}/${sectionItems.length}`;
+    return `<button type="button" class="chip daily-section-chip${allDone ? ' is-done' : ''}" onclick="scrollToDailySection(${sIdx})">
       <span class="chip-name">${escapeHtml(sec.name)}</span>
-      <span class="chip-count">${doneCount}/${sectionItems.length}</span>
+      <span class="chip-count">${countTxt}</span>
       ${badgeHtml}
     </button>`;
   }).join('');
@@ -14785,7 +14793,7 @@ const SFRep = {
   font-size:11.5px; font-weight:600; color:var(--text-tertiary); line-height:1.5; }
 .ck-cut .material-symbols-rounded { font-size:16px; flex:0 0 auto; }
 /* จำนวนรอบของวันนั้น + แถวของรอบที่ยังไม่ส่ง */
-.dh-round { margin-left:auto; font-size:11px; font-weight:700; color:var(--text-tertiary);
+.dh-round { margin-left:auto; font-size:11.5px; font-weight:700; color:var(--text-tertiary);
   font-variant-numeric:tabular-nums; }
 /* รอบที่ยังไม่ส่ง — เป็นบรรทัดปกติ ให้ป้ายแดงเล็ก ๆ เป็นตัวบอก
    ถมพื้นแดงทั้งแถบทำให้วันที่ขาดรอบเดียวดูหนักกว่าวันที่ไม่ส่งเลยทั้งวัน */
