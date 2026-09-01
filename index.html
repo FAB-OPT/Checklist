@@ -8947,16 +8947,27 @@ function _sfTodayStatusHTML() {
 /* เปลี่ยนจาก "จำนวนดิบ" เป็น "อัตราส่วน + ตัวหาร"
    ของเดิมบอกว่า "ข้อที่ตก 42 ข้อ" ซึ่งเทียบข้ามช่วงเวลาไม่ได้เลย
    42 ข้อจาก 100 กับ 42 ข้อจาก 5,000 คนละเรื่องกัน */
+/* ═══ ภาพรวมการส่ง ═══
+   ของเดิมเป็นการ์ดสี่ใบเรียงกัน: การส่งทั้งหมด / ส่งตรงเวลา % / ข้อที่ผ่าน % / ข้อที่ตก
+   ปัญหาคือ "การส่งทั้งหมด 3,097 ครั้ง" ไม่ได้บอกว่าเยอะหรือน้อย เพราะไม่รู้ว่าควรส่งกี่ครั้ง
+   และ "ส่งตรงเวลา 84%" คิดจากใบที่ส่งมาแล้ว ใบที่ไม่ส่งเลยจึงหายไปจากตัวหาร
+   สาขาที่ไม่ส่งทั้งเดือนไม่ถูกนับว่าแย่ ทั้งที่เป็นเคสที่แย่ที่สุด
+
+   ตั้งต้นที่ "รอบที่ควรส่ง" แทน แล้วแตกเป็น ครบ / ช้า / ไม่ส่ง จากฐานเดียวกัน
+   ทั้งสามตัวบวกกันได้ 100% พอดี และรอบที่ขาดหายไปโผล่มาเป็นสีแดงทันที
+   ตัวหารใช้กติกาเดียวกับ _sfDailySummaryHTML — วันที่มีใครสักคนส่งจริง × 2 รอบ × จำนวนสาขา
+   ไม่ยึดปฏิทิน เพราะวันหยุดหรือวันที่ระบบล่มไม่ควรนับเป็นความผิดของสาขา */
 function _sfDailyKpisHTML(dailies) {
   var total = dailies.length;
-  var late = dailies.filter(_isDailyLate).length;
+  var late = ckHasLate() ? dailies.filter(_isDailyLate).length : 0;
   var onTime = total - late;
-  var pass = 0, fail = 0;
+  var pass = 0, fail = 0, na = 0;
   var failBranches = {};
   dailies.forEach(function (d) {
     (d.items || []).forEach(function (it) {
       if (!it) return;
       if (it.status === 'pass') pass++;
+      else if (it.status === 'na') na++;
       else if (it.status === 'fail') {
         fail++;
         failBranches[d.branchCode || d.branchName || '-'] = 1;
@@ -8964,47 +8975,57 @@ function _sfDailyKpisHTML(dailies) {
     });
   });
   var checked = pass + fail;
-  var branches = new Set(dailies.map(function (d) { return d.branchCode || d.branchName || '-'; })).size;
+  var answered = checked + na;
   var rosterN = _sfTodayScopeRoster().length;
-
-  var pctOn = total ? Math.round(onTime / total * 100) : 0;
-  var pctPass = checked ? Math.round(pass / checked * 100) : 0;
   var nFailBr = Object.keys(failBranches).length;
 
-  var tile = function (tone, icon, label, val, unit, sub) {
-    return '<div class="jd-kpi sf-kpi" data-tone="' + tone + '">'
-      + '<div class="sf-kpi-ico"><span class="material-symbols-rounded">' + icon + '</span></div>'
-      + '<div class="sf-kpi-body">'
-      +   '<div class="jd-kpi-label">' + label + '</div>'
-      +   '<div class="jd-kpi-value">' + val + (unit ? '<small class="sf-kpi-unit">' + unit + '</small>' : '') + '</div>'
-      +   '<div class="jd-kpi-sub">' + sub + '</div>'
-      + '</div></div>';
-  };
+  var opDays = {};
+  dailies.forEach(function (d) { if (d && d.date) opDays[d.date] = 1; });
+  var nDays = Object.keys(opDays).length;
+  var need = rosterN * nDays * 2;
+  var miss = Math.max(0, need - total);
 
-  /* เหลือสาขาเดียว (สาขาล็อกอินเอง หรือแอดมินกรองเหลือสาขาเดียว)
-     การบอก "1 สาขา จาก 1" ไม่ได้ความรู้อะไร เปลี่ยนไปบอกแยกรอบเปิด-ปิดแทน */
-  var single = rosterN <= 1;
-  var nOpen = dailies.filter(function (d) { return (d.shift || 'open') !== 'close'; }).length;
-  var nClose = total - nOpen;
+  var f = function (n) { return n.toLocaleString('th-TH'); };
+  var pct = function (n) { return need ? (n / need * 100) : 0; };
 
-  return tile('neutral', 'fact_check', 'การส่งทั้งหมด', total, ' ครั้ง',
-              single ? ('รอบเปิด ' + nOpen + ' · รอบปิด ' + nClose)
-                     : (branches + ' สาขา' + (rosterN ? ' จาก ' + rosterN : '')))
-    /* การ์ดนี้มีเฉพาะแบรนด์ที่ตั้งเวลาตัดไว้
-       แบรนด์ที่ไม่มี cutoff จะได้ onTime = total เสมอ การ์ดจะขึ้น 100% ทุกวันโดยไม่ได้แปลว่าอะไร
-       ตัดทิ้งไปเลยดีกว่าโชว์ตัวเลขที่ไม่มีทางเป็นอย่างอื่น */
-    + (ckHasLate()
-        ? tile(total === 0 ? 'neutral' : (pctOn >= 90 ? 'good' : (pctOn >= 70 ? 'warn' : 'danger')),
-               'schedule', 'ส่งตรงเวลา', total ? pctOn : '—', total ? '%' : '',
-               late > 0 ? ('เกินเวลา ' + late + ' ครั้ง') : 'ไม่มีที่เกินเวลา')
-        : '')
-    + tile(checked === 0 ? 'neutral' : (pctPass >= 95 ? 'good' : (pctPass >= 85 ? 'warn' : 'danger')),
-           'verified', 'ข้อที่ผ่าน', checked ? pctPass : '—', checked ? '%' : '',
-           checked ? ('ผ่าน ' + pass.toLocaleString() + ' จาก ' + checked.toLocaleString() + ' ข้อ') : 'ยังไม่มีข้อมูล')
-    + tile(fail > 0 ? 'danger' : 'good', 'report', 'ข้อที่ตก', fail, ' ข้อ',
-           fail === 0 ? 'ไม่มีข้อตก'
-             : (single ? ('จากที่ตรวจ ' + checked.toLocaleString() + ' ข้อ')
-                       : ('พบใน ' + nFailBr + ' สาขา')));
+  var rows = [{ k: 'ok', l: ckHasLate() ? 'ส่งครบตรงเวลา' : 'ส่งครบ', v: onTime }];
+  if (ckHasLate()) rows.push({ k: 'late', l: 'ส่งช้า', v: late });
+  rows.push({ k: 'miss', l: 'ไม่ได้ส่ง', v: miss });
+
+  /* ยังไม่มีข้อมูลพอจะหาตัวหาร — บอกไปตรง ๆ ดีกว่าโชว์ 0/0 */
+  if (!need) {
+    return '<div class="sfk sfk-empty">ยังไม่มีเช็คลิสต์รายวันในช่วงที่เลือก '
+      + '<s>เลือกช่วงเวลาอื่นจากแถบด้านล่าง</s></div>';
+  }
+
+  var avg = answered ? Math.round(pass / checked * 1000) / 10 : null;
+  var naPct = answered ? Math.round(na / answered * 1000) / 10 : 0;
+
+  return '<div class="sfk">'
+    + '<div class="sfk-top"><b>' + f(need) + '</b><em>รอบที่ควรส่ง</em>'
+    +   '<s>' + rosterN + ' สาขา · ' + nDays + ' วันที่มีการส่ง</s></div>'
+    + '<div class="sfk-bar">'
+    +   rows.map(function (r) {
+          return '<i class="' + r.k + '" style="width:' + pct(r.v).toFixed(2) + '%"></i>';
+        }).join('')
+    + '</div>'
+    + rows.map(function (r) {
+        return '<div class="sfk-r ' + r.k + '"><u></u><span>' + r.l + '</span>'
+          + '<b>' + f(r.v) + '</b><em>' + pct(r.v).toFixed(1) + '%</em></div>';
+      }).join('')
+    + '</div>'
+    + '<div class="sfk-note">ส่งไปแล้ว <b>' + f(total) + '</b> จาก ' + f(need) + ' รอบ'
+    +   (nDays ? ' · เฉลี่ยวันละ <b>' + (Math.round(total / nDays * 10) / 10) + '</b> ครั้ง' : '')
+    +   '</div>'
+    /* สามตัวเลขฝั่งเนื้อหา — คนละเรื่องกับการส่ง จึงแยกกล่อง ไม่เอาไปปนแถวบน */
+    + '<div class="sfk-three">'
+    +   '<span class="sfk-m ok"><b>' + (avg == null ? '—' : avg + '%') + '</b>คะแนนเฉลี่ย</span>'
+    +   '<span class="sfk-m miss"><b>' + f(fail) + '</b>ข้อที่ตก'
+    +     (nFailBr && rosterN > 1 ? ' · ' + nFailBr + ' สาขา' : '') + '</span>'
+    +   '<span class="sfk-m na"><b>' + f(na) + '</b>N/A · ' + naPct + '%</span>'
+    + '</div>'
+    + '<div class="sfk-note">ผ่าน <b>' + f(pass) + '</b> จาก ' + f(checked) + ' ข้อที่ตัดสินผ่าน/ไม่ผ่าน'
+    +   ' · ข้อที่ตอบ N/A ไม่ถูกนำมาคิดคะแนน</div>';
 }
 
 // สรุปหมวดที่ตก (รายวัน) — จัดกลุ่มตามหมวดของ Daily checklist (จุดเตรียมงาน/PASTA/STEAK…)
@@ -14211,6 +14232,52 @@ const SFRep = {
 .sfrep-pv b{color:var(--text-primary,#111);font-weight:800}
 .sfrep-pv.warn{background:#FEF3C7;color:#78350F}
 .sfrep-pv.warn b{color:#78350F}
+
+/* ═══ ภาพรวมการส่ง — กล่องเดียว ตั้งต้นที่ "รอบที่ควรส่ง" ═══
+   ของเดิมเป็นการ์ดสี่ใบเรียงกัน ซึ่งบังคับให้เอาตัวเลขคนละฐานมาวางข้างกัน
+   กล่องเดียวทำให้เห็นว่าทั้งสามตัวมาจากฐานเดียวกันและบวกกันได้ 100% */
+#dashboard-screen #sf-cl-kpis { display:block; background:none; border:0; border-radius:0; }
+.sfk {
+  background:var(--surface); border:1px solid var(--border); border-radius:var(--r-lg);
+  padding:14px 15px;
+}
+.sfk-empty {
+  color:var(--text-tertiary); font-size:13px; font-weight:600; text-align:center; padding:22px 15px;
+}
+.sfk-empty s { text-decoration:none; display:block; font-size:11.5px; margin-top:4px; opacity:.8; }
+.sfk-top { display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; margin-bottom:11px; }
+.sfk-top b { font-size:27px; font-weight:800; line-height:1; letter-spacing:-.025em; font-variant-numeric:tabular-nums; }
+.sfk-top em { font-style:normal; font-size:12px; font-weight:700; color:var(--text-secondary); }
+.sfk-top s { text-decoration:none; margin-left:auto; font-size:11.5px; font-weight:700; color:var(--text-tertiary); }
+.sfk-bar { display:flex; height:13px; border-radius:var(--r-pill); overflow:hidden; background:var(--bg-strong); margin-bottom:12px; }
+.sfk-bar i { display:block; height:100%; }
+.sfk-bar i.ok { background:var(--success); }
+.sfk-bar i.late { background:#C87914; }
+.sfk-bar i.miss { background:var(--danger); }
+.sfk-r { display:flex; align-items:center; gap:10px; padding:8px 0; border-top:1px solid var(--border); }
+.sfk-r:first-of-type { border-top:0; padding-top:0; }
+.sfk-r u { width:9px; height:9px; border-radius:3px; flex:0 0 auto; text-decoration:none; }
+.sfk-r span { flex:1; min-width:0; font-size:13px; font-weight:700; color:var(--text-secondary); }
+.sfk-r b { font-size:16px; font-weight:800; letter-spacing:-.02em; font-variant-numeric:tabular-nums; }
+.sfk-r em { font-style:normal; font-size:12.5px; font-weight:800; font-variant-numeric:tabular-nums;
+  min-width:56px; text-align:right; }
+.sfk-r.ok u { background:var(--success); } .sfk-r.ok b, .sfk-r.ok em { color:var(--success); }
+.sfk-r.late u { background:#C87914; } .sfk-r.late b, .sfk-r.late em { color:#C87914; }
+.sfk-r.miss u { background:var(--danger); } .sfk-r.miss b, .sfk-r.miss em { color:var(--danger); }
+.sfk-note { font-size:11.5px; font-weight:600; color:var(--text-tertiary); line-height:1.6; margin:9px 2px 0; }
+.sfk-note b { color:var(--text-secondary); font-weight:800; }
+.sfk-three { display:flex; gap:8px; margin-top:14px; }
+.sfk-m { flex:1; min-width:0; display:flex; flex-direction:column; gap:2px; padding:12px 13px;
+  border-radius:var(--r-md); font-size:11px; font-weight:700; line-height:1.3; }
+.sfk-m b { font-size:19px; font-weight:800; letter-spacing:-.02em; font-variant-numeric:tabular-nums; }
+.sfk-m.ok { background:var(--success-bg); color:var(--success); }
+.sfk-m.miss { background:var(--danger-bg); color:var(--danger); }
+.sfk-m.na { background:var(--bg-strong); color:var(--text-secondary); }
+@media (max-width:520px){
+  .sfk-three { flex-wrap:wrap; }
+  .sfk-m { flex:1 1 calc(50% - 4px); }
+  .sfk-top b { font-size:24px; }
+}
 </style>
 <!-- ══════════ กล่องออกรายงาน (ซานตาเฟ่) ══════════ -->
 <div class="sfrep-ov" id="sfrep-ov">
