@@ -3934,6 +3934,11 @@ input[type="time"].jd-form-input {
   font-size: 12px; font-weight: 600; color: #7A5818;
   line-height: 1.35;
 }
+/* ในหน้าประวัติ เหตุผลเป็นบรรทัดจาง ๆ ใต้ชื่อสาขา ไม่ใช่กล่องเต็มความกว้าง
+   กล่องสีทำให้แถวที่ส่งช้าดูหนักกว่าแถวที่ตกข้อ ทั้งที่ตกข้อคือเรื่องใหญ่กว่า */
+#daily-list .dhc-late { margin:3px 0 0 0; padding:0; background:none; border-radius:0;
+  color:var(--text-tertiary); font-size:11.5px; font-weight:600; }
+#daily-list .dhc-late .material-symbols-rounded { font-size:14px; margin-top:1px; }
 .dhc-late .material-symbols-rounded { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
 .dhc-late b { font-weight: 800; }
 .daily-empty {
@@ -5105,7 +5110,7 @@ html.fab-sso-pending #login-screen { display: none !important; }
 .sfs-h-t { font-size:13px; font-weight:800; color:var(--text); }
 .sfs-h-s { font-size:11.5px; font-weight:600; color:var(--text-tertiary); }
 .sfs-list { display:flex; flex-direction:column; gap:7px; }
-/* หัวกลุ่มในการ์ด — แยก "ต้องตามก่อน" กับ "ส่งครบที่สุด" ออกจากกันให้เห็นว่าคนละเรื่อง
+/* หัวกลุ่มในการ์ด — แยก "ขาดส่งมากที่สุด" กับ "ส่งครบที่สุด" ออกจากกันให้เห็นว่าคนละเรื่อง
    ไม่ใช้ .sfc-sec เพราะอันนั้นเป็นหัวข้อระดับหน้า ไม่ใช่หัวข้อในการ์ด */
 .sfs-grp { display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; margin:16px 0 9px; }
 .sfs-grp:first-child { margin-top:0; }
@@ -5467,6 +5472,9 @@ body.in-audit #ck-page-head { display:none; }
 .ck-chip .material-symbols-rounded { font-size:12px; }
 .ck-chip.ok  { background:rgba(45,122,74,.10);  border-color:transparent; color:var(--success); }
 .ck-chip.bad { background:rgba(199,50,35,.09);  border-color:transparent; color:var(--danger); }
+/* ส่งช้าสีส้ม · ตกข้อสีแดง — ของเดิมเป็นสีแดงทั้งคู่ แถวที่แค่ส่งช้า
+   จึงดูหนักเท่าแถวที่ตรวจแล้วไม่ผ่าน ทั้งที่คนละเรื่องและคนละความเร่งด่วน */
+.ck-chip.late { background:var(--warning-bg); border-color:transparent; color:#8A5A12; }
 /* ปุ่มแอดมินในแถว — ย่อให้เท่าไอคอน ไม่ให้ไปแย่งน้ำหนักกับคะแนน
    คนที่ไม่ใช่แอดมินไม่เห็นปุ่มนี้อยู่แล้ว จึงไม่ควรกินที่ของทุกคน */
 .ck-row .jd-history-actions { display:flex; gap:5px; flex:0 0 auto; margin-left:2px; }
@@ -9899,10 +9907,10 @@ function _sfDailySummaryHTML(dailies) {
     '</div>';
   };
 
-  const N = 10;
+  const N = 5;
   var out;
   if (rows.length <= N * 2) {
-    /* น้อยกว่ายี่สิบสาขา ตัดหัวท้ายแล้วก็แทบไม่เหลืออะไรตรงกลาง ไล่ทั้งหมดไปเลย */
+    /* ไม่เกินสิบสาขา ตัดหัวท้ายแล้วก็แทบไม่เหลืออะไรตรงกลาง ไล่ทั้งหมดไปเลย */
     out = '<div class="sfs-list">' + rows.map(buildRow).join('') + '</div>';
   } else {
     /* rows เรียงตาม "ต้องตามก่อน" อยู่แล้ว หัวลิสต์คือกลุ่มที่ต้องตาม
@@ -9914,12 +9922,10 @@ function _sfDailySummaryHTML(dailies) {
       .sort(function (a, b) { return (b.pct - a.pct) || (b.sent - a.sent); })
       .slice(0, N);
     var mid = rows.length - worst.length - best.length;
-    out = '<div class="sfs-grp"><span class="sfs-grp-t bad">ต้องตามก่อน ' + worst.length + ' สาขา</span>'
-        + '<span class="sfs-grp-s">ขาดส่งมากที่สุด</span></div>'
+    out = '<div class="sfs-grp"><span class="sfs-grp-t bad">ขาดส่งมากที่สุด ' + worst.length + ' สาขา</span></div>'
       + '<div class="sfs-list">' + worst.map(buildRow).join('') + '</div>'
       + (mid > 0 ? '<div class="sfc-cut">อีก ' + mid.toLocaleString('th-TH') + ' สาขาอยู่ระหว่างสองกลุ่มนี้</div>' : '')
-      + '<div class="sfs-grp"><span class="sfs-grp-t ok">ส่งครบที่สุด ' + best.length + ' สาขา</span>'
-        + '<span class="sfs-grp-s">เรียงจากส่งครบมากที่สุด</span></div>'
+      + '<div class="sfs-grp"><span class="sfs-grp-t ok">ส่งครบที่สุด ' + best.length + ' สาขา</span></div>'
       + '<div class="sfs-list">' + best.map(buildRow).join('') + '</div>';
   }
   return head + out;
@@ -10413,7 +10419,12 @@ function renderDailyList() {
   const _bigList = list.length > 40;
   container.innerHTML = dates.map((date, di) => {
     const dayItems = byDate[date];
-    const cards = dayItems.map(d => {
+    /* วันที่มีหลายสาขา แยกเป็นบล็อก "เปิดร้าน" กับ "ปิดร้าน" แล้วเขียนชื่อรอบไว้หัวบล็อกทีเดียว
+       ของเดิมเป็นแถวติดกันห้าสิบกว่าแถวที่หน้าตาเหมือนกันหมด ไล่สายตาแล้วหลงว่าอยู่ตรงไหน
+       พอมีหัวบล็อกแล้วก็ไม่ต้องมีไอคอนรอบซ้ำทุกแถวอีก ชื่อสาขาได้ความกว้างคืนไปเต็ม ๆ
+       วันละไม่กี่รอบ (บัญชีสาขา) ไม่ต้องแบ่ง หัวบล็อกจะเยอะกว่าของจริง */
+    const byShift = dayItems.length > 4;
+    const rowOf = d => {
       const totalItems = (d.items || []).length;
       const passItems = (d.items || []).filter(i => i.status === 'pass').length;
       const failItems = (d.items || []).filter(i => i.status === 'fail').length;
@@ -10429,8 +10440,12 @@ function renderDailyList() {
       const scorePct = denom > 0 ? (passItems / denom * 100) : 0;
       const scoreColor = scorePct >= 90 ? 'var(--success)' : scorePct >= 70 ? '#C77800' : 'var(--danger)';
       const late = _isDailyLate(d);
+      /* เหตุผลที่ส่งช้า — เป็นบรรทัดต่อท้ายแถว ไม่ใช่กล่องถมสี
+         แถวมีป้าย "เกินเวลา" อยู่แล้ว การเขียนคำว่า "ตรวจช้า (เกินเวลา)" นำหน้าเหตุผลอีก
+         คือบอกเรื่องเดิมสองครั้ง เหลือแต่เหตุผลซึ่งเป็นสิ่งเดียวที่ยังไม่รู้
+         วันที่มีสาขาส่งช้ายี่สิบสาขาจะได้ไม่กลายเป็นกล่องสีส้มยี่สิบใบเรียงกัน */
       const lateHtml = (late && (d.lateReason || '').trim())
-        ? `<div class="dhc-late"><span class="material-symbols-rounded">schedule</span><span><b>ตรวจช้า (เกินเวลา):</b> ${escapeHtml(d.lateReason)}</span></div>`
+        ? `<div class="dhc-late"><span class="material-symbols-rounded">schedule</span><span>${escapeHtml(d.lateReason)}</span></div>`
         : '';
 
       const shiftClass = d.shift === 'open' ? 'shift-open' : 'shift-close';
@@ -10450,21 +10465,36 @@ function renderDailyList() {
       const shiftThaiFull = d.shift === 'open' ? 'เปิดร้าน' : 'ปิดร้าน';
       const rowTone = failItems > 0 ? 'r-bad' : (pending > 0 ? '' : 'r-ok');
       const sentAt = _dailySentLabel(d).replace(' · ส่ง ', '').replace(' น.', '');
-      const lead = isBranch ? shiftThaiFull : branchShort(d.branchCode, d.branchName);
+      const lead = (isBranch && !byShift) ? shiftThaiFull : branchShort(d.branchCode, d.branchName);
       const isFull = scorePct >= 99.5 && failItems === 0 && pending === 0;
       return `<div class="ck-row ${rowTone}" onclick="showDailyDetail('${escapeAttr(d.id)}')">
         <div class="ck-row-top">
-          <span class="material-symbols-rounded ck-row-ic" title="${shiftThaiFull}">${shiftIcon}</span>
+          ${byShift ? '' : `<span class="material-symbols-rounded ck-row-ic" title="${shiftThaiFull}">${shiftIcon}</span>`}
           <span class="ck-row-nm">${escapeHtml(lead)}</span>
           ${sentAt ? `<span class="ck-row-tm">${escapeHtml(sentAt)}</span>` : ''}
-          ${late ? '<span class="ck-chip bad">เกินเวลา</span>' : ''}
+          ${late ? '<span class="ck-chip late">เกินเวลา</span>' : ''}
           ${failItems > 0 ? `<span class="ck-chip bad">ตก ${failItems}</span>` : ''}
           ${pending > 0 ? `<span class="ck-chip">รอ ${pending}</span>` : ''}
           <span class="ck-row-pc${isFull ? ' full' : ''}"${isFull ? '' : ` style="color:${scoreColor};"`}>${scorePct.toFixed(0)}<small>%</small></span>
         </div>
         ${lateHtml}
       </div>`;
-    }).join('');
+    };
+
+    let cards;
+    if (byShift) {
+      cards = ['open', 'close'].map(function (sh) {
+        const part = dayItems.filter(function (x) { return (x.shift === 'close' ? 'close' : 'open') === sh; });
+        if (!part.length) return '';
+        return '<div class="dh-sh"><span class="material-symbols-rounded">'
+          + (sh === 'open' ? 'wb_sunny' : 'bedtime') + '</span>'
+          + (sh === 'open' ? 'เปิดร้าน' : 'ปิดร้าน')
+          + '<em>' + part.length + ' รอบ</em></div>'
+          + '<div class="dh-rows">' + part.map(rowOf).join('') + '</div>';
+      }).join('');
+    } else {
+      cards = '<div class="dh-rows">' + dayItems.map(rowOf).join('') + '</div>';
+    }
 
     /* รอบที่ยังไม่ส่งของวันนั้น — ของเดิมไม่แสดงเลย เห็นแต่รอบที่ส่งแล้ว
        วันที่ส่งแค่รอบเดียวจึงหน้าตาเหมือนวันที่ส่งครบ ต้องนับเองว่าขาดรอบไหน
@@ -10497,7 +10527,7 @@ function renderDailyList() {
     const sumBits = [];
     if (!roundTxt) sumBits.push(dayItems.length + ' รอบ');
     if (!isBranch && !roundTxt) sumBits.push(Object.keys(dayBr).length + ' สาขา');
-    if (dayLate) sumBits.push('<b class="bad">เกินเวลา ' + dayLate + '</b>');
+    if (dayLate) sumBits.push('<b class="late">เกินเวลา ' + dayLate + '</b>');
     if (dayFail) sumBits.push('<b class="bad">ตก ' + dayFail + ' ข้อ</b>');
     const daySum = sumBits.length ? '<span class="dh-sum">' + sumBits.join(' · ') + '</span>' : '';
 
@@ -10513,7 +10543,7 @@ function renderDailyList() {
         ${daySum}
         <span class="material-symbols-rounded dh-chev">expand_more</span>
       </div>
-      <div class="daily-history-cards">${cards}${missHtml}</div>
+      <div class="daily-history-cards">${cards}${missHtml ? `<div class="dh-rows">${missHtml}</div>` : ''}</div>
     </div>`;
   }).join('');
 }
@@ -15082,11 +15112,33 @@ const SFRep = {
 /* ไม่ดันไปชิดขวาแล้ว — ปลายแถวเป็นลูกศรพับ/กาง จำนวนรอบอยู่ต่อจากวันที่ตามลำดับที่อ่าน */
 .dh-round { font-size:11.5px; font-weight:700; color:var(--text-tertiary);
   font-variant-numeric:tabular-nums; }
+/* ── การ์ดวันในหน้าประวัติ ──
+   ให้จังหวะเดียวกันทุกแถว ตา "จับ" ได้ว่าบรรทัดถัดไปเริ่มตรงไหนโดยไม่ต้องหา
+   สามอย่างที่ทำให้นั่งอ่านได้นาน ๆ · แถวสูงเท่ากันทุกแถว · เส้นคั่นบางที่สุดเท่าที่ยังเห็น
+   · ตัวเลขตรงคอลัมน์เดียวกันทั้งใบ (เวลาและคะแนนใช้เลขความกว้างเท่ากัน) */
+#daily-list .daily-history-group { padding:13px 14px 6px; border-color:var(--border); }
+#daily-list .daily-history-date { font-size:15px; margin-bottom:2px; padding-bottom:10px; }
+/* หัวบล็อกรอบ — เปิดร้าน/ปิดร้าน เขียนทีเดียวแทนไอคอนซ้ำทุกแถว */
+.dh-sh { display:flex; align-items:center; gap:6px; margin:12px 0 2px;
+  font-size:11.5px; font-weight:800; color:var(--text-secondary); letter-spacing:.01em; }
+.dh-sh .material-symbols-rounded { font-size:15px; color:var(--text-tertiary); }
+.dh-sh em { font-style:normal; font-weight:600; color:var(--text-tertiary);
+  font-variant-numeric:tabular-nums; }
+.dh-sh em::before { content:'· '; }
+/* เส้นคั่นระหว่างแถว — บางที่สุดเท่าที่ยังนำสายตาข้ามจากชื่อสาขาไปถึงคะแนนได้
+   ไม่ใส่ให้แถวสุดท้าย ไม่งั้นจะกลายเป็นขอบล่างของบล็อกซ้ำกับที่การ์ดมีอยู่แล้ว */
+#daily-list .dh-rows .ck-row { padding:10px 2px; }
+#daily-list .dh-rows .ck-row + .ck-row { border-top:1px solid var(--border); }
+#daily-list .ck-row-nm { font-size:13px; }
+#daily-list .ck-row-tm { font-size:12px; }
+
 /* สรุปของวันบนหัววัน + ลูกศรพับ/กาง */
 .dh-sum { font-size:11.5px; font-weight:600; color:var(--text-tertiary);
   font-variant-numeric:tabular-nums; letter-spacing:0; }
 .dh-sum b { font-weight:800; }
 .dh-sum b.bad { color:var(--danger); }
+/* ส่งช้าสีส้ม · เรื่องที่หนักกว่าถึงจะได้สีแดง */
+.dh-sum b.late { color:var(--warning); }
 /* หัววันซ่อนไอคอนทุกตัวอยู่ (ไอคอนปฏิทินเดิม) ลูกศรพับต้องดึงกลับมาให้เห็น */
 .daily-history-date .material-symbols-rounded.dh-chev { display:inline-block; }
 .dh-chev { margin-left:auto; font-size:20px; color:var(--text-tertiary); flex:0 0 auto;
