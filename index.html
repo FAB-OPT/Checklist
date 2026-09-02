@@ -5466,8 +5466,9 @@ body.in-audit #ck-page-head { display:none; }
 .ck-prog { background:var(--surface); border-bottom:1px solid var(--border); padding:11px 15px;
   position:sticky; top:0; z-index:52; margin:0 -14px 0; }
 .ck-prog-top { display:flex; align-items:baseline; gap:8px; margin-bottom:7px; flex-wrap:wrap; }
-.ck-prog-t { font-size:14.5px; font-weight:800; order:1; }
-.ck-prog-c { margin-left:auto; order:2; font-size:12px; font-weight:800; color:var(--text-secondary);
+.ck-prog-t { font-size:19px; font-weight:800; order:1; letter-spacing:-.02em;
+  font-variant-numeric:tabular-nums; line-height:1.1; }
+.ck-prog-c { margin-left:auto; order:3; font-size:11.5px; font-weight:700; color:var(--text-tertiary);
   font-variant-numeric:tabular-nums; }
 .ck-prog-tr { height:5px; border-radius:3px; background:color-mix(in srgb, var(--primary) 10%, #E9E7E5); overflow:hidden; }
 .ck-prog-tr i { display:block; height:100%; border-radius:3px; background:var(--primary); transition:width .25s; }
@@ -6046,6 +6047,13 @@ body.in-audit #ck-page-head { display:none; }
     <div id="daily-form-screen" style="display:none;">
       <!-- การ์ดหัวฟอร์มเดิมบอก "เช็ค Open" กับวันที่ ซึ่งซ้ำกับการ์ดความคืบหน้าข้างล่าง
            ที่บอกชื่อรอบ สาขา และขนาดฟอร์มครบแล้ว · เอาออกทั้งใบ -->
+      <!-- หัวเรื่องของฟอร์ม — ชื่อรอบ ขนาดฟอร์ม และสาขาที่กำลังกรอกให้
+           อยู่นอกก้อน sticky เพราะเป็นข้อมูลที่อ่านครั้งเดียวตอนเปิด -->
+      <div class="sfc-sec"><span class="sfc-sec-bar"></span>
+        <span class="sfc-sec-t" id="daily-form-shift">เปิดร้าน</span>
+        <span class="sfc-sec-x" id="daily-form-size"></span>
+        <span class="sfc-sec-d" id="daily-form-where"></span></div>
+
       <!-- ห่อความคืบหน้ากับแถบหมวดไว้ด้วยกัน จะได้เลื่อนตามจอเป็นก้อนเดียว
            ของเดิมต่างคน sticky คนละ top พอการ์ดความคืบหน้าสูงขึ้นก็ทับกัน -->
       <div class="ck-stick">
@@ -9015,8 +9023,24 @@ function _sfItemKpisHTML(dailies) {
    BZM มีข้อมูลแค่โซนตัวเอง จึงเขียนได้เฉพาะช่องโซนของตัวเอง (merge)
    ห้ามเขียนค่าเฉลี่ยทั้งแบรนด์ ไม่งั้นจะกลายเป็นค่าเฉลี่ยของโซนเดียวปลอมเป็นทั้งแบรนด์ */
 const CK_SUMMARY_COLLECTION = 'dailySummary';
-let _ckSummary = {};
+/* เก็บใบสรุปที่โหลดมาแล้วลงเครื่องด้วย — รอบหน้าเปิดมาแถบเทียบขึ้นทันที
+   ไม่ต้องรอ Firestore ตอบก่อนแล้วค่อยวาดใหม่ ซึ่งเป็นเหตุที่แถบ "ขึ้นช้า" */
+const CK_SUMMARY_CACHE_KEY = 'ck_summary_cache_v1';
+let _ckSummary = (function () {
+  try { return JSON.parse(localStorage.getItem(CK_SUMMARY_CACHE_KEY) || '{}') || {}; }
+  catch (_) { return {}; }
+})();
 let _ckSummaryAsked = {};
+function _ckSaveSummaryCache() {
+  try {
+    /* เก็บแค่ 6 ใบล่าสุด ไม่ให้กินโควตา localStorage ที่ใช้ร่วมกับระบบอื่น */
+    const keys = Object.keys(_ckSummary).sort().slice(-6);
+    const keep = {};
+    keys.forEach(function (k) { keep[k] = _ckSummary[k]; });
+    _ckSummary = keep;
+    localStorage.setItem(CK_SUMMARY_CACHE_KEY, JSON.stringify(keep));
+  } catch (_) {}
+}
 
 function _ckSummaryId(month) { return ckViewBrandKey() + '_' + month; }
 function _ckMonthLabel(m) {
@@ -9119,6 +9143,7 @@ async function _ckWriteSummary(month) {
     await firebaseDb.collection(CK_SUMMARY_COLLECTION).doc(id).set(payload, { merge: true });
     _ckSummary[id] = Object.assign({}, prev || {}, payload,
       { zones: Object.assign({}, (prev && prev.zones) || {}, payload.zones || {}) });
+    _ckSaveSummaryCache();
   } catch (e) { /* เขียนไม่ได้ก็ไม่เป็นไร แถบเทียบแค่ไม่อัปเดต ไม่ทำให้หน้าพัง */ }
 }
 
@@ -9131,9 +9156,14 @@ async function _ckLoadSummary(month) {
     const snap = await firebaseDb.collection(CK_SUMMARY_COLLECTION).doc(id).get();
     if (snap.exists) {
       _ckSummary[id] = snap.data() || {};
+      _ckSaveSummaryCache();
       if (typeof renderSfChecklistTab === 'function') renderSfChecklistTab();
     }
-  } catch (e) { /* อ่านไม่ได้ก็ไม่ต้องมีแถบเทียบ */ }
+  } catch (e) {
+    /* โหลดพลาด (เน็ตหลุด/ช้า) — ปลดล็อกให้ลองใหม่รอบหน้า
+       ของเดิมกันไว้ไม่ให้ยิงซ้ำ ซึ่งแปลว่าพลาดครั้งเดียวคือไม่มีแถบเทียบทั้งเซสชัน */
+    delete _ckSummaryAsked[id];
+  }
 }
 
 /* ═══ แถบเทียบ ═══
@@ -10709,29 +10739,41 @@ function scrollToDailySection(idx) {
 
 /* แถบความคืบหน้า — นับข้อที่ตอบแล้วจากทั้งชุด (ผ่าน/ไม่ผ่าน/N/A ถือว่าตอบแล้ว)
    ชื่อบนแถบบอกว่ากำลังเช็คกะไหน เพราะฟอร์มสองกะหน้าตาเหมือนกันจนสลับกันได้ */
+/* ═══ การ์ดความคืบหน้า ═══
+   นับเป็น "หมวดที่กำลังทำ" ไม่ใช่ทั้งฟอร์ม — คนกรอกไล่ทีละหมวด
+   "13 / 43" ของทั้งฟอร์มไม่ได้บอกว่าเหลืออีกไกลแค่ไหนกว่าจะจบหมวดนี้
+   ซึ่งเป็นระยะที่คนตัดสินใจว่าจะทำต่อหรือพักตรงนี้
+   หมวดที่กำลังทำ = หมวดแรกที่ยังตอบไม่ครบ ตอบครบหมดแล้วก็ใช้หมวดสุดท้าย */
 function _paintDailyProgress() {
   if (!currentDaily) return;
   const items = currentDaily.items || [];
-  const done = items.filter(i => i.status === 'pass' || i.status === 'fail' || i.status === 'na').length;
+  const secs = _dailySections(items);
+  const answered = it => it && (it.status === 'pass' || it.status === 'fail' || it.status === 'na');
+
+  let cur = secs.find(s => s.items.some(it => !answered(it))) || secs[secs.length - 1] || { name: '', items: [] };
+  const curDone = cur.items.filter(answered).length;
+  const curAll = cur.items.length;
+
   const t = document.getElementById('daily-prog-t');
   const c = document.getElementById('daily-prog-c');
   const i = document.getElementById('daily-prog-i');
-  if (t) t.textContent = currentDaily.shift === 'open' ? 'เปิดร้าน' : 'ปิดร้าน';
-  if (c) c.textContent = done + ' / ' + items.length;
-  if (i) i.style.width = (items.length ? (done / items.length * 100) : 0) + '%';
-
-  /* บรรทัดกลาง — สาขาที่กำลังตรวจ กับขนาดของฟอร์ม
-     คนตรวจแทนสาขาอื่นได้ ต้องเห็นว่ากรอกให้สาขาไหนอยู่ */
-  const secs = _dailySections(items);
+  if (t) t.textContent = curDone + ' / ' + curAll;
+  if (c) c.textContent = 'ทั้งฟอร์ม ' + items.length + ' ข้อ · ' + secs.length + ' หมวด';
+  if (i) i.style.width = (curAll ? (curDone / curAll * 100) : 0) + '%';
   const x = document.getElementById('daily-prog-x');
-  if (x) {
-    /* ไม่ใช้ branchLabel() เพราะมันเติมชื่อแบรนด์นำหน้า ซึ่งซ้ำกับหัวจอที่บอกอยู่แล้ว */
-    const bn = currentDaily.branchName
+  if (x) x.textContent = 'หมวด ' + cur.name;
+
+  /* หัวเรื่องด้านบน — ชื่อรอบ ขนาดฟอร์ม และสาขาที่กรอกให้ */
+  const sh = document.getElementById('daily-form-shift');
+  if (sh) sh.textContent = currentDaily.shift === 'open' ? 'เปิดร้าน' : 'ปิดร้าน';
+  const sz = document.getElementById('daily-form-size');
+  if (sz) sz.textContent = items.length + ' ข้อ';
+  const wh = document.getElementById('daily-form-where');
+  if (wh) {
+    wh.textContent = currentDaily.branchName
       ? (currentDaily.branchCode + ' ' + currentDaily.branchName)
       : String(currentDaily.branchCode || '');
-    x.textContent = (bn ? bn + ' · ' : '') + items.length + ' ข้อ · ' + secs.length + ' หมวด';
   }
-
 }
 
 function renderDailyForm() {
@@ -14924,8 +14966,7 @@ const SFRep = {
 #ck-hd-tools .header-view-toggle { display:flex; gap:6px; flex-wrap:wrap; }
 
 /* บรรทัดกลางในการ์ดความคืบหน้า — สาขา + ขนาดฟอร์ม */
-.ck-prog-x { flex:0 0 100%; order:3; font-size:11.5px; font-weight:600; color:var(--text-tertiary);
-  margin-top:2px; }
+.ck-prog-x { order:2; font-size:12.5px; font-weight:700; color:var(--text-secondary); }
 
 /* หัวข้อระดับรอง — ใช้กับรายการย่อยในหมวด ตัวเล็กกว่าหัวหมวด เส้นบางกว่า */
 .sfc-sec.sub { border-top-width:1px; padding-top:9px; margin:0 2px 9px; }
