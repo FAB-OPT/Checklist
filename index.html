@@ -14985,7 +14985,10 @@ const SFRep = {
    7 คอลัมน์เรียงตามวันในสัปดาห์ เริ่มวันจันทร์
    ในช่องแบ่งสองแถว เปิด/ปิด พร้อมเวลาที่ส่ง
    จอแคบตัวหนังสือหายเหลือแถบสี เพราะช่องกว้าง ~50px ใส่เวลาไม่ไหว */
-#sf-cl-month .dm-wrap { margin-top:12px; margin-bottom:0; }
+/* margin-bottom:0 เดิมทำให้การ์ดปฏิทินไปติดการ์ด "สรุปการส่ง" ที่อยู่ถัดไปพอดี
+   ขอบสองเส้นชนกันเลยอ่านเป็นกล่องเดียวที่มีเส้นคั่นกลาง ไม่ใช่สองการ์ดคนละเรื่อง
+   (กฎนี้ specificity สูงกว่า .dm-wrap จึงลบระยะที่ตั้งไว้ตรงนั้นทิ้ง) */
+#sf-cl-month .dm-wrap { margin-top:12px; margin-bottom:18px; }
 .dm-dow { display:grid; grid-template-columns:repeat(7,1fr); gap:5px; margin-bottom:5px; }
 .dm-dow span { text-align:center; font-size:10.5px; font-weight:800; color:var(--text-tertiary); }
 .dm-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:5px; }
