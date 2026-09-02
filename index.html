@@ -22,8 +22,14 @@
 })();
 </script>
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="theme-color" content="#1E3A5F">
+<!-- แถบบนของเครื่อง (นาฬิกา/แบตฯ บน iOS · แถบที่อยู่บน Android)
+     เดิมตั้งเป็น black-translucent + น้ำเงิน #1E3A5F ตามธีมเก่าที่หัวแอปเป็นแถบน้ำเงิน
+     พอหัวแอปเปลี่ยนเป็นขาว ตัวหนังสือขาวของ black-translucent เลยไปทับพื้นขาว มองไม่เห็นนาฬิกากับแบต
+     และแถบที่อยู่บน Android ก็ยังน้ำเงินอยู่ทั้งที่ทั้งแอปเป็นเทาอ่อนแล้ว
+     default = ตัวหนังสือเข้มบนพื้นสว่าง · theme-color ขาวให้ต่อเนื่องกับหัวแอป
+     (โหมด default ระบบกันที่ให้แถบบนเอง env(safe-area-inset-top) จะเป็น 0 CSS เดิมจึงยังถูก) -->
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#FFFFFF">
 <title>Operations Checklist</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -7130,7 +7136,9 @@ const CK_PHOTO_RULES = {
   jaedaeng: { pick: 1 },
 };
 function ckPhotoRule(brandKey) {
-  return CK_PHOTO_RULES[brandKey || currentBrand] || { pick: 1 };
+  /* currentBrand คือแบรนด์ตอน "ล็อกอิน" ไม่ใช่แบรนด์ที่กำลังดูอยู่
+     คนสิทธิ์ข้ามแบรนด์กดสลับแบรนด์ ตัวนั้นไม่ขยับตาม กติกาเลยค้างของแบรนด์เดิม */
+  return CK_PHOTO_RULES[brandKey || ckViewBrandKey()] || { pick: 1 };
 }
 /* ข้อนี้ยกเว้นการแนบรูปไหม — ใช้ทั้งตอนสุ่ม ตอนวาดฟอร์ม และตอนตรวจก่อนบันทึก
    ต้องเป็นฟังก์ชันเดียวกันทั้งสามที่ ไม่งั้นฟอร์มไม่ขอรูปแต่ตอนกดส่งกลับบล็อก */
@@ -7315,13 +7323,13 @@ function ckCutoffMin(branchCode, shift) {
    ยามะจังกับเจ๊แดงไม่ได้ตั้ง cutoff ไว้ คำว่า "ตรงเวลา/สาย" จึงไม่มีความหมายกับสองแบรนด์นี้
    ต้องซ่อนป้าย คอลัมน์ และหมายเหตุทิ้งไปเลย ไม่ใช่โชว์เลข 0 ค้างไว้ให้คนอ่านนึกว่าไม่มีใครส่งสาย */
 function ckHasLate(brandKey) {
-  const b = CK_BRANDS[brandKey || currentBrand];
+  const b = CK_BRANDS[brandKey || ckViewBrandKey()];
   return !!(b && b.cutoff);
 }
 /* ข้อความอธิบายเวลาตัด — สร้างจากค่าจริงของแบรนด์ ไม่ฮาร์ดโค้ด
    ของเดิมเขียนเวลาซานตาเฟ่ตายตัวไว้ในรายงาน ออกรายงานยามะจังจะได้ข้อความที่ไม่จริง */
 function ckCutoffText(brandKey) {
-  const c = (CK_BRANDS[brandKey || currentBrand] || {}).cutoff;
+  const c = (CK_BRANDS[brandKey || ckViewBrandKey()] || {}).cutoff;
   if (!c) return '';
   const f = m => String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
   return 'รอบเปิดหลัง ' + f(c.open) + ' น. รอบปิดหลัง ' + f(c.close) + ' น.';
@@ -10616,7 +10624,10 @@ async function startDailyShift(shift) {
   if (existing && Array.isArray(existing.requiredPhotos) && existing.requiredPhotos.length) {
     requiredPhotos = existing.requiredPhotos.slice();
   } else {
-    const pick = ckPhotoRule().pick;
+    /* ยึดแบรนด์จากรหัสสาขาในใบ เหมือนที่ ckCutoffMin ทำ
+       เปิดใบของอีกแบรนด์มาแก้ กติกาต้องเป็นของใบนั้น ไม่ใช่ของหน้าจอ */
+    const _formBrand = ckBrandOfBranch(_target.code);
+    const pick = ckPhotoRule(_formBrand).pick;
     requiredPhotos = [];
     let _gi = 0;
     template.forEach(sec => {
@@ -10624,7 +10635,7 @@ async function startDailyShift(shift) {
       const pool = [];
       sec.items.forEach((raw, i) => {
         const txt = (raw && typeof raw === 'object') ? raw.text : raw;
-        if (!ckPhotoExempt(txt)) pool.push(_gi + i);
+        if (!ckPhotoExempt(txt, _formBrand)) pool.push(_gi + i);
       });
       for (let k = pool.length - 1; k > 0; k--) {
         const j = Math.floor(Math.random() * (k + 1));
@@ -10777,6 +10788,7 @@ function _paintDailyProgress() {
 }
 
 function renderDailyForm() {
+  const _formBrand = ckBrandOfBranch(currentDaily.branchCode);
   renderDailySectionTabs();
   _paintDailyProgress();
   const container = document.getElementById('daily-sections-container');
@@ -10803,7 +10815,7 @@ function renderDailyForm() {
       const photos = item.photos || [];
       const isRequired = (currentDaily.requiredPhotos || []).includes(globalIdx);
       // รูปบังคับ: ข้อสุ่ม + ข้อไม่ผ่าน · N/A ไม่ต้องรูป · ข้อที่ยกเว้นไม่ต้องรูปเลยแม้จะตก
-      const showPhotos = !ckPhotoExempt(item.text) && ((isRequired && !isNA) || isFail);
+      const showPhotos = !ckPhotoExempt(item.text, _formBrand) && ((isRequired && !isNA) || isFail);
       let photosHtml = '';
       if (showPhotos) {
         const missing = photos.length === 0;
@@ -10930,7 +10942,8 @@ async function submitDailyShift() {
   }
   const badNote = items.findIndex(it => (it.status === 'fail' || it.status === 'na') && !(it.note || '').trim());
   if (badNote >= 0) { _scrollTo(badNote, 'ระบุเหตุผลไม่ครบ', 'ข้อที่ "ไม่ผ่าน" หรือ "N/A" ต้องระบุเหตุผลก่อนบันทึก'); return; }
-  const failNoPhoto = items.findIndex(it => it.status === 'fail' && !ckPhotoExempt(it.text)
+  const _formBrand = ckBrandOfBranch(currentDaily.branchCode);
+  const failNoPhoto = items.findIndex(it => it.status === 'fail' && !ckPhotoExempt(it.text, _formBrand)
     && (!it.photos || it.photos.length === 0));
   if (failNoPhoto >= 0) { _scrollTo(failNoPhoto, 'ถ่ายรูปไม่ครบ', 'ข้อที่ "ไม่ผ่าน" ต้องถ่ายรูปหลักฐานก่อนบันทึก'); return; }
   // 3) ข้อสุ่มต้องมีรูป — ยกเว้นข้อที่ตอบ N/A (ไม่ต้องแนบรูป)
@@ -10939,7 +10952,7 @@ async function submitDailyShift() {
   const missingPhoto = required.filter(idx => {
     const it = items[idx];
     if (it && it.status === 'na') return false;
-    if (it && ckPhotoExempt(it.text)) return false;
+    if (it && ckPhotoExempt(it.text, _formBrand)) return false;
     return !it || !it.photos || it.photos.length === 0;
   });
   if (missingPhoto.length > 0) { _scrollTo(missingPhoto[0], 'ถ่ายรูปไม่ครบ', `ยังมีข้อที่ต้องถ่ายรูปอีก ${missingPhoto.length} ข้อ`); return; }
