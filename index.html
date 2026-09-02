@@ -12355,7 +12355,6 @@ function _askManager(preset) {
   bodyEl.innerHTML = '<div class="ask-mgr">' +
     '<input type="text" id="ask-mgr-input" class="jd-form-input" autocomplete="name" ' +
       'placeholder="ชื่อผู้รับผิดชอบรอบนี้" value="' + escapeAttr(preset || '') + '">' +
-    '<div class="ask-mgr-hint">ชื่อนี้จะติดไปกับผลตรวจ ใช้ตอนตามเรื่องย้อนหลัง</div>' +
     '<div class="ask-mgr-err" id="ask-mgr-err">ต้องใส่ชื่อก่อนถึงจะเริ่มตรวจได้</div></div>';
   const okOrig = okBtn.textContent, cancelOrig = cancelBtn.textContent, okCls = okBtn.className;
   /* ปุ่มตกลงมี onclick="closeModal()" เขียนไว้ในแท็ก ซึ่งทำงานก่อน listener ที่เพิ่มทีหลังเสมอ
@@ -14991,7 +14990,6 @@ const SFRep = {
 /* ป๊อปอัปถามชื่อผู้ตรวจ */
 .ask-mgr { text-align:left; }
 .ask-mgr input { width:100%; font-size:15px; }
-.ask-mgr-hint { font-size:11.5px; font-weight:600; color:var(--text-tertiary); margin-top:7px; line-height:1.5; }
 .ask-mgr-err { display:none; font-size:11.5px; font-weight:700; color:var(--danger); margin-top:7px; }
 .ask-mgr-err.show { display:block; }
 /* แถบความคืบหน้ากับแถบหมวดต้องเลื่อนตามจอไปด้วยกัน
