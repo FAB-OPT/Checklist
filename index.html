@@ -5167,7 +5167,10 @@ html.fab-sso-pending #login-screen { display: none !important; }
 
 /* ── ตารางการส่ง · เปิด/ปิดร้าน (รายสาขา + สาเหตุส่งช้า) ── */
 /* ── แถบสรุปทั้งเดือนของสาขา ── */
-.dm-wrap { border:1px solid var(--border); border-radius:14px; background:var(--surface); padding:12px 13px; margin-bottom:12px; }
+/* เว้นล่างมากกว่าบน — ปิดท้ายด้วยบรรทัดอธิบายตัวเล็ก ถ้าเว้นเท่ากันบรรทัดนั้นจะดูหล่นไปติดขอบ
+   และเว้นห่างการ์ดถัดไปให้พอ ไม่งั้นคำอธิบายของปฏิทินไปติดหัวข้อของอีกการ์ดจนดูเป็นก้อนเดียวกัน */
+.dm-wrap { border:1px solid var(--border); border-radius:14px; background:var(--surface);
+  padding:12px 13px 15px; margin-bottom:18px; }
 .dm-head { display:flex; align-items:center; gap:7px; flex-wrap:wrap; margin-bottom:11px; }
 .dm-nav { display:inline-flex; align-items:center; justify-content:center; width:30px; height:30px; padding:0;
   border:1px solid var(--border); border-radius:9px; background:var(--bg); color:var(--text); cursor:pointer; }
@@ -5190,7 +5193,7 @@ html.fab-sso-pending #login-screen { display: none !important; }
 .dm-key-note { margin-left:auto; }
 @media (max-width:640px) {
   .dm-sum { margin-left:0; width:100%; }
-  .dm-key-note { margin-left:0; width:100%; }
+  .dm-key-note { margin-left:0; width:100%; margin-top:2px; line-height:1.5; }
 }
 .sf-tbl-day { margin-bottom:18px; }
 .sf-tbl-day-head { display:flex; align-items:center; gap:6px; font-weight:800; color:var(--text); margin-bottom:8px; font-size:14px; }
@@ -10537,10 +10540,10 @@ function renderDailyList() {
     const collapsed = (_bigList && di > 0) ? ' collapsed' : '';
     return `<div class="daily-history-group${collapsed}">
       <div class="daily-history-date" onclick="this.parentNode.classList.toggle('collapsed')">
-        <span class="material-symbols-rounded">calendar_today</span>
-        <span>${escapeHtml(fmtDateThaiDow(date))}</span>
-        ${roundTxt}
-        ${daySum}
+        <span class="dh-h">
+          <span class="dh-d">${escapeHtml(fmtDateThaiDow(date))}</span>
+          ${roundTxt || daySum ? `<span class="dh-l">${roundTxt}${daySum}</span>` : ''}
+        </span>
         <span class="material-symbols-rounded dh-chev">expand_more</span>
       </div>
       <div class="daily-history-cards">${cards}${missHtml ? `<div class="dh-rows">${missHtml}</div>` : ''}</div>
@@ -15141,12 +15144,23 @@ const SFRep = {
 .dh-sum b.late { color:var(--warning); }
 /* หัววันซ่อนไอคอนทุกตัวอยู่ (ไอคอนปฏิทินเดิม) ลูกศรพับต้องดึงกลับมาให้เห็น */
 .daily-history-date .material-symbols-rounded.dh-chev { display:inline-block; }
-.dh-chev { margin-left:auto; font-size:20px; color:var(--text-tertiary); flex:0 0 auto;
+/* หัววันเป็นสองบรรทัด วันที่บน สรุปล่าง ลูกศรปักขวาไม่ยุ่งกับการตัดบรรทัด
+   ของเดิมทุกอย่างอยู่บรรทัดเดียวแล้วให้ตัดคำเอาเอง วันที่สรุปยาวลูกศรเลยตกไปอยู่บรรทัดใหม่
+   การ์ดใบนั้นสูงกว่าใบอื่นทั้งที่มีข้อมูลเท่ากัน · แยกสองบรรทัดแล้ววันที่ทุกใบตรงกัน
+   กวาดตาหาวันได้จากคอลัมน์เดียว ไม่ต้องอ่านผ่านตัวเลขสรุปก่อน */
+.dh-h { flex:1 1 auto; min-width:0; display:flex; flex-direction:column; gap:3px; }
+.dh-d { font-size:15px; font-weight:800; color:var(--text); letter-spacing:-.02em; }
+.dh-l { display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; }
+.dh-chev { font-size:20px; color:var(--text-tertiary); flex:0 0 auto;
   transition:transform .18s; align-self:center; }
-.daily-history-date { cursor:pointer; flex-wrap:wrap; }
+.daily-history-date { cursor:pointer; align-items:center; gap:10px; font-size:inherit; font-weight:inherit; }
 .daily-history-group.collapsed .daily-history-cards { display:none; }
 .daily-history-group.collapsed .daily-history-date { margin-bottom:0; padding-bottom:0; border-bottom:0; }
 .daily-history-group.collapsed .dh-chev { transform:rotate(-90deg); }
+/* วันที่พับอยู่คือ "แถวในลิสต์" ไม่ใช่การ์ดเต็มใบ — บีบให้เตี้ยลงและชิดกันขึ้น
+   เจ็ดวันจะได้อ่านเป็นลิสต์เดียวต่อกัน ไม่ใช่กล่องเจ็ดใบลอยห่าง ๆ กัน */
+#daily-list .daily-history-group.collapsed { padding:0; margin-bottom:7px; }
+#daily-list .daily-history-group.collapsed .daily-history-date { padding:11px 14px; }
 /* เวลาที่ส่งในแถวประวัติ — เป็นข้อมูลประกอบ ไม่ใช่ชื่อแถว จึงเล็กและจางกว่า
    ชิดขวาก่อนคะแนน ทุกแถวจึงอ่านเป็นคอลัมน์เดียวกันได้ */
 .ck-row-tm { font-size:11.5px; font-weight:600; color:var(--text-tertiary);
