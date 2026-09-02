@@ -5105,6 +5105,15 @@ html.fab-sso-pending #login-screen { display: none !important; }
 .sfs-h-t { font-size:13px; font-weight:800; color:var(--text); }
 .sfs-h-s { font-size:11.5px; font-weight:600; color:var(--text-tertiary); }
 .sfs-list { display:flex; flex-direction:column; gap:7px; }
+/* หัวกลุ่มในการ์ด — แยก "ต้องตามก่อน" กับ "ส่งครบที่สุด" ออกจากกันให้เห็นว่าคนละเรื่อง
+   ไม่ใช้ .sfc-sec เพราะอันนั้นเป็นหัวข้อระดับหน้า ไม่ใช่หัวข้อในการ์ด */
+.sfs-grp { display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; margin:16px 0 9px; }
+.sfs-grp:first-child { margin-top:0; }
+.sfs-grp-t { font-size:12.5px; font-weight:800; color:var(--text); display:inline-flex; align-items:center; gap:6px; }
+.sfs-grp-t::before { content:''; width:8px; height:8px; border-radius:2px; background:var(--border-strong); }
+.sfs-grp-t.bad::before { background:var(--danger); }
+.sfs-grp-t.ok::before  { background:var(--success); }
+.sfs-grp-s { font-size:11px; font-weight:600; color:var(--text-tertiary); }
 .sfs-row { border:1px solid var(--border); border-left:3px solid var(--border-strong);
   border-radius:11px; padding:9px 12px; background:var(--surface); }
 .sfs-row.ok   { border-left-color:var(--success); }
@@ -5362,7 +5371,11 @@ html.fab-sso-pending #login-screen { display: none !important; }
 .sfc-fail-h { display:flex; align-items:baseline; gap:8px; }
 .sfc-fail-t { flex:1; min-width:0; font-size:12.5px; font-weight:700; color:var(--text); line-height:1.35; }
 .sfc-fail-n { flex:0 0 auto; font-size:12.5px; font-weight:800; color:var(--danger);
-  font-variant-numeric:tabular-nums; }
+  font-variant-numeric:tabular-nums; text-align:right; line-height:1.25; }
+/* สัดส่วนจากที่ตกทั้งหมด — วางใต้จำนวนครั้ง ตัวเล็กสีจาง
+   เป็นตัวเลขประกอบ ไม่ใช่ตัวเลขหลัก ถ้าเท่ากันจะแย่งกันว่าอันไหนคือคำตอบ */
+.sfc-fail-n em { font-style:normal; display:block; font-size:10px; font-weight:700;
+  color:var(--text-tertiary); }
 .sfc-fail-tr { height:8px; background:var(--surface-2); border-radius:0 4px 4px 0; overflow:hidden; margin:7px 0 6px; }
 .sfc-fail-tr i { display:block; height:100%; background:var(--danger); border-radius:0 4px 4px 0; }
 .sfc-fail-s { display:flex; align-items:center; gap:8px; flex-wrap:wrap;
@@ -9303,18 +9316,28 @@ function _sfDailyTopNaHTML(dailies) {
       stat[key].br[branchLabel(d.branchCode, d.branchName)] = 1;
     });
   });
-  const rows = Object.keys(stat).map(function (k) { return stat[k]; })
-    .sort(function (a, b) { return b.n - a.n; }).slice(0, 8);
+  const all = Object.keys(stat).map(function (k) { return stat[k]; })
+    .sort(function (a, b) { return b.n - a.n; });
+  const rows = all.slice(0, 5);
   if (!rows.length) return '<div class="jd-dash-empty">ไม่มีข้อที่ตอบ N/A</div>';
   const mx = rows[0].n;
+  /* สัดส่วนจาก N/A ทั้งหมด — กติกาเดียวกับหัวข้อที่ตก จะได้อ่านคู่กันได้ */
+  const allNa = all.reduce(function (s2, r) { return s2 + r.n; }, 0) || 1;
+  const share = function (x) {
+    const v = x / allNa * 100;
+    return (v >= 10 ? Math.round(v) : Math.round(v * 10) / 10) + '%';
+  };
+  const rest = all.length - rows.length;
   const many = _sfTodayScopeRoster().length > 1;
   return '<div class="sfna">' + rows.map(function (r) {
     return '<div class="sfna-r"><div class="sfna-t">' + escapeHtml(r.text) +
       (r.section ? '<s>' + escapeHtml(r.section) + '</s>' : '') + '</div>' +
       '<div class="sfna-b"><i style="width:' + (r.n / mx * 100) + '%"></i></div>' +
       '<div class="sfna-n">' + r.n.toLocaleString('th-TH') +
-        (many ? '<em>' + Object.keys(r.br).length + ' สาขา</em>' : '') + '</div></div>';
-  }).join('') + '</div>';
+        '<em>' + share(r.n) + (many ? ' · ' + Object.keys(r.br).length + ' สาขา' : '') + '</em></div></div>';
+  }).join('') + '</div>' +
+  (rest > 0 ? '<div class="sfc-cut">ห้าข้อนี้รวมกัน ' + share(rows.reduce(function (s2, r) { return s2 + r.n; }, 0)) +
+    ' ของ N/A ทั้งหมด · ยังมีอีก ' + rest.toLocaleString('th-TH') + ' หัวข้อ</div>' : '');
 }
 
 function _sfDailyTopFailsHTML(dailies) {
@@ -9345,9 +9368,17 @@ function _sfDailyTopFailsHTML(dailies) {
   const items = Object.values(itemStats).filter(function (i) { return i.fail > 0; })
     .sort(function (a, b) { return b.fail - a.fail; });
   if (!items.length) return '<div class="jd-dash-empty">ยังไม่มีข้อไม่ผ่าน 🎉</div>';
-  const top = items.slice(0, 8);
+  const top = items.slice(0, 5);
   const maxFail = top[0].fail || 1;
   const rest = items.length - top.length;
+  /* ข้อนี้กินสัดส่วนเท่าไรของ "ข้อที่ตกทั้งหมด"
+     ตัวเลข "ตก 120 ครั้ง" เฉย ๆ ไม่บอกว่าเยอะไหม ถ้าทั้งเดือนตกรวม 200 ครั้ง
+     ข้อเดียวนี้คือกว่าครึ่งของปัญหา แต่ถ้าตกรวม 5,000 ครั้งก็เป็นแค่เศษเดียว */
+  const allFail = items.reduce(function (s2, i) { return s2 + i.fail; }, 0) || 1;
+  const share = function (x) {
+    const v = x / allFail * 100;
+    return (v >= 10 ? Math.round(v) : Math.round(v * 10) / 10) + '%';
+  };
 
   return top.map(function (it, i) {
     const occHtml = (it.occ || []).slice()
@@ -9367,15 +9398,20 @@ function _sfDailyTopFailsHTML(dailies) {
     return '<div class="sfc-fail sf-fail-item" onclick="this.classList.toggle(\'open\')">' +
       '<div class="sfc-fail-h">' +
         '<span class="sfc-fail-t">' + escapeHtml(it.text) + '</span>' +
-        '<span class="sfc-fail-n">' + it.fail + ' ครั้ง</span>' +
+        '<span class="sfc-fail-n">' + it.fail + ' ครั้ง<em>' + share(it.fail) + '</em></span>' +
       '</div>' +
       '<div class="sfc-fail-tr"><i style="width:' + Math.round(it.fail / maxFail * 100) + '%"></i></div>' +
-      '<div class="sfc-fail-s">' + escapeHtml(it.section) + ' · ตก ' + it.fail + ' จาก ' + it.total + ' ครั้งที่ตรวจ' +
+      /* ตัวเลขข้าง ๆ กันสองตัวคนละความหมาย — ป้ายบนคือสัดส่วนจากที่ตกทั้งหมด (ข้อนี้เป็นปัญหาแค่ไหนเทียบข้ออื่น)
+         ในวงเล็บคืออัตราตกของข้อนี้เอง (ตรวจสิบครั้งตกกี่ครั้ง) ข้อที่ตรวจน้อยแต่ตกเกือบทุกครั้งจะเห็นได้จากตัวหลัง */
+      '<div class="sfc-fail-s">' + escapeHtml(it.section) + ' · ตก ' + it.fail + ' จาก ' + it.total.toLocaleString('th-TH') + ' ครั้งที่ตรวจ' +
+        ' (' + (it.total ? (it.fail / it.total * 100 >= 10 ? Math.round(it.fail / it.total * 100)
+                                                          : Math.round(it.fail / it.total * 1000) / 10) : 0) + '%)' +
         '<span class="sf-fail-toggle">กดดูสาขา/วัน <span class="material-symbols-rounded sf-fail-chev">expand_more</span></span></div>' +
       '<div class="sf-fail-occ">' + occHtml + '</div>' +
     '</div>';
   }).join('') +
-  (rest > 0 ? '<div class="sfc-cut">ยังมีอีก ' + rest + ' หัวข้อที่ตกน้อยกว่านี้</div>' : '');
+  (rest > 0 ? '<div class="sfc-cut">ห้าข้อนี้รวมกัน ' + share(top.reduce(function (s2, i) { return s2 + i.fail; }, 0)) +
+    ' ของที่ตกทั้งหมด · ยังมีอีก ' + rest.toLocaleString('th-TH') + ' หัวข้อที่ตกน้อยกว่านี้</div>' : '');
 }
 
 // ── จัดการรายชื่อสาขา (เพิ่ม/ลบ) — sync ผ่าน cloud ให้ทุกเครื่องเห็นตรงกัน ──
@@ -9832,7 +9868,11 @@ function _sfDailySummaryHTML(dailies) {
       ' · ไม่ได้ส่ง ' + tot.miss.toLocaleString() + '</span>' +
   '</div>';
 
-  const body = rows.map(function (r) {
+  /* ── ตัดเหลือหัวกับท้าย ──
+     ของเดิมไล่ทุกสาขาที่ดูอยู่ ซานตาเฟ่ 74 สาขาคือการ์ดสูงเกือบ 9,000px บนมือถือ
+     ปัดจอสิบกว่าครั้งเพื่อผ่านการ์ดใบเดียว และแถวกลาง ๆ ก็ไม่มีใครอ่าน
+     คนเปิดหน้านี้อยากรู้สองอย่าง ใครต้องไปตาม กับใครทำได้ดี ตรงกลางไม่ได้ตอบทั้งสองข้อ */
+  const buildRow = function (r) {
     /* คิดเป็นสัดส่วน ไม่ใช่ "ขาดแม้รอบเดียวก็แดง"
        รอบที่ควรส่งมี 62 รอบต่อเดือน ขาดหนึ่งรอบแล้วแดงทันที = ทุกสาขาแดงหมด สีจึงไม่ได้บอกอะไร */
     const tone = r.pct >= 95 ? 'ok' : (r.pct >= 85 ? 'warn' : 'bad');
@@ -9857,11 +9897,47 @@ function _sfDailySummaryHTML(dailies) {
         '<span class="sfs-avg">เฉลี่ย เปิด ' + avgT(r.openT) + ' · ปิด ' + avgT(r.closeT) + '</span>' +
       '</div>' +
     '</div>';
-  }).join('');
+  };
 
-  return head + '<div class="sfs-list">' + body + '</div>';
+  const N = 10;
+  var out;
+  if (rows.length <= N * 2) {
+    /* น้อยกว่ายี่สิบสาขา ตัดหัวท้ายแล้วก็แทบไม่เหลืออะไรตรงกลาง ไล่ทั้งหมดไปเลย */
+    out = '<div class="sfs-list">' + rows.map(buildRow).join('') + '</div>';
+  } else {
+    /* rows เรียงตาม "ต้องตามก่อน" อยู่แล้ว หัวลิสต์คือกลุ่มที่ต้องตาม
+       ส่วนกลุ่มที่ทำได้ดีเรียงจาก % มากลงมา ไม่ใช่เอาท้ายลิสต์เดิมกลับหัว */
+    var worst = rows.slice(0, N);
+    var used = {};
+    worst.forEach(function (r) { used[r.code] = 1; });
+    var best = rows.filter(function (r) { return !used[r.code]; })
+      .sort(function (a, b) { return (b.pct - a.pct) || (b.sent - a.sent); })
+      .slice(0, N);
+    var mid = rows.length - worst.length - best.length;
+    out = '<div class="sfs-grp"><span class="sfs-grp-t bad">ต้องตามก่อน ' + worst.length + ' สาขา</span>'
+        + '<span class="sfs-grp-s">ขาดส่งมากที่สุด</span></div>'
+      + '<div class="sfs-list">' + worst.map(buildRow).join('') + '</div>'
+      + (mid > 0 ? '<div class="sfc-cut">อีก ' + mid.toLocaleString('th-TH') + ' สาขาอยู่ระหว่างสองกลุ่มนี้</div>' : '')
+      + '<div class="sfs-grp"><span class="sfs-grp-t ok">ส่งครบที่สุด ' + best.length + ' สาขา</span>'
+        + '<span class="sfs-grp-s">เรียงจากส่งครบมากที่สุด</span></div>'
+      + '<div class="sfs-list">' + best.map(buildRow).join('') + '</div>';
+  }
+  return head + out;
 }
 
+/* ชื่อสาขาแบบตัดชื่อแบรนด์ออก — ใช้ในหน้าที่ทั้งหน้าเป็นแบรนด์เดียวอยู่แล้ว
+   "5071 Santa Fe โลตัส จรัญสนิทว…" คำว่า Santa Fe ซ้ำทุกแถวและไม่ได้แยกอะไรออกจากกัน
+   แต่กินความกว้างจนชื่อสาขาจริงซึ่งเป็นสิ่งที่คนกวาดตาหาโดนตัดหายไป */
+function branchShort(code, name) {
+  const full = branchLabel(code, name);
+  const sh = ((typeof ckBrand === 'function' ? ckBrand(ckBrandOfBranch(code)) : null) || {}).short || '';
+  if (!sh) return full;
+  const c = String(code || '');
+  let rest = full.startsWith(c) ? full.slice(c.length).trim() : full;
+  if (rest.toLowerCase().indexOf(sh.toLowerCase()) === 0) rest = rest.slice(sh.length).trim();
+  if (!rest) return full;
+  return (c ? c + ' ' : '') + rest;
+}
 function branchLabel(code, name) {
   if (!code && !name) return '';
   if (!name) return String(code);
@@ -10334,7 +10410,8 @@ function renderDailyList() {
   const isBranch = currentUser.role === 'branch';
   /* กรองจนเหลือสาขาเดียวก็นับรอบที่ขาดได้เหมือนบัญชีสาขา */
   const _oneBranchView = new Set(list.map(d => String(d.branchCode || ''))).size === 1;
-  container.innerHTML = dates.map(date => {
+  const _bigList = list.length > 40;
+  container.innerHTML = dates.map((date, di) => {
     const dayItems = byDate[date];
     const cards = dayItems.map(d => {
       const totalItems = (d.items || []).length;
@@ -10365,21 +10442,25 @@ function renderDailyList() {
          ของเดิมเป็นการ์ดสูงเกือบ 200px ต่อใบ มีทั้งแถบคะแนนและตัวเลขสามช่อง
          ซึ่งเป็นการเล่าคะแนนซ้ำสามรอบ พอมีหลายสาขาต่อวันเลยต้องปัดจอทั้งวัน
          รายละเอียดยังอยู่ครบในหน้ารายละเอียด แตะแถวเข้าไปดูได้ */
-      /* บรรทัดเดียวจบ — ไอคอนรอบ · ชื่อรอบ · เวลาที่ส่ง · คะแนนชิดขวา
-         ของเดิมแยกเป็นสองบรรทัด บรรทัดล่างเป็นชิปสามอัน (เวลา / ครบ / ตรวจช้า)
-         ชิป "ครบ" บอกสิ่งที่คะแนน 100% บอกอยู่แล้ว และชิปเวลาไม่ต้องมีกรอบก็อ่านได้
-         สี่บรรทัดต่อวันเหลือสองบรรทัด เห็นได้หลายวันกว่าเดิมในจอเดียว */
+      /* บรรทัดเดียวจบ — ไอคอนรอบ · สิ่งที่ต่างกันในแถว · เวลา · คะแนนชิดขวา
+         ของเดิมขึ้นต้นทุกแถวด้วยคำว่า "เปิดร้าน"/"ปิดร้าน" ซึ่งไอคอนหน้าแถวบอกอยู่แล้ว
+         พอเป็นบัญชีที่เห็นหลายสาขา ชื่อสาขาจึงถูกดันไปท้ายแถวแล้วโดนตัดทิ้ง
+         ทั้งที่ชื่อสาขาคือสิ่งเดียวที่ต่างกันจริงในวันเดียวกัน — เอาขึ้นหน้าแทน
+         คะแนน 100% ทำเป็นสีจาง เพราะเกือบทุกแถวเป็น 100 สิ่งที่ต้องสะดุดตาคือแถวที่ไม่ใช่ */
       const shiftThaiFull = d.shift === 'open' ? 'เปิดร้าน' : 'ปิดร้าน';
       const rowTone = failItems > 0 ? 'r-bad' : (pending > 0 ? '' : 'r-ok');
       const sentAt = _dailySentLabel(d).replace(' · ส่ง ', '').replace(' น.', '');
+      const lead = isBranch ? shiftThaiFull : branchShort(d.branchCode, d.branchName);
+      const isFull = scorePct >= 99.5 && failItems === 0 && pending === 0;
       return `<div class="ck-row ${rowTone}" onclick="showDailyDetail('${escapeAttr(d.id)}')">
         <div class="ck-row-top">
-          <span class="material-symbols-rounded ck-row-ic">${shiftIcon}</span>
-          <span class="ck-row-nm">${shiftThaiFull}${sentAt ? ' · ' + escapeHtml(sentAt) + ' น.' : ''}${isBranch ? '' : ' · ' + escapeHtml(branchLabel(d.branchCode, d.branchName))}</span>
+          <span class="material-symbols-rounded ck-row-ic" title="${shiftThaiFull}">${shiftIcon}</span>
+          <span class="ck-row-nm">${escapeHtml(lead)}</span>
+          ${sentAt ? `<span class="ck-row-tm">${escapeHtml(sentAt)}</span>` : ''}
           ${late ? '<span class="ck-chip bad">เกินเวลา</span>' : ''}
           ${failItems > 0 ? `<span class="ck-chip bad">ตก ${failItems}</span>` : ''}
           ${pending > 0 ? `<span class="ck-chip">รอ ${pending}</span>` : ''}
-          <span class="ck-row-pc" style="color:${scoreColor};">${scorePct.toFixed(0)}<small>%</small></span>
+          <span class="ck-row-pc${isFull ? ' full' : ''}"${isFull ? '' : ` style="color:${scoreColor};"`}>${scorePct.toFixed(0)}<small>%</small></span>
         </div>
         ${lateHtml}
       </div>`;
@@ -10404,11 +10485,33 @@ function renderDailyList() {
         }).join('');
       }
     }
-    return `<div class="daily-history-group">
-      <div class="daily-history-date">
+    /* สรุปของวันไว้บนหัววัน — พับอยู่ก็ยังรู้ว่าวันนั้นเป็นยังไง ไม่ต้องกางทุกวันเพื่อหาวันที่มีปัญหา
+       ดูสาขาเดียวจะมี roundTxt "N/2 รอบ" อยู่แล้ว ตรงนี้จึงไม่นับรอบซ้ำ เหลือแค่สิ่งที่ผิดปกติ */
+    let dayFail = 0, dayLate = 0;
+    const dayBr = {};
+    dayItems.forEach(function (x) {
+      dayFail += (x.items || []).filter(function (i) { return i && i.status === 'fail'; }).length;
+      if (_isDailyLate(x)) dayLate++;
+      dayBr[String(x.branchCode || '')] = 1;
+    });
+    const sumBits = [];
+    if (!roundTxt) sumBits.push(dayItems.length + ' รอบ');
+    if (!isBranch && !roundTxt) sumBits.push(Object.keys(dayBr).length + ' สาขา');
+    if (dayLate) sumBits.push('<b class="bad">เกินเวลา ' + dayLate + '</b>');
+    if (dayFail) sumBits.push('<b class="bad">ตก ' + dayFail + ' ข้อ</b>');
+    const daySum = sumBits.length ? '<span class="dh-sum">' + sumBits.join(' · ') + '</span>' : '';
+
+    /* วันเก่าพับไว้ก่อนเมื่อรายการยาว — แอดมินดู 7 วัน × 74 สาขา × 2 รอบ คือหน้ายาว 31,000px
+       ปัดจอสามสิบกว่าครั้งกว่าจะถึงวันที่แล้ว วันล่าสุดกางไว้เสมอเพราะเป็นวันที่คนเปิดมาดู
+       บัญชีสาขาที่มีวันละสองรอบไม่เข้าเงื่อนไขนี้ หน้าจึงเหมือนเดิมทุกอย่าง */
+    const collapsed = (_bigList && di > 0) ? ' collapsed' : '';
+    return `<div class="daily-history-group${collapsed}">
+      <div class="daily-history-date" onclick="this.parentNode.classList.toggle('collapsed')">
         <span class="material-symbols-rounded">calendar_today</span>
         <span>${escapeHtml(fmtDateThaiDow(date))}</span>
         ${roundTxt}
+        ${daySum}
+        <span class="material-symbols-rounded dh-chev">expand_more</span>
       </div>
       <div class="daily-history-cards">${cards}${missHtml}</div>
     </div>`;
@@ -14934,7 +15037,10 @@ const SFRep = {
 .sfna-b i { display:block; height:100%; border-radius:999px; background:var(--text-tertiary); }
 .sfna-n { text-align:right; font-size:14px; font-weight:800; font-variant-numeric:tabular-nums; color:var(--text-secondary); }
 .sfna-n em { font-style:normal; display:block; font-size:10px; font-weight:700; color:var(--text-tertiary); }
-@media (max-width:520px){ .sfna-r { grid-template-columns:1fr 54px 52px; gap:8px; } }
+/* คอลัมน์ขวากว้างขึ้นบนมือถือ — ตอนนี้ใต้จำนวนครั้งมีทั้ง % และจำนวนสาขา
+   ของเดิม 52px ทำให้ "19% · 25 สาขา" ตัดคำว่า "สาขา" ตกไปอยู่บรรทัดใหม่เดี่ยว ๆ
+   แถบเทียบเสียความกว้างไปนิดหน่อยแต่ยังอ่านสัดส่วนออก */
+@media (max-width:520px){ .sfna-r { grid-template-columns:1fr 40px 74px; gap:8px; } }
 
 /* แถบเครื่องมือบนสุด — ช่วงเวลา · ขอบเขต · ออกรายงาน */
 .sf-toolbar { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin:0 2px 4px; }
@@ -14973,8 +15079,30 @@ const SFRep = {
   font-size:11.5px; font-weight:600; color:var(--text-tertiary); line-height:1.5; }
 .ck-cut .material-symbols-rounded { font-size:16px; flex:0 0 auto; }
 /* จำนวนรอบของวันนั้น + แถวของรอบที่ยังไม่ส่ง */
-.dh-round { margin-left:auto; font-size:11.5px; font-weight:700; color:var(--text-tertiary);
+/* ไม่ดันไปชิดขวาแล้ว — ปลายแถวเป็นลูกศรพับ/กาง จำนวนรอบอยู่ต่อจากวันที่ตามลำดับที่อ่าน */
+.dh-round { font-size:11.5px; font-weight:700; color:var(--text-tertiary);
   font-variant-numeric:tabular-nums; }
+/* สรุปของวันบนหัววัน + ลูกศรพับ/กาง */
+.dh-sum { font-size:11.5px; font-weight:600; color:var(--text-tertiary);
+  font-variant-numeric:tabular-nums; letter-spacing:0; }
+.dh-sum b { font-weight:800; }
+.dh-sum b.bad { color:var(--danger); }
+/* หัววันซ่อนไอคอนทุกตัวอยู่ (ไอคอนปฏิทินเดิม) ลูกศรพับต้องดึงกลับมาให้เห็น */
+.daily-history-date .material-symbols-rounded.dh-chev { display:inline-block; }
+.dh-chev { margin-left:auto; font-size:20px; color:var(--text-tertiary); flex:0 0 auto;
+  transition:transform .18s; align-self:center; }
+.daily-history-date { cursor:pointer; flex-wrap:wrap; }
+.daily-history-group.collapsed .daily-history-cards { display:none; }
+.daily-history-group.collapsed .daily-history-date { margin-bottom:0; padding-bottom:0; border-bottom:0; }
+.daily-history-group.collapsed .dh-chev { transform:rotate(-90deg); }
+/* เวลาที่ส่งในแถวประวัติ — เป็นข้อมูลประกอบ ไม่ใช่ชื่อแถว จึงเล็กและจางกว่า
+   ชิดขวาก่อนคะแนน ทุกแถวจึงอ่านเป็นคอลัมน์เดียวกันได้ */
+.ck-row-tm { font-size:11.5px; font-weight:600; color:var(--text-tertiary);
+  font-variant-numeric:tabular-nums; flex:0 0 auto; }
+/* คะแนนเต็มทำสีจาง — เกือบทุกแถวเป็น 100% ถ้าเขียวหมดทั้งหน้า
+   สีเขียวก็ไม่ได้บอกอะไร และแถวที่ไม่ใช่ 100 ก็ไม่สะดุดตา */
+.ck-row-pc.full { color:var(--text-tertiary); font-weight:700; }
+
 /* รอบที่ยังไม่ส่ง — เป็นบรรทัดปกติ ให้ป้ายแดงเล็ก ๆ เป็นตัวบอก
    ถมพื้นแดงทั้งแถบทำให้วันที่ขาดรอบเดียวดูหนักกว่าวันที่ไม่ส่งเลยทั้งวัน */
 .ck-row.r-miss { background:none; cursor:default; }
