@@ -906,18 +906,13 @@ body.in-audit { padding-bottom: 0 !important; }
   position: static;
   padding-bottom: calc(16px + env(safe-area-inset-bottom));
 }
-/* ปุ่มลอยเลื่อนไปล่างสุด — โผล่เฉพาะตอนเข้าฟอร์มตรวจบนมือถือ */
-#scroll-bottom-fab { display: none; }
-/* ปุ่มลอยต้องอยู่เหนือแถบปุ่มส่ง ไม่ใช่ทับมุมขวาของปุ่ม */
-body.in-audit #scroll-bottom-fab {
-  display: flex; align-items: center; justify-content: center;
-  position: fixed; right: 14px; bottom: calc(84px + env(safe-area-inset-bottom));
-  width: 42px; height: 42px; border-radius: 50%;
-  background: var(--primary); color: #fff; border: none;
-  box-shadow: 0 4px 14px rgba(0,0,0,0.28); z-index: 60; cursor: pointer;
-}
-body.in-audit #scroll-bottom-fab .material-symbols-rounded { font-size: 24px; }
-@media (min-width: 1024px) { body.in-audit #scroll-bottom-fab { display: none; } }
+/* ปุ่มเลื่อนไปล่างสุด — อยู่ในแถวปุ่มท้ายฟอร์ม ไม่ใช่ปุ่มกลมลอย
+   ของเดิมลอยอยู่เหนือแถบปุ่มส่ง เป็นวงกลมสีแบรนด์ทึบขนาดเท่า ๆ กัน
+   ไปบังมุมขวาของปุ่ม N/A และแย่งสายตากับปุ่ม "ส่งผลตรวจ" ซึ่งเป็นปุ่มสีแบรนด์อยู่ก่อนแล้ว
+   ย้ายมาเข้าแถวเดียวกับปุ่มอื่น ทุกอย่างที่กดได้ในหน้านี้จึงอยู่ที่เดียว */
+.ck-jump { flex: 0 0 auto; min-width: 0; padding: 14px 16px; border-radius: 14px; }
+.ck-jump .material-symbols-rounded { font-size: 22px; }
+@media (min-width: 1024px) { .ck-jump { display: none; } }
 .bottom-nav-item {
   flex: 1; display: flex; flex-direction: column; align-items: center;
   gap: 2px; padding: 7px 4px; font-size: 10.5px; font-weight: 700;
@@ -1133,7 +1128,7 @@ body.in-audit #scroll-bottom-fab .material-symbols-rounded { font-size: 24px; }
   .print-footer .pf-right { float: right; }
   body { padding: 0 !important; margin: 0 !important; font-size: 11pt; }
   .bottom-nav, .section-tabs, .progress-bar-container, .no-print,
-  #test-mode-banner, #scroll-bottom-fab, .lightbox { display: none !important; }
+  #test-mode-banner, .lightbox { display: none !important; }
   /* คงสีสถานะ/ป้าย/หัวหมวดให้ติดมากับ PDF */
   * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
 
@@ -6085,6 +6080,10 @@ body.in-audit #ck-page-head { display:none; }
           <button class="btn btn-success" data-ck-action="submit-check" style="flex:1;min-width:130px;" onclick="submitDailyShift()">
             ส่งผลตรวจ
           </button>
+          <button class="btn btn-secondary ck-jump" type="button" title="เลื่อนไปล่างสุด" aria-label="เลื่อนไปล่างสุด"
+            onclick="window.scrollTo({top:document.documentElement.scrollHeight,behavior:'smooth'})">
+            <span class="material-symbols-rounded">keyboard_double_arrow_down</span>
+          </button>
         </div>
       </div>
     </div>
@@ -6252,6 +6251,10 @@ body.in-audit #ck-page-head { display:none; }
           <button class="btn btn-success" data-ck-action="submit-jd" style="flex:1;min-width:130px;" onclick="submitJaedaengAudit()">
             <span class="material-symbols-rounded">save</span> บันทึก
           </button>
+          <button class="btn btn-secondary ck-jump" type="button" title="เลื่อนไปล่างสุด" aria-label="เลื่อนไปล่างสุด"
+            onclick="window.scrollTo({top:document.documentElement.scrollHeight,behavior:'smooth'})">
+            <span class="material-symbols-rounded">keyboard_double_arrow_down</span>
+          </button>
         </div>
       </div>
     </div>
@@ -6292,11 +6295,6 @@ body.in-audit #ck-page-head { display:none; }
   <!-- Bottom Nav (rendered dynamically per role) -->
   <nav class="bottom-nav no-print" id="bottom-nav"></nav>
 
-  <!-- ปุ่มลอยเลื่อนไปล่างสุด (เฉพาะหน้าตรวจ บนมือถือ) -->
-  <button id="scroll-bottom-fab" class="no-print" type="button" title="เลื่อนไปล่างสุด" aria-label="เลื่อนไปล่างสุด"
-    onclick="window.scrollTo({top:document.documentElement.scrollHeight,behavior:'smooth'})">
-    <span class="material-symbols-rounded">keyboard_double_arrow_down</span>
-  </button>
 </div>
 
 
@@ -9253,7 +9251,6 @@ function _sfBenchHTML(scopeDailies) {
   }
   if (me == null || all == null) return '';
 
-  var GOAL = 95;
   var rows = [{ l: scopeRoster === 1 ? 'สาขานี้' : 'ขอบเขตที่ดูอยู่', v: me, me: 1 }];
   if (zone != null) rows.push({ l: 'โซน' + zoneName, v: zone });
   rows.push({ l: 'ทั้งแบรนด์', v: all });
@@ -9266,34 +9263,18 @@ function _sfBenchHTML(scopeDailies) {
   var word = gap >= 0 ? 'สูงกว่า' : 'ต่ำกว่า';
   var meName = rows[0].l;
 
-  /* ห่างเป้าอีกกี่ "ครั้ง" ไม่ใช่กี่ "จุด" — จุดเอาไปทำอะไรต่อไม่ได้
-     แต่ "ส่งให้ครบอีก 3 ครั้ง" คือสิ่งที่ลงมือทำได้พรุ่งนี้ */
-  var scopeDays = {};
-  (scopeDailies || []).forEach(function (d) {
-    if (!d || !d.date || !scopeCodes[String(d.branchCode)]) return;
-    /* ใช้ฐานเดียวกับที่คิด me — ถ้า me มาจากใบสรุป (คิดรายเดือน) ก็ต้องนับเฉพาะเดือนนั้น */
-    if (fromSummary && d.date.slice(0, 7) !== mon) return;
-    if (d.date === todayDateStr()) return;      /* วันนี้ยังไม่จบ ไม่นับเข้าฐาน */
-    scopeDays[d.date] = 1;
-  });
-  var meNeed = Object.keys(scopeDays).length * scopeRoster * 2;
-  var shortBy = meNeed ? Math.ceil(meNeed * GOAL / 100 - meNeed * me / 100) : 0;
-
+  /* บอกแค่ว่าตอนนี้อยู่ตรงไหนเทียบกับคนอื่น พอ
+     เคยมีท่อน "ส่งให้ครบอีก N ครั้ง ก็ถึงเป้า 95%" ต่อท้าย แต่เป้า 95% ไม่ได้ถูกตั้งไว้ที่ไหน
+     เป็นเลขที่กรอบนี้คิดขึ้นเอง การ์ดใบเดียวจึงไปตั้งเป้าให้ทั้งแบรนด์ไม่ได้ */
   var note = '<b>' + escapeHtml(meName) + ' ' + (Math.round(me * 10) / 10) + '%</b> ' + word
-    + escapeHtml(refName) + ' <b>' + (Math.round(Math.abs(gap) * 10) / 10) + ' จุด</b>'
-    + (me < GOAL && shortBy > 0
-        ? ' · ส่งให้ครบอีก <b>' + shortBy.toLocaleString('th-TH') + ' ครั้ง</b> ก็ถึงเป้า ' + GOAL + '%'
-        : (me >= GOAL ? ' · ถึงเป้าแล้ว' : ''));
+    + escapeHtml(refName) + ' <b>' + (Math.round(Math.abs(gap) * 10) / 10) + ' จุด</b>';
 
   return '<div class="sfb">'
-    /* ไม่ต้องอธิบายว่าเส้นดำคืออะไร — บรรทัดสรุปข้างล่างพูดถึงเป้า 95% อยู่แล้ว
-       และเส้นที่ตั้งอยู่ตำแหน่งเดียวกันทุกแถบก็อ่านออกเองว่าเป็นหมุดเทียบ */
+    /* ไม่มีเส้นเป้าในแท่ง — พอไม่มีคำอธิบายแล้วมันก็เป็นแค่ขีดดำที่ไม่มีใครรู้ว่าอะไร */
     + '<div class="sfb-h">' + (ckHasLate() ? 'ส่งครบตรงเวลา' : 'ส่งครบ') + ' — เทียบกับที่อื่น'
     +   (fromSummary ? '<span>' + _ckMonthLabel(mon) + '</span>' : '') + '</div>'
     + rows.map(function (r) {
         return '<div class="sfb-r"><span class="sfb-l">' + escapeHtml(r.l) + '</span>'
-          /* เอาเส้นเป้าออกจากแท่งด้วย — พอไม่มีคำอธิบายแล้วมันก็เป็นแค่ขีดดำที่ไม่มีใครรู้ว่าอะไร
-             ระยะที่เหลือถึงเป้าอยู่ในบรรทัดสรุปข้างล่างแล้ว */
           + '<span class="sfb-t"><i class="sfb-f' + (r.me ? ' me' : '') + '" style="width:'
           +   Math.max(0, Math.min(100, r.v)).toFixed(1) + '%"></i></span>'
           + '<span class="sfb-v' + (r.me ? ' me' : '') + '">' + (Math.round(r.v * 10) / 10) + '%</span></div>';
