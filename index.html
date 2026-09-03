@@ -15120,10 +15120,33 @@ const SFRep = {
 @media (max-width:520px){ .sfna-r { grid-template-columns:1fr 40px 74px; gap:8px; } }
 
 /* แถบเครื่องมือบนสุด — ช่วงเวลา · ขอบเขต · ออกรายงาน */
-.sf-toolbar { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin:0 2px 4px; }
+/* ── แถบเครื่องมือบนสุด ──
+   ของสามอย่างในแถวเดียวกันเคยสูงไม่เท่ากันเลย ชิปวันที่ 34px · ปุ่มออกรายงาน 50px
+   ส่วนช่องเลือกโซนสูง 64px เพราะมันคือ "การ์ด" ที่มีช่อง select อยู่ข้างใน
+   จึงเห็นเป็นกรอบซ้อนกรอบ และเป็นก้อนที่ใหญ่ที่สุดในแถบทั้งที่เป็นแค่ตัวกรอง
+   ทั้งสามเป็นตัวกรองเหมือนกัน จึงควรเป็นทรงเดียวกันและสูงเท่ากัน */
+.sf-toolbar { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin:0 2px 4px;
+  --tb-h:36px; }
 .sf-toolbar .jd-dash-date-filter { margin:0; }
-.sf-toolbar .jd-dash-filter { margin:0; min-width:200px; }
-.sf-toolbar .sf-rep-btn { margin-left:auto; }
+.sf-toolbar .jd-dash-date-chip { min-height:var(--tb-h); }
+.sf-toolbar .jd-dash-date-range { min-height:var(--tb-h); }
+/* ถอดการ์ดที่ครอบ select ออก เหลือ select ตัวเดียวที่เป็นทรงเดียวกับชิปข้าง ๆ */
+.sf-toolbar .jd-dash-filter { margin:0; min-width:210px; padding:0;
+  background:none; border:0; border-radius:0; }
+.sf-toolbar .jd-dash-filter select {
+  width:100%; min-height:var(--tb-h); padding:0 34px 0 14px;
+  border:1.5px solid var(--border); border-radius:var(--r-pill);
+  background:var(--surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23565E67' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat right 12px center;
+  background-size:13px;
+  font-size:12px; font-weight:800; color:var(--text-secondary); letter-spacing:.1px;
+  -webkit-appearance:none; appearance:none; cursor:pointer; }
+.sf-toolbar .jd-dash-filter select:hover { border-color:var(--border-strong); color:var(--text); }
+.sf-toolbar .jd-dash-filter select:focus { outline:none; border-color:var(--text);
+  color:var(--text); }
+.sf-toolbar .sf-rep-btn { margin-left:auto; min-height:var(--tb-h); padding:0 16px;
+  border-radius:var(--r-pill); border-width:1.5px; font-size:12px; font-weight:800;
+  letter-spacing:.1px; }
+.sf-toolbar .sf-rep-btn .material-symbols-rounded { font-size:17px; }
 @media (max-width:640px){
   .sf-toolbar { gap:8px; }
   .sf-toolbar .jd-dash-filter { flex:1 1 100%; }
