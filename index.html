@@ -9011,10 +9011,14 @@ function _sfDailyKpisHTML(dailies) {
           return '<i class="' + r.k + '" style="width:' + pct(r.v).toFixed(2) + '%"></i>';
         }).join('')
     + '</div>'
-    + rows.map(function (r) {
-        return '<div class="sfk-r ' + r.k + '"><u></u><span>' + r.l + '</span>'
-          + '<b>' + f(r.v) + '</b><em>' + pct(r.v).toFixed(1) + '%</em></div>';
-      }).join('')
+    /* ห่อแถวสถานะไว้ในกล่องเดียว — จอกว้างเรียงแนวนอน จอแคบเรียงลงมา
+       จำนวนแถวไม่เท่ากันในแต่ละแบรนด์ (ไม่มีเวลาตัด = ไม่มีแถว "ส่งช้า") จึงใช้ flex ไม่ใช่กริดตายตัว */
+    + '<div class="sfk-rows">'
+    +   rows.map(function (r) {
+          return '<div class="sfk-r ' + r.k + '"><u></u><span>' + r.l + '</span>'
+            + '<b>' + f(r.v) + '</b><em>' + pct(r.v).toFixed(1) + '%</em></div>';
+        }).join('')
+    + '</div>'
     + '</div>';
 }
 
@@ -14961,6 +14965,17 @@ const SFRep = {
 .sfk-bar i.ok { background:var(--success); }
 .sfk-bar i.late { background:#C87914; }
 .sfk-bar i.miss { background:var(--danger); }
+.sfk-rows { display:block; }
+/* จอกว้าง: สามแถวเรียงข้างกัน ป้ายกับตัวเลขจึงอยู่ใกล้กัน
+   เรียงลงมาเต็มความกว้าง 1,120px ป้ายจะอยู่ซ้ายสุด ตัวเลขขวาสุด ห่างกันเกือบทั้งจอ
+   ต้องกวาดตาข้ามจอหนึ่งรอบต่อหนึ่งตัวเลข · เส้นคั่นเปลี่ยนจากขีดบนเป็นขีดข้าง */
+@media (min-width:900px) {
+  .sfk-rows { display:flex; }
+  .sfk-rows .sfk-r { flex:1 1 0; min-width:0; border-top:0; padding:2px 18px; }
+  .sfk-rows .sfk-r + .sfk-r { border-left:1px solid var(--border); }
+  .sfk-rows .sfk-r:first-child { padding-left:0; }
+  .sfk-rows .sfk-r:last-child { padding-right:0; }
+}
 .sfk-r { display:flex; align-items:center; gap:10px; padding:8px 0; border-top:1px solid var(--border); }
 .sfk-r:first-of-type { border-top:0; padding-top:0; }
 .sfk-r u { width:9px; height:9px; border-radius:3px; flex:0 0 auto; text-decoration:none; }
@@ -15078,23 +15093,18 @@ const SFRep = {
    ก้อนที่มีข้อมูลน้อย (กล่องภาพรวม สามแถว) จึงยืดเต็มความกว้างจนป้ายอยู่ซ้ายสุด
    ตัวเลขอยู่ขวาสุด ห่างกันเกือบหนึ่งเมตรบนจอจริง ต้องกวาดตาข้ามทั้งจอต่อหนึ่งบรรทัด
    จับของที่ตอบคำถามเดียวกันมาวางข้างกันแทน หน้าสั้นลงและอ่านทีละก้อนได้ */
+/* ระยะระหว่างกล่องภาพรวมกับปฏิทินคุมที่ gap ที่เดียว ไม่ให้ไปบวกกับ margin ของปฏิทินอีก */
 .sf-ov { display:grid; gap:14px; }
-/* 1200px คือจุดที่ปฏิทินยังได้ความกว้างพอ — ต่ำกว่านี้ 7 คอลัมน์ของปฏิทินจะถูกบีบ
-   จนล้นกรอบ (ลองที่ 1,100px แล้วช่องวันเบียดออกนอกการ์ด) จึงกลับไปวางซ้อนกัน */
-@media (min-width:1200px) {
-  .sf-ov { grid-template-columns:minmax(300px,360px) 1fr; gap:16px; align-items:stretch; }
-  .sf-ov > * { min-width:0; }
-  /* กล่องภาพรวมเตี้ยกว่าปฏิทินอยู่ ~200px ถ้าปล่อยไว้จะเป็นช่องว่างเปล่าใต้กล่อง
-     ยืดให้สูงเท่ากันแล้วกระจายบรรทัดออก สามบรรทัดได้ที่หายใจ และขอบล่างของสองก้อนตรงกัน */
-  .sf-ov .sfk { margin-bottom:0; height:100%; display:flex; flex-direction:column; }
-  .sf-ov .sfk .sfk-r { flex:1 1 auto; min-height:38px; }
-  /* ในกริดใช้ gap คุมระยะแทน margin ของแต่ละก้อน ไม่งั้นสองก้อนสูงไม่เท่ากัน */
-  .sf-ov #sf-cl-month .dm-wrap { margin-top:0; margin-bottom:0; }
-  #dashboard-screen .sf-ov #sf-cl-kpis { display:block; height:100%; }
-}
-.sf-ov { margin-bottom:12px; }
-/* สองกลุ่มในการ์ดสรุปการส่ง */
-.sfs-two { display:grid; gap:0; }
+.sf-ov #sf-cl-month .dm-wrap { margin-top:0; }
+/* เคยลองวางกล่องภาพรวมคู่กับปฏิทินบนจอกว้าง แต่ปฏิทินโดนบีบเหลือ ~600px
+   ช่องวันแคบจนตัวเลข 61/64 เบียดชิดขอบ ปฏิทินเป็นของที่ต้องกว้างถึงจะอ่านสบาย
+   จึงให้กล่องภาพรวมอยู่บนเต็มความกว้างแล้วต่อด้วยปฏิทินเต็มความกว้าง
+   กล่องภาพรวมไม่ยืดจนโหว่ เพราะแถวสถานะเรียงแนวนอนบนจอกว้างแทน (ดู .sfk-rows) */
+.sf-ov { margin-bottom:0; }
+/* สองกลุ่มในการ์ดสรุปการส่ง
+   หัวกลุ่มเป็น :first-child ของคอลัมน์ตัวเอง margin-top จึงถูกล้างทั้งสองคอลัมน์
+   จอแคบที่วางซ้อนกันเลยไม่มีระยะคั่นระหว่างกลุ่ม — ใช้ gap ของกริดคั่นแทน */
+.sfs-two { display:grid; gap:18px; }
 @media (min-width:1200px) {
   .sfs-two { grid-template-columns:1fr 1fr; gap:22px; align-items:start; }
   .sfs-two .sfs-col > .sfs-grp:first-child { margin-top:0; }
