@@ -5984,8 +5984,13 @@ body.in-audit #ck-page-head { display:none; }
         <div class="sfc-sec"><span class="sfc-sec-bar"></span>
           <span class="sfc-sec-t">ภาพรวมการส่ง</span>
           <span class="sfc-sec-x" id="sf-cl-period">ทั้งหมด</span></div>
-        <div class="jd-dash-kpis" id="sf-cl-kpis"></div>
-        <div id="sf-cl-month"></div>
+        <!-- จอกว้างวางคู่กัน — ทั้งสองก้อนตอบคำถามเดียวกัน (เดือนนี้ส่งครบไหม)
+             ก้อนซ้ายบอกยอดรวม ก้อนขวาบอกว่าขาดวันไหน วางซ้อนกันแล้วต้องเลื่อนจอ
+             ไปมาเพื่อจับคู่ตัวเลขกับวัน · จอแคบยังซ้อนกันเหมือนเดิม -->
+        <div class="sf-ov">
+          <div class="jd-dash-kpis" id="sf-cl-kpis"></div>
+          <div id="sf-cl-month"></div>
+        </div>
         <!-- ซ่อนเมื่อดูสาขาเดียว — ตารางเรียง "สาขาที่ต้องตามก่อน" ที่มีแถวเดียวไม่ได้บอกอะไร -->
         <div class="card" id="sf-daily-times-card">
           <div class="card-header"><span class="material-symbols-rounded" style="color:#0E7490;">schedule</span><h2>สรุปการส่ง</h2></div>
@@ -9925,11 +9930,19 @@ function _sfDailySummaryHTML(dailies) {
       .sort(function (a, b) { return (b.pct - a.pct) || (b.sent - a.sent); })
       .slice(0, N);
     var mid = rows.length - worst.length - best.length;
-    out = '<div class="sfs-grp"><span class="sfs-grp-t bad">ขาดส่งมากที่สุด ' + worst.length + ' สาขา</span></div>'
-      + '<div class="sfs-list">' + worst.map(buildRow).join('') + '</div>'
-      + (mid > 0 ? '<div class="sfc-cut">อีก ' + mid.toLocaleString('th-TH') + ' สาขาอยู่ระหว่างสองกลุ่มนี้</div>' : '')
-      + '<div class="sfs-grp"><span class="sfs-grp-t ok">ส่งครบที่สุด ' + best.length + ' สาขา</span></div>'
-      + '<div class="sfs-list">' + best.map(buildRow).join('') + '</div>';
+    /* สองกลุ่มวางคู่กันบนจอกว้าง — เป็นสองขั้วของเรื่องเดียวกัน อยู่ข้างกันถึงเทียบได้
+       บรรทัด "อีก N สาขาอยู่ระหว่างสองกลุ่มนี้" ไปอยู่ท้ายสุดเต็มความกว้าง
+       เพราะพูดถึงทั้งสองกลุ่ม ไม่ใช่ของกลุ่มใดกลุ่มหนึ่ง */
+    const col = function (cls, label, list) {
+      return '<div class="sfs-col">'
+        + '<div class="sfs-grp"><span class="sfs-grp-t ' + cls + '">' + label + '</span></div>'
+        + '<div class="sfs-list">' + list.map(buildRow).join('') + '</div></div>';
+    };
+    out = '<div class="sfs-two">'
+      + col('bad', 'ขาดส่งมากที่สุด ' + worst.length + ' สาขา', worst)
+      + col('ok', 'ส่งครบที่สุด ' + best.length + ' สาขา', best)
+      + '</div>'
+      + (mid > 0 ? '<div class="sfc-cut">อีก ' + mid.toLocaleString('th-TH') + ' สาขาอยู่ระหว่างสองกลุ่มนี้</div>' : '');
   }
   return head + out;
 }
@@ -15060,11 +15073,39 @@ const SFRep = {
 @media (max-width:560px){ .jdv { padding:0; min-height:11px; } .jdv b, .jdv em, .jdv s { display:none; } }
 
 /* สองคอลัมน์บนจอกว้าง */
+/* ── การจัดวางบนจอกว้าง ──
+   เนื้อหากลางกว้าง ~1,120px แต่ทุกก้อนถูกวางเป็นคอลัมน์เดียวไล่ลงมา
+   ก้อนที่มีข้อมูลน้อย (กล่องภาพรวม สามแถว) จึงยืดเต็มความกว้างจนป้ายอยู่ซ้ายสุด
+   ตัวเลขอยู่ขวาสุด ห่างกันเกือบหนึ่งเมตรบนจอจริง ต้องกวาดตาข้ามทั้งจอต่อหนึ่งบรรทัด
+   จับของที่ตอบคำถามเดียวกันมาวางข้างกันแทน หน้าสั้นลงและอ่านทีละก้อนได้ */
+.sf-ov { display:grid; gap:14px; }
+/* 1200px คือจุดที่ปฏิทินยังได้ความกว้างพอ — ต่ำกว่านี้ 7 คอลัมน์ของปฏิทินจะถูกบีบ
+   จนล้นกรอบ (ลองที่ 1,100px แล้วช่องวันเบียดออกนอกการ์ด) จึงกลับไปวางซ้อนกัน */
+@media (min-width:1200px) {
+  .sf-ov { grid-template-columns:minmax(300px,360px) 1fr; gap:16px; align-items:stretch; }
+  .sf-ov > * { min-width:0; }
+  /* กล่องภาพรวมเตี้ยกว่าปฏิทินอยู่ ~200px ถ้าปล่อยไว้จะเป็นช่องว่างเปล่าใต้กล่อง
+     ยืดให้สูงเท่ากันแล้วกระจายบรรทัดออก สามบรรทัดได้ที่หายใจ และขอบล่างของสองก้อนตรงกัน */
+  .sf-ov .sfk { margin-bottom:0; height:100%; display:flex; flex-direction:column; }
+  .sf-ov .sfk .sfk-r { flex:1 1 auto; min-height:38px; }
+  /* ในกริดใช้ gap คุมระยะแทน margin ของแต่ละก้อน ไม่งั้นสองก้อนสูงไม่เท่ากัน */
+  .sf-ov #sf-cl-month .dm-wrap { margin-top:0; margin-bottom:0; }
+  #dashboard-screen .sf-ov #sf-cl-kpis { display:block; height:100%; }
+}
+.sf-ov { margin-bottom:12px; }
+/* สองกลุ่มในการ์ดสรุปการส่ง */
+.sfs-two { display:grid; gap:0; }
+@media (min-width:1200px) {
+  .sfs-two { grid-template-columns:1fr 1fr; gap:22px; align-items:start; }
+  .sfs-two .sfs-col > .sfs-grp:first-child { margin-top:0; }
+}
 .sf-two { display:grid; gap:14px; }
 @media (min-width:900px){ .sf-two { grid-template-columns:1fr 1fr; align-items:start; } }
 /* หัวข้อที่ตอบ N/A บ่อย */
 .sfna { padding:4px 14px 2px; }
-.sfna-r { display:grid; grid-template-columns:1fr 84px 62px; gap:11px; align-items:center;
+/* คอลัมน์ขวา 62px แคบไปตั้งแต่เพิ่ม % เข้าไปข้างจำนวนสาขา — "20% · 25 สาขา" ตัดคำว่า
+   "สาขา" ตกไปบรรทัดใหม่เดี่ยว ๆ ทุกแถว (แก้ไว้เฉพาะจอแคบไปแล้ว จอกว้างยังค้าง) */
+.sfna-r { display:grid; grid-template-columns:1fr 76px 76px; gap:11px; align-items:center;
   padding:9px 0; border-bottom:1px solid var(--border); }
 .sfna-r:last-child { border-bottom:0; }
 .sfna-t { font-size:12.5px; font-weight:600; color:var(--text-secondary); line-height:1.4; min-width:0; }
