@@ -9561,6 +9561,25 @@ function applyCkPerms() {
    ตอบไม่ทัน/ทิ้งรีเควสต์ (เห็นเป็น "โหลดจาก HUB ไม่ได้") → สิทธิ์ใหม่ไม่ถึงเครื่องสาขา
    ตอนนี้: รีเควสต์เดียว ใช้ร่วมกัน + retry 3 ครั้ง + cache 30 วิ */
 let _hubCfg = null, _hubCfgAt = 0, _hubCfgInflight = null;
+/* ชื่อเต็มของ BZM — ทะเบียนสาขาเก็บไว้แค่ชื่อต้นกับชื่อเล่น เช่น "Phakapol" / "Arm"
+   ส่วนชื่อเต็มอยู่ในทะเบียนผู้ใช้ของฮับ ("Phakapol Pleekhan") ซึ่งแอปโหลดมาอยู่แล้ว
+   ในใบผลตรวจเก็บค่าไหนไว้ก็ได้ (แล้วแต่ว่าตอนบันทึกหยิบมาจากช่องไหน)
+   จึงลองจับคู่สามทาง — ชื่อเล่น · ชื่อเต็ม · ชื่อต้น
+   หาไม่เจอคืนค่าเดิม ไม่ทำให้ช่องว่าง ใบเก่าที่ชื่อไม่ตรงทะเบียนแล้วจะได้ไม่หาย */
+function ckBzmFullName(v) {
+  const s = String(v || '').trim();
+  if (!s) return '';
+  const users = (_hubCfg && Array.isArray(_hubCfg.users)) ? _hubCfg.users : [];
+  const bzms = users.filter(u => u && u.role === 'bzm' && u.name);
+  const eq = x => String(x || '').trim() === s;
+  const hit = bzms.find(u => eq(u.nick))
+           || bzms.find(u => eq(u.name))
+           || bzms.find(u => eq(String(u.name).trim().split(/\s+/)[0]));
+  if (!hit) return s;
+  /* เก็บชื่อเล่นต่อท้ายไว้ด้วย — ทีมเรียกกันด้วยชื่อเล่น เอาออกหมดแล้วจะนึกไม่ออกว่าใคร */
+  const nick = String(hit.nick || '').trim();
+  return (nick && nick !== hit.name) ? (hit.name + ' (' + nick + ')') : hit.name;
+}
 const HUB_CFG_TTL_MS = 30 * 1000;
 function fetchHubConfig(force) {
   if (!force && _hubCfg && (Date.now() - _hubCfgAt) < HUB_CFG_TTL_MS) return Promise.resolve(_hubCfg);
@@ -11352,7 +11371,7 @@ function showDailyDetail(id, targetText) {
   const metaRows = [
     { icon: 'storefront',         label: 'สาขา',            value: branchTxt,                 cls: 'span-all primary' },
     { icon: 'badge',              label: 'Manager on duty', value: d.manager || '-' },
-    { icon: 'supervisor_account', label: 'BZM',             value: d.bzm || '-' },
+    { icon: 'supervisor_account', label: 'BZM',             value: ckBzmFullName(d.bzm) || '-' },
     { icon: 'person',             label: 'บันทึกโดย',       value: d.submittedByName || '-' },
     { icon: 'fact_check',         label: 'สถานะรายการ',     value: `ผ่าน ${passN} ข้อ - ไม่ผ่าน ${failN} ข้อ - N/A ${naN} ข้อ${pendN > 0 ? ` - รอ ${pendN} ข้อ` : ''} - ทั้งหมด ${total} ข้อ` },
   ];
@@ -13697,6 +13716,10 @@ async function openPublicDailyReport(id) {
     return;
   }
   rec.id = rec.id || String(id);
+  /* ดึงทะเบียนจากฮับด้วย — ต้องใช้แปลงชื่อ BZM เป็นชื่อเต็ม
+     คนเปิดลิงก์ไม่ได้ล็อกอิน จึงไม่มีใครโหลดให้ ถ้าไม่โหลดตรงนี้จะได้ชื่อเล่นแทนชื่อเต็ม
+     โหลดไม่ได้ก็ไม่เป็นไร ตัวแปลงจะคืนค่าที่เก็บไว้ในใบตามเดิม */
+  try { await fetchHubConfig(); } catch (e) {}
   loading.remove();
   /* หน้ารายละเอียดอ่านจาก allDailyChecklists — ยัดใบเดียวที่โหลดมาเข้าไปแล้วเรียกตัวเดิม
      ตั้ง currentView ตามรหัสสาขาด้วย ไม่งั้นป้าย "ตรงเวลา/สาย" กับสีจะเป็นของแบรนด์อื่น */
