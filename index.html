@@ -7195,7 +7195,7 @@ function jdBranchMatchesLocation(selectedName, locationName) {
 const CK_PHOTO_RULES = {
   santafe:  { pick: 1 },
   /* ข้อสุ่มชิมวัตถุดิบเป็นการชิม ถ่ายรูปแล้วไม่ได้ความ แต่ต้องกรอกว่าชิมอะไร */
-  yamachan: { pick: 5, exempt: ['สุ่มชิมวัตถุดิบ'] },
+  yamachan: { pick: 4, exempt: ['สุ่มชิมวัตถุดิบ'] },
   jaedaeng: { pick: 1 },
 };
 function ckPhotoRule(brandKey) {
@@ -10795,7 +10795,7 @@ async function startDailyShift(shift) {
     });
   });
 
-  // สุ่ม "ต้องแนบรูป" กี่ข้อต่อหมวด ขึ้นกับแบรนด์ (ยามะจัง 5 · ที่เหลือ 1)
+  // สุ่ม "ต้องแนบรูป" กี่ข้อต่อหมวด ขึ้นกับแบรนด์ (ยามะจัง 4 · ที่เหลือ 1)
   // เก็บไว้กับเรคคอร์ด → แก้ไขรอบเดิมได้ข้อเดิม · รอบใหม่สุ่มใหม่ (กันใช้รูปซ้ำ)
   let requiredPhotos;
   if (existing && Array.isArray(existing.requiredPhotos) && existing.requiredPhotos.length) {

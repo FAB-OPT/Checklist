@@ -45,7 +45,7 @@ eq('ckCutoffText yamachan', A.ckCutoffText('yamachan'), '');
 
 console.log('\n■ จำนวนที่สุ่มต่อหมวด');
 eq('pick santafe', A.ckPhotoRule('santafe').pick, 1);
-eq('pick yamachan', A.ckPhotoRule('yamachan').pick, 5);
+eq('pick yamachan', A.ckPhotoRule('yamachan').pick, 4);
 eq('pick jaedaeng', A.ckPhotoRule('jaedaeng').pick, 1);
 
 console.log('\n■ ข้อที่ยกเว้น (ยึดข้อความ)');
@@ -77,7 +77,9 @@ function simulate(tpl,brand,rounds){
   return {รูปต่อรอบ:[...counts].sort((a,b)=>a-b).join('/'), หลุดข้อยกเว้น:leak, ข้อที่เคยถูกสุ่ม:seen.size, ข้อทั้งหมด:flat.length};
 }
 console.log('\n■ จำลองสุ่ม 2,000 รอบต่อชุด');
-const cases=[['YAMACHAN_OPEN','yamachan',10],['YAMACHAN_CLOSE','yamachan',10],
+/* ตัวเลขที่คาดหวัง = จำนวนที่สุ่มต่อหมวด × จำนวนหมวดของชุดนั้น
+   ยามะจัง 4 × 2 หมวด = 8 · ซานตาเฟ่ 1 × 6 = 6 · เจ๊แดง 1 × 7 = 7 */
+const cases=[['YAMACHAN_OPEN','yamachan',8],['YAMACHAN_CLOSE','yamachan',8],
              ['DAILY_OPEN','santafe',6],['DAILY_CLOSE','santafe',6],['JAEDAENG_CHECKLIST','jaedaeng',7]];
 cases.forEach(([k,brand,want])=>{
   const r=simulate(A[k],brand,2000);
