@@ -10044,7 +10044,14 @@ function escapeHtml(s) {
 }
 function escapeAttr(s) { return String(s).replace(/'/g, "\\'").replace(/"/g,'&quot;'); }
 var _modalOnOk = null;
+/* เนื้อความลงด้วย textContent เสมอ — ปลอดภัยจากข้อความที่มาจากผู้ใช้
+   ถ้าต้องการตัวหนา/ขึ้นบรรทัด ให้เรียก showModalHtml() แทน
+   เคยมีที่เรียกผิดตัวแล้วคนกรอกเห็น <b> กับ <br> เป็นตัวหนังสือบนจอ
+   จึงเตือนไว้ในคอนโซลด้วย เพื่อให้เจอตอนทดสอบ ไม่ใช่ตอนสาขาใช้จริง */
 function showModal(title, body, onOk) {
+  if (typeof body === 'string' && /<\s*\/?(b|br|i|u|em|small|span|div)/i.test(body)) {
+    console.warn('[modal] ข้อความมีแท็ก HTML แต่เรียกผ่าน showModal() ซึ่งลงเป็นข้อความล้วน — ใช้ showModalHtml() แทน:', body.slice(0, 80));
+  }
   document.getElementById('modal-title').textContent = title;
   document.getElementById('modal-body').textContent = body;
   document.getElementById('modal').classList.add('show');
@@ -11104,10 +11111,17 @@ async function submitDailyShift() {
   const badFill = items.findIndex(it => _dailyFillMissing(it) > 0);
   if (badFill >= 0) {
     const it = items[badFill];
-    showModal('กรอกยังไม่ครบ',
+    /* ต้องใช้ showModalHtml — showModal ลงเนื้อความด้วย textContent
+       ข้อความนี้มีแท็กจัดรูปแบบอยู่ ถ้าเรียกผิดตัวคนกรอกจะเห็น <b> กับ <br> เป็นตัวหนังสือ */
+    showModalHtml('กรอกยังไม่ครบ',
       '<b>' + escapeHtml(it.text) + '</b><br>ต้องกรอก "' + escapeHtml(it.fillLabel || 'รายละเอียด')
       + '" ให้ครบ ' + it.fills.length + ' ช่อง (ยังขาด ' + _dailyFillMissing(it) + ')'
       + '<br><br>ถ้าทำไม่ได้จริง ให้กด "ไม่ผ่าน" แล้วระบุเหตุผลแทน');
+    /* เลื่อนไปที่ข้อนั้นเองแทนการเรียก _scrollTo — ตัวนั้นเปิดหน้าต่างเป็นข้อความล้วนซ้ำ
+       ซึ่งจะไปทับข้อความที่เพิ่งขึ้นจนกลายเป็นหน้าต่างเปล่า
+       ข้อตรวจอื่นที่ข้อความไม่มีแท็กยังใช้ _scrollTo ได้ตามเดิม */
+    const _t = document.querySelectorAll('.daily-item')[badFill];
+    if (_t) _t.scrollIntoView({ behavior: 'smooth', block: 'center' });
     return;
   }
   const badNote = items.findIndex(it => (it.status === 'fail' || it.status === 'na') && !(it.note || '').trim());
