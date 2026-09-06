@@ -13621,13 +13621,27 @@ function printDailyDetail()    { return _printDetailPDF('daily-detail-screen',  
    ผู้รับเปิดลิงก์ได้ทุกเครื่องโดยไม่ต้องล็อกอิน แล้วกดบันทึกเป็น PDF เอง
    แก้ปัญหาไฟล์ PDF ดาวน์โหลดแล้วส่งต่อยาก / Android กดแล้วเงียบ
    ══════════════════════════════════════════════════════════════════ */
+/* ── รหัสลับประจำใบ ──
+   เลขที่ใบเดาได้ตรง ๆ เพราะเป็น "รหัสสาขา_วันที่_รอบ" ใครได้ลิงก์ไปใบเดียว
+   แก้วันที่ในลิงก์เองก็เปิดใบอื่นได้หมด · ต่อรหัสสุ่มท้ายลิงก์เพื่อปิดช่องนั้น
+   รหัสเก็บติดไปกับใบ (ฟิลด์ shareKey) สร้างครั้งเดียวตอนแชร์ครั้งแรก
+   แชร์ซ้ำได้ลิงก์เดิม ลิงก์ที่ส่งไปแล้วจึงไม่ตายเวลากดแชร์อีกรอบ
+
+   16 ตัวอักษรจากตัวสุ่มของเบราว์เซอร์ = เดาไม่ไหวด้วยการยิงสุ่ม
+   ไม่มีวันหมดอายุตามที่ตกลงไว้ — ใครถือลิงก์เปิดได้ตลอด แต่เดาใบอื่นต่อไม่ได้แล้ว */
+function ckMakeShareKey() {
+  const a = new Uint8Array(10);
+  (window.crypto || window.msCrypto).getRandomValues(a);
+  return Array.from(a).map(b => b.toString(36).padStart(2, '0')).join('').slice(0, 16);
+}
 /* ลิงก์รายงาน — kind บอกว่าเป็นใบของระบบไหน ('jd' = เจ๊แดง · 'daily' = เปิด-ปิดร้าน)
    รูปแบบเดียวกันทั้งสองระบบ เพิ่มระบบใหม่ทีหลังก็เติม kind แล้วต่อที่ openPublicReport */
-function ckReportUrl(kind, id) {
-  return location.origin + location.pathname + '#report=' + kind + '~' + encodeURIComponent(id);
+function ckReportUrl(kind, id, key) {
+  return location.origin + location.pathname + '#report=' + kind + '~' + encodeURIComponent(id)
+    + (key ? '~' + encodeURIComponent(key) : '');
 }
-function jdReportUrl(id) { return ckReportUrl('jd', id); }
-function dailyReportUrl(id) { return ckReportUrl('daily', id); }
+function jdReportUrl(id, key) { return ckReportUrl('jd', id, key); }
+function dailyReportUrl(id, key) { return ckReportUrl('daily', id, key); }
 
 /* กล่องแชร์ตัวเดียวใช้ได้ทุกระบบ — เดิมเขียนไว้เฉพาะเจ๊แดง
    พอทำให้ซานตาเฟ่/ยามะจังด้วยจึงยกออกมาเป็นตัวกลาง ไม่ก๊อปโค้ดชุดเดิมไปวางอีกรอบ */
@@ -13649,22 +13663,43 @@ function ckShareReport(url, title) {
   askManual();
 }
 
-function shareJaedaengReport(id) {
+/* คืนรหัสของใบ · ยังไม่มีก็สร้างแล้วบันทึกขึ้นคลาวด์ให้เครื่องอื่นเห็นด้วย
+   บันทึกไม่สำเร็จก็ยังคืนรหัสไป ลิงก์ยังเปิดได้จากเครื่องนี้ และรอบหน้าจะลองบันทึกใหม่ */
+async function ckEnsureShareKey(rec, saveFn) {
+  if (!rec) return '';
+  if (rec.shareKey) return rec.shareKey;
+  const key = ckMakeShareKey();
+  rec.shareKey = key;
+  try { await saveFn(rec); } catch (e) { console.warn('[share] บันทึกรหัสลิงก์ไม่สำเร็จ', e); }
+  return key;
+}
+
+async function shareJaedaengReport(id) {
   const recId = id || currentJDDetailId;
   if (!recId) return;
   const r = (allJaedaengAudits || []).find(x => x.id === recId);
-  ckShareReport(jdReportUrl(recId),
+  const key = await ckEnsureShareKey(r, async rec => {
+    if (firebaseDb) await firebaseDb.collection(JAEDAENG_COLLECTION).doc(String(rec.id))
+      .set({ shareKey: rec.shareKey }, { merge: true });
+    if (typeof saveJaedaengLocal === 'function') saveJaedaengLocal();
+  });
+  ckShareReport(jdReportUrl(recId, key),
     'รายงานการตรวจสาขา' + (r && r.storeName ? ' · ' + r.storeName : ''));
 }
 
 /* แชร์ผลตรวจเปิด-ปิดร้าน — ใช้ได้ทุกแบรนด์ที่กรอกฟอร์มนี้ (ซานตาเฟ่ · ST_Easy · ยามะจัง) */
-function shareDailyReport(id) {
+async function shareDailyReport(id) {
   const recId = id || currentDailyDetailId;
   if (!recId) return;
   const r = (allDailyChecklists || []).find(x => x.id === recId);
+  const key = await ckEnsureShareKey(r, async rec => {
+    if (firebaseDb) await firebaseDb.collection(DAILY_COLLECTION).doc(String(rec.id))
+      .set({ shareKey: rec.shareKey }, { merge: true });
+    saveDailyLocal();
+  });
   const where = r ? branchLabel(r.branchCode, r.branchName) : '';
   const round = r ? (r.shift === 'close' ? 'ปิดร้าน' : 'เปิดร้าน') : '';
-  ckShareReport(dailyReportUrl(recId),
+  ckShareReport(dailyReportUrl(recId, key),
     'ผลตรวจ' + (round ? ' ' + round : '') + (where ? ' · ' + where : '') +
     (r && r.date ? ' · ' + fmtDateDMY(r.date) : ''));
 }
@@ -13676,11 +13711,22 @@ function shareDailyReport(id) {
    ตัดที่ & และ ? ด้วย เพราะบางแอป (LINE) ชอบต่อพารามิเตอร์ของตัวเองท้าย URL
    ลิงก์เก่าที่แชร์ไปแล้วเป็น #report=jd~... ยังใช้ได้เหมือนเดิม */
 function parseReportHash() {
-  const m = (location.hash || '').match(/[#&]report=(jd|daily)~([^&?]+)/);
+  const m = (location.hash || '').match(/[#&]report=(jd|daily)~([^&?~]+)(?:~([^&?~]+))?/);
   if (!m) return null;
-  let id = m[2];
+  let id = m[2], key = m[3] || '';
   try { id = decodeURIComponent(id); } catch (e) {}
-  return { kind: m[1], id: id };
+  try { key = key ? decodeURIComponent(key) : ''; } catch (e) {}
+  return { kind: m[1], id: id, key: key };
+}
+
+/* รหัสในลิงก์ต้องตรงกับที่เก็บไว้ในใบ
+   ใบเก่าที่แชร์ไปก่อนมีระบบรหัส (ไม่มี shareKey) ยังเปิดได้ด้วยลิงก์เดิมที่ไม่มีรหัส
+   ไม่งั้นลิงก์ที่ส่งให้ลูกค้า/ทีมไปแล้วจะตายหมดในวันที่อัปเดต
+   ใบที่มีรหัสแล้ว ต้องใส่รหัสมาให้ถูกเท่านั้น — นี่คือส่วนที่ปิดช่องเดา URL */
+function ckShareKeyOk(rec, key) {
+  const want = String((rec && rec.shareKey) || '');
+  if (!want) return true;             // ใบเก่าก่อนมีระบบรหัส
+  return String(key || '') === want;
 }
 
 function _jdRepMsg(html) {
@@ -13688,7 +13734,7 @@ function _jdRepMsg(html) {
   if (app) app.innerHTML = `<div class="rep-load">${html}</div>`;
 }
 
-async function openPublicJDReport(id) {
+async function openPublicJDReport(id, key) {
   document.body.classList.add('repmode');
   const login = document.getElementById('login-screen');
   if (login) login.classList.remove('active');
@@ -13706,6 +13752,9 @@ async function openPublicJDReport(id) {
     const snap = await firebaseDb.collection(JAEDAENG_COLLECTION).doc(String(id)).get();
     if (!snap.exists) { _jdRepMsg('ไม่พบรายงานนี้ (อาจถูกลบไปแล้ว)'); return; }
     rec = snap.data();
+    /* ข้อความเดียวกับตอนไม่พบใบ — ไม่บอกว่า "รหัสผิด" เพราะนั่นเท่ากับยืนยันว่าใบนี้มีอยู่จริง
+       คนที่ลองเดา URL จะได้ไม่รู้ว่าเดาถูกครึ่งทางแล้ว */
+    if (!ckShareKeyOk(rec, key)) { _jdRepMsg('ไม่พบรายงานนี้ (อาจถูกลบไปแล้ว)'); return; }
   } catch (e) {
     console.error('[JD report] load error', e);
     _jdRepMsg('โหลดรายงานไม่สำเร็จ — ตรวจอินเทอร์เน็ตแล้วลองใหม่');
@@ -13733,7 +13782,7 @@ async function openPublicJDReport(id) {
    ใช้ได้ทุกแบรนด์ที่กรอกฟอร์มนี้ (ซานตาเฟ่ · ST_Easy · ยามะจัง)
    วิธีเดียวกับของเจ๊แดงทุกอย่าง — ดึงใบเดียวจาก Firestore แล้ววาดด้วยหน้ารายละเอียดตัวเดิม
    จึงได้หน้าตา ภาคผนวกรูป และการแบ่งหน้า PDF เหมือนที่เห็นในแอปเป๊ะ */
-async function openPublicDailyReport(id) {
+async function openPublicDailyReport(id, key) {
   document.body.classList.add('repmode');
   const login = document.getElementById('login-screen');
   if (login) login.classList.remove('active');
@@ -13751,6 +13800,8 @@ async function openPublicDailyReport(id) {
     const snap = await firebaseDb.collection(DAILY_COLLECTION).doc(String(id)).get();
     if (!snap.exists) { _jdRepMsg('ไม่พบรายงานนี้ (อาจถูกลบไปแล้ว)'); return; }
     rec = snap.data();
+    /* ข้อความเดียวกับตอนไม่พบใบ — ไม่บอกว่า "รหัสผิด" เพราะนั่นเท่ากับยืนยันว่าใบนี้มีอยู่จริง */
+    if (!ckShareKeyOk(rec, key)) { _jdRepMsg('ไม่พบรายงานนี้ (อาจถูกลบไปแล้ว)'); return; }
   } catch (e) {
     console.error('[Daily report] load error', e);
     _jdRepMsg('โหลดรายงานไม่สำเร็จ — ตรวจอินเทอร์เน็ตแล้วลองใหม่');
@@ -14081,8 +14132,8 @@ const _ssoLikely = _hasValidSessionSync();
   // เปิดจากลิงก์แชร์รายงาน → แสดงรายงานอย่างเดียว ไม่ต้องล็อกอิน ไม่เด้งไป Hub
   const _rep = parseReportHash();
   if (_rep) {
-    if (_rep.kind === 'daily') openPublicDailyReport(_rep.id);
-    else openPublicJDReport(_rep.id);
+    if (_rep.kind === 'daily') openPublicDailyReport(_rep.id, _rep.key);
+    else openPublicJDReport(_rep.id, _rep.key);
     return;
   }
   // If a sibling FAB app already logged the user in, skip straight into the app.
