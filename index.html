@@ -11242,9 +11242,31 @@ document.addEventListener('keydown', (e) => {
 let currentDailyDetailId = null;
 
 // แก้ไขผล Daily (admin) — โหลด record เข้าฟอร์ม
+/* ใครแก้ใบไหนได้ — ตัดสินที่นี่ที่เดียว ใช้ทั้งตอนตัดสินใจโชว์ปุ่มและตอนกดปุ่มจริง
+   แยกสองที่เมื่อไรจะได้ปุ่มที่กดแล้วไม่ทำอะไร หรือปุ่มที่ซ่อนแต่ยังเรียกได้จากที่อื่น
+
+   · แอดมิน — แก้ได้ทุกใบทุกวัน
+   · สาขา — แก้ได้เฉพาะใบของสาขาตัวเอง และเฉพาะใบของ "วันนี้"
+     เจอที่กรอกผิดตอนเย็นก็แก้เองได้เลย ไม่ต้องรอแอดมิน
+     ข้ามวันแล้วล็อก เพราะผลของวันที่ปิดไปแล้วถูกนับเข้ารายงานและคะแนนไปแล้ว
+     ถ้าจะแก้ย้อนหลังต้องผ่านแอดมิน จะได้มีคนรู้เห็นด้วยหนึ่งคน
+   · ตำแหน่งอื่น (BZM/VP/COO) — ดูได้อย่างเดียว ไม่ใช่คนกรอก */
+function ckCanEditDaily(rec) {
+  if (!rec || !currentUser) return false;
+  if (currentUser.role === 'admin') return true;
+  if (currentUser.role !== 'branch') return false;
+  if (String(rec.branchCode || '') !== String(currentUser.branchCode || '')) return false;
+  return String(rec.date || '') === todayDateStr();
+}
 function editDailyChecklist(id) {
   const d = allDailyChecklists.find(x => x.id === id);
   if (!d) return;
+  if (!ckCanEditDaily(d)) {
+    return showModal('แก้ไขไม่ได้แล้ว',
+      currentUser && currentUser.role === 'branch'
+        ? 'สาขาแก้ผลตรวจได้เฉพาะใบของวันนี้ ใบของวันก่อนหน้าถูกนับเข้ารายงานไปแล้ว ถ้าต้องแก้จริง ๆ ให้แจ้งแอดมิน'
+        : 'บัญชีนี้ไม่มีสิทธิ์แก้ผลตรวจ');
+  }
   currentDaily = JSON.parse(JSON.stringify(d));
   hideAllScreens();
   document.getElementById('daily-form-screen').style.display = 'block';
@@ -11281,11 +11303,12 @@ function showDailyDetail(id, targetText) {
   currentDailyDetailId = id;
   hideAllScreens();
   document.getElementById('daily-detail-screen').style.display = 'block';
-  // ปุ่มแก้ไข/ลบ — เฉพาะ admin
+  /* ปุ่มแก้ไข — แอดมินทุกใบ · สาขาเฉพาะใบของตัวเองที่เป็นของวันนี้
+     ปุ่มลบยังเป็นแอดมินอย่างเดียว การลบทิ้งไม่ใช่เรื่องที่สาขาควรทำเองได้ */
   const _isAdmin = currentUser && currentUser.role === 'admin';
   const _eb = document.getElementById('daily-detail-edit-btn');
   const _db = document.getElementById('daily-detail-del-btn');
-  if (_eb) _eb.style.display = _isAdmin ? '' : 'none';
+  if (_eb) _eb.style.display = ckCanEditDaily(d) ? '' : 'none';
   if (_db) _db.style.display = _isAdmin ? '' : 'none';
 
   // Stats first — needed for the hero percentage and tier badge
