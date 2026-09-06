@@ -851,6 +851,10 @@ body {
    ตัดหัวแอป/เมนูล่างออก เหลือแต่ตัวรายงาน + ปุ่มบันทึกเป็น PDF */
 body.repmode .app-header,
 body.repmode #bottom-nav { display: none !important; }
+/* การ์ดหัวหน้าจอ (โลโก้ + ชื่อผู้ใช้ + ปุ่มสลับแบรนด์) — คนเปิดลิงก์ไม่ได้ล็อกอิน
+   ชื่อผู้ใช้จึงเป็นขีดกลาง และปุ่มสลับแบรนด์กดแล้วไม่มีอะไรเกิดขึ้น
+   หัวรายงานข้างล่างบอกครบอยู่แล้วว่าเป็นสาขาไหน รอบไหน วันไหน */
+body.repmode #ck-page-head { display: none !important; }
 body.repmode #app-screen { padding-top: 58px; }
 .rep-load {
   max-width: 520px; margin: 60px auto; padding: 24px;
@@ -6173,8 +6177,11 @@ body.in-audit #ck-page-head { display:none; }
             title="กลับไปประวัติ" aria-label="กลับไปประวัติ">
             <span class="material-symbols-rounded">arrow_back</span>
           </button>
-          <button class="btn btn-primary" data-ck-action="print-detail" style="flex:1;min-width:110px;" onclick="printDailyDetail()">
-            <span class="material-symbols-rounded">picture_as_pdf</span> ออก PDF
+          <!-- แชร์เป็นลิงก์แทนการออกไฟล์ PDF — แบบเดียวกับเจ๊แดง
+               ไฟล์ PDF ดาวน์โหลดแล้วส่งต่อยาก และบนแอนดรอยด์กดแล้วเงียบไปเฉย ๆ
+               ลิงก์เปิดได้ทุกเครื่องโดยไม่ต้องล็อกอิน แล้วผู้รับกดบันทึกเป็น PDF เองได้ -->
+          <button class="btn btn-primary" data-ck-action="print-detail" style="flex:1;min-width:110px;" onclick="shareDailyReport()">
+            <span class="material-symbols-rounded">ios_share</span> แชร์ลิงก์
           </button>
           <button class="btn btn-secondary ck-ico" id="daily-detail-edit-btn" style="display:none;"
             title="แก้ไขผลตรวจ" aria-label="แก้ไขผลตรวจ" onclick="editDailyChecklist(currentDailyDetailId)">
@@ -13554,16 +13561,17 @@ function printDailyDetail()    { return _printDetailPDF('daily-detail-screen',  
    ผู้รับเปิดลิงก์ได้ทุกเครื่องโดยไม่ต้องล็อกอิน แล้วกดบันทึกเป็น PDF เอง
    แก้ปัญหาไฟล์ PDF ดาวน์โหลดแล้วส่งต่อยาก / Android กดแล้วเงียบ
    ══════════════════════════════════════════════════════════════════ */
-function jdReportUrl(id) {
-  return location.origin + location.pathname + '#report=jd~' + encodeURIComponent(id);
+/* ลิงก์รายงาน — kind บอกว่าเป็นใบของระบบไหน ('jd' = เจ๊แดง · 'daily' = เปิด-ปิดร้าน)
+   รูปแบบเดียวกันทั้งสองระบบ เพิ่มระบบใหม่ทีหลังก็เติม kind แล้วต่อที่ openPublicReport */
+function ckReportUrl(kind, id) {
+  return location.origin + location.pathname + '#report=' + kind + '~' + encodeURIComponent(id);
 }
+function jdReportUrl(id) { return ckReportUrl('jd', id); }
+function dailyReportUrl(id) { return ckReportUrl('daily', id); }
 
-function shareJaedaengReport(id) {
-  const recId = id || currentJDDetailId;
-  if (!recId) return;
-  const r = (allJaedaengAudits || []).find(x => x.id === recId);
-  const url = jdReportUrl(recId);
-  const title = 'รายงานการตรวจสาขา' + (r && r.storeName ? ' · ' + r.storeName : '');
+/* กล่องแชร์ตัวเดียวใช้ได้ทุกระบบ — เดิมเขียนไว้เฉพาะเจ๊แดง
+   พอทำให้ซานตาเฟ่/ยามะจังด้วยจึงยกออกมาเป็นตัวกลาง ไม่ก๊อปโค้ดชุดเดิมไปวางอีกรอบ */
+function ckShareReport(url, title) {
   const askManual = () => { try { window.prompt('คัดลอกลิงก์นี้เพื่อแชร์', url); } catch (e) {} };
   // navigator.share ใช้ได้เฉพาะ https + ส่วนใหญ่เป็นมือถือ · คอมตกไปที่คัดลอกลิงก์
   if (navigator.share) {
@@ -13581,14 +13589,38 @@ function shareJaedaengReport(id) {
   askManual();
 }
 
+function shareJaedaengReport(id) {
+  const recId = id || currentJDDetailId;
+  if (!recId) return;
+  const r = (allJaedaengAudits || []).find(x => x.id === recId);
+  ckShareReport(jdReportUrl(recId),
+    'รายงานการตรวจสาขา' + (r && r.storeName ? ' · ' + r.storeName : ''));
+}
+
+/* แชร์ผลตรวจเปิด-ปิดร้าน — ใช้ได้ทุกแบรนด์ที่กรอกฟอร์มนี้ (ซานตาเฟ่ · ST_Easy · ยามะจัง) */
+function shareDailyReport(id) {
+  const recId = id || currentDailyDetailId;
+  if (!recId) return;
+  const r = (allDailyChecklists || []).find(x => x.id === recId);
+  const where = r ? branchLabel(r.branchCode, r.branchName) : '';
+  const round = r ? (r.shift === 'close' ? 'ปิดร้าน' : 'เปิดร้าน') : '';
+  ckShareReport(dailyReportUrl(recId),
+    'ผลตรวจ' + (round ? ' ' + round : '') + (where ? ' · ' + where : '') +
+    (r && r.date ? ' · ' + fmtDateDMY(r.date) : ''));
+}
+
 /* ── หน้าดูรายงานผ่านลิงก์ (สาธารณะ) — เปิดจาก #report=jd~<id> ──
    ดึงผลตรวจใบเดียวจาก Firestore มาแสดงด้วยหน้ารายละเอียดตัวเดิม
    จึงได้หน้าตา/ภาคผนวกรูป/การแบ่งหน้า PDF เหมือนกับที่เห็นในแอปทุกอย่าง */
-function parseJDReportHash() {
-  // ตัดที่ & และ ? ด้วย — บางแอป (LINE) ชอบต่อพารามิเตอร์ของตัวเองท้าย URL
-  const m = (location.hash || '').match(/[#&]report=jd~([^&?]+)/);
+/* คืน { kind, id } — kind เป็น 'jd' หรือ 'daily'
+   ตัดที่ & และ ? ด้วย เพราะบางแอป (LINE) ชอบต่อพารามิเตอร์ของตัวเองท้าย URL
+   ลิงก์เก่าที่แชร์ไปแล้วเป็น #report=jd~... ยังใช้ได้เหมือนเดิม */
+function parseReportHash() {
+  const m = (location.hash || '').match(/[#&]report=(jd|daily)~([^&?]+)/);
   if (!m) return null;
-  try { return decodeURIComponent(m[1]); } catch (e) { return m[1]; }
+  let id = m[2];
+  try { id = decodeURIComponent(id); } catch (e) {}
+  return { kind: m[1], id: id };
 }
 
 function _jdRepMsg(html) {
@@ -13633,6 +13665,52 @@ async function openPublicJDReport(id) {
   bar.className = 'rep-bar no-print';
   // ไม่ใส่ชื่อรายงานในแถบ — ชื่อสาขาอยู่ในหัวรายงานข้างล่างอยู่แล้ว เอาแค่แถบขาว + ปุ่ม
   bar.innerHTML = '<button class="btn btn-primary" onclick="printJaedaengDetail()">' +
+    '<span class="material-symbols-rounded">picture_as_pdf</span> บันทึกเป็น PDF</button>';
+  document.body.appendChild(bar);
+}
+
+/* หน้าดูรายงานผ่านลิงก์ของเช็คลิสต์เปิด-ปิดร้าน — เปิดจาก #report=daily~<id>
+   ใช้ได้ทุกแบรนด์ที่กรอกฟอร์มนี้ (ซานตาเฟ่ · ST_Easy · ยามะจัง)
+   วิธีเดียวกับของเจ๊แดงทุกอย่าง — ดึงใบเดียวจาก Firestore แล้ววาดด้วยหน้ารายละเอียดตัวเดิม
+   จึงได้หน้าตา ภาคผนวกรูป และการแบ่งหน้า PDF เหมือนที่เห็นในแอปเป๊ะ */
+async function openPublicDailyReport(id) {
+  document.body.classList.add('repmode');
+  const login = document.getElementById('login-screen');
+  if (login) login.classList.remove('active');
+  const app = document.getElementById('app-screen');
+  if (app) app.classList.add('active');
+  const loading = document.createElement('div');
+  loading.className = 'rep-load';
+  loading.id = 'daily-rep-loading';
+  loading.textContent = 'กำลังโหลดรายงาน…';
+  if (app) app.prepend(loading);
+
+  if (!firebaseDb) { _jdRepMsg('เปิดรายงานไม่ได้ — เชื่อมต่อฐานข้อมูลไม่สำเร็จ'); return; }
+  let rec;
+  try {
+    const snap = await firebaseDb.collection(DAILY_COLLECTION).doc(String(id)).get();
+    if (!snap.exists) { _jdRepMsg('ไม่พบรายงานนี้ (อาจถูกลบไปแล้ว)'); return; }
+    rec = snap.data();
+  } catch (e) {
+    console.error('[Daily report] load error', e);
+    _jdRepMsg('โหลดรายงานไม่สำเร็จ — ตรวจอินเทอร์เน็ตแล้วลองใหม่');
+    return;
+  }
+  rec.id = rec.id || String(id);
+  loading.remove();
+  /* หน้ารายละเอียดอ่านจาก allDailyChecklists — ยัดใบเดียวที่โหลดมาเข้าไปแล้วเรียกตัวเดิม
+     ตั้ง currentView ตามรหัสสาขาด้วย ไม่งั้นป้าย "ตรงเวลา/สาย" กับสีจะเป็นของแบรนด์อื่น */
+  allDailyChecklists = [rec];
+  try { currentView = ckBrandOfBranch(rec.branchCode); applyBrandTheme(); } catch (e) {}
+  try { showDailyDetail(rec.id); }
+  catch (e) { console.error('[Daily report] render error', e, rec); _jdRepMsg('แสดงรายงานไม่ได้ — ข้อมูลบางส่วนไม่สมบูรณ์'); return; }
+  /* ตัดแถบปุ่มท้ายหน้าออกทั้งการ์ด (กลับไปประวัติ/แชร์/แก้ไข/ลบ ใช้ไม่ได้เพราะไม่ได้ล็อกอิน)
+     แล้วย้าย "บันทึกเป็น PDF" ขึ้นแถบบนขวา — เห็นตลอดโดยไม่ต้องเลื่อนลงสุด */
+  const bar0 = document.querySelector('#daily-detail-screen .form-action-bar');
+  if (bar0) bar0.remove();
+  const bar = document.createElement('div');
+  bar.className = 'rep-bar no-print';
+  bar.innerHTML = '<button class="btn btn-primary" onclick="printDailyDetail()">' +
     '<span class="material-symbols-rounded">picture_as_pdf</span> บันทึกเป็น PDF</button>';
   document.body.appendChild(bar);
 }
@@ -13937,8 +14015,12 @@ const _ssoLikely = _hasValidSessionSync();
 
 (async function bootstrapLogin() {
   // เปิดจากลิงก์แชร์รายงาน → แสดงรายงานอย่างเดียว ไม่ต้องล็อกอิน ไม่เด้งไป Hub
-  const _repId = parseJDReportHash();
-  if (_repId) { openPublicJDReport(_repId); return; }
+  const _rep = parseReportHash();
+  if (_rep) {
+    if (_rep.kind === 'daily') openPublicDailyReport(_rep.id);
+    else openPublicJDReport(_rep.id);
+    return;
+  }
   // If a sibling FAB app already logged the user in, skip straight into the app.
   const ok = await autoLoginFromSession();
   if (ok) return;
