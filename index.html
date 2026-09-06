@@ -10249,7 +10249,20 @@ function _refreshDailyActions() {
 }
 
 // ป้ายเวลาที่ส่ง (จาก submittedAt) — แสดงบนการ์ดประวัติ
+/* เคยถูกแก้ไหม — ใช้ตัดสินว่าจะขึ้นป้าย "แก้ไขแล้ว" ที่ไหนบ้าง */
+function _dailyWasEdited(d) { return !!(d && d.editedAt); }
+/* เวลาที่ "แก้ไขล่าสุด" แบบสั้น */
+function _dailyEditedLabel(d) {
+  if (!_dailyWasEdited(d)) return '';
+  const dt = new Date(d.editedAt);
+  if (isNaN(dt.getTime())) return '';
+  const hh = String(dt.getHours()).padStart(2, '0');
+  const mm = String(dt.getMinutes()).padStart(2, '0');
+  return hh + ':' + mm;
+}
 function _dailySentLabel(d) {
+  /* ยึด submittedAt เป็นหลักเสมอ — updatedAt เป็นตัวสำรองสำหรับใบเก่าที่ไม่มีช่องนี้
+     ห้ามหยิบ editedAt มาแทน ไม่งั้นจะกลับไปเป็นปัญหาเดิมคือโชว์เวลาแก้เป็นเวลาส่ง */
   const t = d && (d.submittedAt || d.updatedAt);
   if (!t) return '';
   try {
@@ -10562,6 +10575,7 @@ function renderDailyList() {
           <span class="ck-row-nm">${escapeHtml(lead)}</span>
           ${sentAt ? `<span class="ck-row-tm">${escapeHtml(sentAt)}</span>` : ''}
           ${late ? '<span class="ck-chip late">เกินเวลา</span>' : ''}
+          ${_dailyWasEdited(d) ? `<span class="ck-chip" title="แก้ไขเมื่อ ${escapeAttr(_dailyEditedLabel(d))} น.">แก้ไข</span>` : ''}
           ${failItems > 0 ? `<span class="ck-chip bad">ตก ${failItems}</span>` : ''}
           ${pending > 0 ? `<span class="ck-chip">รอ ${pending}</span>` : ''}
           <span class="ck-row-pc${isFull ? ' full' : ''}"${isFull ? '' : ` style="color:${scoreColor};"`}>${scorePct.toFixed(0)}<small>%</small></span>
@@ -11167,8 +11181,24 @@ async function submitDailyShift() {
   });
   if (missingPhoto.length > 0) { _scrollTo(missingPhoto[0], 'ถ่ายรูปไม่ครบ', `ยังมีข้อที่ต้องถ่ายรูปอีก ${missingPhoto.length} ข้อ`); return; }
   currentDaily.manager = manager;
-  currentDaily.submittedAt = new Date().toISOString();
-  currentDaily.updatedAt = currentDaily.submittedAt; // incremental sync
+  /* ── เวลาส่ง กับ เวลาแก้ เป็นคนละเรื่อง ──
+     ของเดิมเขียนทับ submittedAt ทุกครั้งที่กดส่ง ไม่ได้แยกว่าเป็นการส่งครั้งแรก
+     หรือกลับมาแก้ทีหลัง เวลาที่สาขาส่งจริงจึงหายถาวรตั้งแต่แก้ครั้งแรก
+     เรื่องนี้เพิ่งกลายเป็นปัญหาจริง ตอนเปิดให้สาขาแก้ใบของตัวเองได้ — จากปีละไม่กี่ครั้ง
+     เป็นทุกวัน · ปฏิทินกับประวัติอ่านเวลาจากช่องนี้ ตัวเลขจึงขยับตามไปด้วย
+
+     ใบเก่าที่ไม่มี submittedAt (บันทึกไว้ก่อนมีฟิลด์นี้) ให้ครั้งนี้เป็นเวลาส่ง
+     ไม่ใช่นับเป็นการแก้ ไม่งั้นจะได้ใบที่ "แก้ไขแล้ว" ทั้งที่เพิ่งส่งครั้งแรก */
+  const _now = new Date().toISOString();
+  const _firstTime = !currentDaily.submittedAt;
+  if (_firstTime) {
+    currentDaily.submittedAt = _now;
+  } else {
+    currentDaily.editedAt = _now;
+    currentDaily.editedBy = (currentUser && (currentUser.nick || currentUser.name || currentUser.branchName)) || '';
+    currentDaily.editCount = (Number(currentDaily.editCount) || 0) + 1;
+  }
+  currentDaily.updatedAt = _now; // incremental sync
 
   // กันรูป base64 หลุดเข้า Firestore (เกินลิมิต 1MB) — อัปรูปที่ยังเป็น base64 ขึ้น R2 ก่อนเซฟ
   if (!testMode) {
@@ -11373,8 +11403,19 @@ function showDailyDetail(id, targetText) {
     { icon: 'badge',              label: 'Manager on duty', value: d.manager || '-' },
     { icon: 'supervisor_account', label: 'BZM',             value: ckBzmFullName(d.bzm) || '-' },
     { icon: 'person',             label: 'บันทึกโดย',       value: d.submittedByName || '-' },
+
     { icon: 'fact_check',         label: 'สถานะรายการ',     value: `ผ่าน ${passN} ข้อ - ไม่ผ่าน ${failN} ข้อ - N/A ${naN} ข้อ${pendN > 0 ? ` - รอ ${pendN} ข้อ` : ''} - ทั้งหมด ${total} ข้อ` },
   ];
+  /* ใบที่เคยถูกแก้ต้องบอกไว้ในรายงาน — ไม่งั้นคนอ่านไม่มีทางรู้ว่าตัวเลขที่เห็น
+     ไม่ใช่สิ่งที่บันทึกไว้ตอนตรวจจริง · ขึ้นเฉพาะใบที่มีการแก้ ใบปกติไม่มีแถวนี้ */
+  if (_dailyWasEdited(d)) {
+    const _ed = new Date(d.editedAt);
+    const _edTxt = isNaN(_ed.getTime()) ? '' :
+      (fmtDateDMY(d.editedAt.slice(0, 10)) + ' ' + _dailyEditedLabel(d) + ' น.');
+    metaRows.push({ icon: 'edit_note', label: 'แก้ไขล่าสุด',
+      value: _edTxt + (d.editedBy ? ' โดย ' + d.editedBy : '') +
+             ((Number(d.editCount) || 0) > 1 ? ' (แก้ไป ' + d.editCount + ' ครั้ง)' : '') });
+  }
   if (_isDailyLate(d) && (d.lateReason || '').trim()) {
     metaRows.push({ icon: 'schedule', label: 'เหตุผลที่ตรวจช้า (เกินเวลา)', value: d.lateReason, cls: 'span-all is-late-reason' });
   }
