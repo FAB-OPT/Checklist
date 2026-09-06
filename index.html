@@ -9505,6 +9505,11 @@ const CK_ACTIONS = [
   { id: 'view-jd-hub',   group: 'menu',   label: 'ตรวจร้าน (เจ๊แดง)',    roles: ['admin','coo','vp','bzm','branch'] },
   { id: 'print-detail',  group: 'export', label: 'พิมพ์ผลตรวจ',          roles: ['admin','coo','vp','bzm'] },
   { id: 'report-sf',     group: 'export', label: 'ออกรายงาน (ซานตาเฟ่)', roles: ['admin','bzm'] },
+  /* แก้ผลตรวจ — ตั้งได้จากฮับเหมือนปุ่มลบ
+     ค่าตั้งต้นตรงกับกติกาที่ใช้อยู่: แอดมินแก้ได้ทุกใบ · สาขาแก้ได้เฉพาะใบของตัวเอง
+     ส่วน "ภายในกี่วัน" คุมด้วย CK_EDIT_DAYS ข้างล่าง ไม่ได้อยู่ในตารางสิทธิ์
+     เพราะเป็นเรื่องของช่วงเวลา ไม่ใช่เรื่องของตำแหน่ง */
+  { id: 'edit-daily',    group: 'danger', label: 'แก้ผลตรวจ (ซานตาเฟ่)',  roles: ['admin','branch'] },
   { id: 'delete-daily',  group: 'danger', label: 'ลบผลตรวจ (ซานตาเฟ่)',  roles: ['admin'], danger: true },
   { id: 'delete-jd',     group: 'danger', label: 'ลบผลตรวจ (เจ๊แดง)',    roles: ['admin'], danger: true },
   /* ปุ่มบันทึกของสองระบบต้องแยกสิทธิ์กัน — ซานตาเฟ่สาขากรอกเอง ส่วนเจ๊แดงเป็นการตรวจร้าน
@@ -9531,6 +9536,10 @@ function _normalizeCkPerms(p) {
         deny:  Array.isArray(src.deny)  ? src.deny.map(String)  : [],
       };
     });
+    /* ค่าที่ไม่ใช่ "สิทธิ์ต่อปุ่ม" แต่มาในก้อนเดียวกัน — จำนวนวันที่ยังแก้ผลตรวจได้
+       เก็บมาด้วยเพื่อให้ตั้งจากฮับที่เดียวกับสิทธิ์ปุ่ม ไม่ต้องมีที่ตั้งค่าแยกอีกที่ */
+    const d = Number(p.editDailyDays);
+    if (isFinite(d) && d >= 0) out.editDailyDays = d;
   }
   return out;
 }
@@ -11309,10 +11318,32 @@ let currentDailyDetailId = null;
    · ตำแหน่งอื่น (BZM/VP/COO) — ดูได้อย่างเดียว ไม่ใช่คนกรอก */
 function ckCanEditDaily(rec) {
   if (!rec || !currentUser) return false;
-  if (currentUser.role === 'admin') return true;
-  if (currentUser.role !== 'branch') return false;
+  if (!ckCan('edit-daily')) return false;              // ปิดสิทธิ์จากฮับ = จบตรงนี้
+  if (currentUser.role === 'admin') return true;       // แอดมินไม่ติดกรอบเวลา
+  /* คนอื่นแก้ได้เฉพาะใบของสาขาตัวเอง — บัญชีที่ไม่ผูกสาขา (BZM/VP/COO) จึงตกตรงนี้
+     ถึงจะเปิดสิทธิ์ให้จากฮับก็ตาม เพราะไม่รู้ว่าใบไหนเป็น "ของตัวเอง" */
   if (String(rec.branchCode || '') !== String(currentUser.branchCode || '')) return false;
-  return String(rec.date || '') === todayDateStr();
+  return ckWithinEditWindow(rec);
+}
+/* ── กรอบเวลาที่ยังแก้ได้ ──
+   ตั้งจากฮับด้วยคีย์ editDailyDays ในก้อน perms — 1 = เฉพาะวันนี้ (ค่าตั้งต้น)
+   0 = ปิดการแก้ย้อนหลังทั้งหมด · 0 กับค่าติดลบถือว่าแก้ไม่ได้เลย
+   นับเป็น "วัน" ไม่ใช่ 24 ชั่วโมง เพราะรอบตรวจผูกกับวันที่ ไม่ใช่เวลาที่ผ่านไป */
+const CK_EDIT_DAYS_DEFAULT = 1;
+function ckEditDays() {
+  const v = Number(CK_PERMS && CK_PERMS.editDailyDays);
+  return isFinite(v) && v >= 0 ? v : CK_EDIT_DAYS_DEFAULT;
+}
+function ckWithinEditWindow(rec) {
+  const days = ckEditDays();
+  if (days <= 0) return false;
+  const d = String(rec && rec.date || '');
+  if (!d) return false;
+  const today = todayDateStr();
+  if (d === today) return days >= 1;
+  const ms = Date.parse(today + 'T00:00:00') - Date.parse(d + 'T00:00:00');
+  if (!isFinite(ms) || ms < 0) return false;            // ใบของวันในอนาคต ไม่นับ
+  return Math.round(ms / 86400000) < days;
 }
 function editDailyChecklist(id) {
   const d = allDailyChecklists.find(x => x.id === id);
