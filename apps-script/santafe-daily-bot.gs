@@ -226,21 +226,77 @@ function queryDailyByDate(dateStr) {
 }
 
 // รายชื่อสาขาจาก Firestore (appConfig/sfBranches) — sync กับที่แอปจัดการ · fallback = BRANCHES ที่ฝังไว้
+/* รายชื่อสาขา — ฮับคือแหล่งกลาง
+
+   แอปเช็คลิสต์ย้ายมาอ่านจากฮับตั้งแต่ต้น (⚙️ → 🏪 จัดการสาขา) แต่บอทยังค้าง
+   อยู่ที่ Firestore ซึ่งเป็นแหล่งสำรองเก่า ผลคือปิดสาขาในฮับแล้วบอทยังทวงอยู่
+   ทำให้ตัวเลข "ยังไม่ส่ง x/74" ผิด และคนอ่านสรุปทุกเช้าเชื่อผิดตามไปด้วย
+
+   ลำดับแหล่งข้อมูลเดียวกับแอปเป๊ะ ๆ:
+     1) ฮับ        — ของจริง แก้ที่เดียวเห็นตรงกันทุกระบบ
+     2) Firestore  — สำรอง เผื่อฮับล่ม
+     3) ลิสต์ในสคริปต์ — ด่านสุดท้าย กันบอทเงียบ
+
+   สาขาที่ปิดแล้วถูกตัดออกทุกทาง เพราะบอทใช้รายชื่อนี้เพื่อ "ทวงคนที่ยังไม่ส่ง"
+   สาขาที่ปิดไม่มีใครส่งอยู่แล้ว ทวงไปก็ไม่มีความหมาย
+   (แอปยังเก็บสาขาปิดไว้ในลิสต์ เพราะต้องแปลงรหัสเป็นชื่อในรายงานย้อนหลัง
+    แต่บอทไม่ต้องใช้ จึงตัดทิ้งตั้งแต่ตรงนี้เลย) */
+var HUB_CONFIG_URL = 'https://script.google.com/macros/s/AKfycbyjGvhSuDrnnOkWdwoq4CsR5jM3__lp58ZWe_BjcrxDIoOtnlFaiEdKUXX10EANUFCRXA/exec';
+
+/* เก็บเฉพาะรหัสของซานตาเฟ่ — ฮับมีทุกแบรนด์ปนกันในก้อนเดียว
+   40xx = เจ๊แดง · 60xx = ยามะจัง · 50xx กับ 55xx = ซานตาเฟ่ */
+function _isSantaFeCode(code) {
+  var c = String(code);
+  return c.indexOf('50') === 0 || c.indexOf('55') === 0;
+}
+
+function _rosterFromHub() {
+  var res = UrlFetchApp.fetch(HUB_CONFIG_URL + '?action=config&_=' + Date.now(),
+    { muteHttpExceptions: true, followRedirects: true });
+  if (res.getResponseCode() !== 200) return null;
+  var j = JSON.parse(res.getContentText() || '{}');
+  if (!j || !j.ok || !j.branches || !j.branches.branches) return null;
+  var names = j.branches.branches, st = j.branches.statusMap || {};
+  var out = [];
+  for (var code in names) {
+    if (!_isSantaFeCode(code)) continue;
+    if (st[code] === 'closed') continue;          /* ปิดสาขาแล้ว ไม่ต้องทวง */
+    out.push([String(code), names[code] || '']);
+  }
+  /* เรียงตามรหัส ให้รายชื่อในข้อความออกมาลำดับเดิมทุกวัน อ่านซ้ำแล้วไม่สับสน */
+  out.sort(function (a, b) { return a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0; });
+  return out.length ? out : null;
+}
+
+function _rosterFromFirestore() {
+  var a = _fbAuth('https://firestore.googleapis.com/v1/projects/' + PROJECT_ID + '/databases/(default)/documents/appConfig/sfBranches');
+  var res = UrlFetchApp.fetch(a.url, { method: 'get', headers: a.headers, muteHttpExceptions: true });
+  if (res.getResponseCode() !== 200) return null;
+  var doc = JSON.parse(res.getContentText());
+  if (!doc || !doc.fields) return null;
+  var d = decodeDoc(doc.fields);
+  if (!d || !(d.list instanceof Array) || !d.list.length) return null;
+  var out = d.list
+    .filter(function (b) { return b && b.code && !b.closed; })
+    .map(function (b) { return [String(b.code), b.name || '']; });
+  return out.length ? out : null;
+}
+
 function getBranchRoster() {
-  try {
-    var a = _fbAuth('https://firestore.googleapis.com/v1/projects/' + PROJECT_ID + '/databases/(default)/documents/appConfig/sfBranches');
-    var res = UrlFetchApp.fetch(a.url, { method: 'get', headers: a.headers, muteHttpExceptions: true });
-    if (res.getResponseCode() === 200) {
-      var doc = JSON.parse(res.getContentText());
-      if (doc && doc.fields) {
-        var d = decodeDoc(doc.fields);
-        if (d && Array.isArray(d.list) && d.list.length) {
-          return d.list.filter(function (b) { return b && b.code; }).map(function (b) { return [String(b.code), b.name || '']; });
-        }
-      }
-    }
-  } catch (e) {}
-  return BRANCHES; // ยังไม่มีใน cloud หรืออ่านไม่ได้ → ใช้ลิสต์ที่ฝังในสคริปต์
+  try { var h = _rosterFromHub();       if (h) return h; } catch (e) {}
+  try { var f = _rosterFromFirestore(); if (f) return f; } catch (e) {}
+  return BRANCHES;
+}
+
+/* รันมือเพื่อดูว่าตอนนี้บอทเห็นสาขาจากที่ไหน กี่สาขา — ใช้ตอนสงสัยว่าตัวเลขเพี้ยน */
+function testRoster() {
+  var src = 'ลิสต์ในสคริปต์', list = null;
+  try { list = _rosterFromHub(); if (list) src = 'ฮับ'; } catch (e) { Logger.log('ฮับ: ' + e); }
+  if (!list) { try { list = _rosterFromFirestore(); if (list) src = 'Firestore'; } catch (e) { Logger.log('Firestore: ' + e); } }
+  if (!list) list = BRANCHES;
+  Logger.log('แหล่งข้อมูล: ' + src + '  ·  ' + list.length + ' สาขา');
+  Logger.log(list.map(function (b) { return b[0] + ' ' + b[1]; }).join(String.fromCharCode(10)));
+  return { source: src, count: list.length };
 }
 
 function decodeDoc(fields) {
