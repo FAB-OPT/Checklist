@@ -10,10 +10,16 @@
  *
  * ── ติดตั้ง (ทำครั้งเดียว) ─────────────────────────────────────────────
  * 1) Project Settings → Time zone = (GMT+07:00) Bangkok
- * 2) Project Settings → Script Properties เพิ่ม 3 ค่า:
+ * 2) Project Settings → Script Properties เพิ่ม 4 ค่า:
  *      BOT_TOKEN         = โทเคนบอท Telegram (จาก @BotFather)
  *      CHAT_ID           = id กลุ่มซานตาเฟ่ (เช่น -1001234567890)
- *      FIREBASE_API_KEY  = apiKey ของ Firebase web (ดูใน FIREBASE_CONFIG ใน index.html)
+ *      FB_CLIENT_EMAIL   = อีเมล service account   ─┐ ก๊อปจากโปรเจค
+ *      FB_PRIVATE_KEY    = กุญแจส่วนตัวของ service account ─┘ Telegram Notify Checklist JD
+ *
+ *    ตั้งแต่ 7 ก.ย. 2569 ฐานข้อมูลล็อกกฎเป็น "ต้องล็อกอินก่อน" แล้ว
+ *    FIREBASE_API_KEY เปล่า ๆ จะโดนปฏิเสธ (403) ต้องใช้ service account เท่านั้น
+ *    ถ้าไม่ได้ตั้งสองค่านี้ บอทจะรายงานว่าทุกสาขาไม่ส่ง ทั้งที่ส่งครบ
+ *    ซึ่งผิดในทางที่อันตรายกว่าเงียบไปเฉย ๆ — ตรวจได้ด้วย testReportOpen()
  *    (PROJECT_ID ตั้งค่าเริ่มต้นเป็น checklist-a89e2 แล้ว — แก้ด้านล่างถ้าเปลี่ยนโปรเจกต์)
  * 3) Deploy → New deployment → Web app
  *      Execute as = Me · Who has access = Anyone
