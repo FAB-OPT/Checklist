@@ -153,18 +153,59 @@ function buildRoundReport(shift) {
 }
 
 // ───────────────────────── Firestore REST (อ่านอย่างเดียว) ─────────────────────────
-function queryDailyByDate(dateStr) {
+
+/* สิทธิ์เข้า Firestore
+
+   เดิมใช้ FIREBASE_API_KEY เปล่า ๆ ซึ่งใช้ได้เพราะกฎเปิดให้ทุกคนอ่าน
+   พอล็อกกฎเป็น "ต้องล็อกอินก่อน" คีย์เปล่าจะถูกปฏิเสธ แล้วบอทจะรายงานว่า
+   ทุกสาขาไม่ส่ง ทั้งที่ส่งครบ — ผิดในทางที่อันตรายกว่าเงียบไปเฉย ๆ
+
+   จึงเปลี่ยนมาใช้ service account เดียวกับสคริปต์ Telegram
+   (Script properties: FB_CLIENT_EMAIL / FB_PRIVATE_KEY)
+   ยังไม่ได้ตั้ง = ถอยไปใช้คีย์เดิม ทำงานได้จนกว่ากฎจะเปลี่ยน */
+function _fbToken() {
+  var props = PropertiesService.getScriptProperties();
+  var email = props.getProperty('FB_CLIENT_EMAIL');
+  var key = (props.getProperty('FB_PRIVATE_KEY') || '').replace(/[\\]n/g, String.fromCharCode(10));
+  if (!email || !key) return '';
+
+  var cache = CacheService.getScriptCache();
+  var hit = cache.get('sfbot_token');
+  if (hit) return hit;
+
+  var now = Math.floor(Date.now() / 1000);
+  var enc = function (o) { return Utilities.base64EncodeWebSafe(JSON.stringify(o)).replace(/=+$/, ''); };
+  var toSign = enc({ alg: 'RS256', typ: 'JWT' }) + '.' + enc({
+    iss: email, scope: 'https://www.googleapis.com/auth/datastore',
+    aud: 'https://oauth2.googleapis.com/token', iat: now, exp: now + 3600 });
+  var jwt = toSign + '.' + Utilities.base64EncodeWebSafe(
+    Utilities.computeRsaSha256Signature(toSign, key)).replace(/=+$/, '');
+
+  var res = UrlFetchApp.fetch('https://oauth2.googleapis.com/token', {
+    method: 'post', muteHttpExceptions: true,
+    payload: { grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer', assertion: jwt } });
+  var data = JSON.parse(res.getContentText() || '{}');
+  if (!data.access_token) throw new Error('ขอโทเคน service account ไม่สำเร็จ: ' + res.getContentText().slice(0, 200));
+  cache.put('sfbot_token', data.access_token, 3300);
+  return data.access_token;
+}
+function _fbAuth(url) {
+  var t = _fbToken();
+  if (t) return { url: url, headers: { Authorization: 'Bearer ' + t } };
   var key = PropertiesService.getScriptProperties().getProperty('FIREBASE_API_KEY');
-  var url = 'https://firestore.googleapis.com/v1/projects/' + PROJECT_ID +
-            '/databases/(default)/documents:runQuery?key=' + key;
+  return { url: url + (url.indexOf('?') >= 0 ? '&' : '?') + 'key=' + key, headers: {} };
+}
+function queryDailyByDate(dateStr) {
+  var a = _fbAuth('https://firestore.googleapis.com/v1/projects/' + PROJECT_ID +
+                  '/databases/(default)/documents:runQuery');
   var body = {
     structuredQuery: {
       from: [{ collectionId: COLLECTION }],
       where: { fieldFilter: { field: { fieldPath: 'date' }, op: 'EQUAL', value: { stringValue: dateStr } } }
     }
   };
-  var res = UrlFetchApp.fetch(url, {
-    method: 'post', contentType: 'application/json',
+  var res = UrlFetchApp.fetch(a.url, {
+    method: 'post', contentType: 'application/json', headers: a.headers,
     payload: JSON.stringify(body), muteHttpExceptions: true
   });
   var arr = JSON.parse(res.getContentText());
@@ -181,9 +222,8 @@ function queryDailyByDate(dateStr) {
 // รายชื่อสาขาจาก Firestore (appConfig/sfBranches) — sync กับที่แอปจัดการ · fallback = BRANCHES ที่ฝังไว้
 function getBranchRoster() {
   try {
-    var key = PropertiesService.getScriptProperties().getProperty('FIREBASE_API_KEY');
-    var url = 'https://firestore.googleapis.com/v1/projects/' + PROJECT_ID + '/databases/(default)/documents/appConfig/sfBranches?key=' + key;
-    var res = UrlFetchApp.fetch(url, { method: 'get', muteHttpExceptions: true });
+    var a = _fbAuth('https://firestore.googleapis.com/v1/projects/' + PROJECT_ID + '/databases/(default)/documents/appConfig/sfBranches');
+    var res = UrlFetchApp.fetch(a.url, { method: 'get', headers: a.headers, muteHttpExceptions: true });
     if (res.getResponseCode() === 200) {
       var doc = JSON.parse(res.getContentText());
       if (doc && doc.fields) {

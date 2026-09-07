@@ -6442,6 +6442,7 @@ body.in-audit #ck-page-head { display:none; }
 <!-- ============ FIREBASE ============ -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script>
 // 🔧 แทนที่ค่าเหล่านี้ด้วย config จาก Firebase Console ของคุณ
 // (Project Settings → General → Your apps → Web app → SDK setup → Config)
@@ -6456,10 +6457,30 @@ const FIREBASE_CONFIG = {
 };
 
 let firebaseDb = null;
+
+/* ล็อกอินแบบไม่ระบุตัวตน — ต้องทำก่อนแตะฐานข้อมูลทุกครั้ง
+
+   ทำไมต้องมี: กฎความปลอดภัยของ Firestore กำลังจะเปลี่ยนเป็น "ต้องล็อกอินก่อน"
+   เพราะตอนนี้ใครก็ตามที่เห็น apiKey ในหน้านี้ ยิงคำสั่งจากเทอร์มินัลแล้วดูดหรือ
+   ลบใบตรวจทั้งหมดได้ ถ้าไม่มีตัวนี้ก่อน ทุกสาขาจะส่งใบไม่ได้ทันทีที่กฎมีผล
+
+   ตัวนี้ไม่ใช่การยืนยันว่าใครเป็นใคร — แอปยังใช้รหัสพนักงานเหมือนเดิม
+   แต่ทำให้ต้องผ่านหน้าเว็บนี้จริง ๆ ถึงจะแตะข้อมูลได้ */
+let _ckAuthP = Promise.resolve(false);
+function ckAuthReady() { return _ckAuthP; }
+
 try {
   if (FIREBASE_CONFIG.apiKey) {
     firebase.initializeApp(FIREBASE_CONFIG);
     firebaseDb = firebase.firestore();
+    _ckAuthP = firebase.auth().signInAnonymously()
+      .then(function () { return true; })
+      .catch(function (e) {
+        /* ล้มเหลวไม่ปิดแอป — ตอนกฎยังเปิดอยู่ก็ยังทำงานได้ปกติ
+           แต่ถ้าเห็นบรรทัดนี้หลังเปลี่ยนกฎแล้ว แปลว่ายังไม่ได้เปิด Anonymous ใน console */
+        console.warn('ล็อกอิน Firebase ไม่สำเร็จ', e && (e.code || e.message));
+        return false;
+      });
     console.log('Firebase initialized');
   } else {
     console.warn('Firebase config not set — using localStorage only');
@@ -7485,6 +7506,7 @@ function saveAudits() {
 }
 
 async function saveAuditToBackend(audit) {
+  await ckAuthReady();            // รอล็อกอิน Firebase ก่อนแตะข้อมูล
   if (testMode) return;
   if (!firebaseDb || !audit || !audit.id) return;
   try {
@@ -7650,6 +7672,7 @@ function _repaintDaily() {
 const DAILY_FIRST_PAINT_DAYS = 3;
 
 async function loadDailyChecklists() {
+  await ckAuthReady();            // รอล็อกอิน Firebase ก่อนแตะข้อมูล
   loadCkSysNotes(); // หมายเหตุระบบรายวัน/รอบ (เช่น ระบบล่ม สาขาส่งไม่ได้)
   loadSfBranches(); // โหลดรายชื่อสาขา (เพิ่ม/ลบ) จาก cloud — ครั้งเดียวต่อ session
   loadCkPermsFromHub(); // สิทธิ์ปุ่มจาก HUB (throttle) — ตัวหลักเรียกที่ renderBottomNav/visibilitychange
@@ -7738,6 +7761,7 @@ function _dailyHaveFrom() {
   return _dailyLoadedFrom || _daysAgoStr(DAILY_BACKFILL_DAYS);
 }
 async function _ensureDailyRange(from) {
+  await ckAuthReady();            // รอล็อกอิน Firebase ก่อนแตะข้อมูล
   if (!firebaseDb || !from) return false;
   const have = _dailyHaveFrom();
   if (from >= have) return false;              // ครอบคลุมอยู่แล้ว
@@ -7770,6 +7794,7 @@ async function loadAllDailyHistory() {
 }
 
 async function saveDailyToBackend(daily) {
+  await ckAuthReady();            // รอล็อกอิน Firebase ก่อนแตะข้อมูล
   if (testMode) return true;
   if (!firebaseDb || !daily || !daily.id) return false;
   daily.updatedAt = new Date().toISOString(); // จำเป็นต่อ incremental sync
@@ -8086,8 +8111,9 @@ function _rerenderJaedaengIfVisible() {
 const JD_TESTMODE_ID = '__config_testmode__';
 function _isJdConfigDoc(r) { return !r || !r.id || r.id === JD_TESTMODE_ID || r.__config; }
 
-function startJaedaengRealtime() {
+async function startJaedaengRealtime() {
   if (!firebaseDb || _jdUnsub) return;
+  await ckAuthReady();            // รอล็อกอิน Firebase ก่อนเปิด onSnapshot
   try {
     _jdWindowStart = _daysAgoStr(JD_WINDOW_DAYS);
     _jdOldestLoaded = _jdWindowStart;
@@ -8139,6 +8165,7 @@ function startJaedaengRealtime() {
 
 // โหลดผลตรวจเจ๊แดงช่วง [fromStr, _jdOldestLoaded) มาเพิ่ม (เก่ากว่าหน้าต่าง realtime) — ครั้งเดียวต่อช่วง
 async function _ensureJaedaengLoadedFrom(fromStr) {
+  await ckAuthReady();            // รอล็อกอิน Firebase ก่อนแตะข้อมูล
   if (!firebaseDb || !fromStr || _jdLoadingOlder) return;
   if (!_jdOldestLoaded || fromStr >= _jdOldestLoaded) return; // โหลดช่วงนี้ไปแล้ว
   _jdLoadingOlder = true;
@@ -8219,6 +8246,7 @@ function loadBrandData(force) {
 }
 
 async function loadJaedaengAudits() {
+  await ckAuthReady();            // รอล็อกอิน Firebase ก่อนแตะข้อมูล
   // ข้อมูลสด cloud มาทาง realtime (startJaedaengRealtime/onSnapshot) แล้ว → ไม่ต้อง .get() ทั้ง collection ซ้ำ (ประหยัดโควตา)
   const local = loadLocalJaedaeng();
   allJaedaengAudits = local;
@@ -8242,6 +8270,7 @@ async function loadJaedaengAudits() {
   pruneOldJaedaengPhotos();
 }
 async function saveJaedaengToBackend(audit) {
+  await ckAuthReady();            // รอล็อกอิน Firebase ก่อนแตะข้อมูล
   if (testMode) return;
   if (!firebaseDb || !audit || !audit.id) return;
   // มาร์คว่า "ค้างอัปโหลด" ไว้ก่อน — ถ้าสำเร็จค่อยเอาออก
@@ -9190,6 +9219,7 @@ function _ckCmpMonth(list) {
 /* เขียนสรุปของเดือนที่กำลังดูอยู่ — เขียนเมื่อค่าเปลี่ยนจริง หรือใบเดิมเก่าเกิน 6 ชั่วโมง
    จะได้ไม่ยิงเขียนทุกครั้งที่เปิดหน้า */
 async function _ckWriteSummary(month) {
+  await ckAuthReady();            // รอล็อกอิน Firebase ก่อนแตะข้อมูล
   if (!firebaseDb || testMode || !currentUser) return;
   const role = currentUser.role;
   if (role === 'branch') return;
@@ -9239,6 +9269,7 @@ async function _ckWriteSummary(month) {
 
 /* อ่านสรุป — ใช้ตอนเครื่องนี้ไม่มีข้อมูลของสาขาอื่น (คือบัญชีสาขา) */
 async function _ckLoadSummary(month) {
+  await ckAuthReady();            // รอล็อกอิน Firebase ก่อนแตะข้อมูล
   const id = _ckSummaryId(month);
   if (_ckSummary[id] || _ckSummaryAsked[id] || !firebaseDb || testMode) return;
   _ckSummaryAsked[id] = 1;
@@ -9697,6 +9728,7 @@ function _sfBranchesFromHub(res) {
 /* ลำดับแหล่งข้อมูล: cache → HUB (ศูนย์กลาง) → Firestore (ของเดิม กันพัง)
    ย้ายมาอ่านจาก HUB เพื่อให้แก้สาขาที่เดียว (⚙️ → 🏪 จัดการสาขา) แล้วทุกระบบเห็นตรงกัน */
 async function loadSfBranches() {
+  await ckAuthReady();            // รอล็อกอิน Firebase ก่อนแตะข้อมูล
   if (_sfBranchesLoaded) return;
   _sfBranchesLoaded = true;
   try { const a = JSON.parse(localStorage.getItem(SF_BRANCHES_KEY) || 'null'); if (Array.isArray(a) && a.length) _applySfBranches(a); } catch (_) {}
@@ -9741,6 +9773,7 @@ function ckSysNote(date, shift) {
   return CK_SYS_NOTES[date + '|' + shift] || CK_SYS_NOTES[date + '|*'] || '';
 }
 async function loadCkSysNotes() {
+  await ckAuthReady();            // รอล็อกอิน Firebase ก่อนแตะข้อมูล
   if (!firebaseDb) return;
   try {
     const doc = await firebaseDb.collection('appConfig').doc('sysNotes').get();
@@ -9875,6 +9908,7 @@ async function _sysNoteClear() {
    ckSetSysNote('2026-08-06','close','ระบบมีปัญหา ส่งไม่ได้')
    ckSetSysNote('2026-08-06','close','')   ← ลบ */
 async function ckSetSysNote(date, shift, text) {
+  await ckAuthReady();            // รอล็อกอิน Firebase ก่อนแตะข้อมูล
   if (!date || !shift) { console.warn('ต้องระบุ date และ shift (open/close/*)'); return false; }
   const key = date + '|' + shift;
   if (text && String(text).trim()) CK_SYS_NOTES[key] = String(text).trim();
@@ -10695,6 +10729,7 @@ const DAILY_ARCHIVE_DAYS = 365;
    ตรงนี้ไล่แก้ให้ตรงกันจริง ๆ ทีเดียว · ถามจากคลาวด์ตรง ๆ ไม่ใช่จากที่โหลดมาแล้ว
    เพราะใบเก่ากว่า 90 วันยังไม่ได้ถูกโหลดขึ้นมา จะตกหล่น */
 async function jdFixStoreNames(btn) {
+  await ckAuthReady();            // รอล็อกอิน Firebase ก่อนแตะข้อมูล
   if (!firebaseDb) { showModal('ยังไม่พร้อม', 'ยังไม่ได้เชื่อมต่อฐานข้อมูล'); return; }
   if (!ckIsAdmin()) { showModal('ไม่มีสิทธิ์', 'เฉพาะ Admin เท่านั้น'); return; }
   const olds = Object.keys(JD_STORE_ALIAS);
@@ -10745,6 +10780,7 @@ async function jdFixStoreNames(btn) {
 }
 
 async function archiveOldDaily() {
+  await ckAuthReady();            // รอล็อกอิน Firebase ก่อนแตะข้อมูล
   if (!firebaseDb) { showModal('ยังไม่พร้อม', 'ยังไม่ได้เชื่อมต่อฐานข้อมูล'); return; }
   if (!currentUser || currentUser.role !== 'admin') { showModal('ไม่มีสิทธิ์', 'เฉพาะ Admin เท่านั้น'); return; }
   const cutoff = _daysAgoStr(DAILY_ARCHIVE_DAYS);
@@ -11372,6 +11408,7 @@ function editDailyChecklist(id) {
 
 // ลบผล Daily (admin)
 async function deleteDailyChecklist(id) {
+  await ckAuthReady();            // รอล็อกอิน Firebase ก่อนแตะข้อมูล
   const d = allDailyChecklists.find(x => x.id === id);
   if (!d) return;
   const ok = await showConfirm('ลบผลตรวจรายวัน?',
@@ -11556,6 +11593,7 @@ function showJaedaengDashboard() {
 }
 
 async function refreshJaedaengData(silent) {
+  await ckAuthReady();            // รอล็อกอิน Firebase ก่อนแตะข้อมูล
   const btn = document.querySelector('.jd-refresh-btn');
   if (btn) btn.classList.add('is-loading');
   let resyncedCount = 0;
@@ -13405,6 +13443,7 @@ async function deleteJaedaengAudit() {
 
 /* ลบผลตรวจตาม id — ใช้ทั้งจากหน้ารายละเอียด และปุ่มลบบนการ์ด list (admin) */
 async function _deleteJaedaengById(id, storeName) {
+  await ckAuthReady();            // รอล็อกอิน Firebase ก่อนแตะข้อมูล
   if (!currentUser || currentUser.role !== 'admin') {
     showModal('ไม่มีสิทธิ์ลบ', 'เฉพาะ Admin เท่านั้นที่ลบผลตรวจได้');
     return false;
@@ -13774,6 +13813,7 @@ function _jdRepMsg(html) {
 }
 
 async function openPublicJDReport(id, key) {
+  await ckAuthReady();            // รอล็อกอิน Firebase ก่อนแตะข้อมูล
   document.body.classList.add('repmode');
   const login = document.getElementById('login-screen');
   if (login) login.classList.remove('active');
@@ -13822,6 +13862,7 @@ async function openPublicJDReport(id, key) {
    วิธีเดียวกับของเจ๊แดงทุกอย่าง — ดึงใบเดียวจาก Firestore แล้ววาดด้วยหน้ารายละเอียดตัวเดิม
    จึงได้หน้าตา ภาคผนวกรูป และการแบ่งหน้า PDF เหมือนที่เห็นในแอปเป๊ะ */
 async function openPublicDailyReport(id, key) {
+  await ckAuthReady();            // รอล็อกอิน Firebase ก่อนแตะข้อมูล
   document.body.classList.add('repmode');
   const login = document.getElementById('login-screen');
   if (login) login.classList.remove('active');
