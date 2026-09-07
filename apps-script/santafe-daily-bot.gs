@@ -135,6 +135,8 @@ function buildRoundReport(shift) {
   L.push('');
   L.push('⚠️ <b>สาขาที่มีข้อไม่ผ่าน: ' + fails.length + ' สาขา</b>' + (fails.length ? ' (รายละเอียดแยกด้านล่าง 👇)' : ''));
   L.push('📊 ส่งแล้ว ' + docs.length + '/' + roster.length + ' สาขา');
+  var warn = _rosterWarn();
+  if (warn) { L.push(''); L.push(warn); }
   sendLong(L.join('\n'));
 
   // ── แยกส่งรายสาขาที่มีข้อไม่ผ่าน เป็นข้อความละสาขา พร้อมรูปหลักฐาน ──
@@ -282,10 +284,24 @@ function _rosterFromFirestore() {
   return out.length ? out : null;
 }
 
+/* รายชื่อรอบล่าสุดมาจากไหน — ใช้เตือนในข้อความเมื่อไม่ได้มาจากฮับ
+   ตัวเลข "ยังไม่ส่ง x/y" ที่ผิดโดยไม่มีใครรู้ อันตรายกว่าบอทที่บอกว่าตัวเองไม่แน่ใจ */
+var _rosterSrc = '';
+
 function getBranchRoster() {
-  try { var h = _rosterFromHub();       if (h) return h; } catch (e) {}
-  try { var f = _rosterFromFirestore(); if (f) return f; } catch (e) {}
+  try { var h = _rosterFromHub();       if (h) { _rosterSrc = 'hub';       return h; } } catch (e) {}
+  try { var f = _rosterFromFirestore(); if (f) { _rosterSrc = 'firestore'; return f; } } catch (e) {}
+  _rosterSrc = 'script';
   return BRANCHES;
+}
+
+/* ข้อความเตือนท้ายสรุป — ว่างเมื่ออ่านจากฮับได้ตามปกติ */
+function _rosterWarn() {
+  if (_rosterSrc === 'hub') return '';
+  if (_rosterSrc === 'firestore')
+    return '⚠️ อ่านทะเบียนสาขาจากฮับไม่ได้ ใช้ข้อมูลสำรองแทน — จำนวนสาขาอาจไม่ตรงปัจจุบัน';
+  return '⚠️ อ่านทะเบียนสาขาไม่ได้ทั้งฮับและตัวสำรอง ใช้รายชื่อเก่าที่ฝังในสคริปต์ — ' +
+         'ตัวเลขสาขาไม่น่าเชื่อถือ กรุณาเช็คระบบ';
 }
 
 /* รันมือเพื่อดูว่าตอนนี้บอทเห็นสาขาจากที่ไหน กี่สาขา — ใช้ตอนสงสัยว่าตัวเลขเพี้ยน */
