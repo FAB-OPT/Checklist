@@ -7247,6 +7247,46 @@ function ckPhotoExempt(text, brandKey) {
   const s = String(text || '').trim();
   return ex.some(pre => s.indexOf(pre) === 0);
 }
+/* ── สุ่มขอรูปแบบไม่ซ้ำกับรอบก่อน ๆ ──
+   เดิมสุ่มใหม่ทุกรอบโดยไม่ดูประวัติเลย หมวดที่มี 8 ข้อ มีโอกาส 1 ใน 8 ทุกรอบ
+   ที่จะได้ข้อเดียวกับเมื่อวาน สาขาจึงเจอ "ข้อเดิมอีกแล้ว" บ่อยจนรู้สึกว่าสุ่มไม่จริง
+   (และถ่ายรูปเดิมซ้ำได้โดยไม่มีใครรู้)
+
+   ตอนนี้: ข้อที่ยังไม่เคยถูกขอรูปในรอบหลัง ๆ ของสาขานี้ได้ก่อน
+   ถ้าถูกขอมาหมดแล้ว เอาข้อที่ถูกขอนานที่สุด · ข้อที่คะแนนเท่ากันยังสุ่มกันเองตามเดิม
+   ผลคือหมวดหนึ่งจะวนครบทุกข้อก่อนถึงจะกลับมาซ้ำ แต่สาขายังเดาไม่ได้ว่ารอบหน้าข้อไหน
+
+   recent = ข้อความของข้อที่ถูกขอรูปในรอบก่อน ๆ เรียงจากรอบล่าสุด (แต่ละรอบเป็น Set)
+   ยึดข้อความ ไม่ใช่เลขข้อ — เหตุผลเดียวกับ ckPhotoExempt แทรกข้อใหม่แล้วเลขเลื่อน */
+function ckPickFresh(pool, pick, textOf, recent) {
+  const age = {};   // ข้อความ → ถูกขอครั้งล่าสุดเมื่อกี่รอบก่อน (1 = รอบที่แล้ว)
+  (recent || []).forEach((set, r) => set.forEach(t => { if (!(t in age)) age[t] = r + 1; }));
+  const a = pool.slice();
+  for (let k = a.length - 1; k > 0; k--) {
+    const j = Math.floor(Math.random() * (k + 1));
+    const x = a[k]; a[k] = a[j]; a[j] = x;
+  }
+  const score = i => { const t = textOf(i); return (t in age) ? age[t] : Infinity; };
+  /* เทียบตรง ๆ ไม่ใช้ลบกัน — Infinity - Infinity ได้ NaN แล้วการเรียงจะเพี้ยน */
+  a.sort((x, y) => { const sx = score(x), sy = score(y); return sx === sy ? 0 : (sy > sx ? 1 : -1); });
+  return a.slice(0, pick);
+}
+/* ประวัติการขอรูปของสาขาเดียวกัน รอบเดียวกัน (เปิด/ปิด) ย้อนหลังไม่เกิน limit รอบ
+   เครื่องสาขาโหลดใบของตัวเองอยู่แล้ว เครื่องที่ยังไม่มีประวัติจะได้ [] แล้วสุ่มแบบเดิม */
+function ckRecentPhotoTexts(code, shift, excludeId, limit) {
+  return (allDailyChecklists || [])
+    .filter(d => d && String(d.branchCode) === String(code) && d.shift === shift &&
+                 d.id !== excludeId && Array.isArray(d.requiredPhotos) && d.requiredPhotos.length)
+    .sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')))
+    .slice(0, limit || 30)
+    .map(d => new Set(d.requiredPhotos.map(gi => ckPhotoKey((d.items || [])[gi])).filter(Boolean)));
+}
+/* ตัวระบุข้อ = หมวด + ข้อความ
+   ซานตาเฟ่ใช้ข้อความเดียวกันในหลายหมวด (เช่นบรรทัดเดียวกันทั้งใน PASTA และ STEAK — รอบเปิดมี 8 คู่)
+   ถ้ายึดข้อความอย่างเดียว ถ่ายของ PASTA ไปแล้ว STEAK จะนึกว่าข้อนั้นเพิ่งถูกขอ ทั้งที่เป็นคนละจุดในร้าน */
+function ckPhotoKey(it) {
+  return (it && it.text) ? (String(it.section || '') + '|' + String(it.text)) : '';
+}
 const JAEDAENG_PHOTO_EXEMPT = new Set([
   "พนักงานต้องมีความรู้เรื่องการใช้ถังดับเพลิง",
   "เปิดเพลงและโทรทัศน์โฆษณาตลอดเวลาทำการขาย ตามที่บริษัทฯ กำหนด",
@@ -10899,6 +10939,8 @@ async function startDailyShift(shift) {
     const _formBrand = ckBrandOfBranch(_target.code);
     const pick = ckPhotoRule(_formBrand).pick;
     requiredPhotos = [];
+    /* รอบก่อน ๆ ของสาขานี้ รอบเดียวกัน — ข้อที่เพิ่งถูกขอรูปจะไม่ถูกขอซ้ำจนกว่าจะวนครบหมวด */
+    const _recent = ckRecentPhotoTexts(_target.code, shift, id, 30);
     let _gi = 0;
     template.forEach(sec => {
       // สุ่มจากเฉพาะข้อที่ไม่ได้ยกเว้น · ถ้าหมวดมีข้อน้อยกว่าที่จะสุ่ม ก็เอาเท่าที่มี
@@ -10907,11 +10949,7 @@ async function startDailyShift(shift) {
         const txt = (raw && typeof raw === 'object') ? raw.text : raw;
         if (!ckPhotoExempt(txt, _formBrand)) pool.push(_gi + i);
       });
-      for (let k = pool.length - 1; k > 0; k--) {
-        const j = Math.floor(Math.random() * (k + 1));
-        const tmp = pool[k]; pool[k] = pool[j]; pool[j] = tmp;
-      }
-      pool.slice(0, pick).forEach(gi => requiredPhotos.push(gi));
+      ckPickFresh(pool, pick, gi => ckPhotoKey(items[gi]), _recent).forEach(gi => requiredPhotos.push(gi));
       _gi += sec.items.length;
     });
     requiredPhotos.sort((a, b) => a - b);
@@ -12408,6 +12446,30 @@ function _startNewJDAudit() {
   );
 }
 
+/* เลือกข้อที่ต้องแนบรูป หมวดละ ckPhotoRule('jaedaeng').pick ข้อ
+   ข้อใน JAEDAENG_PHOTO_EXEMPT ไม่ถูกเลือก · ข้อที่สาขานี้เพิ่งถูกขอรูปในรอบก่อน ๆ ถูกเลือกทีหลัง (ckPickFresh)
+   ประวัติยึดตามชื่อสาขาในใบ — ใบเจ๊แดงไม่มีรหัสสาขา มีแต่ storeName */
+function _jdPickRequired(a) {
+  const recent = (a && a.storeName) ? (allJaedaengAudits || [])
+    .filter(r => r && r.storeName === a.storeName && r.id !== a.id &&
+                 Array.isArray(r.requiredPhotos) && r.requiredPhotos.length)
+    .sort((x, y) => (String(y.date || '') + String(y.time || '')).localeCompare(String(x.date || '') + String(x.time || '')))
+    .slice(0, 30)
+    .map(r => new Set(r.requiredPhotos.map(i => ckPhotoKey((r.items || [])[i])).filter(Boolean)))
+    : [];
+  const pick = ckPhotoRule('jaedaeng').pick;
+  const bySection = {};
+  a.items.forEach((it, idx) => {
+    if (JAEDAENG_PHOTO_EXEMPT.has(it.text)) return;
+    (bySection[it.sectionIdx] = bySection[it.sectionIdx] || []).push(idx);
+  });
+  const req = [];
+  Object.values(bySection).forEach(pool => {
+    if (pool.length) ckPickFresh(pool, pick, i => ckPhotoKey(a.items[i]), recent).forEach(i => req.push(i));
+  });
+  return req.sort((x, y) => x - y);
+}
+
 function _startJaedaengAuditWithGps(gps) {
   const today = todayDateStr();
   const now = new Date();
@@ -12441,22 +12503,8 @@ function _startJaedaengAuditWithGps(gps) {
       });
     });
   });
-  // Pick exactly one random photo-required item per section. Items in
-  // JAEDAENG_PHOTO_EXEMPT are never eligible.
-  const isEligible = idx => !JAEDAENG_PHOTO_EXEMPT.has(currentJDAudit.items[idx].text);
-  const bySection = {};
-  currentJDAudit.items.forEach((it, idx) => {
-    if (!isEligible(idx)) return;
-    if (!bySection[it.sectionIdx]) bySection[it.sectionIdx] = [];
-    bySection[it.sectionIdx].push(idx);
-  });
-  const required = new Set();
-  Object.values(bySection).forEach(sectionItems => {
-    if (sectionItems.length === 0) return;
-    const pick = sectionItems[Math.floor(Math.random() * sectionItems.length)];
-    required.add(pick);
-  });
-  currentJDAudit.requiredPhotos = Array.from(required).sort((a, b) => a - b);
+  // ยังไม่ได้เลือกสาขา = ยังไม่มีประวัติให้เทียบ สุ่มไว้ก่อน แล้วสุ่มใหม่ตอนเลือกสาขา (ดู setJDStore)
+  currentJDAudit.requiredPhotos = _jdPickRequired(currentJDAudit);
   currentJDAudit._draft = true;
   _renderJDAuditScreen();
   _saveJDDraft();
@@ -12601,6 +12649,16 @@ function setJDStore(field, value) {
   if (!currentJDAudit) return;
   if (field === 'store') {
     currentJDAudit.storeName = value;
+    /* ตอนเริ่มตรวจยังไม่รู้สาขา ข้อที่ต้องแนบรูปจึงสุ่มแบบไม่มีประวัติ
+       เลือกสาขาแล้วสุ่มใหม่โดยเลี่ยงข้อที่สาขานี้เพิ่งถูกขอ — ทำเฉพาะตอนที่ยังไม่มีใครถ่ายรูปข้อที่ถูกเลือก
+       ถ่ายไปแล้วห้ามเปลี่ยน ไม่งั้นรูปที่ถ่ายมาจะไปอยู่ข้อที่ไม่ได้ถูกขอ แล้วต้องถ่ายใหม่ */
+    const _jdTaken = (currentJDAudit.requiredPhotos || [])
+      .some(i => ((currentJDAudit.items[i] || {}).photos || []).length);
+    if (value && !_jdTaken) {
+      currentJDAudit.requiredPhotos = _jdPickRequired(currentJDAudit);
+      renderJaedaengForm();
+      _saveJDDraft();
+    }
     // Auto-fill BZM if the branch is known
     const match = JAEDAENG_BRANCHES.find(b => b.name === value);
     const row = document.getElementById('jd-bzm-row');
