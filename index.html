@@ -7838,7 +7838,13 @@ function saveDailyLocal() {
 }
 
 // ── โหลดแบบประหยัดโควตา (incremental) เพื่อรองรับหลายสาขาในระยะยาว ──
-const DAILY_BACKFILL_DAYS = 30;                    // เครื่องใหม่/ล้างแคช: โหลดย้อนหลังกี่วัน (ครั้งเดียว) · ลดจาก 90 กันโหลดหนัก
+/* มือถือ: แรงน้อยกว่าคอมมาก การดึง+แปลง 30 วัน (~3,400 ใบ 31 MB) ทุกครั้งที่เปิดแอปคือ
+   งานหนักที่สุดของหน้านี้ และแทบไม่ได้ใช้ — หน้าจอมือถือดูของไม่กี่วันล่าสุดเป็นหลัก
+   จึงให้มือถือเก็บ 7 วันพอ กดปุ่ม "ดูย้อนหลัง" เมื่อต้องการของเก่ากว่านั้นได้เหมือนเดิม */
+const CK_IS_PHONE = (function () {
+  try { return window.matchMedia('(max-width: 820px)').matches; } catch (_) { return false; }
+})();
+const DAILY_BACKFILL_DAYS = CK_IS_PHONE ? 7 : 30;  // เครื่องใหม่/ล้างแคช: โหลดย้อนหลังกี่วัน (ครั้งเดียว) · ลดจาก 90 กันโหลดหนัก
 const DAILY_SYNC_OVERLAP_MS = 6 * 60 * 60 * 1000;  // เผื่อนาฬิกาเครื่องคลาดกัน 6 ชม. กันข้อมูลตกหล่น
 function _maxDailyUpdatedAt(list) {
   let m = '';
@@ -7850,6 +7856,7 @@ function _maxDailyUpdatedAt(list) {
    แยกออกมาเพราะตอนนี้ดึงสองจังหวะ (ของใหม่ก่อน · ย้อนหลังตามมา)
    ต้องรวมได้ทั้งสองรอบ */
 function _mergeDailyDocs(map, docs) {
+  var _changed = 0;
   // กันรายการว่างปน — ตอนนี้ถูกเรียกจากสองที่ ไม่ได้ผูกกับผลของ Firestore อย่างเดียวแล้ว
   const snap = { docs: (docs || []).filter(Boolean) };
     snap.docs.map(d => d.data()).forEach(d => {
@@ -7858,9 +7865,11 @@ function _mergeDailyDocs(map, docs) {
       const ex = map.get(String(d.id));
       // ในเครื่องใหม่กว่า (แก้ยังไม่ sync) → ไม่ทับ · ไม่งั้น cloud (sync แล้ว) ทับ = ล้างธงค้างไปในตัว
       if (ex && ex.updatedAt && d.updatedAt && d.updatedAt < ex.updatedAt) return;
+      if (!ex || JSON.stringify(ex) !== JSON.stringify(d)) _changed++;
       map.set(String(d.id), d);
     });
     allDailyChecklists = Array.from(map.values()).filter(d => d && !d.deleted);
+    return _changed;
 }
 /* วาดหน้าจอใหม่เท่าที่เปิดอยู่ — เรียกได้ทุกจังหวะที่ข้อมูลมาถึง */
 function _repaintDaily() {
@@ -7874,6 +7883,16 @@ function _repaintDaily() {
 /* จังหวะแรกดึงกี่วัน — พอให้แดชบอร์ด ("วันนี้ใครยังไม่ส่ง") ขึ้นได้ทันที
    เผื่อไว้ 3 วันกันกรณีเปิดข้ามเที่ยงคืนหรือย้อนดูเมื่อวาน */
 const DAILY_FIRST_PAINT_DAYS = 3;
+/* ดึงช่วง 3 วันล่าสุดแบบครบทุกใบ = ก้อนใหญ่สุดของการเปิดแอปแต่ละครั้ง (~340 ใบ 3 MB)
+   มือถือเปิดแอปบ่อย ๆ จะช้าทุกครั้งโดยไม่ได้อะไรใหม่ เพราะรอบ "เฉพาะที่เปลี่ยน" ครอบคลุมอยู่แล้ว
+   จึงทำเต็มชั่วโมงละครั้ง (และทุกครั้งที่แคชไม่ครบ) ที่เหลือพึ่ง updatedAt */
+const DAILY_FULL3_KEY = 'qa_daily_full3_at_v1';
+const DAILY_FULL3_EVERY_MS = 60 * 60 * 1000;
+function _daily3Due() {
+  try { return Date.now() - Number(localStorage.getItem(DAILY_FULL3_KEY) || 0) > DAILY_FULL3_EVERY_MS; }
+  catch (_) { return true; }
+}
+function _daily3Done() { try { localStorage.setItem(DAILY_FULL3_KEY, String(Date.now())); } catch (_) {} }
 
 async function loadDailyChecklists() {
   await ckAuthReady();            // รอล็อกอิน Firebase ก่อนแตะข้อมูล
@@ -7906,9 +7925,14 @@ async function loadDailyChecklists() {
          จึงดึงตามวันที่ทุกครั้ง ไม่พึ่งแคช แล้ววาดให้เห็นทันที
          (ก้อนเล็ก ไม่กี่ร้อยรายการ) */
       const recent = _daysAgoStr(DAILY_FIRST_PAINT_DAYS);
-      const first = await firebaseDb.collection(DAILY_COLLECTION).where('date', '>=', recent).get();
-      _mergeDailyDocs(map, first.docs);
-      _repaintDaily();
+      const _cover0 = _dailyCoverFrom();
+      const _fresh = !!cursor && !!_cover0 && _cover0 <= _daysAgoStr(DAILY_BACKFILL_DAYS) && !_daily3Due();
+      if (!_fresh) {
+        const first = await firebaseDb.collection(DAILY_COLLECTION).where('date', '>=', recent).get();
+        _mergeDailyDocs(map, first.docs);
+        _daily3Done();
+        _repaintDaily();
+      }
 
       /* ส่วนที่เก่ากว่านั้น เลือกวิธีตามว่าแคชครบหรือไม่
          - แคชครอบคลุมถึงต้นช่วงแล้ว → ดึงเฉพาะที่เปลี่ยน (เบา)
@@ -7927,9 +7951,9 @@ async function loadDailyChecklists() {
           .where('date', '>=', since).where('date', '<', recent).get();
       }
     }
-    _mergeDailyDocs(map, snap.docs);
+    const _chg = _mergeDailyDocs(map, snap.docs);
     allDailyChecklists.forEach(function(d){ const _x = _dropBase64Photos(d.items); if (_x > 0 && d.id != null && !_dailyB64CleanIds.has(String(d.id))) { _dailyB64CleanIds.add(String(d.id)); _silentResaveDaily(d); } });   // ตัด base64 + ล้างขึ้น cloud
-    saveDailyLocal();
+    if (_chg) saveDailyLocal();   // ไม่มีอะไรเปลี่ยน = ไม่ต้องเขียนแคชทั้งก้อนลงเครื่อง (มือถือช้า)
     _dailyFullLoaded = false; // ยังโหลดไม่ครบทุกวัน → ปุ่ม "ดูย้อนหลังทั้งหมด" ยังใช้ได้
     // ดันเฉพาะที่ยังค้างจริง (ในเครื่องยัง _pendingSync หลัง merge = cloud ไม่มีที่ใหม่กว่า) — ไม่ใช่ทุก record
     _repaintDaily();
