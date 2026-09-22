@@ -203,7 +203,47 @@ function _fbAuth(url) {
   var key = PropertiesService.getScriptProperties().getProperty('FIREBASE_API_KEY');
   return { url: url + (url.indexOf('?') >= 0 ? '&' : '?') + 'key=' + key, headers: {} };
 }
+/* ─────────── เช็คลิสต์ย้ายไป Supabase (Training Record · ตาราง ck_docs) ───────────
+   ย้ายข้อมูลแล้ว → อ่านจาก Supabase · ยังไม่ย้าย (ไม่มีตาราง/ตารางยังว่าง) → คืน null ให้ใช้ Firestore ต่อ
+   ทำแบบนี้จึง deploy สคริปต์นี้ได้ก่อนวันสลับ ถึงวันแล้วสลับตามเองไม่ต้องแก้อีก */
+var CK_SB_URL = 'https://cyjfgperenakjeazsfgf.supabase.co';
+var CK_SB_KEY = 'sb_publishable_xAtQvH3Bdaqt7PVJGbkxWw_KVhfBszo';
+function _ckSbToken() {
+  var cache = CacheService.getScriptCache();
+  var t = cache.get('ck_sb_tok');
+  if (t) return t;
+  var res = UrlFetchApp.fetch(CK_SB_URL + '/auth/v1/signup', {
+    method: 'post', contentType: 'application/json', payload: '{}',
+    headers: { apikey: CK_SB_KEY }, muteHttpExceptions: true });
+  var j = JSON.parse(res.getContentText() || '{}');
+  if (!j.access_token) throw new Error('ล็อกอิน Supabase ไม่สำเร็จ: ' + res.getContentText().slice(0, 200));
+  cache.put('ck_sb_tok', j.access_token, 3000);
+  return j.access_token;
+}
+function _ckSbHeaders() { return { apikey: CK_SB_KEY, Authorization: 'Bearer ' + _ckSbToken() }; }
+/* ย้ายข้อมูลแล้วหรือยัง = ตารางมีใบเช็คลิสต์รายวันแล้ว */
+function _ckSbLive() {
+  try {
+    var res = UrlFetchApp.fetch(CK_SB_URL + '/rest/v1/ck_docs?select=id&col=eq.dailyChecklists&limit=1',
+      { headers: _ckSbHeaders(), muteHttpExceptions: true });
+    if (res.getResponseCode() !== 200) return false;
+    return (JSON.parse(res.getContentText() || '[]') || []).length > 0;
+  } catch (e) { return false; }
+}
+/* filters = [{f:'date', op:'==', v:'2026-09-23'}] · คืน null = ยังไม่ย้าย ให้ใช้ Firestore */
+function _ckSbQuery(col, filters) {
+  if (!_ckSbLive()) return null;
+  var res = UrlFetchApp.fetch(CK_SB_URL + '/rest/v1/rpc/ck_query', {
+    method: 'post', contentType: 'application/json', headers: _ckSbHeaders(),
+    payload: JSON.stringify({ p_col: col, p_filters: filters || [] }), muteHttpExceptions: true });
+  if (res.getResponseCode() !== 200) throw new Error('Supabase ตอบ ' + res.getResponseCode() + ': ' + res.getContentText().slice(0, 200));
+  var j = JSON.parse(res.getContentText());
+  return (j.rows || []).map(function (r) { var o = r.data || {}; if (o.id == null) o.id = r.id; return o; });
+}
+
 function queryDailyByDate(dateStr) {
+  var sb = _ckSbQuery(COLLECTION, [{ f: 'date', op: '==', v: dateStr }]);
+  if (sb) return sb;
   var a = _fbAuth('https://firestore.googleapis.com/v1/projects/' + PROJECT_ID +
                   '/databases/(default)/documents:runQuery');
   var body = {
