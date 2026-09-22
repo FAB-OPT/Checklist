@@ -6530,10 +6530,12 @@ const CkSB = {
     const go = !c ? Promise.reject(new Error('โหลดไลบรารี Supabase ไม่ขึ้น')) :
       c.auth.getSession().then(s => (s && s.data && s.data.session) ? null
         : c.auth.signInAnonymously().then(r => { if (r && r.error) throw r.error; }))
-      .then(() => c.from('ck_docs').select('id').eq('col', 'dailyChecklists').limit(1))
+      /* สลับเมื่อมีป้าย _meta/live เท่านั้น — ป้ายนี้เขียนเป็นขั้นสุดท้ายหลังย้ายข้อมูลครบ
+         เช็คแค่ "ตารางมีข้อมูล" ไม่พอ ช่วงกำลังย้ายครึ่งทางเครื่องที่เปิดแอปจะสลับไปเจอของไม่ครบ */
+      .then(() => c.from('ck_docs').select('id').eq('col', '_meta').eq('id', 'live').limit(1))
       .then(r => {
         if (r.error) throw r.error;
-        if (!(r.data || []).length) throw new Error('ตาราง ck_docs ยังว่าง (ยังย้ายข้อมูลไม่เสร็จ)');
+        if (!(r.data || []).length) throw new Error('ยังไม่เปิดใช้ (ยังย้ายข้อมูลไม่เสร็จ)');
         return true;
       });
     const cap = new Promise((_, no) => setTimeout(() => no(new Error('ต่อฐานข้อมูลช้าเกิน 20 วินาที')), 20000));
