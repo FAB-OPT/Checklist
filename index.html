@@ -6443,6 +6443,8 @@ body.in-audit #ck-page-head { display:none; }
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<!-- Supabase — ที่เก็บใหม่ของเช็คลิสต์ (ตรึงรุ่นเดียวกับโมดูลอื่นของฮับ) -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.53.0/dist/umd/supabase.js"></script>
 <script>
 // 🔧 แทนที่ค่าเหล่านี้ด้วย config จาก Firebase Console ของคุณ
 // (Project Settings → General → Your apps → Web app → SDK setup → Config)
@@ -6467,7 +6469,8 @@ let firebaseDb = null;
    ตัวนี้ไม่ใช่การยืนยันว่าใครเป็นใคร — แอปยังใช้รหัสพนักงานเหมือนเดิม
    แต่ทำให้ต้องผ่านหน้าเว็บนี้จริง ๆ ถึงจะแตะข้อมูลได้ */
 let _ckAuthP = Promise.resolve(false);
-function ckAuthReady() { return _ckAuthP; }
+/* รอทั้งล็อกอิน Firebase และรู้ก่อนว่าจะใช้ที่เก็บไหน (Supabase / Firestore) */
+function ckAuthReady() { return Promise.all([_ckAuthP, CkSB.ready()]).then(function (r) { return !!(r[0] || r[1]); }); }
 
 try {
   if (FIREBASE_CONFIG.apiKey) {
@@ -6488,6 +6491,154 @@ try {
 } catch (e) {
   console.error('Firebase init failed', e);
 }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   ที่เก็บเช็คลิสต์ย้ายไป Supabase (Training Record · ตาราง ck_docs · supabase/checklist.sql)
+
+   ทำไมทำแบบนี้: แอปเรียก firebaseDb ตรง ๆ 36 จุด แต่ใช้คำสั่งแค่ไม่กี่แบบ
+   (collection · doc · where · get · set · update · delete · onSnapshot · batch)
+   จึงทำตัวแทนหน้าตาเหมือน Firestore แล้วสลับที่เดียวตรงนี้ โค้ดส่วนอื่นไม่ต้องแก้
+   ตัวแทนตัดสินทุกครั้งที่สั่งงานจริงว่าจะส่งไป Supabase หรือ Firestore
+
+   · CK_SB_ENABLED = false → ใช้ Firestore ทั้งหมดเหมือนเดิม (สวิตช์ถอยกลับ)
+   · ตาราง Supabase ยังไม่มี หรือยังว่าง (ยังย้ายข้อมูลไม่เสร็จ) → ใช้ Firestore
+     ห้ามสลับไปเจอตารางว่าง — เคยมีเหตุข้อมูลรายวันหายเพราะเอาคลาวด์ว่างมาทับของในเครื่อง
+   · เครื่องที่เคยใช้ Supabase แล้ว ห้ามถอยไปเขียน Firestore (ข้อมูลจะแยกสองที่)
+     ต่อไม่ได้ = ให้ล้ม ตรรกะ "ค้างส่ง" เดิมจะเก็บใบไว้ส่งรอบหน้าเอง
+   · onSnapshot (มีที่เดียว: ผลตรวจเจ๊แดง) → ดึงครบครั้งแรก แล้วถามเฉพาะที่เปลี่ยนทุก 30 วินาที
+   ═══════════════════════════════════════════════════════════════════════ */
+const CK_SB_ENABLED = true;
+const CK_POLL_MS = 30000;
+const _ckFs = firebaseDb;
+const CkSB = {
+  url: 'https://cyjfgperenakjeazsfgf.supabase.co',
+  key: 'sb_publishable_xAtQvH3Bdaqt7PVJGbkxWw_KVhfBszo',
+  EVER: 'ck_sb_ever_v1',
+  on: null, err: '', _p: null, _at: 0, _c: null,
+  ever() { try { return localStorage.getItem(this.EVER) === '1'; } catch (e) { return false; } },
+  client() {
+    if (this._c) return this._c;
+    if (!window.supabase || !window.supabase.createClient) return null;
+    this._c = window.supabase.createClient(this.url, this.key);
+    return this._c;
+  },
+  ready() {
+    if (!CK_SB_ENABLED) { this.on = false; return Promise.resolve(false); }
+    if (this._p && !(this.on === false && Date.now() - this._at > 5 * 60 * 1000)) return this._p;
+    this._at = Date.now();
+    const c = this.client();
+    const go = !c ? Promise.reject(new Error('โหลดไลบรารี Supabase ไม่ขึ้น')) :
+      c.auth.getSession().then(s => (s && s.data && s.data.session) ? null
+        : c.auth.signInAnonymously().then(r => { if (r && r.error) throw r.error; }))
+      .then(() => c.from('ck_docs').select('id').eq('col', 'dailyChecklists').limit(1))
+      .then(r => {
+        if (r.error) throw r.error;
+        if (!(r.data || []).length) throw new Error('ตาราง ck_docs ยังว่าง (ยังย้ายข้อมูลไม่เสร็จ)');
+        return true;
+      });
+    const cap = new Promise((_, no) => setTimeout(() => no(new Error('ต่อฐานข้อมูลช้าเกิน 20 วินาที')), 20000));
+    this._p = Promise.race([go, cap]).then(() => {
+      this.on = true; this.err = '';
+      try { localStorage.setItem(this.EVER, '1'); } catch (e) {}
+      return true;
+    }, e => { this.on = false; this.err = (e && e.message) || String(e); return false; });
+    return this._p;
+  },
+  /* true = Supabase · false = Firestore · throw = เคยใช้ Supabase แล้วแต่ตอนนี้ต่อไม่ได้ */
+  mode() {
+    return this.ready().then(ok => {
+      if (ok) return true;
+      if (CK_SB_ENABLED && this.ever()) throw new Error('ต่อฐานข้อมูลเช็คลิสต์ไม่ได้ — ' + this.err);
+      if (!_ckFs) throw new Error('ไม่มีฐานข้อมูลให้ใช้');
+      return false;
+    });
+  },
+  rpc(fn, args) {
+    return this.client().rpc(fn, args).then(r => { if (r.error) throw new Error(r.error.message || String(r.error)); return r.data; });
+  }
+};
+/* ── หน้าตาเหมือน Firestore ── */
+const _ckClone = v => v == null ? v : JSON.parse(JSON.stringify(v));
+function _ckDocSnap(col, id, data) {
+  return { id: String(id), exists: data != null, ref: new CkDocRef(col, id),
+           data() { return data == null ? undefined : _ckClone(data); } };
+}
+function _ckQuerySnap(col, rows) {
+  const docs = (rows || []).map(r => _ckDocSnap(col, r.id, r.data));
+  return { docs, size: docs.length, empty: !docs.length, forEach(fn) { docs.forEach(fn); } };
+}
+function CkDocRef(col, id) { this.col = col; this.id = String(id); }
+CkDocRef.prototype._fs = function () { return _ckFs.collection(this.col).doc(this.id); };
+CkDocRef.prototype.get = function () {
+  return CkSB.mode().then(sb => sb
+    ? CkSB.rpc('ck_get', { p_col: this.col, p_id: this.id }).then(d => _ckDocSnap(this.col, this.id, d))
+    : this._fs().get());
+};
+CkDocRef.prototype.set = function (data, opts) {
+  const merge = !!(opts && opts.merge);
+  return CkSB.mode().then(sb => sb
+    ? CkSB.rpc('ck_set', { p_col: this.col, p_id: this.id, p_data: _ckClone(data) || {}, p_merge: merge }).then(() => undefined)
+    : this._fs().set(data, opts || {}));
+};
+CkDocRef.prototype.update = function (data) {
+  return CkSB.mode().then(sb => sb
+    ? CkSB.rpc('ck_set', { p_col: this.col, p_id: this.id, p_data: _ckClone(data) || {}, p_merge: true }).then(() => undefined)
+    : this._fs().update(data));
+};
+CkDocRef.prototype.delete = function () {
+  return CkSB.mode().then(sb => sb
+    ? CkSB.rpc('ck_delete', { p_col: this.col, p_id: this.id }).then(() => undefined)
+    : this._fs().delete());
+};
+function CkQuery(col, filters) { this.col = col; this.f = filters || []; }
+CkQuery.prototype.where = function (f, op, v) { return new CkQuery(this.col, this.f.concat([{ f: f, op: op, v: v }])); };
+CkQuery.prototype.doc = function (id) { return new CkDocRef(this.col, id); };
+CkQuery.prototype._fs = function () { let q = _ckFs.collection(this.col); this.f.forEach(x => { q = q.where(x.f, x.op, x.v); }); return q; };
+CkQuery.prototype._sb = function (since) {
+  return CkSB.rpc('ck_query', { p_col: this.col, p_filters: this.f, p_since: since || null });
+};
+CkQuery.prototype.get = function () {
+  return CkSB.mode().then(sb => sb ? this._sb().then(r => _ckQuerySnap(this.col, r.rows)) : this._fs().get());
+};
+/* แทน onSnapshot: ครั้งแรกดึงครบ · จากนั้นถามเฉพาะที่เปลี่ยน (ตามเวลาเซิร์ฟเวอร์) ทุก 30 วิ + ทันทีที่กลับมาที่แอป
+   เรียก onNext ด้วย "ผลทั้งชุดปัจจุบัน" เหมือน Firestore แต่เฉพาะตอนมีอะไรเปลี่ยน */
+CkQuery.prototype.onSnapshot = function (onNext, onErr) {
+  let stop = false, inner = null, timer = null, since = null, busy = false;
+  const rows = new Map();
+  const self = this;
+  function tick() {
+    if (stop || busy) return;
+    busy = true; clearTimeout(timer);
+    self._sb(since).then(r => {
+      if (stop) return;
+      const first = since == null;
+      (r.rows || []).forEach(x => rows.set(String(x.id), x.data));
+      (r.gone || []).forEach(id => rows.delete(String(id)));
+      /* ถอยหมุดกลับ 10 วิ กันงานเขียนที่เริ่มก่อนแต่เสร็จหลังเวลาที่ถาม · ได้ซ้ำไม่เป็นไร */
+      since = new Date(new Date(r.now).getTime() - 10000).toISOString();
+      if (first || (r.rows || []).length || (r.gone || []).length) {
+        onNext(_ckQuerySnap(self.col, Array.from(rows, ([id, data]) => ({ id, data }))));
+      }
+    }).catch(e => { if (!stop && onErr) onErr(e); })
+      .then(() => { busy = false; if (!stop) timer = setTimeout(tick, CK_POLL_MS); });
+  }
+  const onVis = () => { if (document.visibilityState === 'visible') tick(); };
+  CkSB.mode().then(sb => {
+    if (stop) return;
+    if (sb) { document.addEventListener('visibilitychange', onVis); tick(); }
+    else inner = this._fs().onSnapshot(onNext, onErr);
+  }).catch(e => { if (onErr) onErr(e); });
+  return function () { stop = true; clearTimeout(timer); document.removeEventListener('visibilitychange', onVis); if (inner) inner(); };
+};
+/* batch ใช้แค่ในเครื่องมือแอดมินสองตัว — ทำทีละรายการตามลำดับ (ทั้งสองที่เก็บ) */
+function CkBatch() { this.ops = []; }
+CkBatch.prototype.set = function (ref, d, o) { this.ops.push(() => ref.set(d, o)); return this; };
+CkBatch.prototype.update = function (ref, d) { this.ops.push(() => ref.update(d)); return this; };
+CkBatch.prototype.delete = function (ref) { this.ops.push(() => ref.delete()); return this; };
+CkBatch.prototype.commit = function () { return this.ops.reduce((p, op) => p.then(op), Promise.resolve()).then(() => undefined); };
+const CkDb = { collection: col => new CkQuery(col), batch: () => new CkBatch() };
+if (_ckFs || CK_SB_ENABLED) firebaseDb = CkDb;
+CkSB.ready();
 </script>
 
 <script>
@@ -7729,7 +7880,14 @@ async function loadDailyChecklists() {
     const _bc = _isBr ? String(currentUser.branchCode || '') : '';
     if (_isBr && _bc) {
       // สาขา → ดึงเฉพาะของสาขาตัวเอง (ไม่กี่ร้อย record) แทนโหลดทุกสาขา (22MB) → มือถือไม่แครช
-      snap = await firebaseDb.collection(DAILY_COLLECTION).where('branchCode', '==', _bc).get();
+      /* บน Supabase: มีแคชครบแล้ว → ดึงเฉพาะที่เปลี่ยน · ของเดิมดึงทุกใบของสาขาทุกครั้งที่เปิด
+         (~1.6 MB และโตทุกวัน) ซึ่งจะชนเพดานโหลดออกของ Supabase ฟรี (5 GB/เดือน) */
+      const _cov = _dailyCoverFrom();
+      const _inc = CkSB.on && cursor && _cov && _cov <= _daysAgoStr(DAILY_BACKFILL_DAYS);
+      snap = _inc
+        ? await firebaseDb.collection(DAILY_COLLECTION).where('branchCode', '==', _bc)
+            .where('updatedAt', '>', new Date(new Date(cursor).getTime() - DAILY_SYNC_OVERLAP_MS).toISOString()).get()
+        : await firebaseDb.collection(DAILY_COLLECTION).where('branchCode', '==', _bc).get();
     } else {
       /* ช่วงไม่กี่วันล่าสุด = สิ่งที่ตารางหน้าแรกแสดง ต้องครบเสมอ
          จึงดึงตามวันที่ทุกครั้ง ไม่พึ่งแคช แล้ววาดให้เห็นทันที
