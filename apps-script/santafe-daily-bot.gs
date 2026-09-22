@@ -233,12 +233,19 @@ function _ckSbLive() {
 /* filters = [{f:'date', op:'==', v:'2026-09-23'}] · คืน null = ยังไม่ย้าย ให้ใช้ Firestore */
 function _ckSbQuery(col, filters) {
   if (!_ckSbLive()) return null;
-  var res = UrlFetchApp.fetch(CK_SB_URL + '/rest/v1/rpc/ck_query', {
-    method: 'post', contentType: 'application/json', headers: _ckSbHeaders(),
-    payload: JSON.stringify({ p_col: col, p_filters: filters || [] }), muteHttpExceptions: true });
-  if (res.getResponseCode() !== 200) throw new Error('Supabase ตอบ ' + res.getResponseCode() + ': ' + res.getContentText().slice(0, 200));
-  var j = JSON.parse(res.getContentText());
-  return (j.rows || []).map(function (r) { var o = r.data || {}; if (o.id == null) o.id = r.id; return o; });
+  /* ดึงทีละหน้า 300 ใบ — ก้อนใหญ่ก้อนเดียวเกินเวลาที่ฐานข้อมูลให้ต่อคำสั่ง */
+  var out = [], after = null;
+  for (var g = 0; g < 400; g++) {
+    var res = UrlFetchApp.fetch(CK_SB_URL + '/rest/v1/rpc/ck_query', {
+      method: 'post', contentType: 'application/json', headers: _ckSbHeaders(),
+      payload: JSON.stringify({ p_col: col, p_filters: filters || [], p_since: null, p_after: after, p_limit: 300 }), muteHttpExceptions: true });
+    if (res.getResponseCode() !== 200) throw new Error('Supabase ตอบ ' + res.getResponseCode() + ': ' + res.getContentText().slice(0, 200));
+    var rows = JSON.parse(res.getContentText()).rows || [];
+    rows.forEach(function (r) { var o = r.data || {}; if (o.id == null) o.id = r.id; out.push(o); });
+    if (rows.length < 300) break;
+    after = rows[rows.length - 1].id;
+  }
+  return out;
 }
 
 function queryDailyByDate(dateStr) {

@@ -6596,8 +6596,19 @@ function CkQuery(col, filters) { this.col = col; this.f = filters || []; }
 CkQuery.prototype.where = function (f, op, v) { return new CkQuery(this.col, this.f.concat([{ f: f, op: op, v: v }])); };
 CkQuery.prototype.doc = function (id) { return new CkDocRef(this.col, id); };
 CkQuery.prototype._fs = function () { let q = _ckFs.collection(this.col); this.f.forEach(x => { q = q.where(x.f, x.op, x.v); }); return q; };
-CkQuery.prototype._sb = function (since) {
-  return CkSB.rpc('ck_query', { p_col: this.col, p_filters: this.f, p_since: since || null });
+/* ดึงทีละหน้า 300 ใบ (เรียงตาม id) จนหมด — ก้อนเดียวใหญ่ ๆ เกินเวลาที่ฐานข้อมูลให้ต่อคำสั่ง */
+CkQuery.prototype._sb = async function (since) {
+  const out = { rows: [], gone: [], now: null };
+  let after = null;
+  for (let guard = 0; guard < 400; guard++) {
+    const r = await CkSB.rpc('ck_query', { p_col: this.col, p_filters: this.f, p_since: since || null, p_after: after, p_limit: 300 });
+    const rows = r.rows || [];
+    out.rows.push(...rows);
+    if (!out.now) { out.now = r.now; out.gone = r.gone || []; }
+    if (rows.length < 300) break;
+    after = rows[rows.length - 1].id;
+  }
+  return out;
 };
 CkQuery.prototype.get = function () {
   return CkSB.mode().then(sb => sb ? this._sb().then(r => _ckQuerySnap(this.col, r.rows)) : this._fs().get());

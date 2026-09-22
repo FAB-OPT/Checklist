@@ -56,7 +56,12 @@ $$;
 -- ── ค้นหา ── p_filters = [{"f":"date","op":">=","v":"2026-09-01"}, ...]
 -- ช่องที่ค้นได้และตัวเทียบถูกจำกัดไว้ (กันประกอบคำสั่งแปลก ๆ)
 -- p_since = คืนเฉพาะที่เปลี่ยนหลังเวลานี้ (เวลาเซิร์ฟเวอร์) + id ที่ถูกลบหลังเวลานี้
-create or replace function public.ck_query(p_col text, p_filters jsonb default '[]'::jsonb, p_since timestamptz default null)
+-- รุ่นแรกไม่มีการแบ่งหน้า: ดึงเดือนเดียว (~3,000 ใบ 27 MB) ก็เกินเวลา 8 วินาทีที่ฐานข้อมูลให้ต่อคำสั่ง
+drop function if exists public.ck_query(text, jsonb, timestamptz);
+-- p_after / p_limit = แบ่งหน้าตาม id (ส่ง id สุดท้ายของหน้าก่อนมา) · หน้าเว็บวนดึงจนได้น้อยกว่า p_limit
+-- ไม่ส่ง p_limit = ไม่แบ่ง (ให้หน้าเว็บ/สคริปต์รุ่นก่อนหน้ายังได้ครบ)
+create or replace function public.ck_query(p_col text, p_filters jsonb default '[]'::jsonb, p_since timestamptz default null,
+                                           p_after text default null, p_limit int default null)
 returns jsonb language plpgsql stable as $$
 declare
   w text := format('col = %L', p_col);
@@ -78,7 +83,10 @@ begin
     end if;
   end loop;
   if p_since is not null then w := w || format(' and server_at > %L', p_since); end if;
-  execute 'select coalesce(jsonb_agg(jsonb_build_object(''id'', id, ''data'', data)), ''[]''::jsonb) from public.ck_docs where ' || w
+  if p_after is not null then w := w || format(' and id > %L', p_after); end if;
+  execute 'select coalesce(jsonb_agg(jsonb_build_object(''id'', id, ''data'', data) order by id), ''[]''::jsonb) from '
+       || '(select id, data from public.ck_docs where ' || w || ' order by id'
+       || case when p_limit is null then '' else ' limit ' || greatest(1, least(p_limit, 1000)) end || ') q'
     into rows;
   if p_since is not null then
     select coalesce(jsonb_agg(distinct t.id), '[]'::jsonb) into gone
@@ -129,7 +137,7 @@ end $$;
 do $$
 declare f text;
 begin
-  foreach f in array array['ck_query(text,jsonb,timestamptz)', 'ck_get(text,text)', 'ck_set(text,text,jsonb,boolean)',
+  foreach f in array array['ck_query(text,jsonb,timestamptz,text,int)', 'ck_get(text,text)', 'ck_set(text,text,jsonb,boolean)',
                            'ck_delete(text,text)', 'ck_import(text,jsonb)'] loop
     execute 'revoke all on function public.' || f || ' from public, anon';
     execute 'grant execute on function public.' || f || ' to authenticated';
