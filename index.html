@@ -10052,7 +10052,6 @@ async function loadSfBranches() {
   await ckAuthReady();            // รอล็อกอิน Firebase ก่อนแตะข้อมูล
   if (_sfBranchesLoaded && Date.now() - _sfBranchesAt < SF_BRANCHES_TTL_MS) return;
   if (_sfBranchesInflight) return _sfBranchesInflight;
-  const _first = !_sfBranchesLoaded;
   const _before = _sfRosterSig();
   _sfBranchesLoaded = true;
   _sfBranchesAt = Date.now();
@@ -10060,7 +10059,9 @@ async function loadSfBranches() {
   /* รายชื่อเปลี่ยน → วาดหน้าที่เปิดอยู่ใหม่ ไม่ต้องให้คนกดรีเฟรชเอง */
   const _repaintIfChanged = function () {
     _sfBranchesInflight = null;
-    if (_first || _sfRosterSig() === _before) return;
+    /* ต้องวาดใหม่ตั้งแต่รอบแรกด้วย — ตอนเปิดแอปเราเอารายชื่อจากแคชในเครื่องมาวาดไปก่อน
+       ถ้ารอบแรกไม่วาดทับ สาขาที่เพิ่งถูกลบที่ฮับจะค้างอยู่บนจอจนกว่าจะมีอย่างอื่นมาวาดแทน */
+    if (_sfRosterSig() === _before) return;
     try { if (typeof renderSfChecklistTab === 'function' && document.getElementById('sf-cl-kpis')) renderSfChecklistTab(); } catch (_) {}
     try { if (typeof renderJaedaengDashboard === 'function' && document.getElementById('jaedaeng-dashboard-screen')
               && document.getElementById('jaedaeng-dashboard-screen').style.display !== 'none') renderJaedaengDashboard(); } catch (_) {}
@@ -10069,7 +10070,7 @@ async function loadSfBranches() {
   try { const a = JSON.parse(localStorage.getItem(SF_BRANCHES_KEY) || 'null'); if (Array.isArray(a) && a.length) _applySfBranches(a); } catch (_) {}
   // 1) HUB = แหล่งหลัก (ใช้ config ก้อนเดียวกับสิทธิ์ปุ่ม — ไม่ยิงซ้ำ)
   try {
-    const res = await fetchHubConfig(!_first);   /* รอบถัด ๆ ไปบังคับถามฮับใหม่ ไม่ใช้ของที่จำไว้ */
+    const res = await fetchHubConfig(true);   /* ถามของจริงเสมอ — ทะเบียนสาขาต้องตรงกับฮับทันที */
     const list = _sfBranchesFromHub(res);
     if (list.length) {
       _applySfBranches(list);
