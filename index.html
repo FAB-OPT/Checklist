@@ -5147,6 +5147,8 @@ html.fab-sso-pending #login-screen { display: none !important; }
 
 /* การ์ดเวลาการส่ง · เปิด/ปิดร้าน (รายสาขา) */
 /* ── สรุปการส่ง · รายสาขา ── */
+.ck-spin { animation: ck-spin 1s linear infinite; color: var(--primary); }
+@keyframes ck-spin { to { transform: rotate(360deg); } }
 .sfs-rank { flex:none; min-width:26px; height:26px; padding:0 6px; border-radius:8px; background:var(--surface-2);
   color:var(--text-secondary); font-size:12.5px; font-weight:800; display:inline-flex; align-items:center; justify-content:center;
   align-self:center; }
@@ -11079,9 +11081,32 @@ function _renderDailyMoreButtons() {
   }
   el.innerHTML = html;
 }
+/* ป็อปอัพระหว่างโหลดของเก่า — ดึงย้อนหลังทีละ 90 วันคือหลายพันใบ ใช้เวลาหลายวินาที
+   ถ้าไม่บอกอะไรเลย คนจะนึกว่าแอปค้างแล้วกดซ้ำ ปิดเองไม่ได้ระหว่างโหลด (ไม่มีปุ่มตกลง) */
+function _dailyLoadingPopup(msg) {
+  const t = document.getElementById('modal-title');
+  const b = document.getElementById('modal-body');
+  const ok = document.getElementById('modal-ok');
+  const cancel = document.getElementById('modal-cancel');
+  if (!t || !b) return function () {};
+  t.textContent = 'กำลังโหลดข้อมูลย้อนหลัง';
+  b.innerHTML = '<div style="display:flex;align-items:center;gap:12px;line-height:1.6">'
+    + '<span class="material-symbols-rounded ck-spin" style="font-size:26px">progress_activity</span>'
+    + '<span>' + msg + '<br><small style="color:var(--text-tertiary)">ข้อมูลเยอะ อาจใช้เวลาสักครู่ ปิดหน้านี้ไม่ได้จนกว่าจะเสร็จ</small></span></div>';
+  if (ok) ok.style.display = 'none';
+  if (cancel) cancel.style.display = 'none';
+  document.getElementById('modal').classList.add('show');
+  return function () {
+    if (ok) ok.style.display = '';
+    document.getElementById('modal').classList.remove('show');
+  };
+}
 async function _onLoadAllDaily(btn) {
   if (btn) { btn.disabled = true; btn.innerHTML = 'กำลังโหลด…'; }
-  await loadAllDailyHistory();
+  const done = _dailyLoadingPopup('กำลังดึงผลตรวจย้อนหลังอีก 90 วัน');
+  try { await loadAllDailyHistory(); }
+  catch (e) { console.warn('[daily] โหลดย้อนหลังไม่สำเร็จ', e); }
+  done();
   renderDailyList();
 }
 
