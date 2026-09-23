@@ -6515,6 +6515,8 @@ try {
      ต่อไม่ได้ = ให้ล้ม ตรรกะ "ค้างส่ง" เดิมจะเก็บใบไว้ส่งรอบหน้าเอง
    · onSnapshot (มีที่เดียว: ผลตรวจเจ๊แดง) → ดึงครบครั้งแรก แล้วถามเฉพาะที่เปลี่ยนทุก 30 วินาที
    ═══════════════════════════════════════════════════════════════════════ */
+/* เริ่มล็อกอินฐานข้อมูลของฮับตั้งแต่เปิดหน้า ให้วิ่งคู่ไปกับของเช็คลิสต์ ไม่ต่อคิวกัน */
+setTimeout(function () { try { _ckHubSbClient(); } catch (e) {} }, 0);
 const CK_SB_ENABLED = true;
 const CK_POLL_MS = 30000;
 const _ckFs = firebaseDb;
@@ -6540,7 +6542,9 @@ const CkSB = {
         : c.auth.signInAnonymously().then(r => { if (r && r.error) throw r.error; }))
       /* สลับเมื่อมีป้าย _meta/live เท่านั้น — ป้ายนี้เขียนเป็นขั้นสุดท้ายหลังย้ายข้อมูลครบ
          เช็คแค่ "ตารางมีข้อมูล" ไม่พอ ช่วงกำลังย้ายครึ่งทางเครื่องที่เปิดแอปจะสลับไปเจอของไม่ครบ */
-      .then(() => c.from('ck_docs').select('id').eq('col', '_meta').eq('id', 'live').limit(1))
+      /* เครื่องที่เคยใช้ Supabase ได้แล้ว ข้ามการถามป้ายซ้ำ — ประหยัดหนึ่งรอบเน็ตก่อนเริ่มโหลดข้อมูล
+         ถ้าใช้ไม่ได้จริง คำสั่งถัดไปจะล้มเอง แล้วตรรกะ "ค้างส่ง" เดิมรับไว้อยู่แล้ว */
+      .then(() => this.ever() ? { data: [1] } : c.from('ck_docs').select('id').eq('col', '_meta').eq('id', 'live').limit(1))
       .then(r => {
         if (r.error) throw r.error;
         if (!(r.data || []).length) throw new Error('ยังไม่เปิดใช้ (ยังย้ายข้อมูลไม่เสร็จ)');
@@ -9932,7 +9936,7 @@ async function _hubConfigFromSupabase() {
   const c = _ckHubSbClient();
   if (!c) throw new Error('ไม่มีไลบรารี Supabase');
   await _ckHubSbAuth;
-  const r = await c.from('hub_config').select('key,value');
+  const r = await c.from('hub_config').select('key,value').in('key', ['branches', 'jaedaengBranches', 'users', 'perms']);
   if (r.error) throw r.error;
   const m = {};
   (r.data || []).forEach(function (row) { m[row.key] = row.value; });
@@ -10049,7 +10053,9 @@ function _sfBranchesFromHub(res) {
 /* ลำดับแหล่งข้อมูล: cache → HUB (ศูนย์กลาง) → Firestore (ของเดิม กันพัง)
    ย้ายมาอ่านจาก HUB เพื่อให้แก้สาขาที่เดียว (⚙️ → 🏪 จัดการสาขา) แล้วทุกระบบเห็นตรงกัน */
 async function loadSfBranches() {
-  await ckAuthReady();            // รอล็อกอิน Firebase ก่อนแตะข้อมูล
+  /* ไม่รอ ckAuthReady() ตรงนี้ — ทะเบียนสาขาอ่านจากฮับ (คนละฐานข้อมูลกับผลตรวจ)
+     ของเดิมรอล็อกอินฐานข้อมูลผลตรวจก่อน ทำให้หน้าจอกว่าจะมีข้อมูลช้าขึ้นโดยไม่จำเป็น
+     ทางสำรองที่ต้องใช้ Firestore ค่อยรอตอนถึงคิวมันเอง */
   if (_sfBranchesLoaded && Date.now() - _sfBranchesAt < SF_BRANCHES_TTL_MS) return;
   if (_sfBranchesInflight) return _sfBranchesInflight;
   const _before = _sfRosterSig();
@@ -10082,6 +10088,7 @@ async function loadSfBranches() {
     console.warn('[sfBranches] HUB ไม่มีข้อมูลสาขา — ใช้ Firestore ต่อ');
   } catch (e) { console.warn('[sfBranches] โหลดจาก HUB ไม่ได้ — ใช้ Firestore ต่อ', e); }
   // 2) fallback: Firestore ของเดิม
+  await ckAuthReady();            // ทางสำรองนี้ต้องล็อกอินก่อน
   if (!firebaseDb) return;
   try {
     const doc = await firebaseDb.collection('appConfig').doc('sfBranches').get();
