@@ -7856,7 +7856,22 @@ function saveDailyLocal() {
 const CK_IS_PHONE = (function () {
   try { return window.matchMedia('(max-width: 820px)').matches; } catch (_) { return false; }
 })();
-const DAILY_BACKFILL_DAYS = CK_IS_PHONE ? 7 : 30;  // เครื่องใหม่/ล้างแคช: โหลดย้อนหลังกี่วัน (ครั้งเดียว) · ลดจาก 90 กันโหลดหนัก
+/* โหลดแค่ "เดือนนี้" (ตั้งแต่วันที่ 1 ถึงวันนี้) — ตรงกับสิ่งที่หน้าจอใช้จริง
+   ของเดิมนับถอยหลังเป็นจำนวนวัน (มือถือ 7 · คอม 30) ซึ่งคร่อมเดือนเก่าโดยไม่ได้ใช้
+   ของเก่ากว่านั้นยังกดปุ่ม "ดูย้อนหลัง" ได้เหมือนเดิม */
+function _dailyMonthFrom() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-01';
+}
+/* มือถือ: ขึ้นของ 7 วันล่าสุดก่อน (เร็ว) แล้วค่อยเติมให้ครบเดือนเบื้องหลัง
+   ทั้งเดือนคือ ~2,600 ใบ ราว 24 MB ถ้ารอให้ครบก่อนค่อยวาด จอจะว่างนานเกินไปบนมือถือ */
+const DAILY_PHONE_FIRST_DAYS = 7;
+function _dailyFirstFrom() {
+  const m = _dailyMonthFrom();
+  if (!CK_IS_PHONE) return m;
+  const q = _daysAgoStr(DAILY_PHONE_FIRST_DAYS);
+  return q > m ? q : m;      /* ต้นเดือนใหม่ ๆ ช่วง 7 วันจะคร่อมเดือนก่อน — ใช้วันที่ 1 พอ */
+}
 const DAILY_SYNC_OVERLAP_MS = 6 * 60 * 60 * 1000;  // เผื่อนาฬิกาเครื่องคลาดกัน 6 ชม. กันข้อมูลตกหล่น
 function _maxDailyUpdatedAt(list) {
   let m = '';
@@ -7927,7 +7942,7 @@ async function loadDailyChecklists() {
       /* บน Supabase: มีแคชครบแล้ว → ดึงเฉพาะที่เปลี่ยน · ของเดิมดึงทุกใบของสาขาทุกครั้งที่เปิด
          (~1.6 MB และโตทุกวัน) ซึ่งจะชนเพดานโหลดออกของ Supabase ฟรี (5 GB/เดือน) */
       const _cov = _dailyCoverFrom();
-      const _inc = CkSB.on && cursor && _cov && _cov <= _daysAgoStr(DAILY_BACKFILL_DAYS);
+      const _inc = CkSB.on && cursor && _cov && _cov <= _dailyFirstFrom();
       snap = _inc
         ? await firebaseDb.collection(DAILY_COLLECTION).where('branchCode', '==', _bc)
             .where('updatedAt', '>', new Date(new Date(cursor).getTime() - DAILY_SYNC_OVERLAP_MS).toISOString()).get()
@@ -7938,7 +7953,7 @@ async function loadDailyChecklists() {
          (ก้อนเล็ก ไม่กี่ร้อยรายการ) */
       const recent = _daysAgoStr(DAILY_FIRST_PAINT_DAYS);
       const _cover0 = _dailyCoverFrom();
-      const _fresh = !!cursor && !!_cover0 && _cover0 <= _daysAgoStr(DAILY_BACKFILL_DAYS) && !_daily3Due();
+      const _fresh = !!cursor && !!_cover0 && _cover0 <= _dailyFirstFrom() && !_daily3Due();
       if (!_fresh) {
         const first = await firebaseDb.collection(DAILY_COLLECTION).where('date', '>=', recent).get();
         _mergeDailyDocs(map, first.docs);
@@ -7950,7 +7965,7 @@ async function loadDailyChecklists() {
          - แคชครอบคลุมถึงต้นช่วงแล้ว → ดึงเฉพาะที่เปลี่ยน (เบา)
          - แคชขาด (พื้นที่ไม่พอจนถูกตัด) → ต้องดึงตามวันที่ ไม่งั้นของที่
            ถูกตัดทิ้งจะไม่กลับมา แล้วตารางจะขึ้นว่ายังไม่ส่งทั้งที่ส่งแล้ว */
-      const since = _daysAgoStr(DAILY_BACKFILL_DAYS);
+      const since = _dailyFirstFrom();
       const cover = _dailyCoverFrom();
       const covered = !!cursor && !!cover && cover <= since;
       if (covered) {
@@ -7972,6 +7987,12 @@ async function loadDailyChecklists() {
     const pending = allDailyChecklists.filter(d => d && d.id != null && d._pendingSync && !d.deleted);
     if (pending.length) _resyncLocalOnlyDaily(pending);
     pruneOldDailyPhotos().catch(e => console.warn('[daily] ล้างลิงก์รูปเก่าไม่สำเร็จ', e));
+    /* เติมให้ครบ "เดือนนี้" ต่อจากช่วงแรก — ทำหลังวาดจอแล้ว คนใช้ไม่ต้องรอ */
+    if (CK_IS_PHONE) {
+      _ensureDailyRange(_dailyMonthFrom())
+        .then(function (got) { if (got) _repaintDaily(); })
+        .catch(function (e) { console.warn('[daily] เติมข้อมูลเดือนนี้ไม่สำเร็จ', e); });
+    }
   } catch (e) {
     console.warn('Daily load failed, using local cache', e);
   }
@@ -8006,7 +8027,7 @@ async function _resyncLocalOnlyDaily(records) {
    ตอนนี้ดึงเฉพาะช่วงที่ยังไม่มี แล้วรวมเข้าไป — ขอซ้ำช่วงเดิมไม่ดึงใหม่ */
 let _dailyLoadedFrom = '';
 function _dailyHaveFrom() {
-  return _dailyLoadedFrom || _daysAgoStr(DAILY_BACKFILL_DAYS);
+  return _dailyLoadedFrom || _dailyFirstFrom();
 }
 async function _ensureDailyRange(from) {
   await ckAuthReady();            // รอล็อกอิน Firebase ก่อนแตะข้อมูล
