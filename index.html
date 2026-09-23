@@ -8036,7 +8036,7 @@ async function loadAllDailyHistory() {
      2) ใบเล็กลง มือถือโหลดเร็วขึ้น
    ตัวใบ ผลผ่าน/ไม่ผ่าน และหมายเหตุ ไม่ถูกแตะ หายเฉพาะรูป
    ทำทีละไม่เกิน 20 ใบต่อรอบ กันเขียนคลาวด์รัวตอนเปิดแอปครั้งแรก */
-const DAILY_PHOTO_RETENTION_DAYS = 180;
+const DAILY_PHOTO_RETENTION_DAYS = 360;   /* ตกลงกันไว้ 23 ก.ย. 2569 — เท่ากับกฎลบไฟล์จริงที่ R2 */
 const DAILY_PURGE_MAX_PER_RUN = 20;
 async function pruneOldDailyPhotos() {
   if (testMode) return;
