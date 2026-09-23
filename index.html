@@ -7928,8 +7928,14 @@ async function loadDailyChecklists() {
   loadCkSysNotes(); // หมายเหตุระบบรายวัน/รอบ (เช่น ระบบล่ม สาขาส่งไม่ได้)
   loadSfBranches(); // โหลดรายชื่อสาขา (เพิ่ม/ลบ) จาก cloud — ครั้งเดียวต่อ session
   loadCkPermsFromHub(); // สิทธิ์ปุ่มจาก HUB (throttle) — ตัวหลักเรียกที่ renderBottomNav/visibilitychange
+  /* ของในเครื่องอยู่ใน IndexedDB (localStorage เก็บเฉพาะใบที่ยังส่งไม่สำเร็จ)
+     ของเดิมอ่านแต่ localStorage จึงได้ลิสต์ว่างเกือบทุกครั้ง → คิดว่าไม่มีแคช
+     → ดึงใหม่ทั้งเดือนทุกครั้งที่เปิดแอป (2,600 ใบ ~24 MB) ทั้งที่ของครบอยู่ในเครื่องแล้ว
+     อ่านจากที่เก็บจริงแทน แล้วรอบต่อ ๆ ไปจะเหลือแค่ "ดึงเฉพาะที่เปลี่ยน" */
   // MERGE: รวม cloud + local (ห้ามทับของในเครื่องด้วยของว่าง) — กันข้อมูลที่เซฟ cloud ไม่สำเร็จหาย
-  const local = loadLocalDaily();
+  let local = [];
+  try { local = await ckLoadCache(DAILY_STORAGE_KEY); } catch (_) { local = []; }
+  if (!Array.isArray(local) || !local.length) local = loadLocalDaily();
   allDailyChecklists = local.filter(d => d && !d.deleted); // แสดง local ก่อน กันจอว่างระหว่างโหลด
   if (!firebaseDb) return;
   // แมพเก็บทุก record ในเครื่อง (รวม deleted) ตาม id ไว้ merge
