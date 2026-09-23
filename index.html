@@ -9004,6 +9004,7 @@ function renderBottomNav() {
   // ดึงสิทธิ์ล่าสุดจาก HUB ทุกครั้งที่เข้าแอป/สลับแบรนด์ (throttle 30 วิ)
   // — ต้องอยู่ตรงนี้ ไม่ใช่ใน loadDailyChecklists() เพราะคนที่ใช้เจ๊แดงอย่างเดียวไม่เคยได้สิทธิ์จาก HUB
   loadCkPermsFromHub();
+  loadSfBranches();     /* ทะเบียนสาขาตามฮับให้ทัน — สลับหน้าก็ถือเป็นจังหวะที่คนกำลังจะอ่านข้อมูล */
 }
 
 // HTML ของเครื่องมือ (สลับแบรนด์) — ใช้ทั้งใน header (มือถือ) และ sidebar (คอม)
@@ -9787,7 +9788,18 @@ function _sfDailyTopFailsHTML(dailies) {
 }
 
 // ── จัดการรายชื่อสาขา (เพิ่ม/ลบ) — sync ผ่าน cloud ให้ทุกเครื่องเห็นตรงกัน ──
+/* ทะเบียนสาขาต้องตามฮับให้ทัน — ของเดิมโหลดครั้งเดียวตอนเปิดแอป (_sfBranchesLoaded)
+   เพิ่ม/ลบ/ปิดสาขาที่ฮับแล้ว เครื่องที่เปิดหน้าค้างไว้จะยังเห็นสาขาเดิมจนกว่าจะปิด-เปิดหน้าใหม่
+   ทำแบบเดียวกับสิทธิ์ปุ่ม: ดึงซ้ำได้ ถี่สุดทุก 60 วิ · เรียกตอนสลับหน้า/กลับมาที่แอป
+   ถ้ารายชื่อเปลี่ยนจริงค่อยวาดหน้าจอใหม่ ไม่ใช่วาดทุกครั้งที่ถาม */
 let _sfBranchesLoaded = false;
+let _sfBranchesAt = 0;
+let _sfBranchesInflight = null;
+const SF_BRANCHES_TTL_MS = 60 * 1000;
+function _sfRosterSig() {
+  try { return (BRANCHES || []).map(b => String(b.code) + (b.closed ? 'x' : '') + (b.name || '')).sort().join('|'); }
+  catch (_) { return ''; }
+}
 function _applySfBranches(list) {
   if (Array.isArray(list) && list.length) {
     // เก็บ closed ไว้ด้วย — สาขาปิดต้องยังอยู่ใน BRANCHES ให้ค้นชื่อจากรหัสได้ (รายงานย้อนหลัง)
@@ -9963,9 +9975,9 @@ async function _fetchCkPermsFromHub(force) {
 }
 /* กลับเข้าแอป (สลับแท็บ/ปลดล็อกจอ) → เช็คสิทธิ์ใหม่ให้เอง — แก้ที่ HUB แล้วเห็นผลใน ~ไม่กี่วิ */
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible' && currentUser) loadCkPermsFromHub();
+  if (document.visibilityState === 'visible' && currentUser) { loadCkPermsFromHub(); loadSfBranches(); }
 });
-window.addEventListener('pageshow', () => { if (currentUser) loadCkPermsFromHub(); });
+window.addEventListener('pageshow', () => { if (currentUser) { loadCkPermsFromHub(); loadSfBranches(); } });
 
 /* ตัดคำนำหน้าออกจากชื่อ BZM แล้วเอาชื่อต้น — HUB เก็บ "นาย ณธวรรท ศิริเมธานณ"
    แต่ Checklist เทียบ manager กับ currentUser.name ที่เก็บชื่อต้น ("ณธวรรท") */
@@ -9999,17 +10011,30 @@ function _sfBranchesFromHub(res) {
    ย้ายมาอ่านจาก HUB เพื่อให้แก้สาขาที่เดียว (⚙️ → 🏪 จัดการสาขา) แล้วทุกระบบเห็นตรงกัน */
 async function loadSfBranches() {
   await ckAuthReady();            // รอล็อกอิน Firebase ก่อนแตะข้อมูล
-  if (_sfBranchesLoaded) return;
+  if (_sfBranchesLoaded && Date.now() - _sfBranchesAt < SF_BRANCHES_TTL_MS) return;
+  if (_sfBranchesInflight) return _sfBranchesInflight;
+  const _first = !_sfBranchesLoaded;
+  const _before = _sfRosterSig();
   _sfBranchesLoaded = true;
+  _sfBranchesAt = Date.now();
+  _sfBranchesInflight = Promise.resolve();
+  /* รายชื่อเปลี่ยน → วาดหน้าที่เปิดอยู่ใหม่ ไม่ต้องให้คนกดรีเฟรชเอง */
+  const _repaintIfChanged = function () {
+    _sfBranchesInflight = null;
+    if (_first || _sfRosterSig() === _before) return;
+    try { if (typeof renderSfChecklistTab === 'function' && document.getElementById('sf-cl-tab')) renderSfChecklistTab(); } catch (_) {}
+    try { _repaintDaily(); } catch (_) {}
+  };
   try { const a = JSON.parse(localStorage.getItem(SF_BRANCHES_KEY) || 'null'); if (Array.isArray(a) && a.length) _applySfBranches(a); } catch (_) {}
   // 1) HUB = แหล่งหลัก (ใช้ config ก้อนเดียวกับสิทธิ์ปุ่ม — ไม่ยิงซ้ำ)
   try {
-    const res = await fetchHubConfig();
+    const res = await fetchHubConfig(!_first);   /* รอบถัด ๆ ไปบังคับถามฮับใหม่ ไม่ใช้ของที่จำไว้ */
     const list = _sfBranchesFromHub(res);
     if (list.length) {
       _applySfBranches(list);
       try { localStorage.setItem(SF_BRANCHES_KEY, JSON.stringify(BRANCHES)); } catch (_) {}
         console.log('[sfBranches] จาก HUB ' + list.length + ' สาขา (ปิด ' + list.filter(b => b.closed).length + ')');
+      _repaintIfChanged();
       return;
     }
     console.warn('[sfBranches] HUB ไม่มีข้อมูลสาขา — ใช้ Firestore ต่อ');
@@ -10023,6 +10048,7 @@ async function loadSfBranches() {
       if (d && Array.isArray(d.list) && d.list.length) {
         _applySfBranches(d.list);
         try { localStorage.setItem(SF_BRANCHES_KEY, JSON.stringify(BRANCHES)); } catch (_) {}
+        _repaintIfChanged();
           }
     }
   } catch (e) { console.warn('loadSfBranches failed', e); }
