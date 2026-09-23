@@ -5147,6 +5147,9 @@ html.fab-sso-pending #login-screen { display: none !important; }
 
 /* การ์ดเวลาการส่ง · เปิด/ปิดร้าน (รายสาขา) */
 /* ── สรุปการส่ง · รายสาขา ── */
+.sfs-more { appearance:none; border:1px solid var(--border); background:var(--surface); color:var(--text);
+  font-family:inherit; font-size:13px; font-weight:800; padding:8px 18px; border-radius:999px; cursor:pointer; }
+.sfs-more:hover { background:var(--surface-2); }
 .sfs-head { display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; margin-bottom:11px; }
 .sfs-h-t { font-size:13px; font-weight:800; color:var(--text); }
 .sfs-h-s { font-size:11.5px; font-weight:600; color:var(--text-tertiary); }
@@ -10206,6 +10209,12 @@ function _visibleBranchRoster() {
 
    ตัวหาร = "รอบที่ควรส่ง" นับจากวันที่มีสาขาใดสาขาหนึ่งส่งจริงในช่วงที่เลือก × 2 รอบ
    ไม่ยึดปฏิทิน เพราะวันหยุด/วันที่ระบบล่ม ไม่ควรนับเป็นความผิดของสาขา */
+/* ย่อ/ขยายรายการสรุปการส่ง — ค่าเริ่มต้นย่อเฉพาะแบรนด์ที่สาขาเยอะ */
+var _sfSumShowAll = false;
+function sfSumToggleAll() {
+  _sfSumShowAll = !_sfSumShowAll;
+  try { renderSfChecklistTab(); } catch (e) {}
+}
 function _sfDailySummaryHTML(dailies) {
   const roster = _visibleBranchRoster();
   if (!roster.length) return '<div class="jd-dash-empty">ไม่มีสาขาในขอบเขตที่ดูอยู่</div>';
@@ -10294,40 +10303,20 @@ function _sfDailySummaryHTML(dailies) {
     '</div>';
   };
 
-  const N = 5;
+  /* แสดงครบทุกสาขาเสมอ — ของเดิมตัดเหลือหัว 5 ท้าย 5 แล้วบอกว่า "อีก N สาขาอยู่ระหว่างสองกลุ่มนี้"
+     ซึ่งคนดูต้องการเห็นทุกสาขาอยู่ดี (และทำให้สาขาที่ % เท่ากันถูกแยกคนละกลุ่มจนงง)
+     เหลือไว้แค่การย่อสำหรับแบรนด์ที่สาขาเยอะ (ซานตาเฟ่ 74 สาขา = การ์ดยาวเกือบ 9,000px บนมือถือ)
+     ย่อแล้วยังกดดูทั้งหมดได้ในคลิกเดียว */
+  const SHOW_FIRST = 12;
   var out;
-  if (rows.length <= N * 2) {
-    /* ไม่เกินสิบสาขา ตัดหัวท้ายแล้วก็แทบไม่เหลืออะไรตรงกลาง ไล่ทั้งหมดไปเลย */
-    out = '<div class="sfs-list">' + rows.map(buildRow).join('') + '</div>';
+  if (rows.length <= SHOW_FIRST || _sfSumShowAll) {
+    out = '<div class="sfs-list">' + rows.map(buildRow).join('') + '</div>'
+        + (rows.length > SHOW_FIRST
+            ? '<div class="sfc-cut"><button type="button" class="sfs-more" onclick="sfSumToggleAll()">ย่อรายการ</button></div>' : '');
   } else {
-    /* rows เรียงตาม "ต้องตามก่อน" อยู่แล้ว หัวลิสต์คือกลุ่มที่ต้องตาม
-       ส่วนกลุ่มที่ทำได้ดีเรียงจาก % มากลงมา ไม่ใช่เอาท้ายลิสต์เดิมกลับหัว */
-    /* กลุ่ม "ทำได้ดี" ตัดจาก % สูงสุดลงมา */
-    var byPct = rows.slice().sort(function (a, b) { return (b.pct - a.pct) || (b.sent - a.sent); });
-    var best = byPct.slice(0, N);
-    var bestMin = best.length ? best[best.length - 1].pct : 101;
-    var inBest = {};
-    best.forEach(function (r) { inBest[r.code] = 1; });
-    /* สาขาที่ % เท่ากับกลุ่มทำได้ดี ห้ามไปโผล่ในกลุ่ม "ขาดส่งมากที่สุด"
-       ของเดิมตัดหัวลิสต์ 5 อันดับแรกตรง ๆ พอมีหลายสาขา % เท่ากัน (เช่น 83% กันหลายสาขา)
-       สาขาหนึ่งจะไปอยู่ฝั่งแย่ อีกสี่สาขาอยู่ฝั่งดี ทั้งที่ตัวเลขเท่ากันเป๊ะ — คนอ่านงงว่าตัดจากอะไร */
-    var worst = rows.filter(function (r) { return !inBest[r.code] && r.pct < bestMin; }).slice(0, N);
-    var mid = rows.length - worst.length - best.length;
-    /* สองกลุ่มวางคู่กันบนจอกว้าง — เป็นสองขั้วของเรื่องเดียวกัน อยู่ข้างกันถึงเทียบได้
-       บรรทัด "อีก N สาขาอยู่ระหว่างสองกลุ่มนี้" ไปอยู่ท้ายสุดเต็มความกว้าง
-       เพราะพูดถึงทั้งสองกลุ่ม ไม่ใช่ของกลุ่มใดกลุ่มหนึ่ง */
-    const col = function (cls, label, list) {
-      return '<div class="sfs-col">'
-        + '<div class="sfs-grp"><span class="sfs-grp-t ' + cls + '">' + label + '</span></div>'
-        + '<div class="sfs-list">' + list.map(buildRow).join('') + '</div></div>';
-    };
-    /* ไม่มีสาขาไหนต่ำกว่ากลุ่มทำได้ดีเลย (ทุกสาขา % เท่ากันหมด) → ไล่ทั้งหมดไปเลย ไม่ต้องแบ่งสองกลุ่ม */
-    if (!worst.length) return head + '<div class="sfs-list">' + rows.map(buildRow).join('') + '</div>';
-    out = '<div class="sfs-two">'
-      + col('bad', 'ขาดส่งมากที่สุด ' + worst.length + ' สาขา', worst)
-      + col('ok', 'ส่งครบที่สุด ' + best.length + ' สาขา', best)
-      + '</div>'
-      + (mid > 0 ? '<div class="sfc-cut">อีก ' + mid.toLocaleString('th-TH') + ' สาขาอยู่ระหว่างสองกลุ่มนี้</div>' : '');
+    out = '<div class="sfs-list">' + rows.slice(0, SHOW_FIRST).map(buildRow).join('') + '</div>'
+        + '<div class="sfc-cut"><button type="button" class="sfs-more" onclick="sfSumToggleAll()">แสดงทั้งหมด '
+        + rows.length.toLocaleString('th-TH') + ' สาขา</button></div>';
   }
   return head + out;
 }
