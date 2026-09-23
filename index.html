@@ -7839,6 +7839,13 @@ const DAILY_COVER_KEY = 'qa_daily_cover_v1';
 function _dailyCoverFrom() {
   try { return localStorage.getItem(DAILY_COVER_KEY) || ''; } catch (_) { return ''; }
 }
+/* หมุดเวลาไว้ใน localStorage — อ่านได้ทันทีตั้งแต่บรรทัดแรก ไม่ต้องรอ IndexedDB
+   ของเดิมคิดหมุดจากรายการที่เพิ่งอ่านจาก IndexedDB ถ้าจังหวะนั้นยังอ่านไม่เสร็จ
+   ระบบจะคิดว่า "ไม่มีแคช" แล้วดึงใหม่ทั้งเดือนทุกครั้งที่เปิดแอป */
+const DAILY_CURSOR_KEY = 'qa_daily_cursor_v1';
+function _dailyCursorSaved() {
+  try { return localStorage.getItem(DAILY_CURSOR_KEY) || ''; } catch (_) { return ''; }
+}
 function saveDailyLocal() {
   if (testMode) return;
   /* หมุด "แคชครอบคลุมถึงวันไหน" คิดจากของที่เก็บจริง — ตอนนี้เก็บครบทุกใบใน IndexedDB
@@ -7847,6 +7854,8 @@ function saveDailyLocal() {
   try {
     const dates = all.map(d => d && d.date).filter(Boolean).sort();
     localStorage.setItem(DAILY_COVER_KEY, dates[0] || '');
+    const cur = _maxDailyUpdatedAt(all);
+    if (cur) localStorage.setItem(DAILY_CURSOR_KEY, cur);
   } catch (_) {}
   ckSaveCache(DAILY_STORAGE_KEY, all, 'daily');
 }
@@ -7940,7 +7949,7 @@ async function loadDailyChecklists() {
   if (!firebaseDb) return;
   // แมพเก็บทุก record ในเครื่อง (รวม deleted) ตาม id ไว้ merge
   const map = new Map(local.filter(d => d && d.id != null).map(d => [String(d.id), d]));
-  const cursor = _maxDailyUpdatedAt(local);
+  const cursor = _maxDailyUpdatedAt(local) || _dailyCursorSaved();
   try {
     let snap;
     const _isBr = currentUser && currentUser.role === 'branch';
