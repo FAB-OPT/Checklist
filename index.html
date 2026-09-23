@@ -8035,7 +8035,12 @@ async function _resyncLocalOnlyDaily(records) {
    ตอนนี้ดึงเฉพาะช่วงที่ยังไม่มี แล้วรวมเข้าไป — ขอซ้ำช่วงเดิมไม่ดึงใหม่ */
 let _dailyLoadedFrom = '';
 function _dailyHaveFrom() {
-  return _dailyLoadedFrom || _dailyFirstFrom();
+  if (_dailyLoadedFrom) return _dailyLoadedFrom;
+  /* แคชในเครื่องครอบคลุมถึงวันไหนแล้ว ก็ถือว่ามีของถึงวันนั้น
+     ของเดิมไม่ดูแคชเลย ตัวเติม "ให้ครบเดือนนี้" จึงดึงซ้ำทั้งเดือนทุกครั้งที่เปิดแอป
+     ทั้งที่ของครบอยู่ในเครื่องแล้ว (นี่คือสาเหตุที่เปิดแอปแล้วช้าทั้งคอมและมือถือ) */
+  const cov = _dailyCoverFrom(), first = _dailyFirstFrom();
+  return (cov && cov < first) ? cov : first;
 }
 async function _ensureDailyRange(from) {
   await ckAuthReady();            // รอล็อกอิน Firebase ก่อนแตะข้อมูล
