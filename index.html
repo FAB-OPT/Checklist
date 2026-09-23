@@ -9911,11 +9911,50 @@ function ckBzmFullName(v) {
   return (nick && nick !== hit.name) ? (hit.name + ' (' + nick + ')') : hit.name;
 }
 const HUB_CFG_TTL_MS = 30 * 1000;
+/* ทะเบียนสาขา/สิทธิ์ ตัวจริงอยู่ที่ Supabase ของฮับ (ตาราง hub_config)
+   ทางเดิมคือถาม Apps Script ซึ่งอ่านจากชีตและแคชไว้ 5 นาที — แก้ทะเบียนที่ฮับแล้ว
+   เครื่องอื่นต้องรอถึง 5 นาทีกว่าจะเห็น (และชีตเองก็เป็นสำเนาที่ตามทีหลัง)
+   อ่านจาก Supabase ตรง ๆ จึงเห็นทันที · ต่อไม่ได้ค่อยถอยไปทาง Apps Script เหมือนเดิม */
+const CK_HUB_SB_URL = 'https://pzspcjqlxoqnbtvlfjsy.supabase.co';
+const CK_HUB_SB_KEY = 'sb_publishable_n1w7k8mdxGbtaHKZ4xnNWA_wxUHhEtP';
+var _ckHubSb = null, _ckHubSbAuth = null;
+function _ckHubSbClient() {
+  if (_ckHubSb) return _ckHubSb;
+  if (!window.supabase || !window.supabase.createClient) return null;
+  _ckHubSb = window.supabase.createClient(CK_HUB_SB_URL, CK_HUB_SB_KEY, { auth: { storageKey: 'sb-ckhubcfg-auth' } });
+  _ckHubSbAuth = _ckHubSb.auth.getSession().then(function (r) {
+    if (r && r.data && r.data.session) return true;
+    return _ckHubSb.auth.signInAnonymously().then(function (x) { return !(x && x.error); });
+  }).catch(function () { return false; });
+  return _ckHubSb;
+}
+async function _hubConfigFromSupabase() {
+  const c = _ckHubSbClient();
+  if (!c) throw new Error('ไม่มีไลบรารี Supabase');
+  await _ckHubSbAuth;
+  const r = await c.from('hub_config').select('key,value');
+  if (r.error) throw r.error;
+  const m = {};
+  (r.data || []).forEach(function (row) { m[row.key] = row.value; });
+  if (!m.branches || !m.branches.branches) throw new Error('hub_config ยังไม่มีทะเบียนสาขา');
+  return { ok: true, source: 'supabase',
+           branches: m.branches, jaedaengBranches: m.jaedaengBranches,
+           users: m.users || [], perms: m.perms || {},
+           brands: (_hubCfg && _hubCfg.brands) || undefined };
+}
+
 function fetchHubConfig(force) {
   if (!force && _hubCfg && (Date.now() - _hubCfgAt) < HUB_CFG_TTL_MS) return Promise.resolve(_hubCfg);
   if (_hubCfgInflight) return _hubCfgInflight;
   _hubCfgInflight = (async () => {
     let lastErr = null;
+    try {
+      const sb = await _hubConfigFromSupabase();
+      _hubCfg = sb; _hubCfgAt = Date.now();
+      return sb;
+    } catch (e) {
+      console.warn('[hubCfg] อ่านจาก Supabase ไม่ได้ → ใช้ Apps Script แทน', e && e.message);
+    }
     for (let i = 0; i < 3; i++) {
       if (i) await new Promise(r => setTimeout(r, 700 * i));   // หน่วงก่อนลองใหม่
       try {
@@ -10022,7 +10061,9 @@ async function loadSfBranches() {
   const _repaintIfChanged = function () {
     _sfBranchesInflight = null;
     if (_first || _sfRosterSig() === _before) return;
-    try { if (typeof renderSfChecklistTab === 'function' && document.getElementById('sf-cl-tab')) renderSfChecklistTab(); } catch (_) {}
+    try { if (typeof renderSfChecklistTab === 'function' && document.getElementById('sf-cl-kpis')) renderSfChecklistTab(); } catch (_) {}
+    try { if (typeof renderJaedaengDashboard === 'function' && document.getElementById('jaedaeng-dashboard-screen')
+              && document.getElementById('jaedaeng-dashboard-screen').style.display !== 'none') renderJaedaengDashboard(); } catch (_) {}
     try { _repaintDaily(); } catch (_) {}
   };
   try { const a = JSON.parse(localStorage.getItem(SF_BRANCHES_KEY) || 'null'); if (Array.isArray(a) && a.length) _applySfBranches(a); } catch (_) {}
