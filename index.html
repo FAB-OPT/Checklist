@@ -5147,6 +5147,11 @@ html.fab-sso-pending #login-screen { display: none !important; }
 
 /* การ์ดเวลาการส่ง · เปิด/ปิดร้าน (รายสาขา) */
 /* ── สรุปการส่ง · รายสาขา ── */
+.sfs-rank { flex:none; min-width:26px; height:26px; padding:0 6px; border-radius:8px; background:var(--surface-2);
+  color:var(--text-secondary); font-size:12.5px; font-weight:800; display:inline-flex; align-items:center; justify-content:center;
+  align-self:center; }
+.sfs-row.ok .sfs-rank { background:var(--success-bg); color:var(--success); }
+.sfs-row.bad .sfs-rank { background:var(--danger-bg); color:var(--danger); }
 .sfs-more { appearance:none; border:1px solid var(--border); background:var(--surface); color:var(--text);
   font-family:inherit; font-size:13px; font-weight:800; padding:8px 18px; border-radius:999px; cursor:pointer; }
 .sfs-more:hover { background:var(--surface-2); }
@@ -10254,9 +10259,12 @@ function _sfDailySummaryHTML(dailies) {
     r.pct = expect > 0 ? Math.round(r.onTime / expect * 100) : 0;
     return r;
   }).sort(function (a, b) {
-    /* ขาดส่งถือว่าหนักกว่าส่งช้า — เรียงตามที่ต้องไปตามก่อน ไม่ใช่เรียงตามรหัสสาขา */
-    const wa = a.miss * 2 + a.late, wb = b.miss * 2 + b.late;
-    if (wb !== wa) return wb - wa;
+    /* เรียงจาก "ทำได้ดีที่สุด" ลงมา เพื่อให้เลขอันดับสื่อตรงตัว (อันดับ 1 = ส่งครบที่สุด)
+       % เท่ากัน → ขาดส่งน้อยกว่าอยู่ก่อน → เกินเวลาน้อยกว่าอยู่ก่อน → แล้วค่อยเรียงรหัสสาขา
+       ของเดิมเรียงจาก "ต้องตามก่อน" ซึ่งพออ่านคู่กับเลขอันดับแล้วสับสน */
+    if (b.pct !== a.pct) return b.pct - a.pct;
+    if (a.miss !== b.miss) return a.miss - b.miss;
+    if (a.late !== b.late) return a.late - b.late;
     return String(a.code).localeCompare(String(b.code));
   });
 
@@ -10269,14 +10277,16 @@ function _sfDailySummaryHTML(dailies) {
     '<span class="sfs-h-t">' + nDays + ' วัน · ' + rows.length + ' สาขา</span>' +
     '<span class="sfs-h-s">ควรส่ง ' + totExpect.toLocaleString() + ' รอบ · ส่งจริง ' + tot.sent.toLocaleString() +
       (ckHasLate() ? ' · เกินเวลา ' + tot.late.toLocaleString() : '') +
-      ' · ไม่ได้ส่ง ' + tot.miss.toLocaleString() + '</span>' +
+      ' · ไม่ได้ส่ง ' + tot.miss.toLocaleString() + ' · อันดับ 1 = ส่งครบที่สุด</span>' +
   '</div>';
 
   /* ── ตัดเหลือหัวกับท้าย ──
      ของเดิมไล่ทุกสาขาที่ดูอยู่ ซานตาเฟ่ 74 สาขาคือการ์ดสูงเกือบ 9,000px บนมือถือ
      ปัดจอสิบกว่าครั้งเพื่อผ่านการ์ดใบเดียว และแถวกลาง ๆ ก็ไม่มีใครอ่าน
      คนเปิดหน้านี้อยากรู้สองอย่าง ใครต้องไปตาม กับใครทำได้ดี ตรงกลางไม่ได้ตอบทั้งสองข้อ */
+  var _rank = 0;
   const buildRow = function (r) {
+    _rank++;
     /* คิดเป็นสัดส่วน ไม่ใช่ "ขาดแม้รอบเดียวก็แดง"
        รอบที่ควรส่งมี 62 รอบต่อเดือน ขาดหนึ่งรอบแล้วแดงทันที = ทุกสาขาแดงหมด สีจึงไม่ได้บอกอะไร */
     const tone = r.pct >= 95 ? 'ok' : (r.pct >= 85 ? 'warn' : 'bad');
@@ -10285,6 +10295,7 @@ function _sfDailySummaryHTML(dailies) {
     const wMiss = expect ? (r.miss / expect * 100) : 0;
     return '<div class="sfs-row ' + tone + '">' +
       '<div class="sfs-top">' +
+        '<span class="sfs-rank">' + _rank + '</span>' +
         '<span class="sfs-name">' + escapeHtml(r.name) + '</span>' +
         '<span class="sfs-pct">' + r.pct + '<small>%</small></span>' +
       '</div>' +
