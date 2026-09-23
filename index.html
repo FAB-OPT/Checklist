@@ -7959,6 +7959,7 @@ async function loadDailyChecklists() {
     _repaintDaily();
     const pending = allDailyChecklists.filter(d => d && d.id != null && d._pendingSync && !d.deleted);
     if (pending.length) _resyncLocalOnlyDaily(pending);
+    pruneOldDailyPhotos().catch(e => console.warn('[daily] ล้างลิงก์รูปเก่าไม่สำเร็จ', e));
   } catch (e) {
     console.warn('Daily load failed, using local cache', e);
   }
@@ -8026,6 +8027,32 @@ async function loadAllDailyHistory() {
   await _ensureDailyRange(from);
   /* ขยายช่วงแล้วไม่ได้อะไรเพิ่ม = ไม่มีของเก่ากว่านี้แล้ว ซ่อนปุ่มได้ */
   if (allDailyChecklists.length === got) _dailyFullLoaded = true;
+}
+
+/* ═══ อายุการเก็บรูป ═══
+   รูปเก็บที่ Cloudflare R2 ซึ่งตั้ง "ลบไฟล์ที่เกินอายุ" ไว้ที่ฝั่ง R2 อีกชั้นหนึ่ง
+   ตรงนี้คือการล้าง "ลิงก์" ออกจากใบที่เกินอายุ เพื่อให้
+     1) ใบเก่าไม่ขึ้นรูปแตกหลังไฟล์จริงถูกลบ — ขึ้นข้อความบอกแทน
+     2) ใบเล็กลง มือถือโหลดเร็วขึ้น
+   ตัวใบ ผลผ่าน/ไม่ผ่าน และหมายเหตุ ไม่ถูกแตะ หายเฉพาะรูป
+   ทำทีละไม่เกิน 20 ใบต่อรอบ กันเขียนคลาวด์รัวตอนเปิดแอปครั้งแรก */
+const DAILY_PHOTO_RETENTION_DAYS = 180;
+const DAILY_PURGE_MAX_PER_RUN = 20;
+async function pruneOldDailyPhotos() {
+  if (testMode) return;
+  const cutoff = _daysAgoStr(DAILY_PHOTO_RETENTION_DAYS);
+  let done = 0, touched = false;
+  for (const r of allDailyChecklists || []) {
+    if (done >= DAILY_PURGE_MAX_PER_RUN) break;
+    if (!r || r.photosPurgedAt || !r.date || String(r.date) >= cutoff) continue;
+    let had = false;
+    (r.items || []).forEach(it => { if (it && it.photos && it.photos.length) { had = true; it.photos = []; } });
+    if (!had) continue;
+    r.photosPurgedAt = new Date().toISOString();
+    done++; touched = true;
+    await saveDailyToBackend(r);
+  }
+  if (touched) { try { saveDailyLocal(); } catch (_) {} }
 }
 
 async function saveDailyToBackend(daily) {
@@ -11770,6 +11797,10 @@ function showDailyDetail(id, targetText) {
       const pillLabel = status === 'pass' ? 'ผ่าน' : status === 'fail' ? 'ไม่ผ่าน' : status === 'na' ? 'N/A' : 'รอ';
       const photos = it.photos || [];
       let photosHtml = '';
+      if (!photos.length && r.photosPurgedAt && it.status !== 'na') {
+        photosHtml = '<div class="detail-item-note" style="background:var(--surface-2);color:var(--text-tertiary);border-color:var(--border);">'
+          + '<span class="material-symbols-rounded">photo_camera</span>รูปถูกลบหลังเก็บครบ ' + DAILY_PHOTO_RETENTION_DAYS + ' วัน</div>';
+      }
       if (photos.length) {
         photosHtml = '<div class="detail-photos">' + photos.map(p => {
           const idx = photoCursor++;
