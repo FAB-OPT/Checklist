@@ -10302,12 +10302,16 @@ function _sfDailySummaryHTML(dailies) {
   } else {
     /* rows เรียงตาม "ต้องตามก่อน" อยู่แล้ว หัวลิสต์คือกลุ่มที่ต้องตาม
        ส่วนกลุ่มที่ทำได้ดีเรียงจาก % มากลงมา ไม่ใช่เอาท้ายลิสต์เดิมกลับหัว */
-    var worst = rows.slice(0, N);
-    var used = {};
-    worst.forEach(function (r) { used[r.code] = 1; });
-    var best = rows.filter(function (r) { return !used[r.code]; })
-      .sort(function (a, b) { return (b.pct - a.pct) || (b.sent - a.sent); })
-      .slice(0, N);
+    /* กลุ่ม "ทำได้ดี" ตัดจาก % สูงสุดลงมา */
+    var byPct = rows.slice().sort(function (a, b) { return (b.pct - a.pct) || (b.sent - a.sent); });
+    var best = byPct.slice(0, N);
+    var bestMin = best.length ? best[best.length - 1].pct : 101;
+    var inBest = {};
+    best.forEach(function (r) { inBest[r.code] = 1; });
+    /* สาขาที่ % เท่ากับกลุ่มทำได้ดี ห้ามไปโผล่ในกลุ่ม "ขาดส่งมากที่สุด"
+       ของเดิมตัดหัวลิสต์ 5 อันดับแรกตรง ๆ พอมีหลายสาขา % เท่ากัน (เช่น 83% กันหลายสาขา)
+       สาขาหนึ่งจะไปอยู่ฝั่งแย่ อีกสี่สาขาอยู่ฝั่งดี ทั้งที่ตัวเลขเท่ากันเป๊ะ — คนอ่านงงว่าตัดจากอะไร */
+    var worst = rows.filter(function (r) { return !inBest[r.code] && r.pct < bestMin; }).slice(0, N);
     var mid = rows.length - worst.length - best.length;
     /* สองกลุ่มวางคู่กันบนจอกว้าง — เป็นสองขั้วของเรื่องเดียวกัน อยู่ข้างกันถึงเทียบได้
        บรรทัด "อีก N สาขาอยู่ระหว่างสองกลุ่มนี้" ไปอยู่ท้ายสุดเต็มความกว้าง
@@ -10317,6 +10321,8 @@ function _sfDailySummaryHTML(dailies) {
         + '<div class="sfs-grp"><span class="sfs-grp-t ' + cls + '">' + label + '</span></div>'
         + '<div class="sfs-list">' + list.map(buildRow).join('') + '</div></div>';
     };
+    /* ไม่มีสาขาไหนต่ำกว่ากลุ่มทำได้ดีเลย (ทุกสาขา % เท่ากันหมด) → ไล่ทั้งหมดไปเลย ไม่ต้องแบ่งสองกลุ่ม */
+    if (!worst.length) return head + '<div class="sfs-list">' + rows.map(buildRow).join('') + '</div>';
     out = '<div class="sfs-two">'
       + col('bad', 'ขาดส่งมากที่สุด ' + worst.length + ' สาขา', worst)
       + col('ok', 'ส่งครบที่สุด ' + best.length + ' สาขา', best)
