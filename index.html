@@ -5871,6 +5871,12 @@ body.in-audit #ck-page-head { display:none; }
 .ir-bs label:hover{background:rgba(15,23,42,.05)}
 .ir-bs input,.ir-zh input{accent-color:var(--primary,#F97316);width:16px;height:16px}
 .ir-bs .c{font-weight:800;color:var(--primary,#F97316);min-width:34px}
+.ir-orig{font-size:11.5px;color:var(--muted,#6b7280);margin-top:2px}
+.ir-fld{padding:14px 20px 4px}
+.ir-fl{font-size:12px;font-weight:800;color:var(--muted,#6b7280);margin-bottom:6px}
+.ir-ta{width:100%;box-sizing:border-box;padding:10px 12px;border-radius:11px;border:1.5px solid var(--border,#e5e7eb);font-family:inherit;font-size:14px;line-height:1.5;outline:none;resize:vertical;background:var(--surface,#fff);color:var(--text,#111)}
+.ir-ta:focus{border-color:var(--primary,#F97316)}
+.ir-fh{font-size:11.5px;color:var(--muted,#6b7280);margin-top:5px;line-height:1.5}
 @media (max-width:640px){
   .ir-ov{padding:0;align-items:flex-end}
   .ir-sheet{max-width:none;max-height:94vh;border-radius:20px 20px 0 0}
@@ -7291,9 +7297,10 @@ function dailyTemplate(shift, branchCode) {
   const code = String(branchCode || '');
   /* ST_Easy (55) เป็นร้านรูปแบบเล็กของซานตาเฟ่ ใช้ชุดย่อของตัวเอง
      ต้องเช็คก่อนแบรนด์ เพราะรหัส 55 ก็นับเป็นซานตาเฟ่เหมือนกัน */
-  if (code.startsWith('55')) return ckApplyItemRules(shift === 'open' ? DAILY_OPEN_55 : DAILY_CLOSE_55, shift, code);
-  const set = CK_DAILY_SETS[ckBrandOfBranch(code)] || CK_DAILY_SETS.santafe;
-  return ckApplyItemRules(shift === 'open' ? set.open : set.close, shift, code);
+  if (code.startsWith('55')) return ckApplyItemRules(shift === 'open' ? DAILY_OPEN_55 : DAILY_CLOSE_55, shift, code, 'santafe');
+  const _br = CK_DAILY_SETS[ckBrandOfBranch(code)] ? ckBrandOfBranch(code) : 'santafe';
+  const set = CK_DAILY_SETS[_br];
+  return ckApplyItemRules(shift === 'open' ? set.open : set.close, shift, code, _br);
 }
 // แบ่งหมวดจากข้อมูลใน record เอง (ไม่ผูกกับ template) → แสดงถูกเสมอแม้หัวข้อจะต่างชุดกัน
 function _dailySections(items) {
@@ -7307,24 +7314,42 @@ function _dailySections(items) {
   return secs;
 }
 
-/* ══════════ กำหนดหัวข้อตรวจรายสาขา (เฉพาะ Admin) ══════════
+/* ══════════ กำหนดหัวข้อตรวจรายสาขา + แก้ข้อความหัวข้อ (Admin ตั้งค่า · BZM ดู) — ทุกแบรนด์ ══════════
    หัวข้อหนึ่งข้อกำหนดได้ว่า "ขึ้นเฉพาะสาขาที่เลือก" (only) หรือ "ขึ้นทุกสาขา ยกเว้นสาขาที่เลือก" (hide)
-   ไม่ตั้งกฎ = ขึ้นทุกสาขาเหมือนเดิม · ใช้กับฟอร์มที่เริ่มตรวจใหม่/แก้ไขเท่านั้น — ใบที่ส่งไปแล้วคงหัวข้อเดิมในใบ
-   เก็บที่ appConfig/itemRules (ทุกเครื่องเห็นตรงกัน) · คีย์ = "รอบ|ข้อความหัวข้อ" รูปแบบ { mode:'only'|'hide', branches:[รหัสสาขา] } */
+   และแก้ข้อความหัวข้อได้ (ren) — ไม่ตั้งกฎ = เหมือนเดิม · ใช้กับฟอร์มที่เริ่มตรวจใหม่/แก้ไขเท่านั้น ใบที่ส่งไปแล้วคงข้อความเดิมในใบ
+   เก็บที่ appConfig/itemRules (ทุกเครื่องเห็นตรงกัน)
+   คีย์  "แบรนด์|รอบ|ข้อความเดิมของหัวข้อ" → { mode:'only'|'hide', branches:[รหัสสาขา หรือชื่อร้าน(เจ๊แดง)] }
+        "ren|แบรนด์|รอบ|ข้อความเดิม"     → { to:'ข้อความใหม่' }
+   รอบ: open / close (ซานตาเฟ่ ยามะจัง) · audit (เจ๊แดง) */
 var CK_ITEM_RULES = {};
 var CK_ITEM_RULES_KEY = 'ck_item_rules_v1';
-try { CK_ITEM_RULES = JSON.parse(localStorage.getItem(CK_ITEM_RULES_KEY) || '{}') || {}; } catch (e) { CK_ITEM_RULES = {}; }
+/* คีย์รุ่นแรก (ไม่มีชื่อแบรนด์นำหน้า) เป็นของซานตาเฟ่ */
+function _ckNormRules(o) {
+  const out = {};
+  Object.keys(o || {}).forEach(k => { out[/^(open|close)\|/.test(k) ? 'santafe|' + k : k] = o[k]; });
+  return out;
+}
+try { CK_ITEM_RULES = _ckNormRules(JSON.parse(localStorage.getItem(CK_ITEM_RULES_KEY) || '{}') || {}); } catch (e) { CK_ITEM_RULES = {}; }
 function ckItemText(raw) { return typeof raw === 'string' ? raw : ((raw && raw.text) || ''); }
-function ckItemRule(shift, raw) { return CK_ITEM_RULES[shift + '|' + String(ckItemText(raw)).trim()] || null; }
-function ckItemAppliesTo(shift, raw, code) {
-  const r = ckItemRule(shift, raw);
+/* ข้อความเดิมของหัวข้อ — ตัวระบุที่ไม่เปลี่ยนแม้แก้ข้อความแล้ว (ใช้กับกฎ ยกเว้นรูป และรวมสถิติ) */
+function ckItemOrig(raw) { return typeof raw === 'string' ? raw : ((raw && (raw.orig || raw.text)) || ''); }
+function ckRuleKey(brand, shift, text) { return brand + '|' + shift + '|' + String(text).trim(); }
+function ckItemAppliesTo(brand, shift, raw, code) {
+  const r = CK_ITEM_RULES[ckRuleKey(brand, shift, ckItemOrig(raw))];
   if (!r || !Array.isArray(r.branches) || !r.branches.length) return true;
   const has = r.branches.map(String).indexOf(String(code)) >= 0;
   return r.mode === 'only' ? has : !has;
 }
-function ckApplyItemRules(tpl, shift, code) {
-  const out = (tpl || []).map(sec => ({ name: sec.name, items: sec.items.filter(i => ckItemAppliesTo(shift, i, code)) })).filter(sec => sec.items.length);
-  return out.length ? out : tpl;   // กันกฎผิดพลาดจนฟอร์มว่างทั้งใบ
+function ckRenameItem(brand, shift, raw) {
+  const o = ckItemOrig(raw), r = CK_ITEM_RULES['ren|' + ckRuleKey(brand, shift, o)];
+  if (!r || !r.to || r.to === o) return raw;
+  return typeof raw === 'string' ? { text: r.to, orig: o } : Object.assign({}, raw, { text: r.to, orig: o });
+}
+function ckApplyItemRules(tpl, shift, code, brand, noFilter) {
+  brand = brand || 'santafe';
+  let secs = (tpl || []).map(sec => ({ name: sec.name, items: noFilter ? sec.items.slice() : sec.items.filter(i => ckItemAppliesTo(brand, shift, i, code)) })).filter(sec => sec.items.length);
+  if (!secs.length) secs = tpl;   // กันกฎผิดพลาดจนฟอร์มว่างทั้งใบ
+  return secs.map(sec => ({ name: sec.name, items: sec.items.map(i => ckRenameItem(brand, shift, i)) }));
 }
 async function loadCkItemRules() {
   await ckAuthReady();
@@ -7333,7 +7358,7 @@ async function loadCkItemRules() {
     const doc = await firebaseDb.collection('appConfig').doc('itemRules').get();
     if (doc.exists) {
       const d = doc.data() || {};
-      CK_ITEM_RULES = (d && typeof d.rules === 'object' && d.rules) ? d.rules : {};
+      CK_ITEM_RULES = _ckNormRules((d && typeof d.rules === 'object' && d.rules) ? d.rules : {});
       try { localStorage.setItem(CK_ITEM_RULES_KEY, JSON.stringify(CK_ITEM_RULES)); } catch (_) {}
     }
   } catch (e) { console.warn('[itemRules] โหลดไม่ได้', e); }
@@ -7347,10 +7372,18 @@ async function ckSaveItemRules() {
     return true;
   } catch (e) { console.warn('[itemRules] บันทึกขึ้นคลาวด์ไม่ได้', e); return false; }
 }
-function _irBranches() { return BRANCHES.filter(b => !b.closed && ckBrandOfBranch(b.code) === 'santafe').sort((a, b) => String(a.code).localeCompare(String(b.code))); }
-/* หัวข้อของรอบนั้น (รวมฟอร์มปกติและ ST_Easy 55) — เรียงหมวด ตัดข้อซ้ำข้อความเดียวกัน */
-function _irSections(shift) {
-  const sets = shift === 'open' ? [DAILY_OPEN, DAILY_OPEN_55] : [DAILY_CLOSE, DAILY_CLOSE_55];
+function _irShifts(brand) { return brand === 'jaedaeng' ? [['audit', 'ใบตรวจ']] : [['open', 'เปิดร้าน'], ['close', 'ปิดร้าน']]; }
+/* สาขาของแบรนด์ — ซานตาเฟ่/ยามะจังใช้รหัสสาขา · เจ๊แดงไม่มีรหัส ใช้ชื่อร้านเป็นตัวระบุ */
+function _irBranches(brand) {
+  if (brand === 'jaedaeng') return (JAEDAENG_BRANCHES || []).map(b => ({ code: b.name, name: b.name, manager: b.manager || '', managerNick: b.managerNick || '', jd: true }));
+  return BRANCHES.filter(b => !b.closed && ckBrandOfBranch(b.code) === brand).sort((a, b) => String(a.code).localeCompare(String(b.code)));
+}
+/* หัวข้อของแบรนด์/รอบนั้น (ข้อความเดิมในโค้ด) — ซานตาเฟ่รวมฟอร์ม ST_Easy 55 ตัดข้อซ้ำข้อความเดียวกัน */
+function _irSections(brand, shift) {
+  let sets;
+  if (brand === 'jaedaeng') sets = [JAEDAENG_CHECKLIST];
+  else if (brand === 'yamachan') sets = [shift === 'open' ? YAMACHAN_OPEN : YAMACHAN_CLOSE];
+  else sets = shift === 'open' ? [DAILY_OPEN, DAILY_OPEN_55] : [DAILY_CLOSE, DAILY_CLOSE_55];
   const seen = {}, secs = [];
   sets.forEach((tpl, k) => (tpl || []).forEach(sec => {
     let cur = secs.find(x => x.name === sec.name);
@@ -7359,17 +7392,22 @@ function _irSections(shift) {
   }));
   return secs;
 }
-var _irShift = 'open', _irOnlyRules = false, _irSearch = '';
+var _irBrand = '', _irShift = 'open', _irOnlyRules = false, _irSearch = '';
 function _irCanView() { try { return !!(currentUser && (currentUser.role === 'admin' || currentUser.role === 'bzm')); } catch (e) { return false; } }
-/* สาขาที่ผู้ใช้คนนี้เห็น — Admin ทุกสาขาซานตาเฟ่ · BZM เฉพาะโซนตัวเอง */
-function _irMyBranches() {
-  const all = _irBranches();
+function _irAllowedBrands() {
+  const all = Object.keys(CK_BRANDS);
+  try { if (ckIsAdmin() || (currentUser && currentUser.crossBrand)) return all; } catch (e) {}
+  return [ckViewBrandKey()];
+}
+/* สาขาที่ผู้ใช้คนนี้เห็น — Admin ทุกสาขา · BZM เฉพาะโซนตัวเอง */
+function _irMyBranches(brand) {
+  const all = _irBranches(brand);
   if (currentUser && currentUser.role === 'bzm') return all.filter(b => b.manager === currentUser.name || b.managerNick === currentUser.nick || b.managerNick === currentUser.name);
   return all;
 }
-function _irNames(codes, limit) {
-  const map = {}; BRANCHES.forEach(b => { map[String(b.code)] = String(b.name || '').replace(String(b.code), '').trim(); });
-  const list = (codes || []).map(c => String(c) + ' ' + (map[String(c)] || ''));
+function _irNames(brand, codes, limit) {
+  const map = {}; _irBranches(brand).forEach(b => { map[String(b.code)] = b.jd ? '' : String(b.name || '').replace(String(b.code), '').trim(); });
+  const list = (codes || []).map(c => (brand === 'jaedaeng' ? String(c) : String(c) + ' ' + (map[String(c)] || '')).trim());
   return list.slice(0, limit).join(' · ') + (list.length > limit ? ' · +' + (list.length - limit) + ' สาขา' : '');
 }
 function _irOverlay(id, top) {
@@ -7381,49 +7419,59 @@ function closeItemRules() { ['itemRulesModal', 'itemRuleEditModal'].forEach(id =
 function openItemRulesModal() {
   if (!_irCanView()) return;
   _irSearch = '';
+  const allowed = _irAllowedBrands();
+  if (!_irBrand || allowed.indexOf(_irBrand) < 0) _irBrand = allowed.indexOf(ckViewBrandKey()) >= 0 ? ckViewBrandKey() : allowed[0];
+  if (!_irShifts(_irBrand).some(s => s[0] === _irShift)) _irShift = _irShifts(_irBrand)[0][0];
   _irRender();
 }
+function _irSetBrand(b) { _irBrand = b; _irShift = _irShifts(b)[0][0]; _irSearch = ''; _irRender(); }
 function _irRender() {
   const edit = ckIsAdmin();
+  const brand = _irBrand, shift = _irShift;
   const m = _irOverlay('itemRulesModal');
-  const cnt = sh => Object.keys(CK_ITEM_RULES).filter(k => k.indexOf(sh + '|') === 0 && (CK_ITEM_RULES[k].branches || []).length).length;
+  const cnt = sh => Object.keys(CK_ITEM_RULES).filter(k => k.indexOf(brand + '|' + sh + '|') === 0 && (CK_ITEM_RULES[k].branches || []).length).length + Object.keys(CK_ITEM_RULES).filter(k => k.indexOf('ren|' + brand + '|' + sh + '|') === 0).length;
   const q = _irSearch.trim().toLowerCase();
-  const mine = new Set(_irMyBranches().map(b => String(b.code)));
+  const mine = new Set(_irMyBranches(brand).map(b => String(b.code)));
   let html = '', shown = 0;
-  _irSections(_irShift).forEach(sec => {
+  _irSections(brand, shift).forEach(sec => {
     const rows = sec.items.filter(it => {
-      const r = CK_ITEM_RULES[_irShift + '|' + it.text];
-      const has = r && (r.branches || []).length;
+      const r = CK_ITEM_RULES[ckRuleKey(brand, shift, it.text)], rn = CK_ITEM_RULES['ren|' + ckRuleKey(brand, shift, it.text)];
+      const has = (r && (r.branches || []).length) || (rn && rn.to);
       if (_irOnlyRules && !has) return false;
-      return !q || it.text.toLowerCase().indexOf(q) >= 0;
+      const shownText = (rn && rn.to) ? rn.to : it.text;
+      return !q || shownText.toLowerCase().indexOf(q) >= 0 || it.text.toLowerCase().indexOf(q) >= 0;
     });
     if (!rows.length) return;
     html += '<div class="ir-sec">' + escapeHtml(sec.name || '—') + '<span>' + rows.length + ' ข้อ</span></div>';
     rows.forEach(it => {
-      const r = CK_ITEM_RULES[_irShift + '|' + it.text];
+      const r = CK_ITEM_RULES[ckRuleKey(brand, shift, it.text)], rn = CK_ITEM_RULES['ren|' + ckRuleKey(brand, shift, it.text)];
       const has = r && (r.branches || []).length;
       const mode = has ? r.mode : 'all';
       let tag = '<span class="ir-tag">ขึ้นทุกสาขา</span>', meta = '';
       if (has) {
         const own = (r.branches || []).filter(c => edit || mine.has(String(c)));
         tag = '<span class="ir-tag ' + (mode === 'only' ? 'only' : 'hide') + '">' + (mode === 'only' ? 'ขึ้นเฉพาะ ' : 'ยกเว้น ') + r.branches.length + ' สาขา</span>';
-        meta = '<span>' + escapeHtml(_irNames(own, 3)) + '</span>';
+        meta = '<span>' + escapeHtml(_irNames(brand, own, 3)) + '</span>';
       }
-      html += '<div class="ir-it ' + (has ? mode : '') + '"><div class="t">' + escapeHtml(it.text) + '</div>' +
-        '<div class="m">' + tag + (it.only55 ? '<span class="ir-tag st">เฉพาะ ST_Easy</span>' : '') + meta + '</div>' +
+      const renamed = rn && rn.to;
+      html += '<div class="ir-it ' + (has ? mode : '') + '"><div class="t">' + escapeHtml(renamed ? rn.to : it.text) + (renamed ? '<div class="ir-orig">ข้อความเดิม: ' + escapeHtml(it.text) + '</div>' : '') + '</div>' +
+        '<div class="m">' + tag + (renamed ? '<span class="ir-tag st">แก้ข้อความแล้ว</span>' : '') + (it.only55 ? '<span class="ir-tag st">เฉพาะ ST_Easy</span>' : '') + meta + '</div>' +
         (edit ? '<div class="a"><button class="ir-set" data-t="' + escapeHtml(it.text).replace(/"/g, '&quot;') + '" onclick="openItemRuleEdit(this.dataset.t)">ตั้งค่า</button></div>' : '') + '</div>';
       shown++;
     });
   });
   if (!shown) html = '<div class="ir-empty">' + (_irOnlyRules ? 'ยังไม่มีหัวข้อที่ตั้งกฎไว้ในรอบนี้' : 'ไม่พบหัวข้อที่ค้นหา') + '</div>';
-  /* เก็บตำแหน่งเลื่อน/โฟกัสช่องค้นหาตอนวาดใหม่ */
   const oldList = m.querySelector('.ir-list'), top = oldList ? oldList.scrollTop : 0;
   const hadFocus = document.activeElement && document.activeElement.id === 'ir-q';
+  const allowed = _irAllowedBrands();
+  const brandSeg = allowed.length > 1 ? '<div class="ir-seg">' + allowed.map(k => '<button class="' + (k === brand ? 'on' : '') + '" onclick="_irSetBrand(\'' + k + '\')">' + escapeHtml((CK_BRANDS[k] && (CK_BRANDS[k].short || CK_BRANDS[k].name)) || k) + '</button>').join('') + '</div>' : '';
+  const shifts = _irShifts(brand);
+  const shiftSeg = shifts.length > 1 ? '<div class="ir-seg">' + shifts.map(s => '<button class="' + (s[0] === shift ? 'on' : '') + '" onclick="_irShift=\'' + s[0] + '\';_irRender()">' + s[1] + (cnt(s[0]) ? '<b>' + cnt(s[0]) + '</b>' : '') + '</button>').join('') + '</div>' : '';
   m.innerHTML = '<div class="ir-sheet">' +
-    '<div class="ir-hd"><div class="ir-ico"><span class="material-symbols-rounded">tune</span></div><div><div class="ir-ttl">หัวข้อตรวจรายสาขา</div><div class="ir-sub">' + (edit ? 'กำหนดว่าหัวข้อไหนขึ้นที่สาขาไหน · ไม่ตั้งกฎ = ขึ้นทุกสาขา' : 'ดูว่าหัวข้อไหนขึ้นที่สาขาไหน (ดูได้อย่างเดียว · Admin เป็นผู้ตั้งค่า)') + '</div></div><button class="ir-x" onclick="closeItemRules()" title="ปิด">✕</button></div>' +
-    '<div class="ir-tools"><div class="ir-seg"><button class="' + (_irShift === 'open' ? 'on' : '') + '" onclick="_irShift=\'open\';_irRender()">เปิดร้าน' + (cnt('open') ? '<b>' + cnt('open') + '</b>' : '') + '</button><button class="' + (_irShift === 'close' ? 'on' : '') + '" onclick="_irShift=\'close\';_irRender()">ปิดร้าน' + (cnt('close') ? '<b>' + cnt('close') + '</b>' : '') + '</button></div>' +
+    '<div class="ir-hd"><div class="ir-ico"><span class="material-symbols-rounded">tune</span></div><div><div class="ir-ttl">หัวข้อตรวจรายสาขา</div><div class="ir-sub">' + (edit ? 'กำหนดว่าหัวข้อไหนขึ้นที่สาขาไหน และแก้ข้อความหัวข้อได้ · ไม่ตั้งกฎ = ขึ้นทุกสาขาตามเดิม' : 'ดูว่าหัวข้อไหนขึ้นที่สาขาไหน (ดูได้อย่างเดียว · Admin เป็นผู้ตั้งค่า)') + '</div></div><button class="ir-x" onclick="closeItemRules()" title="ปิด">✕</button></div>' +
+    '<div class="ir-tools">' + brandSeg + shiftSeg +
       '<input id="ir-q" class="ir-q" placeholder="ค้นหาหัวข้อ…" value="' + escapeHtml(_irSearch).replace(/"/g, '&quot;') + '" oninput="_irSearch=this.value;_irRender()">' +
-      '<label class="ir-tg"><input type="checkbox" ' + (_irOnlyRules ? 'checked' : '') + ' onchange="_irOnlyRules=this.checked;_irRender()">เฉพาะที่ตั้งกฎ</label></div>' +
+      '<label class="ir-tg"><input type="checkbox" ' + (_irOnlyRules ? 'checked' : '') + ' onchange="_irOnlyRules=this.checked;_irRender()">เฉพาะที่ตั้งกฎ/แก้ข้อความ</label></div>' +
     '<div class="ir-list">' + html + '</div>' +
     '<div class="ir-ft"><div class="note">ใช้กับการตรวจครั้งใหม่ · ใบที่ส่งไปแล้วไม่เปลี่ยน</div><button class="ir-btn ghost" onclick="closeItemRules()">ปิด</button></div></div>';
   const nl2 = m.querySelector('.ir-list'); if (nl2) nl2.scrollTop = top;
@@ -7434,25 +7482,32 @@ var _irEditText = '';
 function openItemRuleEdit(text) {
   if (!ckIsAdmin()) return;
   _irEditText = text;
-  const r = CK_ITEM_RULES[_irShift + '|' + text] || { mode: 'all', branches: [] };
+  const brand = _irBrand, shift = _irShift;
+  const r = CK_ITEM_RULES[ckRuleKey(brand, shift, text)] || { mode: 'all', branches: [] };
+  const rn = CK_ITEM_RULES['ren|' + ckRuleKey(brand, shift, text)];
+  const cur = (rn && rn.to) ? rn.to : text;
   const mode = (r.branches && r.branches.length) ? r.mode : 'all';
   const sel = (r.branches || []).map(String);
   const m = _irOverlay('itemRuleEditModal', true);
-  /* จัดกลุ่มสาขาตามโซน (ผู้ดูแล) */
   const zones = {};
-  _irBranches().forEach(b => { const z = b.manager || b.managerNick || 'ไม่ระบุโซน'; (zones[z] = zones[z] || []).push(b); });
+  _irBranches(brand).forEach(b => { const z = b.manager || b.managerNick || 'ไม่ระบุโซน'; (zones[z] = zones[z] || []).push(b); });
   const zhtml = Object.keys(zones).sort().map(z => {
     const bs = zones[z];
-    return '<div class="ir-zone" data-z="' + escapeHtml(z).replace(/"/g, '&quot;') + '"><div class="ir-zh" onclick="_irZone(this)"><input type="checkbox" onclick="event.stopPropagation();_irZone(this.parentNode,this.checked)"><span>' + escapeHtml(z) + '</span><em></em></div><div class="ir-bs">' +
-      bs.map(b => '<label data-q="' + escapeHtml((b.code + ' ' + b.name + ' ' + z).toLowerCase()).replace(/"/g, '&quot;') + '"><input type="checkbox" value="' + escapeHtml(String(b.code)) + '" ' + (sel.indexOf(String(b.code)) >= 0 ? 'checked' : '') + ' onchange="_irCount()"><span class="c">' + escapeHtml(String(b.code)) + '</span><span>' + escapeHtml(String(b.name || '').replace(String(b.code), '').trim()) + '</span></label>').join('') + '</div></div>';
+    return '<div class="ir-zone"><div class="ir-zh" onclick="_irZone(this)"><input type="checkbox" onclick="event.stopPropagation();_irZone(this.parentNode,this.checked)"><span>' + escapeHtml(z) + '</span><em></em></div><div class="ir-bs">' +
+      bs.map(b => '<label data-q="' + escapeHtml((b.code + ' ' + b.name + ' ' + z).toLowerCase()).replace(/"/g, '&quot;') + '"><input type="checkbox" value="' + escapeHtml(String(b.code)).replace(/"/g, '&quot;') + '" ' + (sel.indexOf(String(b.code)) >= 0 ? 'checked' : '') + ' onchange="_irCount()">' + (b.jd ? '' : '<span class="c">' + escapeHtml(String(b.code)) + '</span>') + '<span>' + escapeHtml(b.jd ? String(b.name) : String(b.name || '').replace(String(b.code), '').trim()) + '</span></label>').join('') + '</div></div>';
   }).join('');
   const modeCard = (v, ic, tt, dd) => '<label class="ir-mode ' + (mode === v ? 'on' : '') + '"><input type="radio" name="ir-mode" value="' + v + '" ' + (mode === v ? 'checked' : '') + ' onchange="_irModeChange()"><span><div class="tt">' + ic + ' ' + tt + '</div><div class="dd">' + dd + '</div></span></label>';
+  const shiftName = (_irShifts(brand).find(s => s[0] === shift) || [0, ''])[1];
   m.innerHTML = '<div class="ir-sheet sm">' +
-    '<div class="ir-hd"><div class="ir-ico"><span class="material-symbols-rounded">rule</span></div><div style="min-width:0"><div class="ir-ttl" style="font-size:15px">' + escapeHtml(text) + '</div><div class="ir-sub">รอบ' + (_irShift === 'open' ? 'เปิดร้าน' : 'ปิดร้าน') + '</div></div><button class="ir-x" onclick="document.getElementById(\'itemRuleEditModal\').classList.remove(\'show\')" title="ปิด">✕</button></div>' +
+    '<div class="ir-hd"><div class="ir-ico"><span class="material-symbols-rounded">rule</span></div><div style="min-width:0"><div class="ir-ttl" style="font-size:15px">แก้หัวข้อ</div><div class="ir-sub">' + escapeHtml((CK_BRANDS[brand] && (CK_BRANDS[brand].short || CK_BRANDS[brand].name)) || brand) + ' · ' + escapeHtml(shiftName) + '</div></div><button class="ir-x" onclick="document.getElementById(\'itemRuleEditModal\').classList.remove(\'show\')" title="ปิด">✕</button></div>' +
+    '<div style="overflow:auto;flex:1;min-height:0;display:flex;flex-direction:column">' +
+    '<div class="ir-fld"><div class="ir-fl">ข้อความหัวข้อ</div><textarea id="ir-text" class="ir-ta" rows="2">' + escapeHtml(cur) + '</textarea>' +
+      '<div class="ir-fh">' + (cur !== text ? 'ข้อความเดิม: ' + escapeHtml(text) + ' · <a href="#" onclick="document.getElementById(\'ir-text\').value=_irEditText;return false">คืนค่าเดิม</a>' : 'แก้ข้อความที่นี่ ใบตรวจใหม่จะใช้ข้อความนี้ · สถิติยังนับรวมกับหัวข้อเดิม') + '</div></div>' +
+    '<div class="ir-fl" style="padding:2px 20px 0">ขึ้นที่สาขาไหน</div>' +
     '<div class="ir-modes">' + modeCard('all', '🌐', 'ขึ้นทุกสาขา', 'ค่าเริ่มต้น — ทุกสาขาเห็นหัวข้อนี้') + modeCard('only', '🎯', 'ขึ้นเฉพาะสาขาที่เลือก', 'สาขาอื่นจะไม่เห็นหัวข้อนี้') + modeCard('hide', '🚫', 'ขึ้นทุกสาขา ยกเว้นสาขาที่เลือก', 'สาขาที่เลือกจะไม่เห็นหัวข้อนี้') + '</div>' +
     '<div class="ir-pick" id="ir-pick" style="' + (mode === 'all' ? 'display:none' : '') + '">' +
       '<div class="ir-tools"><input id="ir-bq" class="ir-q" placeholder="ค้นหารหัส / ชื่อสาขา / ชื่อโซน…" oninput="_irFilter()"><button class="ir-set" onclick="_irAll(true)">เลือกที่เห็น</button><button class="ir-set" onclick="_irAll(false)">ล้าง</button></div>' +
-      '<div class="ir-list" id="ir-br">' + zhtml + '</div></div>' +
+      '<div class="ir-list" id="ir-br" style="max-height:38vh">' + zhtml + '</div></div></div>' +
     '<div class="ir-ft"><div class="note" id="ir-count"></div><button class="ir-btn ghost" onclick="document.getElementById(\'itemRuleEditModal\').classList.remove(\'show\')">ยกเลิก</button><button class="ir-btn" onclick="saveItemRuleEdit()">บันทึก</button></div></div>';
   m.classList.add('show');
   _irCount();
@@ -7487,12 +7542,15 @@ function _irCount() {
 }
 async function saveItemRuleEdit() {
   if (!ckIsAdmin()) return;
+  const brand = _irBrand, shift = _irShift;
   const mode = (document.querySelector('input[name="ir-mode"]:checked') || {}).value || 'all';
   const branches = [].slice.call(document.querySelectorAll('#ir-br .ir-bs input:checked')).map(x => x.value);
-  const key = _irShift + '|' + _irEditText;
-  if (mode === 'all') delete CK_ITEM_RULES[key];
-  else if (!branches.length) { showModal('ยังไม่ได้เลือกสาขา', 'เลือกอย่างน้อย 1 สาขา หรือเลือก "ขึ้นทุกสาขา"'); return; }
-  else CK_ITEM_RULES[key] = { mode: mode, branches: branches };
+  const key = ckRuleKey(brand, shift, _irEditText), rkey = 'ren|' + key;
+  const newText = String((document.getElementById('ir-text') || {}).value || '').replace(/\s+/g, ' ').trim();
+  if (!newText) { showModal('ข้อความหัวข้อว่าง', 'กรุณาใส่ข้อความหัวข้อ'); return; }
+  if (mode !== 'all' && !branches.length) { showModal('ยังไม่ได้เลือกสาขา', 'เลือกอย่างน้อย 1 สาขา หรือเลือก "ขึ้นทุกสาขา"'); return; }
+  if (mode === 'all') delete CK_ITEM_RULES[key]; else CK_ITEM_RULES[key] = { mode: mode, branches: branches };
+  if (newText === _irEditText) delete CK_ITEM_RULES[rkey]; else CK_ITEM_RULES[rkey] = { to: newText };
   const ok = await ckSaveItemRules();
   document.getElementById('itemRuleEditModal').classList.remove('show');
   _irRender();
@@ -9295,11 +9353,11 @@ function renderBottomNav() {
     // ระบบ OSS audit (ตรวจสาขา) ถูกตัดออกแล้ว — เหลือเฉพาะ Operations Checklist (Daily)
     // เมนู "ตรวจร้าน" (Open-Close) แสดงให้ทุก role · role อื่นเลือกสาขาก่อนตรวจ
     html += '<button class="bottom-nav-item nav-daily-btn" id="nav-daily" data-ck-action="view-daily" onclick="showDailyHub()"><span class="material-symbols-rounded">checklist</span><span>ตรวจร้าน</span></button>';
-    /* เมนู "หัวข้อรายสาขา" — Admin ตั้งค่าได้ · BZM ดูได้ */
-    if (view === 'santafe' && currentUser && (currentUser.role === 'admin' || currentUser.role === 'bzm')) {
-      html += '<button class="bottom-nav-item nav-daily-btn" id="nav-rules" data-ck-action="view-item-rules" onclick="openItemRulesModal()"><span class="material-symbols-rounded">tune</span><span>หัวข้อรายสาขา</span></button>';
-    }
     // ปุ่ม "จัดการสาขา" ถูกยกออก — สาขาจัดการที่ HUB (⚙️ → 🏪 จัดการสาขา) ที่เดียว · ระบบนี้อ่านอย่างเดียว
+  }
+  /* เมนู "หัวข้อรายสาขา" — ทุกแบรนด์ · Admin ตั้งค่า/แก้ข้อความได้ · BZM ดูได้ */
+  if (currentUser && (currentUser.role === 'admin' || currentUser.role === 'bzm')) {
+    html += '<button class="bottom-nav-item nav-daily-btn" id="nav-rules" data-ck-action="view-item-rules" onclick="openItemRulesModal()"><span class="material-symbols-rounded">tune</span><span>หัวข้อรายสาขา</span></button>';
   }
   html += '<button class="bottom-nav-item nav-logout-btn" id="nav-logout" onclick="logout()"><span class="material-symbols-rounded">logout</span><span>ออกระบบ</span></button>';
   html += '</div>';
@@ -9992,8 +10050,9 @@ function _sfDailyTopNaHTML(dailies) {
       if (!it || !it.status) return;
       answered++;
       if (it.status !== 'na') return;
-      const key = (it.section || '-') + '||' + it.text;
+      const key = (it.section || '-') + '||' + (it.orig || it.text);
       if (!stat[key]) stat[key] = { text: it.text, section: it.section || '', n: 0, br: {} };
+      if (it.orig) stat[key].text = it.text;
       stat[key].n++;
       stat[key].br[branchLabel(d.branchCode, d.branchName)] = 1;
     });
@@ -10031,8 +10090,9 @@ function _sfDailyTopFailsHTML(dailies) {
       if (!it || (it.status !== 'fail' && it.status !== 'pass')) return;
       const section = it.section || '-';
       if (!catStats[section]) catStats[section] = { section, fail: 0, total: 0 };
-      const key = section + '||' + it.text;
+      const key = section + '||' + (it.orig || it.text);
       if (!itemStats[key]) itemStats[key] = { text: it.text, section, fail: 0, total: 0, branches: {}, occ: [] };
+      if (it.orig) itemStats[key].text = it.text;
       catStats[section].total++; itemStats[key].total++;
       if (it.status === 'fail') {
         catStats[section].fail++; itemStats[key].fail++;
@@ -11540,7 +11600,8 @@ async function startDailyShift(shift) {
       const text = (typeof raw === 'string') ? raw : ((raw && raw.text) || '');
       const nFill = (raw && raw.fills) || 0;
       const key = `${sIdx}|${iIdx}`;
-      const prior = existing && ((existing.items || []).find(it => it.text === text && (it.section || '') === (sec.name || '')) || (existing.items || []).find(it => it.text === text) || (existing.items || []).find(it => it.key === key && !it.text));
+      const _oid = ckItemOrig(raw);
+      const prior = existing && ((existing.items || []).find(it => (it.orig || it.text) === _oid && (it.section || '') === (sec.name || '')) || (existing.items || []).find(it => (it.orig || it.text) === _oid) || (existing.items || []).find(it => it.key === key && !it.text));
       const it = {
         key,
         section: sec.name,
@@ -11550,6 +11611,7 @@ async function startDailyShift(shift) {
         note: prior ? (prior.note || '') : '',
         photos: prior && Array.isArray(prior.photos) ? prior.photos.slice() : []
       };
+      if (raw && raw.orig) it.orig = raw.orig;   // แก้ข้อความหัวข้อแล้ว — เก็บข้อความเดิมไว้เป็นตัวระบุ (ยกเว้นรูป/รวมสถิติ)
       if (nFill) {
         it.fillLabel = (raw && raw.fillLabel) || 'รายละเอียด';
         const old = (prior && Array.isArray(prior.fills)) ? prior.fills : [];
@@ -11564,7 +11626,7 @@ async function startDailyShift(shift) {
   let requiredPhotos;
   if (existing && Array.isArray(existing.requiredPhotos) && existing.requiredPhotos.length) {
     /* ตำแหน่งข้ออาจขยับถ้ามีกฎซ่อนหัวข้อ — แปลงเลขข้อเดิมเป็นข้อใหม่ด้วยข้อความหัวข้อ */
-    requiredPhotos = existing.requiredPhotos.map(i => { const old = (existing.items || [])[i]; const ni = old ? items.findIndex(x => x.text === old.text) : -1; return ni; }).filter(i => i >= 0);
+    requiredPhotos = existing.requiredPhotos.map(i => { const old = (existing.items || [])[i]; const ni = old ? items.findIndex(x => (x.orig || x.text) === (old.orig || old.text)) : -1; return ni; }).filter(i => i >= 0);
   } else {
     /* ยึดแบรนด์จากรหัสสาขาในใบ เหมือนที่ ckCutoffMin ทำ
        เปิดใบของอีกแบรนด์มาแก้ กติกาต้องเป็นของใบนั้น ไม่ใช่ของหน้าจอ */
@@ -11578,7 +11640,7 @@ async function startDailyShift(shift) {
       // สุ่มจากเฉพาะข้อที่ไม่ได้ยกเว้น · ถ้าหมวดมีข้อน้อยกว่าที่จะสุ่ม ก็เอาเท่าที่มี
       const pool = [];
       sec.items.forEach((raw, i) => {
-        const txt = (raw && typeof raw === 'object') ? raw.text : raw;
+        const txt = ckItemOrig(raw);
         if (!ckPhotoExempt(txt, _formBrand)) pool.push(_gi + i);
       });
       ckPickFresh(pool, pick, gi => ckPhotoKey(items[gi]), _recent).forEach(gi => requiredPhotos.push(gi));
@@ -11755,7 +11817,7 @@ function renderDailyForm() {
       const photos = item.photos || [];
       const isRequired = (currentDaily.requiredPhotos || []).includes(globalIdx);
       // รูปบังคับ: ข้อสุ่ม + ข้อไม่ผ่าน · N/A ไม่ต้องรูป · ข้อที่ยกเว้นไม่ต้องรูปเลยแม้จะตก
-      const showPhotos = !ckPhotoExempt(item.text, _formBrand) && ((isRequired && !isNA) || isFail);
+      const showPhotos = !ckPhotoExempt(item.orig || item.text, _formBrand) && ((isRequired && !isNA) || isFail);
       let photosHtml = '';
       if (showPhotos) {
         const missing = photos.length === 0;
@@ -11890,7 +11952,7 @@ async function submitDailyShift() {
   const badNote = items.findIndex(it => (it.status === 'fail' || it.status === 'na') && !(it.note || '').trim());
   if (badNote >= 0) { _scrollTo(badNote, 'ระบุเหตุผลไม่ครบ', 'ข้อที่ "ไม่ผ่าน" หรือ "N/A" ต้องระบุเหตุผลก่อนบันทึก'); return; }
   const _formBrand = ckBrandOfBranch(currentDaily.branchCode);
-  const failNoPhoto = items.findIndex(it => it.status === 'fail' && !ckPhotoExempt(it.text, _formBrand)
+  const failNoPhoto = items.findIndex(it => it.status === 'fail' && !ckPhotoExempt(it.orig || it.text, _formBrand)
     && (!it.photos || it.photos.length === 0));
   if (failNoPhoto >= 0) { _scrollTo(failNoPhoto, 'ถ่ายรูปไม่ครบ', 'ข้อที่ "ไม่ผ่าน" ต้องถ่ายรูปหลักฐานก่อนบันทึก'); return; }
   // 3) ข้อสุ่มต้องมีรูป — ยกเว้นข้อที่ตอบ N/A (ไม่ต้องแนบรูป)
@@ -11899,7 +11961,7 @@ async function submitDailyShift() {
   const missingPhoto = required.filter(idx => {
     const it = items[idx];
     if (it && it.status === 'na') return false;
-    if (it && ckPhotoExempt(it.text, _formBrand)) return false;
+    if (it && ckPhotoExempt(it.orig || it.text, _formBrand)) return false;
     return !it || !it.photos || it.photos.length === 0;
   });
   if (missingPhoto.length > 0) { _scrollTo(missingPhoto[0], 'ถ่ายรูปไม่ครบ', `ยังมีข้อที่ต้องถ่ายรูปอีก ${missingPhoto.length} ข้อ`); return; }
@@ -12657,8 +12719,9 @@ function renderJaedaengTopFails() {
       if (!it || !it.text) return;
       const section = it.section || '-';
       if (!failCatStats[section]) failCatStats[section] = { section, fail: 0, total: 0 };
-      const key = section + '||' + it.text;
+      const key = section + '||' + (it.orig || it.text);
       if (!failItemStats[key]) failItemStats[key] = { text: it.text, section, fail: 0, total: 0, occ: [] };
+      if (it.orig) failItemStats[key].text = it.text;
       if (it.status === 'fail' || it.status === 'pass') {
         failItemStats[key].total++;
         failCatStats[section].total++;
@@ -13096,7 +13159,7 @@ function _jdPickRequired(a) {
   const pick = ckPhotoRule('jaedaeng').pick;
   const bySection = {};
   a.items.forEach((it, idx) => {
-    if (JAEDAENG_PHOTO_EXEMPT.has(it.text)) return;
+    if (JAEDAENG_PHOTO_EXEMPT.has(it.orig || it.text)) return;
     (bySection[it.sectionIdx] = bySection[it.sectionIdx] || []).push(idx);
   });
   const req = [];
@@ -13106,6 +13169,25 @@ function _jdPickRequired(a) {
   return req.sort((x, y) => x - y);
 }
 
+/* รายการข้อของใบเจ๊แดง: แก้ข้อความ + กรองตามสาขา (store ว่าง = ยังไม่กรอง) · คงคำตอบ/รูปเดิมด้วยการจับคู่ตามหมวด+ข้อความเดิม */
+function _jdBuildItems(store, prev) {
+  const prior = {};
+  (prev || []).forEach(it => { prior[(it.section || '') + '|' + (it.orig || it.text)] = it; });
+  const out = [];
+  JAEDAENG_CHECKLIST.forEach((sec, sIdx) => {
+    sec.items.forEach((o, iIdx) => {
+      if (store && !ckItemAppliesTo('jaedaeng', 'audit', o, store)) return;
+      const r = ckRenameItem('jaedaeng', 'audit', o);
+      const text = ckItemText(r), orig = ckItemOrig(o);
+      const p = prior[(sec.name || '') + '|' + orig];
+      const it = { key: sIdx + '|' + iIdx, section: sec.name, sectionIdx: sIdx, num: iIdx + 1, text,
+        status: p ? p.status : '', note: p ? (p.note || '') : '', photos: p && Array.isArray(p.photos) ? p.photos.slice() : [] };
+      if (text !== orig) it.orig = orig;
+      out.push(it);
+    });
+  });
+  return out;
+}
 function _startJaedaengAuditWithGps(gps) {
   const today = todayDateStr();
   const now = new Date();
@@ -13125,20 +13207,7 @@ function _startJaedaengAuditWithGps(gps) {
     gps,
     items: [],
   };
-  JAEDAENG_CHECKLIST.forEach((sec, sIdx) => {
-    sec.items.forEach((text, iIdx) => {
-      currentJDAudit.items.push({
-        key: `${sIdx}|${iIdx}`,
-        section: sec.name,
-        sectionIdx: sIdx,
-        num: iIdx + 1,
-        text,
-        status: '',
-        note: '',
-        photos: [],
-      });
-    });
-  });
+  currentJDAudit.items = _jdBuildItems('', null);   // ยังไม่รู้สาขา: แก้ข้อความแล้ว แต่ยังไม่กรองตามสาขา
   // ยังไม่ได้เลือกสาขา = ยังไม่มีประวัติให้เทียบ สุ่มไว้ก่อน แล้วสุ่มใหม่ตอนเลือกสาขา (ดู setJDStore)
   currentJDAudit.requiredPhotos = _jdPickRequired(currentJDAudit);
   currentJDAudit._draft = true;
@@ -13285,6 +13354,13 @@ function setJDStore(field, value) {
   if (!currentJDAudit) return;
   if (field === 'store') {
     currentJDAudit.storeName = value;
+    /* หัวข้อบางข้ออาจขึ้นเฉพาะบางร้าน — สร้างรายการข้อใหม่ตามร้านที่เลือก (คงคำตอบเดิม) และแปลงเลขข้อที่ต้องแนบรูปให้ตรง */
+    try {
+      const _oldItems = currentJDAudit.items || [];
+      const _reqKeys = (currentJDAudit.requiredPhotos || []).map(i => ckPhotoKey(_oldItems[i]));
+      currentJDAudit.items = _jdBuildItems(value, _oldItems);
+      currentJDAudit.requiredPhotos = _reqKeys.map(k => currentJDAudit.items.findIndex(x => ckPhotoKey(x) === k)).filter(i => i >= 0);
+    } catch (e) { console.warn('[jd] สร้างรายการข้อตามร้านไม่สำเร็จ', e); }
     /* ตอนเริ่มตรวจยังไม่รู้สาขา ข้อที่ต้องแนบรูปจึงสุ่มแบบไม่มีประวัติ
        เลือกสาขาแล้วสุ่มใหม่โดยเลี่ยงข้อที่สาขานี้เพิ่งถูกขอ — ทำเฉพาะตอนที่ยังไม่มีใครถ่ายรูปข้อที่ถูกเลือก
        ถ่ายไปแล้วห้ามเปลี่ยน ไม่งั้นรูปที่ถ่ายมาจะไปอยู่ข้อที่ไม่ได้ถูกขอ แล้วต้องถ่ายใหม่ */
