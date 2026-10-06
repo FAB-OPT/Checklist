@@ -7393,7 +7393,7 @@ function _irSections(brand, shift) {
   return secs;
 }
 var _irBrand = '', _irShift = 'open', _irOnlyRules = false, _irSearch = '';
-function _irCanView() { try { return !!(currentUser && (currentUser.role === 'admin' || currentUser.role === 'bzm')); } catch (e) { return false; } }
+function _irCanView() { try { return !!(currentUser && currentUser.role === 'admin'); } catch (e) { return false; } }   // เห็นและตั้งค่าได้เฉพาะ Admin
 function _irAllowedBrands() {
   const all = Object.keys(CK_BRANDS);
   try { if (ckIsAdmin() || (currentUser && currentUser.crossBrand)) return all; } catch (e) {}
@@ -9355,8 +9355,8 @@ function renderBottomNav() {
     html += '<button class="bottom-nav-item nav-daily-btn" id="nav-daily" data-ck-action="view-daily" onclick="showDailyHub()"><span class="material-symbols-rounded">checklist</span><span>ตรวจร้าน</span></button>';
     // ปุ่ม "จัดการสาขา" ถูกยกออก — สาขาจัดการที่ HUB (⚙️ → 🏪 จัดการสาขา) ที่เดียว · ระบบนี้อ่านอย่างเดียว
   }
-  /* เมนู "หัวข้อรายสาขา" — ทุกแบรนด์ · Admin ตั้งค่า/แก้ข้อความได้ · BZM ดูได้ */
-  if (currentUser && (currentUser.role === 'admin' || currentUser.role === 'bzm')) {
+  /* เมนู "หัวข้อรายสาขา" — ทุกแบรนด์ · เฉพาะ Admin */
+  if (currentUser && currentUser.role === 'admin') {
     html += '<button class="bottom-nav-item nav-daily-btn" id="nav-rules" data-ck-action="view-item-rules" onclick="openItemRulesModal()"><span class="material-symbols-rounded">tune</span><span>หัวข้อรายสาขา</span></button>';
   }
   html += '<button class="bottom-nav-item nav-logout-btn" id="nav-logout" onclick="logout()"><span class="material-symbols-rounded">logout</span><span>ออกระบบ</span></button>';
