@@ -5814,25 +5814,71 @@ body.in-audit #ck-page-head { display:none; }
 .sf-tbl-note.has-note { border-color:#3b82f6; background:rgba(59,130,246,0.16); }
 .sf-note-dot { width:7px; height:7px; border-radius:50%; background:#ef4444; }
 
-/* หน้าต่างกำหนดหัวข้อตรวจรายสาขา */
-.ir-box{max-width:620px}
-.ir-tabs{display:flex;gap:6px;padding:0 22px 10px}
-.ir-tab{flex:1;border:1.5px solid var(--border,#e5e7eb);background:transparent;border-radius:11px;padding:9px;font-family:inherit;font-size:13.5px;font-weight:700;cursor:pointer;color:var(--text,#111)}
-.ir-tab.on{border-color:var(--primary,#F97316);background:rgba(249,115,22,.1);color:var(--primary,#F97316)}
-.ir-sec{font-size:12px;font-weight:800;color:var(--muted,#6b7280);margin:12px 22px 6px}
-.ir-row{display:flex;align-items:center;gap:10px;margin:0 22px 6px;padding:9px 12px;border:1px solid var(--border,#e5e7eb);border-radius:11px;font-size:13px}
-.ir-row .ir-txt{flex:1;min-width:0;line-height:1.45}
-.ir-chip{font-size:11px;font-weight:700;border-radius:999px;padding:3px 9px;white-space:nowrap;background:rgba(15,23,42,.06);color:var(--muted,#6b7280)}
-.ir-chip.only{background:rgba(59,130,246,.12);color:#1d4ed8}
-.ir-chip.hide{background:rgba(239,68,68,.12);color:#b91c1c}
-.ir-btn{border:1px solid var(--border,#e5e7eb);background:transparent;border-radius:9px;padding:6px 11px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;color:var(--text,#111)}
-.ir-btn:hover{border-color:var(--primary,#F97316);color:var(--primary,#F97316)}
-.ir-modes{display:flex;flex-direction:column;gap:6px;padding:0 22px 10px}
-.ir-mode{display:flex;align-items:flex-start;gap:9px;padding:9px 12px;border:1.5px solid var(--border,#e5e7eb);border-radius:11px;cursor:pointer;font-size:13px}
+/* หน้าต่างกำหนดหัวข้อตรวจรายสาขา — แผ่นกลางจอบนคอม · แผ่นล่างเต็มกว้างบนมือถือ */
+.ir-ov{position:fixed;inset:0;z-index:9000;display:none;align-items:center;justify-content:center;padding:20px;background:rgba(15,23,42,.5);backdrop-filter:blur(3px)}
+.ir-ov.show{display:flex}
+.ir-ov.top{z-index:9100}
+.ir-sheet{background:var(--surface,#fff);border-radius:20px;width:100%;max-width:760px;max-height:min(88vh,860px);display:flex;flex-direction:column;box-shadow:0 30px 80px rgba(15,23,42,.35);overflow:hidden;animation:snPop .16s ease}
+.ir-sheet.sm{max-width:640px}
+.ir-hd{display:flex;align-items:center;gap:12px;padding:18px 20px 14px;border-bottom:1px solid var(--border,#e5e7eb)}
+.ir-ico{width:40px;height:40px;border-radius:12px;background:rgba(249,115,22,.12);color:var(--primary,#F97316);display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+.ir-ico .material-symbols-rounded{font-size:22px}
+.ir-ttl{font-size:17px;font-weight:800;letter-spacing:-.2px;line-height:1.3}
+.ir-sub{font-size:12.5px;color:var(--muted,#6b7280);margin-top:2px;line-height:1.5}
+.ir-x{margin-left:auto;border:0;background:transparent;width:34px;height:34px;border-radius:10px;font-size:17px;cursor:pointer;color:var(--muted,#9ca3af);flex:0 0 auto}
+.ir-x:hover{background:rgba(15,23,42,.07);color:var(--text,#111)}
+.ir-tools{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:12px 20px;border-bottom:1px solid var(--border,#e5e7eb);background:rgba(15,23,42,.02)}
+.ir-seg{display:flex;background:rgba(15,23,42,.06);border-radius:11px;padding:3px;gap:3px}
+.ir-seg button{border:0;background:transparent;border-radius:9px;padding:7px 16px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;color:var(--muted,#6b7280);white-space:nowrap}
+.ir-seg button.on{background:var(--surface,#fff);color:var(--text,#111);box-shadow:0 1px 3px rgba(15,23,42,.14)}
+.ir-seg b{font-weight:800;color:var(--primary,#F97316);margin-left:4px}
+.ir-q{flex:1;min-width:150px;box-sizing:border-box;padding:9px 12px;border-radius:11px;border:1.5px solid var(--border,#e5e7eb);font-family:inherit;font-size:13.5px;outline:none;background:var(--surface,#fff);color:var(--text,#111)}
+.ir-q:focus{border-color:var(--primary,#F97316)}
+.ir-tg{display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;cursor:pointer;color:var(--text,#111);white-space:nowrap}
+.ir-list{overflow:auto;flex:1;padding:4px 20px 12px;-webkit-overflow-scrolling:touch}
+.ir-sec{position:sticky;top:0;z-index:1;background:var(--surface,#fff);font-size:12px;font-weight:800;color:var(--muted,#6b7280);padding:12px 0 6px;letter-spacing:.2px}
+.ir-sec span{font-weight:600;opacity:.75;margin-left:6px}
+.ir-it{display:grid;grid-template-columns:1fr auto;gap:2px 12px;align-items:center;padding:10px 12px;margin-bottom:6px;border:1px solid var(--border,#e5e7eb);border-radius:12px;border-left-width:4px;border-left-color:var(--border,#e5e7eb)}
+.ir-it.only{border-left-color:#3b82f6;background:rgba(59,130,246,.04)}
+.ir-it.hide{border-left-color:#ef4444;background:rgba(239,68,68,.04)}
+.ir-it .t{font-size:13.5px;line-height:1.5;min-width:0}
+.ir-it .m{grid-column:1;font-size:12px;color:var(--muted,#6b7280);line-height:1.5;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.ir-it .a{grid-column:2;grid-row:1 / span 2;align-self:center}
+.ir-tag{font-size:11px;font-weight:700;border-radius:999px;padding:2px 9px;white-space:nowrap;background:rgba(15,23,42,.07);color:var(--muted,#6b7280)}
+.ir-tag.only{background:rgba(59,130,246,.14);color:#1d4ed8}
+.ir-tag.hide{background:rgba(239,68,68,.14);color:#b91c1c}
+.ir-tag.st{background:rgba(249,115,22,.14);color:#c2410c}
+.ir-set{border:1.5px solid var(--border,#e5e7eb);background:var(--surface,#fff);border-radius:10px;padding:7px 14px;font-family:inherit;font-size:12.5px;font-weight:700;cursor:pointer;color:var(--text,#111);white-space:nowrap;min-width:64px}
+.ir-set:hover{border-color:var(--primary,#F97316);color:var(--primary,#F97316)}
+.ir-empty{text-align:center;color:var(--muted,#6b7280);padding:34px 10px;font-size:13px}
+.ir-ft{display:flex;align-items:center;gap:10px;padding:12px 20px;border-top:1px solid var(--border,#e5e7eb);background:var(--surface,#fff)}
+.ir-ft .note{flex:1;font-size:12px;color:var(--muted,#6b7280);line-height:1.5}
+.ir-btn{border:0;border-radius:11px;padding:10px 20px;font-family:inherit;font-size:13.5px;font-weight:800;cursor:pointer;background:var(--primary,#F97316);color:#fff}
+.ir-btn.ghost{background:transparent;border:1.5px solid var(--border,#e5e7eb);color:var(--text,#111)}
+.ir-modes{display:grid;gap:8px;padding:14px 20px 4px}
+.ir-mode{display:flex;gap:11px;align-items:flex-start;padding:11px 13px;border:1.5px solid var(--border,#e5e7eb);border-radius:13px;cursor:pointer}
+.ir-mode input{margin-top:3px;accent-color:var(--primary,#F97316)}
 .ir-mode.on{border-color:var(--primary,#F97316);background:rgba(249,115,22,.07)}
-.ir-br{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:4px 10px;padding:0 22px 10px;max-height:34vh;overflow:auto}
-.ir-br label{display:flex;align-items:center;gap:7px;font-size:12.5px;padding:4px 2px;cursor:pointer}
-.ir-foot{display:flex;gap:8px;justify-content:flex-end;padding:12px 22px 18px;position:sticky;bottom:0;background:var(--surface,#fff)}
+.ir-mode .tt{font-size:13.5px;font-weight:800}
+.ir-mode .dd{font-size:12px;color:var(--muted,#6b7280);margin-top:2px;line-height:1.5}
+.ir-pick{display:flex;flex-direction:column;min-height:0;flex:1}
+.ir-pick .ir-tools{border-top:1px solid var(--border,#e5e7eb);margin-top:10px}
+.ir-zone{margin-bottom:8px}
+.ir-zh{display:flex;align-items:center;gap:8px;position:sticky;top:0;z-index:1;background:var(--surface,#fff);padding:8px 0 5px;font-size:12.5px;font-weight:800;cursor:pointer}
+.ir-zh em{font-style:normal;font-weight:600;color:var(--muted,#6b7280);font-size:11.5px}
+.ir-bs{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:2px 10px}
+.ir-bs label{display:flex;align-items:center;gap:8px;font-size:13px;padding:6px 8px;border-radius:9px;cursor:pointer}
+.ir-bs label:hover{background:rgba(15,23,42,.05)}
+.ir-bs input,.ir-zh input{accent-color:var(--primary,#F97316);width:16px;height:16px}
+.ir-bs .c{font-weight:800;color:var(--primary,#F97316);min-width:34px}
+@media (max-width:640px){
+  .ir-ov{padding:0;align-items:flex-end}
+  .ir-sheet{max-width:none;max-height:94vh;border-radius:20px 20px 0 0}
+  .ir-tools{padding:10px 14px}.ir-hd{padding:14px 14px 12px}.ir-list{padding:2px 14px 10px}.ir-ft{padding:10px 14px}.ir-modes{padding:12px 14px 2px}
+  .ir-it{grid-template-columns:1fr;}
+  .ir-it .a{grid-column:1;grid-row:auto;justify-self:end}
+  .ir-seg{width:100%}.ir-seg button{flex:1;padding:8px 6px}
+}
 /* หน้าต่างจัดการหมายเหตุระบบ */
 .sysnote-overlay{position:fixed;inset:0;z-index:9000;display:none;align-items:center;justify-content:center;
   padding:16px;background:rgba(15,23,42,.55);backdrop-filter:blur(4px)}
@@ -7313,33 +7359,75 @@ function _irSections(shift) {
   }));
   return secs;
 }
-var _irShift = 'open';
-function _irOverlay() {
-  let m = document.getElementById('itemRulesModal');
-  if (!m) { m = document.createElement('div'); m.id = 'itemRulesModal'; m.className = 'sysnote-overlay'; m.onclick = e => { if (e.target === m) closeItemRules(); }; document.body.appendChild(m); }
+var _irShift = 'open', _irOnlyRules = false, _irSearch = '';
+function _irCanView() { try { return !!(currentUser && (currentUser.role === 'admin' || currentUser.role === 'bzm')); } catch (e) { return false; } }
+/* สาขาที่ผู้ใช้คนนี้เห็น — Admin ทุกสาขาซานตาเฟ่ · BZM เฉพาะโซนตัวเอง */
+function _irMyBranches() {
+  const all = _irBranches();
+  if (currentUser && currentUser.role === 'bzm') return all.filter(b => b.manager === currentUser.name || b.managerNick === currentUser.nick || b.managerNick === currentUser.name);
+  return all;
+}
+function _irNames(codes, limit) {
+  const map = {}; BRANCHES.forEach(b => { map[String(b.code)] = String(b.name || '').replace(String(b.code), '').trim(); });
+  const list = (codes || []).map(c => String(c) + ' ' + (map[String(c)] || ''));
+  return list.slice(0, limit).join(' · ') + (list.length > limit ? ' · +' + (list.length - limit) + ' สาขา' : '');
+}
+function _irOverlay(id, top) {
+  let m = document.getElementById(id);
+  if (!m) { m = document.createElement('div'); m.id = id; m.className = 'ir-ov' + (top ? ' top' : ''); m.onclick = e => { if (e.target === m) m.classList.remove('show'); }; document.body.appendChild(m); }
   return m;
 }
-function closeItemRules() { const m = document.getElementById('itemRulesModal'); if (m) m.classList.remove('show'); const e = document.getElementById('itemRuleEditModal'); if (e) e.classList.remove('show'); }
+function closeItemRules() { ['itemRulesModal', 'itemRuleEditModal'].forEach(id => { const m = document.getElementById(id); if (m) m.classList.remove('show'); }); }
 function openItemRulesModal() {
-  if (!ckIsAdmin()) return;
-  const m = _irOverlay();
-  const secs = _irSections(_irShift);
-  const nOpen = Object.keys(CK_ITEM_RULES).filter(k => k.indexOf('open|') === 0).length, nClose = Object.keys(CK_ITEM_RULES).filter(k => k.indexOf('close|') === 0).length;
-  let rows = '';
-  secs.forEach(sec => {
-    rows += '<div class="ir-sec">' + escapeHtml(sec.name || '—') + '</div>';
-    sec.items.forEach(it => {
+  if (!_irCanView()) return;
+  _irSearch = '';
+  _irRender();
+}
+function _irRender() {
+  const edit = ckIsAdmin();
+  const m = _irOverlay('itemRulesModal');
+  const cnt = sh => Object.keys(CK_ITEM_RULES).filter(k => k.indexOf(sh + '|') === 0 && (CK_ITEM_RULES[k].branches || []).length).length;
+  const q = _irSearch.trim().toLowerCase();
+  const mine = new Set(_irMyBranches().map(b => String(b.code)));
+  let html = '', shown = 0;
+  _irSections(_irShift).forEach(sec => {
+    const rows = sec.items.filter(it => {
       const r = CK_ITEM_RULES[_irShift + '|' + it.text];
-      const has = r && Array.isArray(r.branches) && r.branches.length;
-      const chip = has ? '<span class="ir-chip ' + (r.mode === 'only' ? 'only' : 'hide') + '">' + (r.mode === 'only' ? 'เฉพาะ ' : 'ยกเว้น ') + r.branches.length + ' สาขา</span>' : '<span class="ir-chip">ทุกสาขา</span>';
-      rows += '<div class="ir-row"><div class="ir-txt">' + escapeHtml(it.text) + (it.only55 ? ' <span class="ir-chip">ST_Easy</span>' : '') + '</div>' + chip +
-        '<button class="ir-btn" onclick="openItemRuleEdit(this.dataset.t)" data-t="' + escapeHtml(it.text).replace(/"/g, '&quot;') + '">ตั้งค่า</button></div>';
+      const has = r && (r.branches || []).length;
+      if (_irOnlyRules && !has) return false;
+      return !q || it.text.toLowerCase().indexOf(q) >= 0;
+    });
+    if (!rows.length) return;
+    html += '<div class="ir-sec">' + escapeHtml(sec.name || '—') + '<span>' + rows.length + ' ข้อ</span></div>';
+    rows.forEach(it => {
+      const r = CK_ITEM_RULES[_irShift + '|' + it.text];
+      const has = r && (r.branches || []).length;
+      const mode = has ? r.mode : 'all';
+      let tag = '<span class="ir-tag">ขึ้นทุกสาขา</span>', meta = '';
+      if (has) {
+        const own = (r.branches || []).filter(c => edit || mine.has(String(c)));
+        tag = '<span class="ir-tag ' + (mode === 'only' ? 'only' : 'hide') + '">' + (mode === 'only' ? 'ขึ้นเฉพาะ ' : 'ยกเว้น ') + r.branches.length + ' สาขา</span>';
+        meta = '<span>' + escapeHtml(_irNames(own, 3)) + '</span>';
+      }
+      html += '<div class="ir-it ' + (has ? mode : '') + '"><div class="t">' + escapeHtml(it.text) + '</div>' +
+        '<div class="m">' + tag + (it.only55 ? '<span class="ir-tag st">เฉพาะ ST_Easy</span>' : '') + meta + '</div>' +
+        (edit ? '<div class="a"><button class="ir-set" data-t="' + escapeHtml(it.text).replace(/"/g, '&quot;') + '" onclick="openItemRuleEdit(this.dataset.t)">ตั้งค่า</button></div>' : '') + '</div>';
+      shown++;
     });
   });
-  m.innerHTML = '<div class="sysnote-box ir-box">' +
-    '<div class="sn-head"><div class="sn-head-txt"><div class="sn-title">⚙️ กำหนดหัวข้อตรวจรายสาขา</div><div class="sn-date">เลือกว่าหัวข้อไหนขึ้นที่สาขาไหน · ไม่ตั้ง = ขึ้นทุกสาขา</div></div><button class="sn-x" onclick="closeItemRules()" title="ปิด">✕</button></div>' +
-    '<div class="ir-tabs"><button class="ir-tab ' + (_irShift === 'open' ? 'on' : '') + '" onclick="_irShift=\'open\';openItemRulesModal()">เปิดร้าน' + (nOpen ? ' (' + nOpen + ')' : '') + '</button><button class="ir-tab ' + (_irShift === 'close' ? 'on' : '') + '" onclick="_irShift=\'close\';openItemRulesModal()">ปิดร้าน' + (nClose ? ' (' + nClose + ')' : '') + '</button></div>' +
-    rows + '<div style="height:16px"></div></div>';
+  if (!shown) html = '<div class="ir-empty">' + (_irOnlyRules ? 'ยังไม่มีหัวข้อที่ตั้งกฎไว้ในรอบนี้' : 'ไม่พบหัวข้อที่ค้นหา') + '</div>';
+  /* เก็บตำแหน่งเลื่อน/โฟกัสช่องค้นหาตอนวาดใหม่ */
+  const oldList = m.querySelector('.ir-list'), top = oldList ? oldList.scrollTop : 0;
+  const hadFocus = document.activeElement && document.activeElement.id === 'ir-q';
+  m.innerHTML = '<div class="ir-sheet">' +
+    '<div class="ir-hd"><div class="ir-ico"><span class="material-symbols-rounded">tune</span></div><div><div class="ir-ttl">หัวข้อตรวจรายสาขา</div><div class="ir-sub">' + (edit ? 'กำหนดว่าหัวข้อไหนขึ้นที่สาขาไหน · ไม่ตั้งกฎ = ขึ้นทุกสาขา' : 'ดูว่าหัวข้อไหนขึ้นที่สาขาไหน (ดูได้อย่างเดียว · Admin เป็นผู้ตั้งค่า)') + '</div></div><button class="ir-x" onclick="closeItemRules()" title="ปิด">✕</button></div>' +
+    '<div class="ir-tools"><div class="ir-seg"><button class="' + (_irShift === 'open' ? 'on' : '') + '" onclick="_irShift=\'open\';_irRender()">เปิดร้าน' + (cnt('open') ? '<b>' + cnt('open') + '</b>' : '') + '</button><button class="' + (_irShift === 'close' ? 'on' : '') + '" onclick="_irShift=\'close\';_irRender()">ปิดร้าน' + (cnt('close') ? '<b>' + cnt('close') + '</b>' : '') + '</button></div>' +
+      '<input id="ir-q" class="ir-q" placeholder="ค้นหาหัวข้อ…" value="' + escapeHtml(_irSearch).replace(/"/g, '&quot;') + '" oninput="_irSearch=this.value;_irRender()">' +
+      '<label class="ir-tg"><input type="checkbox" ' + (_irOnlyRules ? 'checked' : '') + ' onchange="_irOnlyRules=this.checked;_irRender()">เฉพาะที่ตั้งกฎ</label></div>' +
+    '<div class="ir-list">' + html + '</div>' +
+    '<div class="ir-ft"><div class="note">ใช้กับการตรวจครั้งใหม่ · ใบที่ส่งไปแล้วไม่เปลี่ยน</div><button class="ir-btn ghost" onclick="closeItemRules()">ปิด</button></div></div>';
+  const nl2 = m.querySelector('.ir-list'); if (nl2) nl2.scrollTop = top;
+  if (hadFocus) { const qi = document.getElementById('ir-q'); if (qi) { qi.focus(); const v = qi.value; qi.value = ''; qi.value = v; } }
   m.classList.add('show');
 }
 var _irEditText = '';
@@ -7348,44 +7436,66 @@ function openItemRuleEdit(text) {
   _irEditText = text;
   const r = CK_ITEM_RULES[_irShift + '|' + text] || { mode: 'all', branches: [] };
   const mode = (r.branches && r.branches.length) ? r.mode : 'all';
-  let m = document.getElementById('itemRuleEditModal');
-  if (!m) { m = document.createElement('div'); m.id = 'itemRuleEditModal'; m.className = 'sysnote-overlay'; m.style.zIndex = '9100'; m.onclick = e => { if (e.target === m) m.classList.remove('show'); }; document.body.appendChild(m); }
   const sel = (r.branches || []).map(String);
-  const brs = _irBranches();
-  m.innerHTML = '<div class="sysnote-box ir-box">' +
-    '<div class="sn-head"><div class="sn-head-txt"><div class="sn-title">' + escapeHtml(text) + '</div><div class="sn-date">รอบ' + (_irShift === 'open' ? 'เปิดร้าน' : 'ปิดร้าน') + '</div></div><button class="sn-x" onclick="document.getElementById(\'itemRuleEditModal\').classList.remove(\'show\')" title="ปิด">✕</button></div>' +
-    '<div class="ir-modes">' +
-      ['all|ขึ้นทุกสาขา|ค่าเริ่มต้น', 'only|ขึ้นเฉพาะสาขาที่เลือก|สาขาอื่นจะไม่เห็นหัวข้อนี้', 'hide|ขึ้นทุกสาขา ยกเว้นสาขาที่เลือก|สาขาที่เลือกจะไม่เห็นหัวข้อนี้']
-        .map(x => { const p = x.split('|'); return '<label class="ir-mode ' + (mode === p[0] ? 'on' : '') + '"><input type="radio" name="ir-mode" value="' + p[0] + '" ' + (mode === p[0] ? 'checked' : '') + ' onchange="_irModeChange()"><span><b>' + p[1] + '</b><br><span class="sn-dim" style="font-size:11.5px">' + p[2] + '</span></span></label>'; }).join('') +
-    '</div>' +
-    '<div id="ir-br-wrap" style="' + (mode === 'all' ? 'display:none' : '') + '">' +
-      '<div style="padding:0 22px 8px;display:flex;gap:8px;flex-wrap:wrap;align-items:center"><input id="ir-q" class="sn-in" style="flex:1;min-width:160px" placeholder="ค้นหารหัส/ชื่อสาขา" oninput="_irFilter()"><button class="ir-btn" onclick="_irAll(true)">เลือกทั้งหมด</button><button class="ir-btn" onclick="_irAll(false)">ล้าง</button></div>' +
-      '<div class="ir-br" id="ir-br">' + brs.map(b => '<label data-q="' + escapeHtml((b.code + ' ' + b.name).toLowerCase()).replace(/"/g, '&quot;') + '"><input type="checkbox" value="' + escapeHtml(String(b.code)) + '" ' + (sel.indexOf(String(b.code)) >= 0 ? 'checked' : '') + ' onchange="_irCount()"><span>' + escapeHtml(String(b.code)) + ' ' + escapeHtml(String(b.name || '').replace(String(b.code), '').trim()) + '</span></label>').join('') + '</div>' +
-      '<div id="ir-count" class="sn-dim" style="padding:0 22px 6px;font-size:12px"></div>' +
-    '</div>' +
-    '<div class="ir-foot"><button class="sn-btn ghost" onclick="document.getElementById(\'itemRuleEditModal\').classList.remove(\'show\')">ยกเลิก</button><button class="sn-btn" onclick="saveItemRuleEdit()">บันทึก</button></div></div>';
+  const m = _irOverlay('itemRuleEditModal', true);
+  /* จัดกลุ่มสาขาตามโซน (ผู้ดูแล) */
+  const zones = {};
+  _irBranches().forEach(b => { const z = b.manager || b.managerNick || 'ไม่ระบุโซน'; (zones[z] = zones[z] || []).push(b); });
+  const zhtml = Object.keys(zones).sort().map(z => {
+    const bs = zones[z];
+    return '<div class="ir-zone" data-z="' + escapeHtml(z).replace(/"/g, '&quot;') + '"><div class="ir-zh" onclick="_irZone(this)"><input type="checkbox" onclick="event.stopPropagation();_irZone(this.parentNode,this.checked)"><span>' + escapeHtml(z) + '</span><em></em></div><div class="ir-bs">' +
+      bs.map(b => '<label data-q="' + escapeHtml((b.code + ' ' + b.name + ' ' + z).toLowerCase()).replace(/"/g, '&quot;') + '"><input type="checkbox" value="' + escapeHtml(String(b.code)) + '" ' + (sel.indexOf(String(b.code)) >= 0 ? 'checked' : '') + ' onchange="_irCount()"><span class="c">' + escapeHtml(String(b.code)) + '</span><span>' + escapeHtml(String(b.name || '').replace(String(b.code), '').trim()) + '</span></label>').join('') + '</div></div>';
+  }).join('');
+  const modeCard = (v, ic, tt, dd) => '<label class="ir-mode ' + (mode === v ? 'on' : '') + '"><input type="radio" name="ir-mode" value="' + v + '" ' + (mode === v ? 'checked' : '') + ' onchange="_irModeChange()"><span><div class="tt">' + ic + ' ' + tt + '</div><div class="dd">' + dd + '</div></span></label>';
+  m.innerHTML = '<div class="ir-sheet sm">' +
+    '<div class="ir-hd"><div class="ir-ico"><span class="material-symbols-rounded">rule</span></div><div style="min-width:0"><div class="ir-ttl" style="font-size:15px">' + escapeHtml(text) + '</div><div class="ir-sub">รอบ' + (_irShift === 'open' ? 'เปิดร้าน' : 'ปิดร้าน') + '</div></div><button class="ir-x" onclick="document.getElementById(\'itemRuleEditModal\').classList.remove(\'show\')" title="ปิด">✕</button></div>' +
+    '<div class="ir-modes">' + modeCard('all', '🌐', 'ขึ้นทุกสาขา', 'ค่าเริ่มต้น — ทุกสาขาเห็นหัวข้อนี้') + modeCard('only', '🎯', 'ขึ้นเฉพาะสาขาที่เลือก', 'สาขาอื่นจะไม่เห็นหัวข้อนี้') + modeCard('hide', '🚫', 'ขึ้นทุกสาขา ยกเว้นสาขาที่เลือก', 'สาขาที่เลือกจะไม่เห็นหัวข้อนี้') + '</div>' +
+    '<div class="ir-pick" id="ir-pick" style="' + (mode === 'all' ? 'display:none' : '') + '">' +
+      '<div class="ir-tools"><input id="ir-bq" class="ir-q" placeholder="ค้นหารหัส / ชื่อสาขา / ชื่อโซน…" oninput="_irFilter()"><button class="ir-set" onclick="_irAll(true)">เลือกที่เห็น</button><button class="ir-set" onclick="_irAll(false)">ล้าง</button></div>' +
+      '<div class="ir-list" id="ir-br">' + zhtml + '</div></div>' +
+    '<div class="ir-ft"><div class="note" id="ir-count"></div><button class="ir-btn ghost" onclick="document.getElementById(\'itemRuleEditModal\').classList.remove(\'show\')">ยกเลิก</button><button class="ir-btn" onclick="saveItemRuleEdit()">บันทึก</button></div></div>';
   m.classList.add('show');
   _irCount();
 }
 function _irModeChange() {
   const v = (document.querySelector('input[name="ir-mode"]:checked') || {}).value;
-  document.querySelectorAll('.ir-mode').forEach(el => el.classList.toggle('on', el.querySelector('input').checked));
-  const w = document.getElementById('ir-br-wrap'); if (w) w.style.display = v === 'all' ? 'none' : '';
+  document.querySelectorAll('#itemRuleEditModal .ir-mode').forEach(el => el.classList.toggle('on', el.querySelector('input').checked));
+  const w = document.getElementById('ir-pick'); if (w) w.style.display = v === 'all' ? 'none' : '';
+  _irCount();
 }
-function _irFilter() { const q = (document.getElementById('ir-q').value || '').trim().toLowerCase(); document.querySelectorAll('#ir-br label').forEach(l => { l.style.display = !q || (l.dataset.q || '').indexOf(q) >= 0 ? '' : 'none'; }); }
+function _irFilter() {
+  const q = (document.getElementById('ir-bq').value || '').trim().toLowerCase();
+  document.querySelectorAll('#ir-br label').forEach(l => { l.style.display = !q || (l.dataset.q || '').indexOf(q) >= 0 ? '' : 'none'; });
+  document.querySelectorAll('#ir-br .ir-zone').forEach(z => { z.style.display = [].slice.call(z.querySelectorAll('label')).some(l => l.style.display !== 'none') ? '' : 'none'; });
+}
 function _irAll(on) { document.querySelectorAll('#ir-br label').forEach(l => { if (l.style.display !== 'none') l.querySelector('input').checked = on; }); _irCount(); }
-function _irCount() { const n = document.querySelectorAll('#ir-br input:checked').length, t = document.querySelectorAll('#ir-br input').length; const c = document.getElementById('ir-count'); if (c) c.textContent = 'เลือกแล้ว ' + n + ' จาก ' + t + ' สาขา'; }
+function _irZone(head, on) {
+  const z = head.parentNode; const boxes = [].slice.call(z.querySelectorAll('.ir-bs label')).filter(l => l.style.display !== 'none').map(l => l.querySelector('input'));
+  const val = (typeof on === 'boolean') ? on : !boxes.every(b => b.checked);
+  boxes.forEach(b => { b.checked = val; }); _irCount();
+}
+function _irCount() {
+  const n = document.querySelectorAll('#ir-br .ir-bs input:checked').length, t = document.querySelectorAll('#ir-br .ir-bs input').length;
+  document.querySelectorAll('#ir-br .ir-zone').forEach(z => {
+    const bx = [].slice.call(z.querySelectorAll('.ir-bs input')), c = bx.filter(b => b.checked).length;
+    const h = z.querySelector('.ir-zh input'); if (h) { h.checked = c === bx.length && c > 0; h.indeterminate = c > 0 && c < bx.length; }
+    const em = z.querySelector('.ir-zh em'); if (em) em.textContent = c + '/' + bx.length + ' สาขา';
+  });
+  const mode = (document.querySelector('input[name="ir-mode"]:checked') || {}).value || 'all';
+  const c = document.getElementById('ir-count');
+  if (c) c.textContent = mode === 'all' ? 'ทุกสาขาเห็นหัวข้อนี้' : 'เลือกแล้ว ' + n + ' จาก ' + t + ' สาขา' + (mode === 'hide' ? ' (จะไม่เห็นหัวข้อนี้)' : ' (จะเห็นหัวข้อนี้)');
+}
 async function saveItemRuleEdit() {
   if (!ckIsAdmin()) return;
   const mode = (document.querySelector('input[name="ir-mode"]:checked') || {}).value || 'all';
-  const branches = [].slice.call(document.querySelectorAll('#ir-br input:checked')).map(x => x.value);
+  const branches = [].slice.call(document.querySelectorAll('#ir-br .ir-bs input:checked')).map(x => x.value);
   const key = _irShift + '|' + _irEditText;
   if (mode === 'all') delete CK_ITEM_RULES[key];
   else if (!branches.length) { showModal('ยังไม่ได้เลือกสาขา', 'เลือกอย่างน้อย 1 สาขา หรือเลือก "ขึ้นทุกสาขา"'); return; }
   else CK_ITEM_RULES[key] = { mode: mode, branches: branches };
   const ok = await ckSaveItemRules();
   document.getElementById('itemRuleEditModal').classList.remove('show');
-  openItemRulesModal();
+  _irRender();
   if (!ok) showModal('บันทึกในเครื่องนี้แล้ว', 'ยังบันทึกขึ้นฐานข้อมูลกลางไม่ได้ — ลองกดบันทึกใหม่เมื่อมีสัญญาณ');
 }
 
@@ -9185,6 +9295,10 @@ function renderBottomNav() {
     // ระบบ OSS audit (ตรวจสาขา) ถูกตัดออกแล้ว — เหลือเฉพาะ Operations Checklist (Daily)
     // เมนู "ตรวจร้าน" (Open-Close) แสดงให้ทุก role · role อื่นเลือกสาขาก่อนตรวจ
     html += '<button class="bottom-nav-item nav-daily-btn" id="nav-daily" data-ck-action="view-daily" onclick="showDailyHub()"><span class="material-symbols-rounded">checklist</span><span>ตรวจร้าน</span></button>';
+    /* เมนู "หัวข้อรายสาขา" — Admin ตั้งค่าได้ · BZM ดูได้ */
+    if (view === 'santafe' && currentUser && (currentUser.role === 'admin' || currentUser.role === 'bzm')) {
+      html += '<button class="bottom-nav-item nav-daily-btn" id="nav-rules" data-ck-action="view-item-rules" onclick="openItemRulesModal()"><span class="material-symbols-rounded">tune</span><span>หัวข้อรายสาขา</span></button>';
+    }
     // ปุ่ม "จัดการสาขา" ถูกยกออก — สาขาจัดการที่ HUB (⚙️ → 🏪 จัดการสาขา) ที่เดียว · ระบบนี้อ่านอย่างเดียว
   }
   html += '<button class="bottom-nav-item nav-logout-btn" id="nav-logout" onclick="logout()"><span class="material-symbols-rounded">logout</span><span>ออกระบบ</span></button>';
@@ -9217,9 +9331,6 @@ function _toolsHtml(view) {
         `<button type="button" class="header-view-pill ${view === k ? 'active' : ''}" onclick="switchViewBrand('${k}')"><i class="hvp-dot" style="background:${CK_BRANDS[k].color || 'var(--primary)'}"></i>${escapeHtml(CK_BRANDS[k].short || CK_BRANDS[k].name)}</button>`
       ).join('') +
     '</div>';
-  }
-  if (typeof ckIsAdmin === 'function' && ckIsAdmin() && view === 'santafe') {
-    html += '<div class="tools-label">ตั้งค่า</div><button type="button" class="header-view-pill" onclick="openItemRulesModal()" title="กำหนดว่าหัวข้อตรวจข้อไหนขึ้นที่สาขาไหน">⚙️ หัวข้อตรวจรายสาขา</button>';
   }
   return html;
 }
