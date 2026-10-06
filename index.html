@@ -5814,6 +5814,25 @@ body.in-audit #ck-page-head { display:none; }
 .sf-tbl-note.has-note { border-color:#3b82f6; background:rgba(59,130,246,0.16); }
 .sf-note-dot { width:7px; height:7px; border-radius:50%; background:#ef4444; }
 
+/* หน้าต่างกำหนดหัวข้อตรวจรายสาขา */
+.ir-box{max-width:620px}
+.ir-tabs{display:flex;gap:6px;padding:0 22px 10px}
+.ir-tab{flex:1;border:1.5px solid var(--border,#e5e7eb);background:transparent;border-radius:11px;padding:9px;font-family:inherit;font-size:13.5px;font-weight:700;cursor:pointer;color:var(--text,#111)}
+.ir-tab.on{border-color:var(--primary,#F97316);background:rgba(249,115,22,.1);color:var(--primary,#F97316)}
+.ir-sec{font-size:12px;font-weight:800;color:var(--muted,#6b7280);margin:12px 22px 6px}
+.ir-row{display:flex;align-items:center;gap:10px;margin:0 22px 6px;padding:9px 12px;border:1px solid var(--border,#e5e7eb);border-radius:11px;font-size:13px}
+.ir-row .ir-txt{flex:1;min-width:0;line-height:1.45}
+.ir-chip{font-size:11px;font-weight:700;border-radius:999px;padding:3px 9px;white-space:nowrap;background:rgba(15,23,42,.06);color:var(--muted,#6b7280)}
+.ir-chip.only{background:rgba(59,130,246,.12);color:#1d4ed8}
+.ir-chip.hide{background:rgba(239,68,68,.12);color:#b91c1c}
+.ir-btn{border:1px solid var(--border,#e5e7eb);background:transparent;border-radius:9px;padding:6px 11px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;color:var(--text,#111)}
+.ir-btn:hover{border-color:var(--primary,#F97316);color:var(--primary,#F97316)}
+.ir-modes{display:flex;flex-direction:column;gap:6px;padding:0 22px 10px}
+.ir-mode{display:flex;align-items:flex-start;gap:9px;padding:9px 12px;border:1.5px solid var(--border,#e5e7eb);border-radius:11px;cursor:pointer;font-size:13px}
+.ir-mode.on{border-color:var(--primary,#F97316);background:rgba(249,115,22,.07)}
+.ir-br{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:4px 10px;padding:0 22px 10px;max-height:34vh;overflow:auto}
+.ir-br label{display:flex;align-items:center;gap:7px;font-size:12.5px;padding:4px 2px;cursor:pointer}
+.ir-foot{display:flex;gap:8px;justify-content:flex-end;padding:12px 22px 18px;position:sticky;bottom:0;background:var(--surface,#fff)}
 /* หน้าต่างจัดการหมายเหตุระบบ */
 .sysnote-overlay{position:fixed;inset:0;z-index:9000;display:none;align-items:center;justify-content:center;
   padding:16px;background:rgba(15,23,42,.55);backdrop-filter:blur(4px)}
@@ -7226,9 +7245,9 @@ function dailyTemplate(shift, branchCode) {
   const code = String(branchCode || '');
   /* ST_Easy (55) เป็นร้านรูปแบบเล็กของซานตาเฟ่ ใช้ชุดย่อของตัวเอง
      ต้องเช็คก่อนแบรนด์ เพราะรหัส 55 ก็นับเป็นซานตาเฟ่เหมือนกัน */
-  if (code.startsWith('55')) return shift === 'open' ? DAILY_OPEN_55 : DAILY_CLOSE_55;
+  if (code.startsWith('55')) return ckApplyItemRules(shift === 'open' ? DAILY_OPEN_55 : DAILY_CLOSE_55, shift, code);
   const set = CK_DAILY_SETS[ckBrandOfBranch(code)] || CK_DAILY_SETS.santafe;
-  return shift === 'open' ? set.open : set.close;
+  return ckApplyItemRules(shift === 'open' ? set.open : set.close, shift, code);
 }
 // แบ่งหมวดจากข้อมูลใน record เอง (ไม่ผูกกับ template) → แสดงถูกเสมอแม้หัวข้อจะต่างชุดกัน
 function _dailySections(items) {
@@ -7240,6 +7259,134 @@ function _dailySections(items) {
     cur.items.push(it);
   });
   return secs;
+}
+
+/* ══════════ กำหนดหัวข้อตรวจรายสาขา (เฉพาะ Admin) ══════════
+   หัวข้อหนึ่งข้อกำหนดได้ว่า "ขึ้นเฉพาะสาขาที่เลือก" (only) หรือ "ขึ้นทุกสาขา ยกเว้นสาขาที่เลือก" (hide)
+   ไม่ตั้งกฎ = ขึ้นทุกสาขาเหมือนเดิม · ใช้กับฟอร์มที่เริ่มตรวจใหม่/แก้ไขเท่านั้น — ใบที่ส่งไปแล้วคงหัวข้อเดิมในใบ
+   เก็บที่ appConfig/itemRules (ทุกเครื่องเห็นตรงกัน) · คีย์ = "รอบ|ข้อความหัวข้อ" รูปแบบ { mode:'only'|'hide', branches:[รหัสสาขา] } */
+var CK_ITEM_RULES = {};
+var CK_ITEM_RULES_KEY = 'ck_item_rules_v1';
+try { CK_ITEM_RULES = JSON.parse(localStorage.getItem(CK_ITEM_RULES_KEY) || '{}') || {}; } catch (e) { CK_ITEM_RULES = {}; }
+function ckItemText(raw) { return typeof raw === 'string' ? raw : ((raw && raw.text) || ''); }
+function ckItemRule(shift, raw) { return CK_ITEM_RULES[shift + '|' + String(ckItemText(raw)).trim()] || null; }
+function ckItemAppliesTo(shift, raw, code) {
+  const r = ckItemRule(shift, raw);
+  if (!r || !Array.isArray(r.branches) || !r.branches.length) return true;
+  const has = r.branches.map(String).indexOf(String(code)) >= 0;
+  return r.mode === 'only' ? has : !has;
+}
+function ckApplyItemRules(tpl, shift, code) {
+  const out = (tpl || []).map(sec => ({ name: sec.name, items: sec.items.filter(i => ckItemAppliesTo(shift, i, code)) })).filter(sec => sec.items.length);
+  return out.length ? out : tpl;   // กันกฎผิดพลาดจนฟอร์มว่างทั้งใบ
+}
+async function loadCkItemRules() {
+  await ckAuthReady();
+  if (!firebaseDb) return;
+  try {
+    const doc = await firebaseDb.collection('appConfig').doc('itemRules').get();
+    if (doc.exists) {
+      const d = doc.data() || {};
+      CK_ITEM_RULES = (d && typeof d.rules === 'object' && d.rules) ? d.rules : {};
+      try { localStorage.setItem(CK_ITEM_RULES_KEY, JSON.stringify(CK_ITEM_RULES)); } catch (_) {}
+    }
+  } catch (e) { console.warn('[itemRules] โหลดไม่ได้', e); }
+}
+async function ckSaveItemRules() {
+  try { localStorage.setItem(CK_ITEM_RULES_KEY, JSON.stringify(CK_ITEM_RULES)); } catch (_) {}
+  await ckAuthReady();
+  if (!firebaseDb) return false;
+  try {
+    await firebaseDb.collection('appConfig').doc('itemRules').set({ rules: CK_ITEM_RULES, updatedAt: new Date().toISOString(), updatedBy: (currentUser && (currentUser.name || currentUser.nick)) || '' });
+    return true;
+  } catch (e) { console.warn('[itemRules] บันทึกขึ้นคลาวด์ไม่ได้', e); return false; }
+}
+function _irBranches() { return BRANCHES.filter(b => !b.closed && ckBrandOfBranch(b.code) === 'santafe').sort((a, b) => String(a.code).localeCompare(String(b.code))); }
+/* หัวข้อของรอบนั้น (รวมฟอร์มปกติและ ST_Easy 55) — เรียงหมวด ตัดข้อซ้ำข้อความเดียวกัน */
+function _irSections(shift) {
+  const sets = shift === 'open' ? [DAILY_OPEN, DAILY_OPEN_55] : [DAILY_CLOSE, DAILY_CLOSE_55];
+  const seen = {}, secs = [];
+  sets.forEach((tpl, k) => (tpl || []).forEach(sec => {
+    let cur = secs.find(x => x.name === sec.name);
+    if (!cur) { cur = { name: sec.name, items: [] }; secs.push(cur); }
+    sec.items.forEach(raw => { const t = String(ckItemText(raw)).trim(); if (t && !seen[t]) { seen[t] = 1; cur.items.push({ text: t, only55: k === 1 }); } });
+  }));
+  return secs;
+}
+var _irShift = 'open';
+function _irOverlay() {
+  let m = document.getElementById('itemRulesModal');
+  if (!m) { m = document.createElement('div'); m.id = 'itemRulesModal'; m.className = 'sysnote-overlay'; m.onclick = e => { if (e.target === m) closeItemRules(); }; document.body.appendChild(m); }
+  return m;
+}
+function closeItemRules() { const m = document.getElementById('itemRulesModal'); if (m) m.classList.remove('show'); const e = document.getElementById('itemRuleEditModal'); if (e) e.classList.remove('show'); }
+function openItemRulesModal() {
+  if (!ckIsAdmin()) return;
+  const m = _irOverlay();
+  const secs = _irSections(_irShift);
+  const nOpen = Object.keys(CK_ITEM_RULES).filter(k => k.indexOf('open|') === 0).length, nClose = Object.keys(CK_ITEM_RULES).filter(k => k.indexOf('close|') === 0).length;
+  let rows = '';
+  secs.forEach(sec => {
+    rows += '<div class="ir-sec">' + escapeHtml(sec.name || '—') + '</div>';
+    sec.items.forEach(it => {
+      const r = CK_ITEM_RULES[_irShift + '|' + it.text];
+      const has = r && Array.isArray(r.branches) && r.branches.length;
+      const chip = has ? '<span class="ir-chip ' + (r.mode === 'only' ? 'only' : 'hide') + '">' + (r.mode === 'only' ? 'เฉพาะ ' : 'ยกเว้น ') + r.branches.length + ' สาขา</span>' : '<span class="ir-chip">ทุกสาขา</span>';
+      rows += '<div class="ir-row"><div class="ir-txt">' + escapeHtml(it.text) + (it.only55 ? ' <span class="ir-chip">ST_Easy</span>' : '') + '</div>' + chip +
+        '<button class="ir-btn" onclick="openItemRuleEdit(this.dataset.t)" data-t="' + escapeHtml(it.text).replace(/"/g, '&quot;') + '">ตั้งค่า</button></div>';
+    });
+  });
+  m.innerHTML = '<div class="sysnote-box ir-box">' +
+    '<div class="sn-head"><div class="sn-head-txt"><div class="sn-title">⚙️ กำหนดหัวข้อตรวจรายสาขา</div><div class="sn-date">เลือกว่าหัวข้อไหนขึ้นที่สาขาไหน · ไม่ตั้ง = ขึ้นทุกสาขา</div></div><button class="sn-x" onclick="closeItemRules()" title="ปิด">✕</button></div>' +
+    '<div class="ir-tabs"><button class="ir-tab ' + (_irShift === 'open' ? 'on' : '') + '" onclick="_irShift=\'open\';openItemRulesModal()">เปิดร้าน' + (nOpen ? ' (' + nOpen + ')' : '') + '</button><button class="ir-tab ' + (_irShift === 'close' ? 'on' : '') + '" onclick="_irShift=\'close\';openItemRulesModal()">ปิดร้าน' + (nClose ? ' (' + nClose + ')' : '') + '</button></div>' +
+    rows + '<div style="height:16px"></div></div>';
+  m.classList.add('show');
+}
+var _irEditText = '';
+function openItemRuleEdit(text) {
+  if (!ckIsAdmin()) return;
+  _irEditText = text;
+  const r = CK_ITEM_RULES[_irShift + '|' + text] || { mode: 'all', branches: [] };
+  const mode = (r.branches && r.branches.length) ? r.mode : 'all';
+  let m = document.getElementById('itemRuleEditModal');
+  if (!m) { m = document.createElement('div'); m.id = 'itemRuleEditModal'; m.className = 'sysnote-overlay'; m.style.zIndex = '9100'; m.onclick = e => { if (e.target === m) m.classList.remove('show'); }; document.body.appendChild(m); }
+  const sel = (r.branches || []).map(String);
+  const brs = _irBranches();
+  m.innerHTML = '<div class="sysnote-box ir-box">' +
+    '<div class="sn-head"><div class="sn-head-txt"><div class="sn-title">' + escapeHtml(text) + '</div><div class="sn-date">รอบ' + (_irShift === 'open' ? 'เปิดร้าน' : 'ปิดร้าน') + '</div></div><button class="sn-x" onclick="document.getElementById(\'itemRuleEditModal\').classList.remove(\'show\')" title="ปิด">✕</button></div>' +
+    '<div class="ir-modes">' +
+      ['all|ขึ้นทุกสาขา|ค่าเริ่มต้น', 'only|ขึ้นเฉพาะสาขาที่เลือก|สาขาอื่นจะไม่เห็นหัวข้อนี้', 'hide|ขึ้นทุกสาขา ยกเว้นสาขาที่เลือก|สาขาที่เลือกจะไม่เห็นหัวข้อนี้']
+        .map(x => { const p = x.split('|'); return '<label class="ir-mode ' + (mode === p[0] ? 'on' : '') + '"><input type="radio" name="ir-mode" value="' + p[0] + '" ' + (mode === p[0] ? 'checked' : '') + ' onchange="_irModeChange()"><span><b>' + p[1] + '</b><br><span class="sn-dim" style="font-size:11.5px">' + p[2] + '</span></span></label>'; }).join('') +
+    '</div>' +
+    '<div id="ir-br-wrap" style="' + (mode === 'all' ? 'display:none' : '') + '">' +
+      '<div style="padding:0 22px 8px;display:flex;gap:8px;flex-wrap:wrap;align-items:center"><input id="ir-q" class="sn-in" style="flex:1;min-width:160px" placeholder="ค้นหารหัส/ชื่อสาขา" oninput="_irFilter()"><button class="ir-btn" onclick="_irAll(true)">เลือกทั้งหมด</button><button class="ir-btn" onclick="_irAll(false)">ล้าง</button></div>' +
+      '<div class="ir-br" id="ir-br">' + brs.map(b => '<label data-q="' + escapeHtml((b.code + ' ' + b.name).toLowerCase()).replace(/"/g, '&quot;') + '"><input type="checkbox" value="' + escapeHtml(String(b.code)) + '" ' + (sel.indexOf(String(b.code)) >= 0 ? 'checked' : '') + ' onchange="_irCount()"><span>' + escapeHtml(String(b.code)) + ' ' + escapeHtml(String(b.name || '').replace(String(b.code), '').trim()) + '</span></label>').join('') + '</div>' +
+      '<div id="ir-count" class="sn-dim" style="padding:0 22px 6px;font-size:12px"></div>' +
+    '</div>' +
+    '<div class="ir-foot"><button class="sn-btn ghost" onclick="document.getElementById(\'itemRuleEditModal\').classList.remove(\'show\')">ยกเลิก</button><button class="sn-btn" onclick="saveItemRuleEdit()">บันทึก</button></div></div>';
+  m.classList.add('show');
+  _irCount();
+}
+function _irModeChange() {
+  const v = (document.querySelector('input[name="ir-mode"]:checked') || {}).value;
+  document.querySelectorAll('.ir-mode').forEach(el => el.classList.toggle('on', el.querySelector('input').checked));
+  const w = document.getElementById('ir-br-wrap'); if (w) w.style.display = v === 'all' ? 'none' : '';
+}
+function _irFilter() { const q = (document.getElementById('ir-q').value || '').trim().toLowerCase(); document.querySelectorAll('#ir-br label').forEach(l => { l.style.display = !q || (l.dataset.q || '').indexOf(q) >= 0 ? '' : 'none'; }); }
+function _irAll(on) { document.querySelectorAll('#ir-br label').forEach(l => { if (l.style.display !== 'none') l.querySelector('input').checked = on; }); _irCount(); }
+function _irCount() { const n = document.querySelectorAll('#ir-br input:checked').length, t = document.querySelectorAll('#ir-br input').length; const c = document.getElementById('ir-count'); if (c) c.textContent = 'เลือกแล้ว ' + n + ' จาก ' + t + ' สาขา'; }
+async function saveItemRuleEdit() {
+  if (!ckIsAdmin()) return;
+  const mode = (document.querySelector('input[name="ir-mode"]:checked') || {}).value || 'all';
+  const branches = [].slice.call(document.querySelectorAll('#ir-br input:checked')).map(x => x.value);
+  const key = _irShift + '|' + _irEditText;
+  if (mode === 'all') delete CK_ITEM_RULES[key];
+  else if (!branches.length) { showModal('ยังไม่ได้เลือกสาขา', 'เลือกอย่างน้อย 1 สาขา หรือเลือก "ขึ้นทุกสาขา"'); return; }
+  else CK_ITEM_RULES[key] = { mode: mode, branches: branches };
+  const ok = await ckSaveItemRules();
+  document.getElementById('itemRuleEditModal').classList.remove('show');
+  openItemRulesModal();
+  if (!ok) showModal('บันทึกในเครื่องนี้แล้ว', 'ยังบันทึกขึ้นฐานข้อมูลกลางไม่ได้ — ลองกดบันทึกใหม่เมื่อมีสัญญาณ');
 }
 
 // ============ JAE DAENG BRANCH LOCATIONS ============
@@ -7935,6 +8082,7 @@ function _daily3Done() { try { localStorage.setItem(DAILY_FULL3_KEY, String(Date
 async function loadDailyChecklists() {
   await ckAuthReady();            // รอล็อกอิน Firebase ก่อนแตะข้อมูล
   loadCkSysNotes(); // หมายเหตุระบบรายวัน/รอบ (เช่น ระบบล่ม สาขาส่งไม่ได้)
+  loadCkItemRules(); // กฎหัวข้อตรวจรายสาขา (Admin ตั้ง)
   loadSfBranches(); // โหลดรายชื่อสาขา (เพิ่ม/ลบ) จาก cloud — ครั้งเดียวต่อ session
   loadCkPermsFromHub(); // สิทธิ์ปุ่มจาก HUB (throttle) — ตัวหลักเรียกที่ renderBottomNav/visibilitychange
   /* ของในเครื่องอยู่ใน IndexedDB (localStorage เก็บเฉพาะใบที่ยังส่งไม่สำเร็จ)
@@ -9069,6 +9217,9 @@ function _toolsHtml(view) {
         `<button type="button" class="header-view-pill ${view === k ? 'active' : ''}" onclick="switchViewBrand('${k}')"><i class="hvp-dot" style="background:${CK_BRANDS[k].color || 'var(--primary)'}"></i>${escapeHtml(CK_BRANDS[k].short || CK_BRANDS[k].name)}</button>`
       ).join('') +
     '</div>';
+  }
+  if (typeof ckIsAdmin === 'function' && ckIsAdmin() && view === 'santafe') {
+    html += '<div class="tools-label">ตั้งค่า</div><button type="button" class="header-view-pill" onclick="openItemRulesModal()" title="กำหนดว่าหัวข้อตรวจข้อไหนขึ้นที่สาขาไหน">⚙️ หัวข้อตรวจรายสาขา</button>';
   }
   return html;
 }
@@ -11278,7 +11429,7 @@ async function startDailyShift(shift) {
       const text = (typeof raw === 'string') ? raw : ((raw && raw.text) || '');
       const nFill = (raw && raw.fills) || 0;
       const key = `${sIdx}|${iIdx}`;
-      const prior = existing && (existing.items || []).find(it => it.key === key);
+      const prior = existing && ((existing.items || []).find(it => it.text === text && (it.section || '') === (sec.name || '')) || (existing.items || []).find(it => it.text === text) || (existing.items || []).find(it => it.key === key && !it.text));
       const it = {
         key,
         section: sec.name,
@@ -11301,7 +11452,8 @@ async function startDailyShift(shift) {
   // เก็บไว้กับเรคคอร์ด → แก้ไขรอบเดิมได้ข้อเดิม · รอบใหม่สุ่มใหม่ (กันใช้รูปซ้ำ)
   let requiredPhotos;
   if (existing && Array.isArray(existing.requiredPhotos) && existing.requiredPhotos.length) {
-    requiredPhotos = existing.requiredPhotos.slice();
+    /* ตำแหน่งข้ออาจขยับถ้ามีกฎซ่อนหัวข้อ — แปลงเลขข้อเดิมเป็นข้อใหม่ด้วยข้อความหัวข้อ */
+    requiredPhotos = existing.requiredPhotos.map(i => { const old = (existing.items || [])[i]; const ni = old ? items.findIndex(x => x.text === old.text) : -1; return ni; }).filter(i => i >= 0);
   } else {
     /* ยึดแบรนด์จากรหัสสาขาในใบ เหมือนที่ ckCutoffMin ทำ
        เปิดใบของอีกแบรนด์มาแก้ กติกาต้องเป็นของใบนั้น ไม่ใช่ของหน้าจอ */
