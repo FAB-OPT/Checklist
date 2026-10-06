@@ -15096,6 +15096,7 @@ const SFRep = {
       this.S.zone = sfClFilter.zone || 'all';
       this.S.branch = sfClFilter.branch || 'all';
     }
+    try { const _sub = document.querySelector('.sfrep-sub'), _b = CK_BRANDS[ckViewBrandKey()]; if (_sub && _b) _sub.textContent = 'Daily Open-Close Checklist · ' + (_b.short || _b.name); } catch (e) {}   // หัวกล่องตามแบรนด์ที่เปิดอยู่ (เดิมเขียนซานตาเฟ่ตายตัว)
     if (!this.S.from) this.setQuick('7', true);
     this.paintTypes(); this.paintQuick(); this.paintScope();
     document.getElementById('sfrep-from').value = this.S.from;
