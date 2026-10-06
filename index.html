@@ -9616,7 +9616,7 @@ function setupSfClScope() {
   const zones = []; const seen = new Set();
   _openBranches().forEach(b => { const key = b.managerNick || b.manager; if (seen.has(key)) return; seen.add(key); const _m = _jdStripTitle(b.manager || ''); const label = (_m && b.managerNick) ? `โซน ${_m} (${b.managerNick})` : `โซน ${_m || b.managerNick}`; zones.push({ key, label }); });
   let o = '<option value="all">ดูทุกโซน · ทุกสาขา</option><optgroup label="แยกตามโซน">';
-  zones.forEach(z => { o += `<option value="zone:${escapeAttr(z.key)}">${escapeHtml(z.label)}</option>`; });
+  zones.forEach(z => { o += `<option value="zone:${escapeOptVal(z.key)}">${escapeHtml(z.label)}</option>`; });
   o += '</optgroup><optgroup label="แยกตามสาขา">';
   _openBranches().forEach(b => { o += `<option value="branch:${escapeAttr(b.code)}">${escapeHtml(b.code + ' ' + b.name)}</option>`; });
   o += '</optgroup>';
@@ -10828,6 +10828,8 @@ function escapeHtml(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
 }
 function escapeAttr(s) { return String(s).replace(/'/g, "\\'").replace(/"/g,'&quot;'); }
+/* ค่าใน value="..." ของ <option> — escapeAttr ใส่ \ หน้า ' (สำหรับสตริง JS ใน onclick) ทำให้ชื่อโซนอย่าง P'Arm ไม่ตรงกับค่าจริง → กรองไม่เจอสาขาเลย */
+function escapeOptVal(s) { return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
 var _modalOnOk = null;
 /* เนื้อความลงด้วย textContent เสมอ — ปลอดภัยจากข้อความที่มาจากผู้ใช้
    ถ้าต้องการตัวหนา/ขึ้นบรรทัด ให้เรียก showModalHtml() แทน
@@ -12520,7 +12522,7 @@ function setupJaedaengDashFilter() {
   let opts = '<option value="all">ดูทุกโซน · ทุกสาขา</option>';
   opts += '<optgroup label="แยกตามโซน">';
   zones.forEach(z => {
-    opts += `<option value="zone:${escapeAttr(z.key)}">${escapeHtml(z.label)}</option>`;
+    opts += `<option value="zone:${escapeOptVal(z.key)}">${escapeHtml(z.label)}</option>`;
   });
   opts += '</optgroup>';
   opts += '<optgroup label="แยกตามสาขา">';
@@ -12682,7 +12684,7 @@ function _populateJdTopFailFilters() {
   const zones = [...new Set(_jdTfRecords.map(r => r.bzmNick || r.bzm).filter(Boolean))].sort();
   const curZone = zoneSel.value;
   zoneSel.innerHTML = '<option value="">ทุกโซน (BZM)</option>' +
-    zones.map(z => `<option value="${escapeAttr(z)}"${z===curZone?' selected':''}>${escapeHtml(z)}</option>`).join('');
+    zones.map(z => `<option value="${escapeOptVal(z)}"${z===curZone?' selected':''}>${escapeHtml(z)}</option>`).join('');
   _populateJdTopFailBranches(zoneSel.value);
 }
 function _populateJdTopFailBranches(zone) {
@@ -12693,7 +12695,7 @@ function _populateJdTopFailBranches(zone) {
   const names = [...new Set(pool.map(r => r.storeName).filter(Boolean))].sort();
   const cur = branchSel.value;
   branchSel.innerHTML = '<option value="">ทุกสาขา</option>' +
-    names.map(n => `<option value="${escapeAttr(n)}"${n===cur?' selected':''}>${escapeHtml(n)}</option>`).join('');
+    names.map(n => `<option value="${escapeOptVal(n)}"${n===cur?' selected':''}>${escapeHtml(n)}</option>`).join('');
 }
 function onJdTopFailZoneChange() {
   _populateJdTopFailBranches(document.getElementById('jd-tf-zone').value);
@@ -15164,7 +15166,7 @@ const SFRep = {
     all.forEach((b) => { const z = _sfBranchZone(b.code); if (z && !seen[z]) { seen[z] = 1; zones.push(z); } });
     zones.sort();
     const zs = document.getElementById('sfrep-zone');
-    zs.innerHTML = '<option value="all">ทุกโซน</option>' + zones.map((z) => `<option value="${escapeAttr(z)}">${escapeHtml(z)}</option>`).join('');
+    zs.innerHTML = '<option value="all">ทุกโซน</option>' + zones.map((z) => `<option value="${escapeOptVal(z)}">${escapeHtml(z)}</option>`).join('');
     zs.value = this.S.zone;
     const pool = this.S.zone === 'all' ? all : all.filter((b) => _sfBranchZone(b.code) === this.S.zone);
     const bs = document.getElementById('sfrep-branch');
