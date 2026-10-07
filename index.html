@@ -5877,6 +5877,14 @@ body.in-audit #ck-page-head { display:none; }
 .ir-ta{width:100%;box-sizing:border-box;padding:10px 12px;border-radius:11px;border:1.5px solid var(--border,#e5e7eb);font-family:inherit;font-size:14px;line-height:1.5;outline:none;resize:vertical;background:var(--surface,#fff);color:var(--text,#111)}
 .ir-ta:focus{border-color:var(--primary,#F97316)}
 .ir-fh{font-size:11.5px;color:var(--muted,#6b7280);margin-top:5px;line-height:1.5}
+/* โหมดหน้าเต็ม (ไม่ใช่ป๊อปอัป) */
+.ir-page{max-width:none;max-height:none;overflow:visible;animation:none;box-shadow:0 8px 30px rgba(15,23,42,.08);border:1px solid var(--border,#e5e7eb)}
+.ir-page .ir-list{overflow:visible;flex:none}
+.ir-page .ir-tools{position:sticky;top:0;z-index:5;background:var(--surface,#fff)}
+.ir-page .ir-sec{top:62px}
+.ir-it.del{opacity:.6;border-left-color:#9ca3af;background:rgba(15,23,42,.03)}.ir-it.del .t{text-decoration:line-through}
+.ir-set.ir-del{color:#b91c1c;border-color:rgba(239,68,68,.35)}.ir-set.ir-del:hover{background:rgba(239,68,68,.08);border-color:#ef4444;color:#b91c1c}
+.ir-it .a{display:flex;gap:6px}
 @media (max-width:640px){
   .ir-ov{padding:0;align-items:flex-end}
   .ir-sheet{max-width:none;max-height:94vh;border-radius:20px 20px 0 0}
@@ -6140,6 +6148,9 @@ body.in-audit #ck-page-head { display:none; }
 
       </div>
     </div>
+
+    <!-- หัวข้อรายสาขา (หน้าเต็ม · เฉพาะ Admin) -->
+    <div id="item-rules-screen" style="display:none;"></div>
 
     <!-- DAILY HUB SCREEN -->
     <div id="daily-hub-screen" style="display:none;">
@@ -7334,7 +7345,9 @@ function ckItemText(raw) { return typeof raw === 'string' ? raw : ((raw && raw.t
 /* ข้อความเดิมของหัวข้อ — ตัวระบุที่ไม่เปลี่ยนแม้แก้ข้อความแล้ว (ใช้กับกฎ ยกเว้นรูป และรวมสถิติ) */
 function ckItemOrig(raw) { return typeof raw === 'string' ? raw : ((raw && (raw.orig || raw.text)) || ''); }
 function ckRuleKey(brand, shift, text) { return brand + '|' + shift + '|' + String(text).trim(); }
+function ckItemDeleted(brand, shift, raw) { return !!CK_ITEM_RULES['del|' + ckRuleKey(brand, shift, ckItemOrig(raw))]; }
 function ckItemAppliesTo(brand, shift, raw, code) {
+  if (ckItemDeleted(brand, shift, raw)) return false;
   const r = CK_ITEM_RULES[ckRuleKey(brand, shift, ckItemOrig(raw))];
   if (!r || !Array.isArray(r.branches) || !r.branches.length) return true;
   const has = r.branches.map(String).indexOf(String(code)) >= 0;
@@ -7415,9 +7428,14 @@ function _irOverlay(id, top) {
   if (!m) { m = document.createElement('div'); m.id = id; m.className = 'ir-ov' + (top ? ' top' : ''); m.onclick = e => { if (e.target === m) m.classList.remove('show'); }; document.body.appendChild(m); }
   return m;
 }
-function closeItemRules() { ['itemRulesModal', 'itemRuleEditModal'].forEach(id => { const m = document.getElementById(id); if (m) m.classList.remove('show'); }); }
+function closeItemRules() { ['itemRuleEditModal'].forEach(id => { const m = document.getElementById(id); if (m) m.classList.remove('show'); }); }
+/* เปิดเป็นหน้าเต็ม (เมนู "หัวข้อรายสาขา") — ไม่ใช่ป๊อปอัป · ป๊อปอัปเหลือเฉพาะหน้าต่างตั้งค่ารายหัวข้อ */
 function openItemRulesModal() {
   if (!_irCanView()) return;
+  hideAllScreens();
+  const scr = document.getElementById('item-rules-screen'); if (scr) scr.style.display = 'block';
+  setActiveNav('nav-rules');
+  try { window.scrollTo(0, 0); } catch (e) {}
   _irSearch = '';
   const allowed = _irAllowedBrands();
   if (!_irBrand || allowed.indexOf(_irBrand) < 0) _irBrand = allowed.indexOf(ckViewBrandKey()) >= 0 ? ckViewBrandKey() : allowed[0];
@@ -7428,15 +7446,16 @@ function _irSetBrand(b) { _irBrand = b; _irShift = _irShifts(b)[0][0]; _irSearch
 function _irRender() {
   const edit = ckIsAdmin();
   const brand = _irBrand, shift = _irShift;
-  const m = _irOverlay('itemRulesModal');
-  const cnt = sh => Object.keys(CK_ITEM_RULES).filter(k => k.indexOf(brand + '|' + sh + '|') === 0 && (CK_ITEM_RULES[k].branches || []).length).length + Object.keys(CK_ITEM_RULES).filter(k => k.indexOf('ren|' + brand + '|' + sh + '|') === 0).length;
+  const m = document.getElementById('item-rules-screen');
+  if (!m) return;
+  const cnt = sh => Object.keys(CK_ITEM_RULES).filter(k => k.indexOf(brand + '|' + sh + '|') === 0 && (CK_ITEM_RULES[k].branches || []).length).length + Object.keys(CK_ITEM_RULES).filter(k => k.indexOf('ren|' + brand + '|' + sh + '|') === 0 || k.indexOf('del|' + brand + '|' + sh + '|') === 0).length;
   const q = _irSearch.trim().toLowerCase();
   const mine = new Set(_irMyBranches(brand).map(b => String(b.code)));
   let html = '', shown = 0;
   _irSections(brand, shift).forEach(sec => {
     const rows = sec.items.filter(it => {
       const r = CK_ITEM_RULES[ckRuleKey(brand, shift, it.text)], rn = CK_ITEM_RULES['ren|' + ckRuleKey(brand, shift, it.text)];
-      const has = (r && (r.branches || []).length) || (rn && rn.to);
+      const has = (r && (r.branches || []).length) || (rn && rn.to) || CK_ITEM_RULES['del|' + ckRuleKey(brand, shift, it.text)];
       if (_irOnlyRules && !has) return false;
       const shownText = (rn && rn.to) ? rn.to : it.text;
       return !q || shownText.toLowerCase().indexOf(q) >= 0 || it.text.toLowerCase().indexOf(q) >= 0;
@@ -7454,29 +7473,48 @@ function _irRender() {
         meta = '<span>' + escapeHtml(_irNames(brand, own, 3)) + '</span>';
       }
       const renamed = rn && rn.to;
-      html += '<div class="ir-it ' + (has ? mode : '') + '"><div class="t">' + escapeHtml(renamed ? rn.to : it.text) + (renamed ? '<div class="ir-orig">ข้อความเดิม: ' + escapeHtml(it.text) + '</div>' : '') + '</div>' +
-        '<div class="m">' + tag + (renamed ? '<span class="ir-tag st">แก้ข้อความแล้ว</span>' : '') + (it.only55 ? '<span class="ir-tag st">เฉพาะ ST_Easy</span>' : '') + meta + '</div>' +
-        (edit ? '<div class="a"><button class="ir-set" data-t="' + escapeHtml(it.text).replace(/"/g, '&quot;') + '" onclick="openItemRuleEdit(this.dataset.t)">ตั้งค่า</button></div>' : '') + '</div>';
+      const isDel = !!CK_ITEM_RULES['del|' + ckRuleKey(brand, shift, it.text)];
+      html += '<div class="ir-it ' + (has ? mode : '') + (isDel ? ' del' : '') + '"><div class="t">' + escapeHtml(renamed ? rn.to : it.text) + (renamed ? '<div class="ir-orig">ข้อความเดิม: ' + escapeHtml(it.text) + '</div>' : '') + '</div>' +
+        '<div class="m">' + (isDel ? '<span class="ir-tag hide">ลบแล้ว · ไม่ขึ้นในใบตรวจใหม่</span>' : tag) + (renamed ? '<span class="ir-tag st">แก้ข้อความแล้ว</span>' : '') + (it.only55 ? '<span class="ir-tag st">เฉพาะ ST_Easy</span>' : '') + meta + '</div>' +
+        (edit ? '<div class="a">' + (isDel
+          ? '<button class="ir-set" data-t="' + escapeHtml(it.text).replace(/"/g, '&quot;') + '" onclick="restoreItemRule(this.dataset.t)">กู้คืน</button>'
+          : '<button class="ir-set" data-t="' + escapeHtml(it.text).replace(/"/g, '&quot;') + '" onclick="openItemRuleEdit(this.dataset.t)">ตั้งค่า</button> <button class="ir-set ir-del" data-t="' + escapeHtml(it.text).replace(/"/g, '&quot;') + '" onclick="deleteItemRule(this.dataset.t)">ลบ</button>') + '</div>' : '') + '</div>';
       shown++;
     });
   });
   if (!shown) html = '<div class="ir-empty">' + (_irOnlyRules ? 'ยังไม่มีหัวข้อที่ตั้งกฎไว้ในรอบนี้' : 'ไม่พบหัวข้อที่ค้นหา') + '</div>';
-  const oldList = m.querySelector('.ir-list'), top = oldList ? oldList.scrollTop : 0;
+  const top = 0;
   const hadFocus = document.activeElement && document.activeElement.id === 'ir-q';
   const allowed = _irAllowedBrands();
   const brandSeg = allowed.length > 1 ? '<div class="ir-seg">' + allowed.map(k => '<button class="' + (k === brand ? 'on' : '') + '" onclick="_irSetBrand(\'' + k + '\')">' + escapeHtml((CK_BRANDS[k] && (CK_BRANDS[k].short || CK_BRANDS[k].name)) || k) + '</button>').join('') + '</div>' : '';
   const shifts = _irShifts(brand);
   const shiftSeg = shifts.length > 1 ? '<div class="ir-seg">' + shifts.map(s => '<button class="' + (s[0] === shift ? 'on' : '') + '" onclick="_irShift=\'' + s[0] + '\';_irRender()">' + s[1] + (cnt(s[0]) ? '<b>' + cnt(s[0]) + '</b>' : '') + '</button>').join('') + '</div>' : '';
-  m.innerHTML = '<div class="ir-sheet">' +
-    '<div class="ir-hd"><div class="ir-ico"><span class="material-symbols-rounded">tune</span></div><div><div class="ir-ttl">หัวข้อตรวจรายสาขา</div><div class="ir-sub">' + (edit ? 'กำหนดว่าหัวข้อไหนขึ้นที่สาขาไหน และแก้ข้อความหัวข้อได้ · ไม่ตั้งกฎ = ขึ้นทุกสาขาตามเดิม' : 'ดูว่าหัวข้อไหนขึ้นที่สาขาไหน (ดูได้อย่างเดียว · Admin เป็นผู้ตั้งค่า)') + '</div></div><button class="ir-x" onclick="closeItemRules()" title="ปิด">✕</button></div>' +
+  m.innerHTML = '<div class="ir-sheet ir-page">' +
+    '<div class="ir-hd"><div class="ir-ico"><span class="material-symbols-rounded">tune</span></div><div><div class="ir-ttl">หัวข้อตรวจรายสาขา</div><div class="ir-sub">' + (edit ? 'กำหนดว่าหัวข้อไหนขึ้นที่สาขาไหน และแก้ข้อความหัวข้อได้ · ไม่ตั้งกฎ = ขึ้นทุกสาขาตามเดิม' : 'ดูว่าหัวข้อไหนขึ้นที่สาขาไหน (ดูได้อย่างเดียว · Admin เป็นผู้ตั้งค่า)') + '</div></div></div>' +
     '<div class="ir-tools">' + brandSeg + shiftSeg +
       '<input id="ir-q" class="ir-q" placeholder="ค้นหาหัวข้อ…" value="' + escapeHtml(_irSearch).replace(/"/g, '&quot;') + '" oninput="_irSearch=this.value;_irRender()">' +
       '<label class="ir-tg"><input type="checkbox" ' + (_irOnlyRules ? 'checked' : '') + ' onchange="_irOnlyRules=this.checked;_irRender()">เฉพาะที่ตั้งกฎ/แก้ข้อความ</label></div>' +
     '<div class="ir-list">' + html + '</div>' +
-    '<div class="ir-ft"><div class="note">ใช้กับการตรวจครั้งใหม่ · ใบที่ส่งไปแล้วไม่เปลี่ยน</div><button class="ir-btn ghost" onclick="closeItemRules()">ปิด</button></div></div>';
-  const nl2 = m.querySelector('.ir-list'); if (nl2) nl2.scrollTop = top;
+    '<div class="ir-ft"><div class="note">ใช้กับการตรวจครั้งใหม่ · ใบที่ส่งไปแล้วไม่เปลี่ยน · ลบแล้วกู้คืนได้</div></div></div>';
+  window.scrollTo(window.scrollX, window.scrollY);
   if (hadFocus) { const qi = document.getElementById('ir-q'); if (qi) { qi.focus(); const v = qi.value; qi.value = ''; qi.value = v; } }
-  m.classList.add('show');
+}
+/* ลบหัวข้อ (ไม่ขึ้นในใบตรวจใหม่ทุกสาขา) · กู้คืนได้ · ใบที่ส่งไปแล้วไม่เปลี่ยน */
+async function deleteItemRule(text) {
+  if (!ckIsAdmin()) return;
+  const ok = await showConfirm('ลบหัวข้อนี้?', '<div style="font-size:14px;line-height:1.6">' + escapeHtml(text) + '</div><div style="margin-top:10px;font-size:12.5px;color:#6b7280">หัวข้อนี้จะไม่ขึ้นในการตรวจครั้งใหม่ของทุกสาขา · ใบที่ส่งไปแล้วไม่เปลี่ยน · กด "กู้คืน" เมื่อไรก็ได้</div>', { okLabel: 'ลบหัวข้อ', danger: true });
+  if (!ok) return;
+  CK_ITEM_RULES['del|' + ckRuleKey(_irBrand, _irShift, text)] = { deleted: true };
+  const saved = await ckSaveItemRules();
+  _irRender();
+  if (!saved) showModal('บันทึกในเครื่องนี้แล้ว', 'ยังบันทึกขึ้นฐานข้อมูลกลางไม่ได้ — ลองใหม่เมื่อมีสัญญาณ');
+}
+async function restoreItemRule(text) {
+  if (!ckIsAdmin()) return;
+  delete CK_ITEM_RULES['del|' + ckRuleKey(_irBrand, _irShift, text)];
+  const saved = await ckSaveItemRules();
+  _irRender();
+  if (!saved) showModal('บันทึกในเครื่องนี้แล้ว', 'ยังบันทึกขึ้นฐานข้อมูลกลางไม่ได้ — ลองใหม่เมื่อมีสัญญาณ');
 }
 var _irEditText = '';
 function openItemRuleEdit(text) {
@@ -9481,7 +9519,7 @@ function setActiveNav(id) {
 }
 
 function hideAllScreens() {
-  ['dashboard-screen','info-screen','checklist-screen','summary-screen','daily-hub-screen','daily-form-screen','daily-detail-screen','jaedaeng-dashboard-screen','jaedaeng-hub-screen','jaedaeng-audit-screen','jaedaeng-detail-screen'].forEach(id => {
+  ['dashboard-screen','info-screen','checklist-screen','summary-screen','daily-hub-screen','daily-form-screen','daily-detail-screen','jaedaeng-dashboard-screen','jaedaeng-hub-screen','jaedaeng-audit-screen','jaedaeng-detail-screen','item-rules-screen'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.style.display = 'none';
   });
