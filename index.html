@@ -14925,6 +14925,16 @@ async function autoLoginFromSession() {
   } catch (_) {}
   // No brand on the session (e.g. Hub admin) → default to Santa Fe and
   // skip the picker. Cross-brand users can flip via the header toggle.
+  /* สาขา: แบรนด์มาจากรหัสสาขา (60xx = ยามะจัง · 40xx = เจ๊แดง) ไม่ใช่ซานตาเฟ่ตายตัว
+     เดิมเซสชันจากฮับที่ไม่มีแบรนด์ถูกตีเป็นซานตาเฟ่หมด สาขายามะจังจึงเห็นโลโก้/ชื่อแบรนด์ผิด */
+  let _qpBrand = ''; try { _qpBrand = new URLSearchParams(window.location.search).get('brand') || ''; } catch (_) {}
+  if (s.role === 'branch' && !_qpBrand && (!s.brand || s.brand === 'santafe')) {
+    const bc = s.branchCode || s.code;
+    if (bc && ckBrandOfBranch(bc) !== s.brand) {
+      s.brand = ckBrandOfBranch(bc);
+      try { localStorage.setItem(FAB_SESSION_KEY, JSON.stringify(s)); } catch (_) {}
+    }
+  }
   if (!s.brand) {
     s.brand = 'santafe';
     try { localStorage.setItem(FAB_SESSION_KEY, JSON.stringify(s)); } catch (_) {}
