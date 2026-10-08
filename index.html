@@ -5885,6 +5885,38 @@ body.in-audit #ck-page-head { display:none; }
 .ir-it.del{opacity:.6;border-left-color:#9ca3af;background:rgba(15,23,42,.03)}.ir-it.del .t{text-decoration:line-through}
 .ir-set.ir-del{color:#b91c1c;border-color:rgba(239,68,68,.35)}.ir-set.ir-del:hover{background:rgba(239,68,68,.08);border-color:#ef4444;color:#b91c1c}
 .ir-it .a{display:flex;gap:6px}
+/* ── หน้าตาใหม่: สี + กริด ── */
+.ir-hd.hero{background:linear-gradient(135deg,rgba(249,115,22,.14),rgba(251,191,36,.10) 60%,transparent);padding:20px 22px 16px}
+.ir-hd.hero .ir-ico{width:46px;height:46px;border-radius:14px;background:linear-gradient(135deg,#F97316,#FB923C);color:#fff;box-shadow:0 8px 18px rgba(249,115,22,.35)}
+.ir-hd.hero .ir-ttl{font-size:19px}
+.ir-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:14px 20px 4px}
+.ir-stats>div{display:flex;align-items:center;gap:11px;padding:11px 14px;border-radius:14px}
+.ir-stats .material-symbols-rounded{font-size:22px;width:38px;height:38px;border-radius:12px;display:grid;place-items:center;flex:none}
+.ir-stats b{display:block;font-size:22px;font-weight:800;line-height:1.1;font-variant-numeric:tabular-nums}.ir-stats small{font-size:12px;font-weight:600;color:#6b7280}
+.ir-stats .s0{background:#fff4ea}.ir-stats .s0 .material-symbols-rounded{background:#ffe0c7;color:#ea580c}.ir-stats .s0 b{color:#c2410c}
+.ir-stats .s1{background:#eef4ff}.ir-stats .s1 .material-symbols-rounded{background:#d9e6ff;color:#2563eb}.ir-stats .s1 b{color:#1d4ed8}
+.ir-stats .s2{background:#f5efff}.ir-stats .s2 .material-symbols-rounded{background:#e6d9ff;color:#7c3aed}.ir-stats .s2 b{color:#6d28d9}
+.ir-stats .s3{background:#fff0f0}.ir-stats .s3 .material-symbols-rounded{background:#ffd9d9;color:#dc2626}.ir-stats .s3 b{color:#b91c1c}
+.ir-seg.brand button.on{background:linear-gradient(135deg,#F97316,#FB923C);color:#fff;box-shadow:0 4px 10px rgba(249,115,22,.35)}
+.ir-seg.shift button::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:7px;background:#9ca3af}
+.ir-seg.shift button.sh-open::before{background:#16a34a}.ir-seg.shift button.sh-close::before{background:#6366f1}
+.ir-seg.shift button.on.sh-open{background:#e8f7ee;color:#15803d}.ir-seg.shift button.on.sh-close{background:#ececff;color:#4338ca}
+.ir-sec{display:flex;align-items:center;gap:9px;font-size:13px;color:var(--text,#111);padding:16px 0 8px}
+.ir-sec i{width:10px;height:22px;border-radius:5px;background:var(--sc,#F97316)}
+.ir-sec span{margin-left:auto;font-size:11.5px;font-weight:700;color:var(--sc,#F97316);background:color-mix(in srgb,var(--sc,#F97316) 13%,transparent);padding:2px 10px;border-radius:999px;opacity:1}
+.ir-sec.c0{--sc:#F97316}.ir-sec.c1{--sc:#2563eb}.ir-sec.c2{--sc:#16a34a}.ir-sec.c3{--sc:#7c3aed}.ir-sec.c4{--sc:#e11d48}.ir-sec.c5{--sc:#0891b2}
+.ir-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(420px,1fr));gap:8px 12px}
+.ir-grid .ir-it{margin:0;padding:12px 14px;border-radius:14px;border-left-width:5px;border-left-color:#22c55e;background:#fff;box-shadow:0 1px 3px rgba(15,23,42,.05)}
+.ir-grid .ir-it.only{border-left-color:#3b82f6;background:#f5f9ff}.ir-grid .ir-it.hide{border-left-color:#ef4444;background:#fff6f6}.ir-grid .ir-it.del{border-left-color:#9ca3af;background:#f3f4f6}
+.ir-tag.all{background:rgba(34,197,94,.14);color:#15803d}
+.ir-tag.st{background:rgba(124,58,237,.12);color:#6d28d9}
+.ir-it .a{gap:6px;align-items:center}
+.ir-set{display:inline-flex;align-items:center;gap:5px;height:34px;padding:0 12px;border-radius:10px;border:0;background:#fff1e6;color:#c2410c}
+.ir-set .material-symbols-rounded{font-size:18px}
+.ir-set:hover{background:#ffe0c7;color:#c2410c}
+.ir-set.ir-del{width:34px;padding:0;justify-content:center;background:#fff0f0;border:0;color:#dc2626}.ir-set.ir-del:hover{background:#ffd9d9;color:#b91c1c}
+.ir-set.rs{background:#e8f7ee;color:#15803d}
+@media (max-width:760px){.ir-stats{grid-template-columns:1fr 1fr}.ir-grid{grid-template-columns:1fr}}
 @media (max-width:640px){
   .ir-ov{padding:0;align-items:flex-end}
   .ir-sheet{max-width:none;max-height:94vh;border-radius:20px 20px 0 0}
@@ -7451,7 +7483,13 @@ function _irRender() {
   const cnt = sh => Object.keys(CK_ITEM_RULES).filter(k => k.indexOf(brand + '|' + sh + '|') === 0 && (CK_ITEM_RULES[k].branches || []).length).length + Object.keys(CK_ITEM_RULES).filter(k => k.indexOf('ren|' + brand + '|' + sh + '|') === 0 || k.indexOf('del|' + brand + '|' + sh + '|') === 0).length;
   const q = _irSearch.trim().toLowerCase();
   const mine = new Set(_irMyBranches(brand).map(b => String(b.code)));
-  let html = '', shown = 0;
+  let html = '', shown = 0, secNo = 0;
+  const st = { all: 0, rule: 0, ren: 0, del: 0 };
+  _irSections(brand, shift).forEach(sec => sec.items.forEach(it => {
+    const k = ckRuleKey(brand, shift, it.text), r = CK_ITEM_RULES[k];
+    st.all++; if (r && (r.branches || []).length) st.rule++;
+    if ((CK_ITEM_RULES['ren|' + k] || {}).to) st.ren++; if (CK_ITEM_RULES['del|' + k]) st.del++;
+  }));
   _irSections(brand, shift).forEach(sec => {
     const rows = sec.items.filter(it => {
       const r = CK_ITEM_RULES[ckRuleKey(brand, shift, it.text)], rn = CK_ITEM_RULES['ren|' + ckRuleKey(brand, shift, it.text)];
@@ -7461,12 +7499,12 @@ function _irRender() {
       return !q || shownText.toLowerCase().indexOf(q) >= 0 || it.text.toLowerCase().indexOf(q) >= 0;
     });
     if (!rows.length) return;
-    html += '<div class="ir-sec">' + escapeHtml(sec.name || '—') + '<span>' + rows.length + ' ข้อ</span></div>';
+    html += '<div class="ir-sec c' + (secNo++ % 6) + '"><i></i>' + escapeHtml(sec.name || '—') + '<span>' + rows.length + ' ข้อ</span></div><div class="ir-grid">';
     rows.forEach(it => {
       const r = CK_ITEM_RULES[ckRuleKey(brand, shift, it.text)], rn = CK_ITEM_RULES['ren|' + ckRuleKey(brand, shift, it.text)];
       const has = r && (r.branches || []).length;
       const mode = has ? r.mode : 'all';
-      let tag = '<span class="ir-tag">ขึ้นทุกสาขา</span>', meta = '';
+      let tag = '<span class="ir-tag all">ขึ้นทุกสาขา</span>', meta = '';
       if (has) {
         const own = (r.branches || []).filter(c => edit || mine.has(String(c)));
         tag = '<span class="ir-tag ' + (mode === 'only' ? 'only' : 'hide') + '">' + (mode === 'only' ? 'ขึ้นเฉพาะ ' : 'ยกเว้น ') + r.branches.length + ' สาขา</span>';
@@ -7477,20 +7515,22 @@ function _irRender() {
       html += '<div class="ir-it ' + (has ? mode : '') + (isDel ? ' del' : '') + '"><div class="t">' + escapeHtml(renamed ? rn.to : it.text) + (renamed ? '<div class="ir-orig">ข้อความเดิม: ' + escapeHtml(it.text) + '</div>' : '') + '</div>' +
         '<div class="m">' + (isDel ? '<span class="ir-tag hide">ลบแล้ว · ไม่ขึ้นในใบตรวจใหม่</span>' : tag) + (renamed ? '<span class="ir-tag st">แก้ข้อความแล้ว</span>' : '') + (it.only55 ? '<span class="ir-tag st">เฉพาะ ST_Easy</span>' : '') + meta + '</div>' +
         (edit ? '<div class="a">' + (isDel
-          ? '<button class="ir-set" data-t="' + escapeHtml(it.text).replace(/"/g, '&quot;') + '" onclick="restoreItemRule(this.dataset.t)">กู้คืน</button>'
-          : '<button class="ir-set" data-t="' + escapeHtml(it.text).replace(/"/g, '&quot;') + '" onclick="openItemRuleEdit(this.dataset.t)">ตั้งค่า</button> <button class="ir-set ir-del" data-t="' + escapeHtml(it.text).replace(/"/g, '&quot;') + '" onclick="deleteItemRule(this.dataset.t)">ลบ</button>') + '</div>' : '') + '</div>';
+          ? '<button class="ir-set rs" data-t="' + escapeHtml(it.text).replace(/"/g, '&quot;') + '" onclick="restoreItemRule(this.dataset.t)"><span class="material-symbols-rounded">undo</span>กู้คืน</button>'
+          : '<button class="ir-set" data-t="' + escapeHtml(it.text).replace(/"/g, '&quot;') + '" onclick="openItemRuleEdit(this.dataset.t)"><span class="material-symbols-rounded">tune</span>ตั้งค่า</button><button class="ir-set ir-del" title="ลบหัวข้อ" data-t="' + escapeHtml(it.text).replace(/"/g, '&quot;') + '" onclick="deleteItemRule(this.dataset.t)"><span class="material-symbols-rounded">delete</span></button>') + '</div>' : '') + '</div>';
       shown++;
     });
+    html += '</div>';
   });
   if (!shown) html = '<div class="ir-empty">' + (_irOnlyRules ? 'ยังไม่มีหัวข้อที่ตั้งกฎไว้ในรอบนี้' : 'ไม่พบหัวข้อที่ค้นหา') + '</div>';
   const top = 0;
   const hadFocus = document.activeElement && document.activeElement.id === 'ir-q';
   const allowed = _irAllowedBrands();
-  const brandSeg = allowed.length > 1 ? '<div class="ir-seg">' + allowed.map(k => '<button class="' + (k === brand ? 'on' : '') + '" onclick="_irSetBrand(\'' + k + '\')">' + escapeHtml((CK_BRANDS[k] && (CK_BRANDS[k].short || CK_BRANDS[k].name)) || k) + '</button>').join('') + '</div>' : '';
+  const brandSeg = allowed.length > 1 ? '<div class="ir-seg brand">' + allowed.map(k => '<button class="' + (k === brand ? 'on' : '') + '" onclick="_irSetBrand(\'' + k + '\')">' + escapeHtml((CK_BRANDS[k] && (CK_BRANDS[k].short || CK_BRANDS[k].name)) || k) + '</button>').join('') + '</div>' : '';
   const shifts = _irShifts(brand);
-  const shiftSeg = shifts.length > 1 ? '<div class="ir-seg">' + shifts.map(s => '<button class="' + (s[0] === shift ? 'on' : '') + '" onclick="_irShift=\'' + s[0] + '\';_irRender()">' + s[1] + (cnt(s[0]) ? '<b>' + cnt(s[0]) + '</b>' : '') + '</button>').join('') + '</div>' : '';
+  const shiftSeg = shifts.length > 1 ? '<div class="ir-seg shift">' + shifts.map(s => '<button class="' + (s[0] === shift ? 'on' : '') + ' sh-' + s[0] + '" onclick="_irShift=\'' + s[0] + '\';_irRender()">' + s[1] + (cnt(s[0]) ? '<b>' + cnt(s[0]) + '</b>' : '') + '</button>').join('') + '</div>' : '';
   m.innerHTML = '<div class="ir-sheet ir-page">' +
-    '<div class="ir-hd"><div class="ir-ico"><span class="material-symbols-rounded">tune</span></div><div><div class="ir-ttl">หัวข้อตรวจรายสาขา</div><div class="ir-sub">' + (edit ? 'กำหนดว่าหัวข้อไหนขึ้นที่สาขาไหน และแก้ข้อความหัวข้อได้ · ไม่ตั้งกฎ = ขึ้นทุกสาขาตามเดิม' : 'ดูว่าหัวข้อไหนขึ้นที่สาขาไหน (ดูได้อย่างเดียว · Admin เป็นผู้ตั้งค่า)') + '</div></div></div>' +
+    '<div class="ir-hd hero"><div class="ir-ico"><span class="material-symbols-rounded">tune</span></div><div><div class="ir-ttl">หัวข้อตรวจรายสาขา</div><div class="ir-sub">' + (edit ? 'กำหนดว่าหัวข้อไหนขึ้นที่สาขาไหน และแก้ข้อความหัวข้อได้ · ไม่ตั้งกฎ = ขึ้นทุกสาขาตามเดิม' : 'ดูว่าหัวข้อไหนขึ้นที่สาขาไหน (ดูได้อย่างเดียว · Admin เป็นผู้ตั้งค่า)') + '</div></div></div>' +
+    '<div class="ir-stats"><div class="s0"><span class="material-symbols-rounded">checklist</span><div><b>' + st.all + '</b><small>หัวข้อทั้งหมด</small></div></div><div class="s1"><span class="material-symbols-rounded">storefront</span><div><b>' + st.rule + '</b><small>ตั้งกฎรายสาขา</small></div></div><div class="s2"><span class="material-symbols-rounded">edit_note</span><div><b>' + st.ren + '</b><small>แก้ข้อความแล้ว</small></div></div><div class="s3"><span class="material-symbols-rounded">delete</span><div><b>' + st.del + '</b><small>ลบแล้ว</small></div></div></div>' +
     '<div class="ir-tools">' + brandSeg + shiftSeg +
       '<input id="ir-q" class="ir-q" placeholder="ค้นหาหัวข้อ…" value="' + escapeHtml(_irSearch).replace(/"/g, '&quot;') + '" oninput="_irSearch=this.value;_irRender()">' +
       '<label class="ir-tg"><input type="checkbox" ' + (_irOnlyRules ? 'checked' : '') + ' onchange="_irOnlyRules=this.checked;_irRender()">เฉพาะที่ตั้งกฎ/แก้ข้อความ</label></div>' +
