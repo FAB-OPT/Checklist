@@ -5961,6 +5961,15 @@ body.in-audit #ck-page-head { display:none; }
 #itemRuleEditModal .ir-mode.on.m-only{border-color:#3b82f6;background:#f5f9ff;box-shadow:0 0 0 3px rgba(59,130,246,.12)}#itemRuleEditModal .ir-mode.on.m-only .mi{background:#3b82f6}
 #itemRuleEditModal .ir-mode.on.m-hide{border-color:#ef4444;background:#fff6f6;box-shadow:0 0 0 3px rgba(239,68,68,.12)}#itemRuleEditModal .ir-mode.on.m-hide .mi{background:#ef4444}
 #itemRuleEditModal .ir-ft{padding:14px 22px;background:#fafbfc}
+/* สรุปสาขาที่เลือกในหน้าต่างแก้หัวข้อ */
+.ir-selbox{border-top:1px solid var(--border,#e5e7eb);padding:10px 20px 8px;background:#fffaf5;max-height:116px;overflow:auto}
+.ir-selbox .h{font-size:12px;font-weight:800;color:#9a3412;margin-bottom:6px}
+.ir-selbox .cs{display:flex;flex-wrap:wrap;gap:6px}
+.ir-selbox .ch{display:inline-flex;align-items:center;gap:6px;padding:3px 6px 3px 10px;border-radius:999px;background:#fff;border:1px solid #fed7aa;font-size:12.5px;color:#7c2d12;line-height:1.4}
+.ir-selbox .ch b{color:#ea580c;font-weight:800}
+.ir-selbox .ch button{border:0;background:#ffedd5;color:#9a3412;width:18px;height:18px;border-radius:50%;cursor:pointer;font-size:12px;line-height:1;padding:0}
+.ir-selbox .ch button:hover{background:#fdba74}
+.ir-selbox .em{font-size:12.5px;color:#9ca3af}
 #itemRuleEditModal .ir-ft .note{font-weight:700;color:#4b5563}
 #itemRuleEditModal .ir-btn{border-radius:12px;padding:11px 24px}
 @media (max-width:600px){#itemRuleEditModal .ir-modes{grid-template-columns:1fr}#itemRuleEditModal .ir-mode{flex-direction:row;align-items:center}}
@@ -7634,6 +7643,7 @@ function openItemRuleEdit(text) {
     '<div class="ir-pick" id="ir-pick" style="' + (mode === 'all' ? 'display:none' : '') + '">' +
       '<div class="ir-tools"><input id="ir-bq" class="ir-q" placeholder="ค้นหารหัส / ชื่อสาขา / ชื่อโซน…" oninput="_irFilter()"><button class="ir-set" onclick="_irAll(true)">เลือกที่เห็น</button><button class="ir-set" onclick="_irAll(false)">ล้าง</button></div>' +
       '<div class="ir-list" id="ir-br" style="max-height:38vh">' + zhtml + '</div></div></div>' +
+    '<div class="ir-selbox" id="ir-selbox" style="' + (mode === 'all' ? 'display:none' : '') + '"></div>' +
     '<div class="ir-ft"><div class="note" id="ir-count"></div><button class="ir-btn ghost" onclick="document.getElementById(\'itemRuleEditModal\').classList.remove(\'show\')">ยกเลิก</button><button class="ir-btn" onclick="saveItemRuleEdit()">บันทึก</button></div></div>';
   m.classList.add('show');
   _irCount();
@@ -7650,6 +7660,10 @@ function _irFilter() {
   document.querySelectorAll('#ir-br .ir-zone').forEach(z => { z.style.display = [].slice.call(z.querySelectorAll('label')).some(l => l.style.display !== 'none') ? '' : 'none'; });
 }
 function _irAll(on) { document.querySelectorAll('#ir-br label').forEach(l => { if (l.style.display !== 'none') l.querySelector('input').checked = on; }); _irCount(); }
+function _irUncheck(code) {
+  const x = [].slice.call(document.querySelectorAll('#ir-br .ir-bs input')).find(i => i.value === String(code));
+  if (x) { x.checked = false; _irCount(); }
+}
 function _irZone(head, on) {
   const z = head.parentNode; const boxes = [].slice.call(z.querySelectorAll('.ir-bs label')).filter(l => l.style.display !== 'none').map(l => l.querySelector('input'));
   const val = (typeof on === 'boolean') ? on : !boxes.every(b => b.checked);
@@ -7663,6 +7677,16 @@ function _irCount() {
     const em = z.querySelector('.ir-zh em'); if (em) em.textContent = c + '/' + bx.length + ' สาขา';
   });
   const mode = (document.querySelector('input[name="ir-mode"]:checked') || {}).value || 'all';
+  const sb = document.getElementById('ir-selbox');
+  if (sb) {
+    sb.style.display = mode === 'all' ? 'none' : '';
+    const picked = [].slice.call(document.querySelectorAll('#ir-br .ir-bs input:checked')).map(x => {
+      const l = x.closest('label'), nm = l ? l.lastElementChild.textContent : '';
+      return '<span class="ch"><b>' + escapeHtml(String(x.value)) + '</b>' + escapeHtml(nm) + '<button type="button" title="เอาออก" onclick="_irUncheck(this.dataset.c)" data-c="' + escapeHtml(String(x.value)).replace(/"/g, '&quot;') + '">×</button></span>';
+    });
+    sb.innerHTML = '<div class="h">' + (mode === 'hide' ? 'สาขาที่จะไม่เห็นหัวข้อนี้' : 'สาขาที่จะเห็นหัวข้อนี้') + ' · ' + picked.length + ' สาขา</div>' +
+      (picked.length ? '<div class="cs">' + picked.join('') + '</div>' : '<div class="em">ยังไม่ได้เลือกสาขา — ติ๊กจากรายการด้านบน</div>');
+  }
   const c = document.getElementById('ir-count');
   if (c) c.textContent = mode === 'all' ? 'ทุกสาขาเห็นหัวข้อนี้' : 'เลือกแล้ว ' + n + ' จาก ' + t + ' สาขา' + (mode === 'hide' ? ' (จะไม่เห็นหัวข้อนี้)' : ' (จะเห็นหัวข้อนี้)');
 }
