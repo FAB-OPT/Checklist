@@ -5971,6 +5971,33 @@ body.in-audit #ck-page-head { display:none; }
 .ir-selbox .ch button:hover{background:#fdba74}
 .ir-selbox .em{font-size:12.5px;color:#9ca3af}
 #itemRuleEditModal .ir-ft .note{font-weight:700;color:#4b5563}
+/* หน้าต่างแก้หัวข้อแบบกว้าง: ซ้าย = เลือกสาขาทุกโซนในหน้าเดียว (4 คอลัมน์) · ขวา = ข้อความ/โหมด/สาขาที่เลือก — ไม่ต้องเลื่อน */
+#itemRuleEditModal .ir-sheet{max-width:1240px;width:min(1240px,96vw);max-height:94vh}
+#itemRuleEditModal .irx{display:grid;grid-template-columns:minmax(0,1fr) 420px;flex:1;min-height:0}
+#itemRuleEditModal .irx-l{display:flex;flex-direction:column;min-height:0;overflow:auto;background:#fff}
+#itemRuleEditModal .irx-l .ir-pick{flex:1;min-height:0}
+#itemRuleEditModal .irx-l .ir-tools{position:sticky;top:0;z-index:3;background:#fff;margin:0;padding:12px 18px;border-top:0;border-bottom:1px solid var(--border,#e5e7eb)}
+#itemRuleEditModal #ir-br{max-height:none!important;overflow:visible;padding:8px 18px 12px;column-count:4;column-gap:14px}
+#itemRuleEditModal #ir-br .ir-zone{break-inside:avoid;margin-bottom:10px}
+#itemRuleEditModal #ir-br .ir-zh{position:static;padding:4px 0 3px;background:transparent}
+#itemRuleEditModal #ir-br .ir-bs{display:block}
+#itemRuleEditModal #ir-br .ir-bs label{padding:3px 6px;font-size:12.5px;gap:6px;min-width:0}
+#itemRuleEditModal #ir-br .ir-bs label span:last-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#itemRuleEditModal .irx-r{border-left:1px solid var(--border,#e5e7eb);background:#fff;display:flex;flex-direction:column;min-height:0;overflow:auto}
+#itemRuleEditModal .irx-r .ir-fld{padding:16px 18px 0}
+#itemRuleEditModal .irx-r .ir-modes{grid-template-columns:repeat(3,1fr);padding:6px 18px 10px;gap:8px}
+#itemRuleEditModal .irx-r .ir-mode{flex-direction:column;align-items:center;text-align:center;gap:4px;padding:9px 6px;border-radius:13px}
+#itemRuleEditModal .irx-r .ir-mode .mi{width:30px;height:30px;font-size:18px;border-radius:10px;flex:none}
+#itemRuleEditModal .irx-r .ir-mode .tt{font-size:13px}
+#itemRuleEditModal .irx-r .ir-mode .dd{font-size:11px;line-height:1.35}
+#itemRuleEditModal .irx-r .ir-ta{min-height:58px}
+#itemRuleEditModal .irx-r .ir-selbox .ch{padding:2px 4px 2px 9px;font-size:12px}
+#itemRuleEditModal .irx-r .ir-selbox{flex:1;max-height:none;overflow:auto;min-height:90px}
+#itemRuleEditModal .irx-all{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;flex:1;padding:40px 24px;text-align:center;color:#6b7280;font-size:13px}
+#itemRuleEditModal .irx-all .material-symbols-rounded{font-size:42px;color:#9ca3af}
+#itemRuleEditModal .irx-all b{font-size:16px;color:#1f2430}
+@media (max-width:980px){#itemRuleEditModal .irx{grid-template-columns:1fr;overflow:auto}#itemRuleEditModal .irx-r{border-left:0;border-top:1px solid var(--border,#e5e7eb);order:-1;overflow:visible}#itemRuleEditModal .irx-l{overflow:visible}#itemRuleEditModal #ir-br{column-count:2}}
+
 #itemRuleEditModal .ir-btn{border-radius:12px;padding:11px 24px}
 @media (max-width:600px){#itemRuleEditModal .ir-modes{grid-template-columns:1fr}#itemRuleEditModal .ir-mode{flex-direction:row;align-items:center}}
 @media (max-width:760px){.ir-stats{grid-template-columns:1fr 1fr}.ir-grid{grid-template-columns:1fr}}
@@ -7629,21 +7656,27 @@ function openItemRuleEdit(text) {
   const zhtml = Object.keys(zones).sort().map(z => {
     const bs = zones[z];
     return '<div class="ir-zone"><div class="ir-zh" onclick="_irZone(this)"><input type="checkbox" onclick="event.stopPropagation();_irZone(this.parentNode,this.checked)"><span>' + escapeHtml(z) + '</span><em></em></div><div class="ir-bs">' +
-      bs.map(b => '<label data-q="' + escapeHtml((b.code + ' ' + b.name + ' ' + z).toLowerCase()).replace(/"/g, '&quot;') + '"><input type="checkbox" value="' + escapeHtml(String(b.code)).replace(/"/g, '&quot;') + '" ' + (sel.indexOf(String(b.code)) >= 0 ? 'checked' : '') + ' onchange="_irCount()">' + (b.jd ? '' : '<span class="c">' + escapeHtml(String(b.code)) + '</span>') + '<span>' + escapeHtml(b.jd ? String(b.name) : String(b.name || '').replace(String(b.code), '').trim()) + '</span></label>').join('') + '</div></div>';
+      bs.map(b => '<label title="' + escapeHtml(String(b.code) + ' ' + String(b.name || '')).replace(/"/g, '&quot;') + '" data-q="' + escapeHtml((b.code + ' ' + b.name + ' ' + z).toLowerCase()).replace(/"/g, '&quot;') + '"><input type="checkbox" value="' + escapeHtml(String(b.code)).replace(/"/g, '&quot;') + '" ' + (sel.indexOf(String(b.code)) >= 0 ? 'checked' : '') + ' onchange="_irCount()">' + (b.jd ? '' : '<span class="c">' + escapeHtml(String(b.code)) + '</span>') + '<span>' + escapeHtml(b.jd ? String(b.name) : String(b.name || '').replace(String(b.code), '').trim()) + '</span></label>').join('') + '</div></div>';
   }).join('');
   const modeCard = (v, ic, tt, dd) => '<label class="ir-mode m-' + v + ' ' + (mode === v ? 'on' : '') + '"><input type="radio" name="ir-mode" value="' + v + '" ' + (mode === v ? 'checked' : '') + ' onchange="_irModeChange()"><span class="mi material-symbols-rounded">' + ic + '</span><span class="mx"><div class="tt">' + tt + '</div><div class="dd">' + dd + '</div></span></label>';
   const shiftName = (_irShifts(brand).find(s => s[0] === shift) || [0, ''])[1];
   m.innerHTML = '<div class="ir-sheet sm">' +
     '<div class="ir-hd"><div class="ir-ico"><span class="material-symbols-rounded">rule</span></div><div style="min-width:0"><div class="ir-ttl" style="font-size:15px">แก้หัวข้อ</div><div class="ir-sub">' + escapeHtml((CK_BRANDS[brand] && (CK_BRANDS[brand].short || CK_BRANDS[brand].name)) || brand) + ' · ' + escapeHtml(shiftName) + '</div></div><button class="ir-x" onclick="document.getElementById(\'itemRuleEditModal\').classList.remove(\'show\')" title="ปิด"><span class="material-symbols-rounded" style="font-size:20px">close</span></button></div>' +
-    '<div style="overflow:auto;flex:1;min-height:0;display:flex;flex-direction:column">' +
-    '<div class="ir-fld"><div class="ir-fl"><b>1</b>ข้อความหัวข้อ</div><textarea id="ir-text" class="ir-ta" rows="2">' + escapeHtml(cur) + '</textarea>' +
-      '<div class="ir-fh">' + (cur !== text ? 'ข้อความเดิม: ' + escapeHtml(text) + ' · <a href="#" onclick="document.getElementById(\'ir-text\').value=_irEditText;return false">คืนค่าเดิม</a>' : 'แก้ข้อความที่นี่ ใบตรวจใหม่จะใช้ข้อความนี้ · สถิติยังนับรวมกับหัวข้อเดิม') + '</div></div>' +
-    '<div class="ir-fl" style="padding:16px 20px 0"><b>2</b>ขึ้นที่สาขาไหน</div>' +
-    '<div class="ir-modes">' + modeCard('all', 'public', 'ทุกสาขา', 'ค่าเริ่มต้น · ทุกสาขาเห็น') + modeCard('only', 'my_location', 'เฉพาะที่เลือก', 'สาขาอื่นไม่เห็น') + modeCard('hide', 'block', 'ยกเว้นที่เลือก', 'สาขาที่เลือกไม่เห็น') + '</div>' +
-    '<div class="ir-pick" id="ir-pick" style="' + (mode === 'all' ? 'display:none' : '') + '">' +
-      '<div class="ir-tools"><input id="ir-bq" class="ir-q" placeholder="ค้นหารหัส / ชื่อสาขา / ชื่อโซน…" oninput="_irFilter()"><button class="ir-set" onclick="_irAll(true)">เลือกที่เห็น</button><button class="ir-set" onclick="_irAll(false)">ล้าง</button></div>' +
-      '<div class="ir-list" id="ir-br" style="max-height:38vh">' + zhtml + '</div></div></div>' +
-    '<div class="ir-selbox" id="ir-selbox" style="' + (mode === 'all' ? 'display:none' : '') + '"></div>' +
+    '<div class="irx">' +
+      '<div class="irx-l">' +
+        '<div class="ir-pick" id="ir-pick" style="' + (mode === 'all' ? 'display:none' : '') + '">' +
+          '<div class="ir-tools"><input id="ir-bq" class="ir-q" placeholder="ค้นหารหัส / ชื่อสาขา / ชื่อโซน…" oninput="_irFilter()"><button class="ir-set" onclick="_irAll(true)">เลือกที่เห็น</button><button class="ir-set" onclick="_irAll(false)">ล้าง</button></div>' +
+          '<div class="ir-list" id="ir-br">' + zhtml + '</div></div>' +
+        '<div class="irx-all" id="ir-allhint" style="' + (mode === 'all' ? '' : 'display:none') + '"><span class="material-symbols-rounded">public</span><b>ทุกสาขาเห็นหัวข้อนี้</b><span>ไม่ต้องเลือกสาขา — เลือก “เฉพาะที่เลือก” หรือ “ยกเว้นที่เลือก” ทางขวาเพื่อกำหนดสาขา</span></div>' +
+      '</div>' +
+      '<div class="irx-r">' +
+        '<div class="ir-fld"><div class="ir-fl"><b>1</b>ข้อความหัวข้อ</div><textarea id="ir-text" class="ir-ta" rows="3">' + escapeHtml(cur) + '</textarea>' +
+          '<div class="ir-fh">' + (cur !== text ? 'ข้อความเดิม: ' + escapeHtml(text) + ' · <a href="#" onclick="document.getElementById(\'ir-text\').value=_irEditText;return false">คืนค่าเดิม</a>' : 'แก้ข้อความที่นี่ ใบตรวจใหม่จะใช้ข้อความนี้ · สถิติยังนับรวมกับหัวข้อเดิม') + '</div></div>' +
+        '<div class="ir-fl" style="padding:14px 18px 0"><b>2</b>ขึ้นที่สาขาไหน</div>' +
+        '<div class="ir-modes">' + modeCard('all', 'public', 'ทุกสาขา', 'ค่าเริ่มต้น · ทุกสาขาเห็น') + modeCard('only', 'my_location', 'เฉพาะที่เลือก', 'สาขาอื่นไม่เห็น') + modeCard('hide', 'block', 'ยกเว้นที่เลือก', 'สาขาที่เลือกไม่เห็น') + '</div>' +
+        '<div class="ir-selbox" id="ir-selbox" style="' + (mode === 'all' ? 'display:none' : '') + '"></div>' +
+      '</div>' +
+    '</div>' +
     '<div class="ir-ft"><div class="note" id="ir-count"></div><button class="ir-btn ghost" onclick="document.getElementById(\'itemRuleEditModal\').classList.remove(\'show\')">ยกเลิก</button><button class="ir-btn" onclick="saveItemRuleEdit()">บันทึก</button></div></div>';
   m.classList.add('show');
   _irCount();
@@ -7652,6 +7685,7 @@ function _irModeChange() {
   const v = (document.querySelector('input[name="ir-mode"]:checked') || {}).value;
   document.querySelectorAll('#itemRuleEditModal .ir-mode').forEach(el => el.classList.toggle('on', el.querySelector('input').checked));
   const w = document.getElementById('ir-pick'); if (w) w.style.display = v === 'all' ? 'none' : '';
+  const hn = document.getElementById('ir-allhint'); if (hn) hn.style.display = v === 'all' ? '' : 'none';
   _irCount();
 }
 function _irFilter() {
