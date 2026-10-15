@@ -6880,14 +6880,11 @@ let currentBrand = null; // 'santafe' | 'jaedaeng'
 // แต่ละสาขามี lat/lng ฝังในตัว → ระยะ GPS คำนวณตรงๆ ไม่ต้อง fuzzy match
 // รายการด้านล่างเป็น default · จะถูก override โดย cloud หรือ localStorage ถ้ามี
 let JAEDAENG_BRANCHES = [
-  // นุชจรินทร์ (พี่กัส)
-  { name: "ร้านส้มตำเจ๊แดง (ธนิยะ)", manager: "นุชจรินทร์", managerNick: "พี่กัส", lat: 13.730303, lng: 100.533171 },
   { name: "ร้านส้มตำเจ๊แดง (ดุสิต เซ็นทรัล พาร์ค)", manager: "ขวัญดาว", managerNick: "พี่ดาว", lat: 13.7286393, lng: 100.5373889 },
   { name: "ร้านส้มตำเจ๊แดง (พรานนก)", manager: "จุรีพร", managerNick: "พี่อีฟ", lat: 13.7535416, lng: 100.448169 },
   { name: "ร้านส้มตำเจ๊แดง (Paseo กาญจนาภิเษก)", manager: "พิมพ์พิชชา", managerNick: "พี่อ้อย", lat: 13.766593, lng: 100.406222 },
   { name: "ร้านส้มตำเจ๊แดง (เซ็นทรัลพระราม 2)", manager: "พิมพ์พิชชา", managerNick: "พี่อ้อย", lat: 13.6634845, lng: 100.4375234 },
   { name: "ร้านส้มตำเจ๊แดง (The Bright พระราม 2)", manager: "พิมพ์พิชชา", managerNick: "พี่อ้อย", lat: 13.66876, lng: 100.4523693 },
-  { name: "ร้านส้มตำเจ๊แดง (ศาลายา ปั๊ม PT)", manager: "นุชจรินทร์", managerNick: "พี่กัส", lat: 13.788697, lng: 100.3419475 },
   { name: "ร้านส้มตำเจ๊แดง (ปั๊ม ปตท.เวสวิลเลจ)", manager: "พิมพ์พิชชา", managerNick: "พี่อ้อย", lat: 13.856723, lng: 100.4102629 },
   { name: "ร้านส้มตำเจ๊แดง (ปตท.บรมราชชนนี)", manager: "จุรีพร", managerNick: "พี่อีฟ", lat: 13.7804619, lng: 100.4133608 },
   { name: "ร้านส้มตำเจ๊แดง (บางจาก ราชพฤกษ์)", manager: "จุรีพร", managerNick: "พี่อีฟ", lat: 13.7907175, lng: 100.4472591 },
@@ -7042,7 +7039,6 @@ const USERS_JAEDAENG = {
   "490057": { name: "พิมพ์พิชชา",    nick: "พี่อ้อย",  role: "bzm", title: "นางสาว" },
   "560874": { name: "จุรีพร",         nick: "พี่อีฟ",   role: "bzm", title: "นางสาว" },
   "651221": { name: "ขวัญดาว",      nick: "พี่ดาว",   role: "bzm" },
-  "651462": { name: "นุชจรินทร์",       nick: "พี่กัส",   role: "bzm" },
 };
 let currentAudit = null; // {id, branchInfo, answers, currentSectionIdx, status}
 let allAudits = []; // loaded from storage
