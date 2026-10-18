@@ -8378,6 +8378,29 @@ function _dailyFirstFrom() {
   const q = _daysAgoStr(DAILY_PHONE_FIRST_DAYS);
   return q > m ? q : m;      /* ต้นเดือนใหม่ ๆ ช่วง 7 วันจะคร่อมเดือนก่อน — ใช้วันที่ 1 พอ */
 }
+/* ── หมุด "ดึงล่าสุดถึงเมื่อไร" ตามเวลาเซิร์ฟเวอร์ ──
+   ของเดิมใช้ updatedAt ล่าสุดของใบที่อยู่ในเครื่องเป็นหมุด แล้วดึงเฉพาะ updatedAt ที่ใหม่กว่านั้น
+   ปัญหา: หมุดเลื่อนไปข้างหน้าเองทุกครั้งที่เครื่องนี้ "บันทึกใบของตัวเอง" (updatedAt = เวลาเครื่อง)
+   ต่อให้รอบดึงก่อนหน้านั้นล้มเหลว (เน็ตหลุด/ปิดแอปก่อนเสร็จ) ใบของวันที่ผ่านมาที่เครื่องอื่นส่ง
+   จะถูกข้ามตลอดไป ปฏิทินจึงขึ้นว่า "ไม่ได้ส่ง" ทั้งที่ส่งแล้ว และเป็นเฉพาะบางเครื่อง
+   แก้: หมุดมาจากเวลาเซิร์ฟเวอร์ ณ ก่อนเริ่มดึง และบันทึกเฉพาะเมื่อดึง+รวมสำเร็จ
+   ใช้ server_at (ไม่ใช่ updatedAt ที่มาจากนาฬิกาเครื่อง) · เครื่องที่ไม่มีหมุดจะดึงเต็มหนึ่งรอบเพื่อซ่อมแคชเก่า */
+const DAILY_SRV_KEY = 'qa_daily_srv_v2';
+const DAILY_MFULL_KEY = 'qa_daily_mfull_v2';
+const DAILY_MFULL_EVERY_MS = 24 * 60 * 60 * 1000;   // สาขา: ดึง "เดือนนี้" เต็มวันละครั้ง กันของหลุดที่เหลือ
+function _dailySrvCursor() { try { return localStorage.getItem(DAILY_SRV_KEY) || ''; } catch (_) { return ''; } }
+function _dailySrvSave(iso) { try { localStorage.setItem(DAILY_SRV_KEY, iso); } catch (_) {} }
+function _dailyMfullDue() { try { return Date.now() - Number(localStorage.getItem(DAILY_MFULL_KEY) || 0) > DAILY_MFULL_EVERY_MS; } catch (_) { return true; } }
+function _dailyMfullDone() { try { localStorage.setItem(DAILY_MFULL_KEY, String(Date.now())); } catch (_) {} }
+async function _ckServerNow() {
+  const r = await CkSB.rpc('ck_query', { p_col: '_meta', p_filters: [], p_since: null, p_after: null, p_limit: 1 });
+  return (r && r.now) || '';
+}
+/* ดึงเฉพาะใบที่เปลี่ยนหลังเวลาเซิร์ฟเวอร์ที่กำหนด (ตัวกรองอื่นใส่เพิ่มได้) */
+async function _dailyGetSince(filters, since) {
+  const r = await new CkQuery(DAILY_COLLECTION, filters || [])._sb(since);
+  return _ckQuerySnap(DAILY_COLLECTION, r.rows);
+}
 const DAILY_SYNC_OVERLAP_MS = 6 * 60 * 60 * 1000;  // เผื่อนาฬิกาเครื่องคลาดกัน 6 ชม. กันข้อมูลตกหล่น
 function _maxDailyUpdatedAt(list) {
   let m = '';
@@ -8446,6 +8469,13 @@ async function loadDailyChecklists() {
   // แมพเก็บทุก record ในเครื่อง (รวม deleted) ตาม id ไว้ merge
   const map = new Map(local.filter(d => d && d.id != null).map(d => [String(d.id), d]));
   const cursor = _maxDailyUpdatedAt(local) || _dailyCursorSaved();
+  /* Supabase: ใช้หมุดเวลาเซิร์ฟเวอร์ (ดูอธิบายที่ _dailySrvCursor) · ต้องมีของในเครื่องจริงด้วย
+     (แคชหายแต่หมุดค้างอยู่ = ต้องดึงเต็ม ไม่ใช่ดึงเฉพาะที่เปลี่ยน) */
+  const _sbOn = !!CkSB.on;
+  let _t0 = '';
+  if (_sbOn) { try { _t0 = await _ckServerNow(); } catch (_) { _t0 = ''; } }
+  const _srv = (_sbOn && _t0 && local.length) ? _dailySrvCursor() : '';
+  const _haveCur = _sbOn ? !!_srv : !!cursor;
   try {
     let snap;
     const _isBr = currentUser && currentUser.role === 'branch';
@@ -8455,18 +8485,23 @@ async function loadDailyChecklists() {
       /* บน Supabase: มีแคชครบแล้ว → ดึงเฉพาะที่เปลี่ยน · ของเดิมดึงทุกใบของสาขาทุกครั้งที่เปิด
          (~1.6 MB และโตทุกวัน) ซึ่งจะชนเพดานโหลดออกของ Supabase ฟรี (5 GB/เดือน) */
       const _cov = _dailyCoverFrom();
-      const _inc = CkSB.on && cursor && _cov && _cov <= _dailyFirstFrom();
+      const _inc = _sbOn && _srv && _cov && _cov <= _dailyFirstFrom();
       snap = _inc
-        ? await firebaseDb.collection(DAILY_COLLECTION).where('branchCode', '==', _bc)
-            .where('updatedAt', '>', new Date(new Date(cursor).getTime() - DAILY_SYNC_OVERLAP_MS).toISOString()).get()
+        ? await _dailyGetSince([{ f: 'branchCode', op: '==', v: _bc }], _srv)
         : await firebaseDb.collection(DAILY_COLLECTION).where('branchCode', '==', _bc).get();
+      /* ดึง "เดือนนี้" เต็มวันละครั้งเสริมอีกชั้น — เผื่อใบที่หลุดจากเหตุอื่น (แคชถูกตัด ฯลฯ) */
+      if (_inc && _dailyMfullDue()) {
+        const _m = await firebaseDb.collection(DAILY_COLLECTION).where('branchCode', '==', _bc).where('date', '>=', _dailyMonthFrom()).get();
+        snap = { docs: snap.docs.concat(_m.docs) };
+        _dailyMfullDone();
+      }
     } else {
       /* ช่วงไม่กี่วันล่าสุด = สิ่งที่ตารางหน้าแรกแสดง ต้องครบเสมอ
          จึงดึงตามวันที่ทุกครั้ง ไม่พึ่งแคช แล้ววาดให้เห็นทันที
          (ก้อนเล็ก ไม่กี่ร้อยรายการ) */
       const recent = _daysAgoStr(DAILY_FIRST_PAINT_DAYS);
       const _cover0 = _dailyCoverFrom();
-      const _fresh = !!cursor && !!_cover0 && _cover0 <= _dailyFirstFrom() && !_daily3Due();
+      const _fresh = _haveCur && !!_cover0 && _cover0 <= _dailyFirstFrom() && !_daily3Due();
       if (!_fresh) {
         const first = await firebaseDb.collection(DAILY_COLLECTION).where('date', '>=', recent).get();
         _mergeDailyDocs(map, first.docs);
@@ -8480,11 +8515,14 @@ async function loadDailyChecklists() {
            ถูกตัดทิ้งจะไม่กลับมา แล้วตารางจะขึ้นว่ายังไม่ส่งทั้งที่ส่งแล้ว */
       const since = _dailyFirstFrom();
       const cover = _dailyCoverFrom();
-      const covered = !!cursor && !!cover && cover <= since;
+      const covered = _haveCur && !!cover && cover <= since;
       if (covered) {
-        const from = new Date(new Date(cursor).getTime() - DAILY_SYNC_OVERLAP_MS).toISOString();
-        snap = await firebaseDb.collection(DAILY_COLLECTION)
-          .where('updatedAt', '>', from).get();
+        if (_sbOn) snap = await _dailyGetSince([], _srv);
+        else {
+          const from = new Date(new Date(cursor).getTime() - DAILY_SYNC_OVERLAP_MS).toISOString();
+          snap = await firebaseDb.collection(DAILY_COLLECTION)
+            .where('updatedAt', '>', from).get();
+        }
       } else {
         if (cursor) console.warn('[daily] แคชไม่ครบช่วง (ถึง ' + (cover || '—') + ') → ดึงตามวันที่แทน');
         snap = await firebaseDb.collection(DAILY_COLLECTION)
@@ -8492,6 +8530,7 @@ async function loadDailyChecklists() {
       }
     }
     const _chg = _mergeDailyDocs(map, snap.docs);
+    if (_sbOn && _t0) _dailySrvSave(new Date(new Date(_t0).getTime() - 10000).toISOString());   // ดึง+รวมสำเร็จแล้วค่อยเลื่อนหมุด
     allDailyChecklists.forEach(function(d){ const _x = _dropBase64Photos(d.items); if (_x > 0 && d.id != null && !_dailyB64CleanIds.has(String(d.id))) { _dailyB64CleanIds.add(String(d.id)); _silentResaveDaily(d); } });   // ตัด base64 + ล้างขึ้น cloud
     if (_chg) saveDailyLocal();   // ไม่มีอะไรเปลี่ยน = ไม่ต้องเขียนแคชทั้งก้อนลงเครื่อง (มือถือช้า)
     _dailyFullLoaded = false; // ยังโหลดไม่ครบทุกวัน → ปุ่ม "ดูย้อนหลังทั้งหมด" ยังใช้ได้
