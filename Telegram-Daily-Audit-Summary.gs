@@ -50,17 +50,17 @@ var HUB_SB_KEY = 'sb_publishable_n1w7k8mdxGbtaHKZ4xnNWA_wxUHhEtP';
 
 // รายชื่อสำรอง (ใช้เมื่ออ่านทะเบียนฮับไม่ได้เท่านั้น) · role: bzm = ทีมที่ "ควรตรวจ"
 var FALLBACK_USERS = [
-  { code: '550713', name: 'Nattakorn Ersathaporn',  nick: 'พี่ปอ',     role: 'vp',  brands: ['jaedaeng'] },
-  { code: '590022', name: 'Kanusswan  aimsumrun',    nick: 'พี่เฟิร์น', role: 'bzm', brands: ['jaedaeng'] },
-  { code: '490057', name: 'Phimphitcha Chatchawan', nick: 'พี่อ้อย',   role: 'bzm', brands: ['jaedaeng'] },
-  { code: '560874', name: 'Jureeporn Thong-ach',    nick: 'พี่อีฟ',    role: 'bzm', brands: ['jaedaeng'] },
-  { code: '651221', name: 'Khwandao Boonruang',     nick: 'พี่ดาว',    role: 'bzm', brands: ['jaedaeng'] },
+  { code: '550713', name: 'Nattakorn Ersathaporn',  nick: "P'Por",    role: 'vp',  brands: ['jaedaeng'] },
+  { code: '590022', name: 'Kanusswan  aimsumrun',    nick: "P'Fern",   role: 'bzm', brands: ['jaedaeng'] },
+  { code: '490057', name: 'Phimphitcha Chatchawan', nick: "P'Aoy",    role: 'bzm', brands: ['jaedaeng'] },
+  { code: '560874', name: 'Jureeporn Thong-ach',    nick: "P'Eve",    role: 'bzm', brands: ['jaedaeng'] },
+  { code: '651221', name: 'Khwandao Boonruang',     nick: "P'Daw",    role: 'bzm', brands: ['jaedaeng'] },
   { code: '601183', name: 'Kantapon Lapmongkolnawin', nick: "P'Guy",  role: 'admin', brands: ['santafe'] },
-  { code: '681201', name: 'Angkana Nilkumnerd',     nick: 'พี่อิ๊ว',   role: 'coo', brands: ['santafe'] }
+  { code: '681201', name: 'Angkana Nilkumnerd',     nick: "P'Ew",     role: 'coo', brands: ['santafe'] }
 ];
-// ชื่อเล่นอังกฤษเดิมที่เคยถูกบันทึกติดไปกับผลตรวจเก่า → แสดงเป็นชื่อเล่นปัจจุบันของรหัสนั้น
+// ชื่อเล่นแบบอื่นของคนเดียวกัน (เช่น ชื่อไทย) ที่อาจติดมากับผลตรวจ → แสดงเป็นชื่อเล่นปัจจุบันในทะเบียน
 var OLD_NICK_BY_CODE = {
-  '550713': ["P'Por"], '590022': ["P'Fern"], '490057': ["P'Aoy"], '560874': ["P'Eve"], '651221': ["P'Daw"], '681201': ["P'Ew"]
+  '550713': ['พี่ปอ'], '590022': ['พี่เฟิร์น'], '490057': ['พี่อ้อย'], '560874': ['พี่อีฟ'], '651221': ['พี่ดาว'], '681201': ['พี่อิ๊ว']
 };
 
 var _usersCache = null, _usersSource = '';
@@ -116,7 +116,7 @@ function nameByCode_(code, fallback) {
   return fallback || '-';
 }
 
-// ชื่อเล่นที่ติดมากับผลตรวจ (อาจเป็นชื่อเก่า เช่น P'Eve) → ชื่อเล่นปัจจุบันของคนนั้น
+// ชื่อเล่นที่ติดมากับผลตรวจ (อาจเป็นชื่ออีกแบบ เช่น พี่อีฟ) → ชื่อเล่นปัจจุบันของคนนั้นตามทะเบียน
 function currentNick_(raw) {
   var t = String(raw == null ? '' : raw).trim();
   if (!t) return '';
