@@ -8375,7 +8375,17 @@ function _writeShrinkingCache(key, records, label) {
    จำเป็นเพราะจุดอ้างอิงเวลา (updatedAt ล่าสุด) บอกได้แค่ว่า "ใหม่ถึงไหน"
    ไม่ได้บอกว่า "เก่าถึงไหน" — พอแคชถูกตัดให้เล็กลงเพราะพื้นที่ไม่พอ
    รอบต่อไปจะดึงแต่ของที่เปลี่ยนใหม่ ของเก่าที่ถูกตัดจะไม่กลับมาอีกเลย */
-const DAILY_COVER_KEY = 'qa_daily_cover_v1';
+/* v2: "แคชครอบคลุมถึงวันไหน" ต้องมาจากการดึงช่วงวันที่เต็มสำเร็จจริงเท่านั้น
+   ของเดิม (v1) คิดจากวันที่เก่าสุดของใบที่มีในเครื่อง ซึ่งผิดเมื่อมีใบเก่าโผล่มาแบบกระจัดกระจาย
+   (ใบเก่าที่ถูกแก้/บันทึกซ้ำใหม่ ๆ เข้ามากับรอบ "ดึงเฉพาะที่เปลี่ยน") → เครื่องเข้าใจว่าครบทั้งเดือน
+   แล้วไม่ดึงวันที่ 1-11 เลย ปฏิทินขึ้น 1/63 2/63 ทั้งที่ส่งครบ */
+const DAILY_COVER_KEY = 'qa_daily_cover_v2';
+function _dailyCoverSet(date) {
+  try {
+    const cur = localStorage.getItem(DAILY_COVER_KEY) || '';
+    if (!cur || date < cur) localStorage.setItem(DAILY_COVER_KEY, date);
+  } catch (_) {}
+}
 function _dailyCoverFrom() {
   try { return localStorage.getItem(DAILY_COVER_KEY) || ''; } catch (_) { return ''; }
 }
@@ -8392,8 +8402,6 @@ function saveDailyLocal() {
      จึงเป็นวันเก่าสุดที่มีอยู่ ไม่ใช่วันเก่าสุดที่เหลือรอดจากการตัดทิ้งเหมือนเมื่อก่อน */
   const all = (allDailyChecklists || []).filter(Boolean);
   try {
-    const dates = all.map(d => d && d.date).filter(Boolean).sort();
-    localStorage.setItem(DAILY_COVER_KEY, dates[0] || '');
     const cur = _maxDailyUpdatedAt(all);
     if (cur) localStorage.setItem(DAILY_CURSOR_KEY, cur);
   } catch (_) {}
@@ -8463,7 +8471,7 @@ function _adoptCachedDaily(cached) {
   allDailyChecklists = Array.from(m.values()).filter(d => d && !d.deleted);
 }
 /* รุ่นของโค้ดชุดนี้ + เวลาซิงค์ล่าสุด — โชว์ใต้ปฏิทินให้เห็นว่าเครื่องนี้ใช้โค้ดใหม่หรือยัง และดึงข้อมูลล่าสุดเมื่อไร */
-const CK_BUILD = '20261019a';
+const CK_BUILD = '20261019b';
 const DAILY_SYNCED_KEY = 'qa_daily_synced_at_v2';
 function _dailySyncedAt() { try { return localStorage.getItem(DAILY_SYNCED_KEY) || ''; } catch (_) { return ''; } }
 function _dailySyncedSave() { try { localStorage.setItem(DAILY_SYNCED_KEY, new Date().toISOString()); } catch (_) {} }
@@ -8471,7 +8479,8 @@ function _dailySyncedSave() { try { localStorage.setItem(DAILY_SYNCED_KEY, new D
 async function _dailyForceResync(btn) {
   if (btn) { btn.disabled = true; btn.textContent = 'กำลังดึงข้อมูลใหม่…'; }
   try {
-    try { localStorage.removeItem(DAILY_SRV_KEY); localStorage.removeItem(DAILY_MFULL_KEY); } catch (_) {}
+    try { localStorage.removeItem(DAILY_SRV_KEY); localStorage.removeItem(DAILY_MFULL_KEY); localStorage.removeItem(DAILY_COVER_KEY); } catch (_) {}
+    _dailyLoadedFrom = '';
     await loadDailyChecklists();
   } catch (e) { console.warn('[daily] ดึงใหม่ไม่สำเร็จ', e); }
   _dailyRepaintMonth();
@@ -8552,7 +8561,7 @@ async function loadDailyChecklists() {
   const _srv = (_sbOn && _t0 && local.length) ? _dailySrvCursor() : '';
   const _haveCur = _sbOn ? !!_srv : !!cursor;
   try {
-    let snap;
+    let snap, _coverTo = '';   // _coverTo = ดึงช่วงวันที่เต็มสำเร็จตั้งแต่วันนี้ → จดหมุดครอบคลุมหลังรวมสำเร็จ
     const _isBr = currentUser && currentUser.role === 'branch';
     const _bc = _isBr ? String(currentUser.branchCode || '') : '';
     if (_isBr && _bc) {
@@ -8564,6 +8573,7 @@ async function loadDailyChecklists() {
       snap = _inc
         ? await _dailyGetSince([{ f: 'branchCode', op: '==', v: _bc }], _srv)
         : await firebaseDb.collection(DAILY_COLLECTION).where('branchCode', '==', _bc).get();
+      if (!_inc) _coverTo = '2000-01-01';
       /* ดึง "เดือนนี้" เต็มวันละครั้งเสริมอีกชั้น — เผื่อใบที่หลุดจากเหตุอื่น (แคชถูกตัด ฯลฯ) */
       if (_inc && _dailyMfullDue()) {
         const _m = await firebaseDb.collection(DAILY_COLLECTION).where('branchCode', '==', _bc).where('date', '>=', _dailyMonthFrom()).get();
@@ -8602,11 +8612,13 @@ async function loadDailyChecklists() {
         if (cursor) console.warn('[daily] แคชไม่ครบช่วง (ถึง ' + (cover || '—') + ') → ดึงตามวันที่แทน');
         snap = await firebaseDb.collection(DAILY_COLLECTION)
           .where('date', '>=', since).where('date', '<', recent).get();
+        _coverTo = since;
       }
     }
     const _chg = _mergeDailyDocs(map, snap.docs);
     if (_sbOn && _t0) _dailySrvSave(new Date(new Date(_t0).getTime() - 10000).toISOString());   // ดึง+รวมสำเร็จแล้วค่อยเลื่อนหมุด
     _dailySyncedSave();
+    if (_coverTo) _dailyCoverSet(_coverTo);
     allDailyChecklists.forEach(function(d){ const _x = _dropBase64Photos(d.items); if (_x > 0 && d.id != null && !_dailyB64CleanIds.has(String(d.id))) { _dailyB64CleanIds.add(String(d.id)); _silentResaveDaily(d); } });   // ตัด base64 + ล้างขึ้น cloud
     if (_chg) saveDailyLocal();   // ไม่มีอะไรเปลี่ยน = ไม่ต้องเขียนแคชทั้งก้อนลงเครื่อง (มือถือช้า)
     _dailyFullLoaded = false; // ยังโหลดไม่ครบทุกวัน → ปุ่ม "ดูย้อนหลังทั้งหมด" ยังใช้ได้
@@ -8675,6 +8687,7 @@ async function _ensureDailyRange(from) {
   const map = new Map(allDailyChecklists.filter(d => d && d.id != null).map(d => [String(d.id), d]));
   _mergeDailyDocs(map, snap.docs);
   _dailyLoadedFrom = from;
+  _dailyCoverSet(from);
   saveDailyLocal();
   return true;
 }
@@ -8784,10 +8797,7 @@ function _ckTrimCacheOnBoot() {
     if (key === DAILY_STORAGE_KEY) {
       /* หมุด "แคชครอบคลุมถึงวันไหน" ต้องขยับตาม ไม่งั้นรอบหน้าจะดึงแต่ของใหม่
          แล้วเข้าใจว่าของเก่ายังอยู่ครบ ทั้งที่เพิ่งตัดทิ้งไป */
-      try {
-        const dates = (kept || []).map(d => d && d.date).filter(Boolean).sort();
-        localStorage.setItem(DAILY_COVER_KEY, dates[0] || '');
-      } catch (_) {}
+      try { localStorage.removeItem(DAILY_COVER_KEY); } catch (_) {}
     }
     let after = 0;
     try { after = (localStorage.getItem(key) || '').length * 2; } catch (_) {}
