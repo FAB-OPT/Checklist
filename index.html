@@ -5242,6 +5242,9 @@ html.fab-sso-pending #login-screen { display: none !important; }
 .dm-key span { display:inline-flex; align-items:center; gap:5px; }
 .dm-key i { width:12px; height:3px; border-radius:2px; display:block; }
 .dm-key-note { margin-left:auto; }
+.dm-sync { margin-top:10px; font-size:12px; color:#8a8f98; line-height:1.6; }
+.dm-sync button { border:0; background:none; padding:0; font:inherit; color:#b8500a; font-weight:700; text-decoration:underline; cursor:pointer; }
+.dm-sync button:disabled { opacity:.6; text-decoration:none; }
 @media (max-width:640px) {
   .dm-sum { margin-left:0; width:100%; }
   .dm-key-note { margin-left:0; width:100%; margin-top:2px; line-height:1.5; }
@@ -8401,6 +8404,36 @@ async function _dailyGetSince(filters, since) {
   const r = await new CkQuery(DAILY_COLLECTION, filters || [])._sb(since);
   return _ckQuerySnap(DAILY_COLLECTION, r.rows);
 }
+/* รับของจากแคชในเครื่องเข้าหน่วยความจำ "แบบรวม" ไม่ใช่ทับ
+   ตอนเข้าแอปมีสองงานวิ่งพร้อมกัน: (ก) อ่านแคชจาก IndexedDB (ข) ดึงของใหม่จากเซิร์ฟเวอร์แล้วรวมเข้าแคช
+   ถ้า (ก) เสร็จช้ากว่า (ข) (มือถือที่ IndexedDB ช้า) ของเดิมจะเอาแคชเก่ามาทับของที่เพิ่งดึงมา
+   แล้วพอมีการบันทึกอะไรครั้งถัดไป แคชเก่าก็ถูกเขียนกลับลงเครื่อง ใบที่ขาดจึงขาดค้างต่อไปเรื่อย ๆ
+   ตอนนี้ถ้าในหน่วยความจำมีของแล้ว ให้รวมตาม id โดยเอาใบที่ updatedAt ใหม่กว่า */
+function _adoptCachedDaily(cached) {
+  const cur = (allDailyChecklists || []).filter(Boolean);
+  const inc = (cached || []).filter(Boolean);
+  if (!cur.length) { allDailyChecklists = inc; return; }
+  const m = new Map(inc.map(d => [String(d.id), d]));
+  cur.forEach(d => {
+    const k = String(d.id), ex = m.get(k);
+    if (!ex || String(d.updatedAt || '') >= String(ex.updatedAt || '')) m.set(k, d);
+  });
+  allDailyChecklists = Array.from(m.values()).filter(d => d && !d.deleted);
+}
+/* รุ่นของโค้ดชุดนี้ + เวลาซิงค์ล่าสุด — โชว์ใต้ปฏิทินให้เห็นว่าเครื่องนี้ใช้โค้ดใหม่หรือยัง และดึงข้อมูลล่าสุดเมื่อไร */
+const CK_BUILD = '20261019a';
+const DAILY_SYNCED_KEY = 'qa_daily_synced_at_v2';
+function _dailySyncedAt() { try { return localStorage.getItem(DAILY_SYNCED_KEY) || ''; } catch (_) { return ''; } }
+function _dailySyncedSave() { try { localStorage.setItem(DAILY_SYNCED_KEY, new Date().toISOString()); } catch (_) {} }
+/* ปุ่มบังคับดึงใหม่ทั้งหมด — ล้างหมุดแล้วดึงเต็ม (เครื่องไหนข้อมูลไม่ครบ กดได้เอง) */
+async function _dailyForceResync(btn) {
+  if (btn) { btn.disabled = true; btn.textContent = 'กำลังดึงข้อมูลใหม่…'; }
+  try {
+    try { localStorage.removeItem(DAILY_SRV_KEY); localStorage.removeItem(DAILY_MFULL_KEY); } catch (_) {}
+    await loadDailyChecklists();
+  } catch (e) { console.warn('[daily] ดึงใหม่ไม่สำเร็จ', e); }
+  _dailyRepaintMonth();
+}
 const DAILY_SYNC_OVERLAP_MS = 6 * 60 * 60 * 1000;  // เผื่อนาฬิกาเครื่องคลาดกัน 6 ชม. กันข้อมูลตกหล่น
 function _maxDailyUpdatedAt(list) {
   let m = '';
@@ -8531,6 +8564,7 @@ async function loadDailyChecklists() {
     }
     const _chg = _mergeDailyDocs(map, snap.docs);
     if (_sbOn && _t0) _dailySrvSave(new Date(new Date(_t0).getTime() - 10000).toISOString());   // ดึง+รวมสำเร็จแล้วค่อยเลื่อนหมุด
+    _dailySyncedSave();
     allDailyChecklists.forEach(function(d){ const _x = _dropBase64Photos(d.items); if (_x > 0 && d.id != null && !_dailyB64CleanIds.has(String(d.id))) { _dailyB64CleanIds.add(String(d.id)); _silentResaveDaily(d); } });   // ตัด base64 + ล้างขึ้น cloud
     if (_chg) saveDailyLocal();   // ไม่มีอะไรเปลี่ยน = ไม่ต้องเขียนแคชทั้งก้อนลงเครื่อง (มือถือช้า)
     _dailyFullLoaded = false; // ยังโหลดไม่ครบทุกวัน → ปุ่ม "ดูย้อนหลังทั้งหมด" ยังใช้ได้
@@ -11445,6 +11479,12 @@ function _dailyMonthStripHTML(list, nBranch) {
         ? 'ในช่องบอกจำนวนสาขาที่ส่ง · แถวบน = เปิดร้าน แถวล่าง = ปิดร้าน'
         : 'ในช่องบอกเวลาที่ส่ง · แถวบน = เปิดร้าน แถวล่าง = ปิดร้าน') + '</span>' +
     '</div>' +
+    (function () {
+      const t = _dailySyncedAt(); let hm = '—';
+      if (t) { const d = new Date(t); if (!isNaN(d)) hm = d.getDate() + '/' + (d.getMonth() + 1) + ' ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); }
+      return '<div class="dm-sync">ซิงค์ล่าสุด ' + hm + ' · รุ่น ' + CK_BUILD +
+        ' · <button type="button" onclick="_dailyForceResync(this)">ดึงข้อมูลใหม่ทั้งหมด</button></div>';
+    })() +
   '</div>';
 }
 
@@ -15126,7 +15166,7 @@ async function autoLoginFromSession() {
      ระหว่างรอ หน้าจะขึ้นด้วยของว่างแป๊บหนึ่ง ซึ่งเป็นจังหวะเดียวกับที่รอ cloud อยู่แล้ว */
   Promise.all([loadCachedAudits(), loadCachedDaily(), loadCachedJaedaeng()])
     .then(function (r) {
-      allAudits = r[0]; allDailyChecklists = r[1]; allJaedaengAudits = r[2];
+      allAudits = r[0]; _adoptCachedDaily(r[1]); allJaedaengAudits = r[2];
       if (currentUser) routeByRole();
     })
     .catch(function () {});
@@ -15156,7 +15196,7 @@ function finalizeBrandFromSession(brand) {
      ระหว่างรอ หน้าจะขึ้นด้วยของว่างแป๊บหนึ่ง ซึ่งเป็นจังหวะเดียวกับที่รอ cloud อยู่แล้ว */
   Promise.all([loadCachedAudits(), loadCachedDaily(), loadCachedJaedaeng()])
     .then(function (r) {
-      allAudits = r[0]; allDailyChecklists = r[1]; allJaedaengAudits = r[2];
+      allAudits = r[0]; _adoptCachedDaily(r[1]); allJaedaengAudits = r[2];
       if (currentUser) routeByRole();
     })
     .catch(function () {});
