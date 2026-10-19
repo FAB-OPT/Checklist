@@ -8470,8 +8470,109 @@ function _adoptCachedDaily(cached) {
   });
   allDailyChecklists = Array.from(m.values()).filter(d => d && !d.deleted);
 }
+/* ── แสดงชื่อ BZM / ผู้ตรวจ เป็นภาษาอังกฤษ ──
+   ตัดสินใจ 19 ต.ค. 2569: ทะเบียนผู้ใช้ใช้ชื่ออังกฤษ (P'Jeb · Jureeporn Thong-ach) แต่ใบเก่าส่วนใหญ่ถูกจดเป็นชื่อไทยไว้
+   (ซานตาเฟ่ ~10,400 ใบ · เจ๊แดง ~190 ใบ) · ไม่แก้ใบในฐานข้อมูล (หนัก + ทุกเครื่องต้องโหลดใหม่ทั้งหมด)
+   แปลงตอน "แสดง/จัดกลุ่ม/เทียบ" เท่านั้น — ใบเก่า (ไทย) กับใบใหม่ (อังกฤษ) จึงรวมเป็นกลุ่มเดียวกัน */
+const CK_EN_PAIRS = [
+  ['นางสาว ศุกร์แสง วัฒนาฟุ้งเจริญ', 'Sooksang Wattanafungcharoen'],
+  ['นาย ศุกร์แสง วัฒนาฟุ้งเจริญ', 'Sooksang Wattanafungcharoen'],
+  ['นาง ศุกร์แสง วัฒนาฟุ้งเจริญ', 'Sooksang Wattanafungcharoen'],
+  ['นางสาว พิมพ์พิชชา ชัชวาลย์', 'Phimphitcha Chatchawan'],
+  ['นางสาว กันตภณ ลาภมงคลนาวิน', 'Kantapon Lapmongkolnawin'],
+  ['นางสาว พัทธดนย์ วัฒนายุทธ', 'Phatthadon Watthanayut'],
+  ['นางสาว คณัสวรรณ อิ่มสำราญ', 'Kanusswan  aimsumrun'],
+  ['นางสาว ณธวรรท ศิริเมธานณ', 'Natawat Sirimettanon'],
+  ['นางสาว อนุรักษ์ สอนภักดี', 'Anurak Sronpukdee'],
+  ['นางสาว อังคณา นิลกำเหนิด', 'Angkana Nilkumnerd'],
+  ['นางสาว นิรุต เจริญศิลป์', 'Nirut Jaroensin'],
+  ['นางสาว สีวิกา สังข์ด้วง', 'Seewika Songdoung'],
+  ['ศุกร์แสง วัฒนาฟุ้งเจริญ', 'Sooksang Wattanafungcharoen'],
+  ['นางสาว นพชัย จันทร์รุ่ง', 'Noppachai Chanrung'],
+  ['นาย พิมพ์พิชชา ชัชวาลย์', 'Phimphitcha Chatchawan'],
+  ['นาง พิมพ์พิชชา ชัชวาลย์', 'Phimphitcha Chatchawan'],
+  ['นางสาว ขวัญดาว บุญเรือง', 'Khwandao Boonruang'],
+  ['นาย กันตภณ ลาภมงคลนาวิน', 'Kantapon Lapmongkolnawin'],
+  ['นาง กันตภณ ลาภมงคลนาวิน', 'Kantapon Lapmongkolnawin'],
+  ['นาย พัทธดนย์ วัฒนายุทธ', 'Phatthadon Watthanayut'],
+  ['นาง พัทธดนย์ วัฒนายุทธ', 'Phatthadon Watthanayut'],
+  ['นางสาว ณฐกร เอื้อสถาพร', 'Nattakorn Ersathaporn'],
+  ['นาย คณัสวรรณ อิ่มสำราญ', 'Kanusswan  aimsumrun'],
+  ['นาง คณัสวรรณ อิ่มสำราญ', 'Kanusswan  aimsumrun'],
+  ['นางสาว นุชจรินทร์ ใจยศ', 'Nuchjarin Chaiyod'],
+  ['นาย ณธวรรท ศิริเมธานณ', 'Natawat Sirimettanon'],
+  ['นาง ณธวรรท ศิริเมธานณ', 'Natawat Sirimettanon'],
+  ['นาย อนุรักษ์ สอนภักดี', 'Anurak Sronpukdee'],
+  ['นาง อนุรักษ์ สอนภักดี', 'Anurak Sronpukdee'],
+  ['นางสาว อารียา สันเต๊ะ', 'Areeya Sunteh'],
+  ['นาย อังคณา นิลกำเหนิด', 'Angkana Nilkumnerd'],
+  ['นาง อังคณา นิลกำเหนิด', 'Angkana Nilkumnerd'],
+  ['นาย นิรุต เจริญศิลป์', 'Nirut Jaroensin'],
+  ['นาง นิรุต เจริญศิลป์', 'Nirut Jaroensin'],
+  ['นาย สีวิกา สังข์ด้วง', 'Seewika Songdoung'],
+  ['นาง สีวิกา สังข์ด้วง', 'Seewika Songdoung'],
+  ['นาย นพชัย จันทร์รุ่ง', 'Noppachai Chanrung'],
+  ['นาง นพชัย จันทร์รุ่ง', 'Noppachai Chanrung'],
+  ['นางสาว จุรีพร ทองอาจ', 'Jureeporn Thong-ach'],
+  ['นาย ขวัญดาว บุญเรือง', 'Khwandao Boonruang'],
+  ['นาง ขวัญดาว บุญเรือง', 'Khwandao Boonruang'],
+  ['นาย ณฐกร เอื้อสถาพร', 'Nattakorn Ersathaporn'],
+  ['นาง ณฐกร เอื้อสถาพร', 'Nattakorn Ersathaporn'],
+  ['พิมพ์พิชชา ชัชวาลย์', 'Phimphitcha Chatchawan'],
+  ['นาย นุชจรินทร์ ใจยศ', 'Nuchjarin Chaiyod'],
+  ['นาง นุชจรินทร์ ใจยศ', 'Nuchjarin Chaiyod'],
+  ['กันตภณ ลาภมงคลนาวิน', 'Kantapon Lapmongkolnawin'],
+  ['พัทธดนย์ วัฒนายุทธ', 'Phatthadon Watthanayut'],
+  ['นาย อารียา สันเต๊ะ', 'Areeya Sunteh'],
+  ['นาง อารียา สันเต๊ะ', 'Areeya Sunteh'],
+  ['คณัสวรรณ อิ่มสำราญ', 'Kanusswan  aimsumrun'],
+  ['Khanatwan Imsamran', 'Kanusswan  aimsumrun'],
+  ['ณธวรรท ศิริเมธานณ', 'Natawat Sirimettanon'],
+  ['อนุรักษ์ สอนภักดี', 'Anurak Sronpukdee'],
+  ['อังคณา นิลกำเหนิด', 'Angkana Nilkumnerd'],
+  ['นาย จุรีพร ทองอาจ', 'Jureeporn Thong-ach'],
+  ['นาง จุรีพร ทองอาจ', 'Jureeporn Thong-ach'],
+  ['นิรุต เจริญศิลป์', 'Nirut Jaroensin'],
+  ['สีวิกา สังข์ด้วง', 'Seewika Songdoung'],
+  ['นพชัย จันทร์รุ่ง', 'Noppachai Chanrung'],
+  ['ขวัญดาว บุญเรือง', 'Khwandao Boonruang'],
+  ['ณฐกร เอื้อสถาพร', 'Nattakorn Ersathaporn'],
+  ['นุชจรินทร์ ใจยศ', 'Nuchjarin Chaiyod'],
+  ['อารียา สันเต๊ะ', 'Areeya Sunteh'],
+  ['จุรีพร ทองอาจ', 'Jureeporn Thong-ach'],
+  ['พี่เจี๊ยบ', 'P\'Jeb'],
+  ['พี่เฟิร์น', 'P\'Fern'],
+  ['พี่ปิ๊ก', 'P\'Pik'],
+  ['พี่บิ๊ก', 'P\'Big'],
+  ['พี่เอ็ม', 'P\'M'],
+  ['พี่อิ๊ว', 'P\'Ew'],
+  ['พี่อ้อย', 'P\'Aoy'],
+  ['พี่รุต', 'P\'Rut'],
+  ['พี่หยี', 'P\'Yee'],
+  ['พี่ก๊ะ', 'P\'Ka'],
+  ['พี่อีฟ', 'P\'Eve'],
+  ['พี่ดาว', 'P\'Daw'],
+  ['พี่กัส', 'P\'Gus'],
+  ['พี่กาย', 'P\'Guy'],
+  ['พี่นพ', 'P\'Nop'],
+  ['พี่ปอ', 'P\'Por'],
+  ['จุรีพร', 'Jureeporn Thong-ach']
+];
+const CK_EN_SHORT = { 'ฟาง': 'Fern', 'หนิง': 'Ning' };
+function ckEn(v) {
+  let s = String(v == null ? '' : v);
+  if (!s) return s;
+  const t = s.trim();
+  if (CK_EN_SHORT[t]) return CK_EN_SHORT[t];
+  if (!/[\u0E00-\u0E7F]|Khanatwan/.test(s)) return s;
+  for (let i = 0; i < CK_EN_PAIRS.length; i++) {
+    const a = CK_EN_PAIRS[i][0];
+    if (s.indexOf(a) >= 0) s = s.split(a).join(CK_EN_PAIRS[i][1]);
+  }
+  return s;
+}
 /* รุ่นของโค้ดชุดนี้ + เวลาซิงค์ล่าสุด — โชว์ใต้ปฏิทินให้เห็นว่าเครื่องนี้ใช้โค้ดใหม่หรือยัง และดึงข้อมูลล่าสุดเมื่อไร */
-const CK_BUILD = '20261019b';
+const CK_BUILD = '20261019c';
 const DAILY_SYNCED_KEY = 'qa_daily_synced_at_v2';
 function _dailySyncedAt() { try { return localStorage.getItem(DAILY_SYNCED_KEY) || ''; } catch (_) { return ''; } }
 function _dailySyncedSave() { try { localStorage.setItem(DAILY_SYNCED_KEY, new Date().toISOString()); } catch (_) {} }
@@ -11229,7 +11330,8 @@ function getVisibleDailyChecklists() {
     );
     return mine.filter(d =>
       myCodes.has(String(d.branchCode)) ||
-      d.bzm === currentUser.name || d.bzm === currentUser.nick   // เผื่อ record เก่า
+      d.bzm === currentUser.name || d.bzm === currentUser.nick ||   // เผื่อ record เก่า
+      (ckEn(d.bzm) && (ckEn(d.bzm) === ckEn(currentUser.name) || ckEn(d.bzm) === ckEn(currentUser.nick)))
     );
   }
   return mine;
@@ -12522,8 +12624,8 @@ function showDailyDetail(id, targetText) {
   const metaRows = [
     { icon: 'storefront',         label: 'สาขา',            value: branchTxt,                 cls: 'span-all primary' },
     { icon: 'badge',              label: 'Manager on duty', value: d.manager || '-' },
-    { icon: 'supervisor_account', label: 'BZM',             value: ckBzmFullName(d.bzm) || '-' },
-    { icon: 'person',             label: 'บันทึกโดย',       value: d.submittedByName || '-' },
+    { icon: 'supervisor_account', label: 'BZM',             value: ckBzmFullName(ckEn(d.bzm)) || '-' },
+    { icon: 'person',             label: 'บันทึกโดย',       value: ckEn(d.submittedByName) || '-' },
 
     { icon: 'fact_check',         label: 'สถานะรายการ',     value: `ผ่าน ${passN} ข้อ - ไม่ผ่าน ${failN} ข้อ - N/A ${naN} ข้อ${pendN > 0 ? ` - รอ ${pendN} ข้อ` : ''} - ทั้งหมด ${total} ข้อ` },
   ];
@@ -12625,7 +12727,7 @@ function showDailyDetail(id, targetText) {
   const _prh = document.getElementById('daily-print-header');
   if (_prh) {
     _prh.innerHTML = `<div class="prh-title">รายงานเช็คลิสต์รายวัน · ${d.shift === 'open' ? 'Open Shift' : 'Close Shift'}</div>
-      <div class="prh-sub">${escapeHtml(branchTxt)} · ${escapeHtml(fmtDateDMY(d.date))} · บันทึกโดย ${escapeHtml(d.submittedByName || '-')}</div>`;
+      <div class="prh-sub">${escapeHtml(branchTxt)} · ${escapeHtml(fmtDateDMY(d.date))} · บันทึกโดย ${escapeHtml(ckEn(d.submittedByName) || '-')}</div>`;
   }
   if (targetText) _flashDetailItem('daily-detail-content', targetText);
 }
@@ -12780,8 +12882,8 @@ function getVisibleJaedaengAudits() {
   if (!currentUser) return all;
   if (currentUser.role === 'bzm') {
     return all.filter(r =>
-      r.bzm === currentUser.name ||
-      r.bzmNick === currentUser.nick ||
+      r.bzm === currentUser.name || ckEn(r.bzm) === ckEn(currentUser.name) ||
+      r.bzmNick === currentUser.nick || ckEn(r.bzmNick) === ckEn(currentUser.nick) ||
       r.auditorCode === currentUser.code ||
       r.submittedBy === currentUser.code
     );
@@ -12907,7 +13009,7 @@ function _scoreDetailDate(records) {
         <span class="material-symbols-rounded sd-icon ${f>0?'fail':'ok'}">${f>0?'error':'check_circle'}</span>
         <div style="flex:1;min-width:0;">
           <div class="score-detail-name">${escapeHtml(r.storeName||'-')}</div>
-          <div class="score-detail-sub">${r.time?escapeHtml(r.time)+' · ':''}${f>0?('ตก '+f+' ข้อ'):'ผ่านทุกข้อ'} · ${escapeHtml(r.auditor||'-')}</div>
+          <div class="score-detail-sub">${r.time?escapeHtml(r.time)+' · ':''}${f>0?('ตก '+f+' ข้อ'):'ผ่านทุกข้อ'} · ${escapeHtml(ckEn(r.auditor)||'-')}</div>
         </div>
         <span class="score-detail-val" style="color:${valColor};">${pct.toFixed(1)}%</span>
         ${r.id?'<span class="material-symbols-rounded sd-go">chevron_right</span>':''}
@@ -12992,7 +13094,7 @@ function _populateJdTopFailFilters() {
     branchSel.value = '';
     return;
   }
-  const zones = [...new Set(_jdTfRecords.map(r => r.bzmNick || r.bzm).filter(Boolean))].sort();
+  const zones = [...new Set(_jdTfRecords.map(r => ckEn(r.bzmNick || r.bzm)).filter(Boolean))].sort();
   const curZone = zoneSel.value;
   zoneSel.innerHTML = '<option value="">ทุกโซน (BZM)</option>' +
     zones.map(z => `<option value="${escapeOptVal(z)}"${z===curZone?' selected':''}>${escapeHtml(z)}</option>`).join('');
@@ -13002,7 +13104,7 @@ function _populateJdTopFailBranches(zone) {
   const branchSel = document.getElementById('jd-tf-branch');
   if (!branchSel) return;
   let pool = _jdTfRecords;
-  if (zone) pool = pool.filter(r => (r.bzmNick || r.bzm) === zone);
+  if (zone) pool = pool.filter(r => ckEn(r.bzmNick || r.bzm) === zone);
   const names = [...new Set(pool.map(r => r.storeName).filter(Boolean))].sort();
   const cur = branchSel.value;
   branchSel.innerHTML = '<option value="">ทุกสาขา</option>' +
@@ -13097,7 +13199,7 @@ function renderJaedaengTopFails() {
           const occHtml = (it.occ || []).slice().sort((a, b) => (b.date || '').localeCompare(a.date || '')).map(o =>
             `<div class="sf-occ-row${o.id ? ' sf-occ-clickable' : ''}"${o.id ? ` onclick="event.stopPropagation(); showJaedaengDetail('${escapeAttr(o.id)}','${escapeAttr(it.text)}')"` : ''}>
               <span class="sf-occ-branch"><span class="material-symbols-rounded sf-ico-fill">storefront</span> ${escapeHtml(o.branch)}</span>
-              <span class="sf-occ-meta"><span class="material-symbols-rounded sf-ico-fill">event</span> ${escapeHtml(fmtDateDMY(o.date))}${o.auditor ? ' · ' + escapeHtml(o.auditor) : ''}</span>
+              <span class="sf-occ-meta"><span class="material-symbols-rounded sf-ico-fill">event</span> ${escapeHtml(fmtDateDMY(o.date))}${o.auditor ? ' · ' + escapeHtml(ckEn(o.auditor)) : ''}</span>
               ${o.note ? `<span class="sf-occ-note">📝 ${escapeHtml(o.note)}</span>` : ''}
               ${o.id ? '<span class="material-symbols-rounded sf-occ-go">chevron_right</span>' : ''}
             </div>`
@@ -13193,7 +13295,7 @@ function renderJaedaengDashboard() {
   let records = getVisibleJaedaengAudits();  // bzm ได้เฉพาะของตัวเองอยู่แล้ว
   // กรองตาม dropdown (ทุก role) — bzm เลือกได้เฉพาะสาขาตัวเอง
   if (jdDashFilter.zone !== 'all') {
-    records = records.filter(r => (r.bzmNick || r.bzm) === jdDashFilter.zone);
+    records = records.filter(r => ckEn(r.bzmNick || r.bzm) === jdDashFilter.zone);
   }
   if (jdDashFilter.branch !== 'all') {
     records = records.filter(r => r.storeName === jdDashFilter.branch);
@@ -13283,8 +13385,8 @@ function renderJaedaengDashboard() {
   else {
   const byBzm = {};
   records.forEach(r => {
-    const key = r.bzmNick || r.bzm || 'ไม่ระบุ';
-    if (!byBzm[key]) byBzm[key] = { count: 0, sumPct: 0, fails: 0, full: r.bzm, records: [] };
+    const key = ckEn(r.bzmNick || r.bzm) || 'ไม่ระบุ';
+    if (!byBzm[key]) byBzm[key] = { count: 0, sumPct: 0, fails: 0, full: ckEn(r.bzm), records: [] };
     byBzm[key].count++;
     byBzm[key].sumPct += r.passPct || 0;
     byBzm[key].fails += r.failCount || 0;
@@ -13320,7 +13422,7 @@ function renderJaedaengDashboard() {
       return `<div class="recent-card ${tierCls}" onclick="showJaedaengDetail('${escapeAttr(r.id)}')">
         <div class="recent-card-main">
           <div class="recent-card-name">${escapeHtml(r.storeName || '-')}</div>
-          <div class="recent-card-subline">${escapeHtml(fmtDateDMY(r.date))}${r.time ? ' · ' + escapeHtml(r.time) : ''} · ${escapeHtml(r.auditor || '-')}</div>
+          <div class="recent-card-subline">${escapeHtml(fmtDateDMY(r.date))}${r.time ? ' · ' + escapeHtml(r.time) : ''} · ${escapeHtml(ckEn(r.auditor) || '-')}</div>
           <div class="recent-card-stats">
             <span class="recent-chip ok"><span class="material-symbols-rounded">check_circle</span> ผ่าน ${pass}</span>
             <span class="recent-chip ${fail>0?'fail':'ok'}"><span class="material-symbols-rounded">${fail>0?'cancel':'check'}</span> ตก ${fail}</span>
@@ -13401,7 +13503,7 @@ function renderJaedaengList() {
       <div class="ck-row-ft">
         <span class="ck-chip"><span class="material-symbols-rounded">schedule</span>${escapeHtml(fmtDateThaiShort(r.date))}${r.time ? ' ' + escapeHtml(r.time) : ''}</span>
         <span class="ck-chip">ผ่าน ${r.passCount}/${r.totalCount - r.naCount}</span>
-        <span class="ck-chip">${escapeHtml(r.auditor || '-')}</span>
+        <span class="ck-chip">${escapeHtml(ckEn(r.auditor) || '-')}</span>
       </div>
       ${gpsLine}
     </div>`;
@@ -13556,13 +13658,13 @@ function _renderJDAuditScreen() {
   const select = document.getElementById('jd-store-name');
   select.innerHTML = '<option value="">— เลือกสาขา —</option>' + _jdBuildZoneOptions(JAEDAENG_BRANCHES);
   select.value = a.storeName || '';
-  document.getElementById('jd-auditor-display').textContent = a.auditor || '-';
+  document.getElementById('jd-auditor-display').textContent = ckEn(a.auditor) || '-';
   document.getElementById('jd-date-display').textContent = fmtDateDMY(a.date || todayDateStr());
   document.getElementById('jd-time-display').textContent = (a.time || '') + ' น.';
   const bzmRow = document.getElementById('jd-bzm-row');
   const bzmDisp = document.getElementById('jd-bzm-display');
   if ((a.bzm || a.bzmNick) && bzmRow && bzmDisp) {
-    bzmDisp.textContent = (a.bzm || '') + (a.bzmNick ? ' (' + a.bzmNick + ')' : '');
+    bzmDisp.textContent = ckEn(a.bzm || '') + (a.bzmNick ? ' (' + ckEn(a.bzmNick) + ')' : '');
     bzmRow.style.display = '';
   } else if (bzmRow) { bzmRow.style.display = 'none'; }
   _jdPaintGpsRow();
@@ -13590,14 +13692,14 @@ function editJaedaengAudit(id) {
   select.innerHTML = '<option value="">— เลือกสาขา —</option>' + _jdBuildZoneOptions(JAEDAENG_BRANCHES);
   select.value = currentJDAudit.storeName || '';
 
-  document.getElementById('jd-auditor-display').textContent = currentJDAudit.auditor || '-';
+  document.getElementById('jd-auditor-display').textContent = ckEn(currentJDAudit.auditor) || '-';
   document.getElementById('jd-date-display').textContent = fmtDateDMY(currentJDAudit.date || '');
   document.getElementById('jd-time-display').textContent = (currentJDAudit.time || '') + ' น.';
   // BZM row
   const bzmRow = document.getElementById('jd-bzm-row');
   const bzmDisp = document.getElementById('jd-bzm-display');
   if (currentJDAudit.bzm || currentJDAudit.bzmNick) {
-    if (bzmDisp) bzmDisp.textContent = currentJDAudit.bzm + (currentJDAudit.bzmNick ? ' (' + currentJDAudit.bzmNick + ')' : '');
+    if (bzmDisp) bzmDisp.textContent = ckEn(currentJDAudit.bzm) + (currentJDAudit.bzmNick ? ' (' + ckEn(currentJDAudit.bzmNick) + ')' : '');
     if (bzmRow) bzmRow.style.display = '';
   } else if (bzmRow) { bzmRow.style.display = 'none'; }
   // GPS row
@@ -14591,7 +14693,7 @@ function showJaedaengDetail(id, targetText) {
       <span class="material-symbols-rounded">person</span>
       <div class="summary-meta-row-body">
         <div class="summary-meta-row-label">ผู้ตรวจ</div>
-        <div class="summary-meta-row-value">${escapeHtml(r.auditor)}</div>
+        <div class="summary-meta-row-value">${escapeHtml(ckEn(r.auditor))}</div>
       </div>
     </div>
     ${r.gps ? `<div class="summary-meta-row" data-icon="my_location">
@@ -14614,7 +14716,7 @@ function showJaedaengDetail(id, targetText) {
       <span class="material-symbols-rounded">supervisor_account</span>
       <div class="summary-meta-row-body">
         <div class="summary-meta-row-label">ทีม BZM</div>
-        <div class="summary-meta-row-value">${escapeHtml(r.bzm)}${r.bzmNick ? ` (${escapeHtml(r.bzmNick)})` : ''}</div>
+        <div class="summary-meta-row-value">${escapeHtml(ckEn(r.bzm))}${r.bzmNick ? ` (${escapeHtml(ckEn(r.bzmNick))})` : ''}</div>
       </div>
     </div>` : ''}
     <div class="summary-meta-row span-all" data-icon="fact_check">
@@ -14709,7 +14811,7 @@ function showJaedaengDetail(id, targetText) {
   const prh = document.getElementById('jd-print-header');
   if (prh) {
     prh.innerHTML = `<div class="prh-title">รายงานผลการตรวจสาขา · เจ๊แดง</div>
-      <div class="prh-sub">${escapeHtml(r.storeName || '—')} · ${escapeHtml(fmtDateDMY(r.date))}${r.time ? ' ' + escapeHtml(r.time) + ' น.' : ''} · ผู้ตรวจ ${escapeHtml(r.auditor || '—')}</div>`;
+      <div class="prh-sub">${escapeHtml(r.storeName || '—')} · ${escapeHtml(fmtDateDMY(r.date))}${r.time ? ' ' + escapeHtml(r.time) + ' น.' : ''} · ผู้ตรวจ ${escapeHtml(ckEn(r.auditor) || '—')}</div>`;
   }
   if (targetText) _flashDetailItem('jd-detail-content', targetText);
 }
