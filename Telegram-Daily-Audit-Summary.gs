@@ -448,19 +448,31 @@ function formatMessage_(audits, dateStr) {
     return String(a.submittedAt || '') < String(b.submittedAt || '') ? -1 : 1;
   });
 
-  var lines = audits.map(function (a, i) {
-    var who = esc_(nameByCode_(a.auditorCode || a.submittedBy, a.auditor && a.auditor !== '-' ? a.auditor : a.submittedByName));
-    var store = esc_(a.storeName || '-');
-    var time = a.time ? ('  ' + esc_(a.time) + ' น.') : '';
-    var pct = (typeof a.passPct === 'number') ? a.passPct.toFixed(1) + '%' : '-';
-    var fail = (typeof a.failCount === 'number') ? a.failCount : 0;
-    var failTxt = fail > 0 ? ('  (ไม่ผ่าน ' + fail + ' ข้อ)') : '';
-    return (i + 1) + '. <b>' + who + '</b>\n' +
-           '   🏬 ' + store + time + '\n' +
-           '   ✅ ผ่านเกณฑ์ ' + pct + esc_(failTxt);
+  /* รวมตามคนตรวจ — คนเดียวตรวจหลายสาขาในวันเดียว ขึ้นเป็นกลุ่มเดียว แล้วลิสต์สาขาข้างใต้ (เรียงตามเวลาที่ตรวจครั้งแรกของแต่ละคน) */
+  var groups = [], byKey = {};
+  audits.forEach(function (a) {
+    var key = String(a.auditorCode || a.submittedBy || (a.auditor && a.auditor !== '-' ? a.auditor : a.submittedByName) || '-');
+    if (!byKey[key]) {
+      byKey[key] = { who: esc_(nameByCode_(a.auditorCode || a.submittedBy, a.auditor && a.auditor !== '-' ? a.auditor : a.submittedByName)), items: [] };
+      groups.push(byKey[key]);
+    }
+    byKey[key].items.push(a);
   });
 
-  return head + '\n✅ วันนี้มีการตรวจ <b>' + audits.length + '</b> สาขา\n\n' +
+  var lines = groups.map(function (g, i) {
+    var rows = g.items.map(function (a) {
+      var store = esc_(a.storeName || '-');
+      var time = a.time ? ('  ' + esc_(a.time) + ' น.') : '';
+      var pct = (typeof a.passPct === 'number') ? a.passPct.toFixed(1) + '%' : '-';
+      var fail = (typeof a.failCount === 'number') ? a.failCount : 0;
+      var failTxt = fail > 0 ? ('  (ไม่ผ่าน ' + fail + ' ข้อ)') : '';
+      return '   🏬 ' + store + time + '\n' +
+             '      ✅ ผ่านเกณฑ์ ' + pct + esc_(failTxt);
+    });
+    return (i + 1) + '. <b>' + g.who + '</b> · ตรวจ ' + g.items.length + ' สาขา\n' + rows.join('\n');
+  });
+
+  return head + '\n✅ วันนี้มีการตรวจ <b>' + audits.length + '</b> สาขา · <b>' + groups.length + '</b> คน\n\n' +
          lines.join('\n\n') + missingTxt;
 }
 
