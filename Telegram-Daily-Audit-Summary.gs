@@ -41,26 +41,93 @@ var COLLECTION = 'jaedaengAudits';   // เฉพาะการตรวจเ�
 var BRAND_LABEL = 'เจ๊แดง จุ่มนัวร์';
 var TZ = 'Asia/Bangkok';
 
-// รหัสพนักงาน → ชื่อจริง / ชื่อเล่น (ใช้แสดงชื่อจริงในข้อความ)
-var USERS_BY_CODE = {
-  '550713': { name: 'ณฐกร',      nick: 'พี่ปอ' },
-  '590022': { name: 'คณัสวรรณ',   nick: 'พี่เฟิร์น' },
-  '490057': { name: 'พิมพ์พิชชา',  nick: 'พี่อ้อย' },
-  '560874': { name: 'จุรีพร',      nick: 'พี่อีฟ' },
-  '651221': { name: 'ขวัญดาว',    nick: 'พี่ดาว' },
-  '651462': { name: 'นุชจรินทร์',  nick: 'พี่กัส' },
-  '601183': { name: 'Kantapon',  nick: 'พี่กาย' },
-  '681201': { name: 'อังคณา',     nick: 'พี่อิ๊ว' }
+/* ─────────── รายชื่อทีม: อ่านจากทะเบียนผู้ใช้ของฮับ (hub_config · key=users) ───────────
+   ทะเบียนผู้ใช้อยู่ที่ฮับที่เดียว (⚙️ → จัดการผู้ใช้) — เดิมสคริปต์นี้ฝังรายชื่อไว้เอง
+   พอมีคนเข้า/ออก/เปลี่ยนชื่อ ข้อความในกลุ่มก็ผิดตามไปด้วย (เช่น ยังเตือนว่า "พี่กัส ยังไม่ได้ตรวจ" ทุกวัน
+   ทั้งที่ออกจากทีมไปแล้ว) · ตอนนี้ดึงของจริงมาทุกครั้ง · ดึงไม่ได้ → ใช้รายชื่อสำรองด้านล่าง และบอกในข้อความ */
+var HUB_SB_URL = 'https://pzspcjqlxoqnbtvlfjsy.supabase.co';
+var HUB_SB_KEY = 'sb_publishable_n1w7k8mdxGbtaHKZ4xnNWA_wxUHhEtP';
+
+// รายชื่อสำรอง (ใช้เมื่ออ่านทะเบียนฮับไม่ได้เท่านั้น) · role: bzm = ทีมที่ "ควรตรวจ"
+var FALLBACK_USERS = [
+  { code: '550713', name: 'Nattakorn Ersathaporn',  nick: 'พี่ปอ',     role: 'vp',  brands: ['jaedaeng'] },
+  { code: '590022', name: 'Kanusswan  aimsumrun',    nick: 'พี่เฟิร์น', role: 'bzm', brands: ['jaedaeng'] },
+  { code: '490057', name: 'Phimphitcha Chatchawan', nick: 'พี่อ้อย',   role: 'bzm', brands: ['jaedaeng'] },
+  { code: '560874', name: 'Jureeporn Thong-ach',    nick: 'พี่อีฟ',    role: 'bzm', brands: ['jaedaeng'] },
+  { code: '651221', name: 'Khwandao Boonruang',     nick: 'พี่ดาว',    role: 'bzm', brands: ['jaedaeng'] },
+  { code: '601183', name: 'Kantapon Lapmongkolnawin', nick: "P'Guy",  role: 'admin', brands: ['santafe'] },
+  { code: '681201', name: 'Angkana Nilkumnerd',     nick: 'พี่อิ๊ว',   role: 'coo', brands: ['santafe'] }
+];
+// ชื่อเล่นอังกฤษเดิมที่เคยถูกบันทึกติดไปกับผลตรวจเก่า → แสดงเป็นชื่อเล่นปัจจุบันของรหัสนั้น
+var OLD_NICK_BY_CODE = {
+  '550713': ["P'Por"], '590022': ["P'Fern"], '490057': ["P'Aoy"], '560874': ["P'Eve"], '651221': ["P'Daw"], '681201': ["P'Ew"]
 };
 
-// ทีมที่ "ควรตรวจ" (BZM เจ๊แดง) — ใช้เช็คว่าใครยังไม่ได้ตรวจวันนี้ (แก้รายชื่อได้)
-var EXPECTED_CODES = ['590022', '490057', '560874', '651221', '651462'];
+var _usersCache = null, _usersSource = '';
+function hubSbToken_() {
+  var cache = CacheService.getScriptCache();
+  var t = cache.get('hub_sb_tok');
+  if (t) return t;
+  var res = UrlFetchApp.fetch(HUB_SB_URL + '/auth/v1/signup', {
+    method: 'post', contentType: 'application/json', payload: '{}',
+    headers: { apikey: HUB_SB_KEY }, muteHttpExceptions: true });
+  var j = JSON.parse(res.getContentText() || '{}');
+  if (!j.access_token) throw new Error('ล็อกอิน Supabase (ฮับ) ไม่สำเร็จ: ' + res.getContentText().slice(0, 200));
+  cache.put('hub_sb_tok', j.access_token, 3000);
+  return j.access_token;
+}
+function loadRegistryUsers_() {
+  try {
+    var res = UrlFetchApp.fetch(HUB_SB_URL + '/rest/v1/hub_config?select=value&key=eq.users',
+      { headers: { apikey: HUB_SB_KEY, Authorization: 'Bearer ' + hubSbToken_() }, muteHttpExceptions: true });
+    if (res.getResponseCode() !== 200) return null;
+    var rows = JSON.parse(res.getContentText() || '[]');
+    var v = rows && rows[0] && rows[0].value;
+    return (Array.isArray(v) && v.length) ? v : null;
+  } catch (e) { return null; }
+}
+function users_() {
+  if (_usersCache) return _usersCache;
+  var list = loadRegistryUsers_();
+  if (list) { _usersSource = 'registry'; } else { list = FALLBACK_USERS; _usersSource = 'fallback'; }
+  _usersCache = list;
+  return list;
+}
+function userByCode_(code) {
+  var c = String(code || ''), list = users_();
+  for (var i = 0; i < list.length; i++) if (String(list[i].code) === c) return list[i];
+  return null;
+}
+function userBrands_(u) {
+  return (u && Array.isArray(u.brands) && u.brands.length) ? u.brands : (u && u.brand ? [u.brand] : []);
+}
 
-// แสดงชื่อจริง (พร้อมชื่อเล่นในวงเล็บ) จากรหัส — ไม่พบรหัส ใช้ค่า fallback
+// ทีมที่ "ควรตรวจ" = BZM ที่ดูแลแบรนด์เจ๊แดงในทะเบียน — ใช้เช็คว่าใครยังไม่ได้ตรวจวันนี้
+function expectedCodes_() {
+  return users_().filter(function (u) {
+    return u.role === 'bzm' && userBrands_(u).indexOf('jaedaeng') >= 0;
+  }).map(function (u) { return String(u.code); });
+}
+
+// แสดงชื่อเล่น (พร้อมชื่อจริงในวงเล็บ) จากรหัส — ไม่พบรหัส ใช้ค่า fallback
 function nameByCode_(code, fallback) {
-  var u = USERS_BY_CODE[String(code || '')];
-  if (u) return u.name + (u.nick ? ' (' + u.nick + ')' : '');
+  var u = userByCode_(code);
+  if (u) return u.nick ? (u.nick + (u.name ? ' (' + u.name + ')' : '')) : (u.name || fallback || '-');   // ชื่อเล่นนำ — ทะเบียนเก็บชื่อจริงเป็นอังกฤษ
   return fallback || '-';
+}
+
+// ชื่อเล่นที่ติดมากับผลตรวจ (อาจเป็นชื่อเก่า เช่น P'Eve) → ชื่อเล่นปัจจุบันของคนนั้น
+function currentNick_(raw) {
+  var t = String(raw == null ? '' : raw).trim();
+  if (!t) return '';
+  var list = users_();
+  for (var i = 0; i < list.length; i++) {
+    var u = list[i];
+    if (t === u.nick || t === u.name) return u.nick || u.name;
+    var olds = OLD_NICK_BY_CODE[String(u.code)] || [];
+    if (olds.indexOf(t) >= 0) return u.nick || t;
+  }
+  return t;
 }
 
 var TH_MONTH = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
@@ -164,7 +231,7 @@ function formatInstant_(a) {
                ' · ⚪ N/A ' + (isNaN(na) ? '-' : na) +
                (isNaN(tot) ? '' : (' · รวม ' + tot + ' ข้อ'));
 
-  var bzm = (a.bzmNick || a.bzm) ? ('\n👥 BZM: ' + esc_(a.bzmNick || a.bzm)) : '';
+  var bzm = (a.bzmNick || a.bzm) ? ('\n👥 BZM: ' + esc_(currentNick_(a.bzmNick || a.bzm))) : '';
 
   // รายการข้อที่ไม่ผ่าน (พร้อมหมายเหตุ) — จำกัดไม่เกิน 12 ข้อ
   var failedTxt = '';
@@ -364,10 +431,11 @@ function formatMessage_(audits, dateStr) {
     if (a.auditorCode) inspected[String(a.auditorCode)] = true;
     if (a.submittedBy) inspected[String(a.submittedBy)] = true;
   });
-  var missing = EXPECTED_CODES.filter(function (c) { return !inspected[c]; });
+  var missing = expectedCodes_().filter(function (c) { return !inspected[c]; });
   var missingTxt = missing.length
     ? '\n\n⛔️ <b>ยังไม่ได้ตรวจวันนี้:</b> ' + missing.map(function (c) { return esc_(nameByCode_(c)); }).join(', ')
     : '\n\n🎉 <b>ทีมตรวจครบทุกคนแล้ว</b>';
+  if (_usersSource === 'fallback') missingTxt += '\n<i>(อ่านทะเบียนผู้ใช้จากฮับไม่ได้ — ใช้รายชื่อสำรอง)</i>';
 
   if (!audits.length) {
     return head + '\n📭 วันนี้ยังไม่มีการตรวจสาขา' + missingTxt;
