@@ -12684,7 +12684,7 @@ function showDailyDetail(id, targetText) {
       const pillLabel = status === 'pass' ? 'ผ่าน' : status === 'fail' ? 'ไม่ผ่าน' : status === 'na' ? 'N/A' : 'รอ';
       const photos = it.photos || [];
       let photosHtml = '';
-      if (!photos.length && r.photosPurgedAt && it.status !== 'na') {
+      if (!photos.length && d.photosPurgedAt && it.status !== 'na') {
         photosHtml = '<div class="detail-item-note" style="background:var(--surface-2);color:var(--text-tertiary);border-color:var(--border);">'
           + '<span class="material-symbols-rounded">photo_camera</span>รูปถูกลบหลังเก็บครบ ' + DAILY_PHOTO_RETENTION_DAYS + ' วัน</div>';
       }
