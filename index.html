@@ -11428,6 +11428,13 @@ function _dailyEditedLabel(d) {
   const mm = String(dt.getMinutes()).padStart(2, '0');
   return hh + ':' + mm;
 }
+/* เวลา HH:MM จากค่า ISO — คืน '' ถ้าไม่มี/อ่านไม่ได้ */
+function _dailyHM(iso) {
+  if (!iso) return '';
+  const dt = new Date(iso);
+  if (isNaN(dt.getTime())) return '';
+  return String(dt.getHours()).padStart(2, '0') + ':' + String(dt.getMinutes()).padStart(2, '0');
+}
 function _dailySentLabel(d) {
   /* ยึด submittedAt เป็นหลักเสมอ — updatedAt เป็นตัวสำรองสำหรับใบเก่าที่ไม่มีช่องนี้
      ห้ามหยิบ editedAt มาแทน ไม่งั้นจะกลับไปเป็นปัญหาเดิมคือโชว์เวลาแก้เป็นเวลาส่ง */
@@ -12616,7 +12623,8 @@ function showDailyDetail(id, targetText) {
     `<span class="material-symbols-rounded">${shiftIcon}</span>` +
     `<span>${shiftLabel}</span>` +
     `<span class="kicker-dot">·</span>` +
-    `<span>${escapeHtml(fmtDateDMY(d.date))}</span>`;
+    `<span>${escapeHtml(fmtDateDMY(d.date))}</span>` +
+    (_dailyHM(d.submittedAt || d.updatedAt) ? `<span class="kicker-dot">·</span><span>${_dailyHM(d.submittedAt || d.updatedAt)} น.</span>` : '');
   document.getElementById('daily-pass-pct').textContent = pct.toFixed(1);
 
   // Meta list — mirror audit summary layout
@@ -12626,6 +12634,7 @@ function showDailyDetail(id, targetText) {
     { icon: 'badge',              label: 'Manager on duty', value: d.manager || '-' },
     { icon: 'supervisor_account', label: 'BZM',             value: ckBzmFullName(ckEn(d.bzm)) || '-' },
     { icon: 'person',             label: 'บันทึกโดย',       value: ckEn(d.submittedByName) || '-' },
+    { icon: 'schedule',         label: 'เวลาตรวจ',        value: [_dailyHM(d.startedAt) ? 'เริ่ม ' + _dailyHM(d.startedAt) + ' น.' : '', _dailyHM(d.submittedAt || d.updatedAt) ? 'ส่ง ' + _dailyHM(d.submittedAt || d.updatedAt) + ' น.' : ''].filter(Boolean).join(' · ') || '-' },
 
     { icon: 'fact_check',         label: 'สถานะรายการ',     value: `ผ่าน ${passN} ข้อ - ไม่ผ่าน ${failN} ข้อ - N/A ${naN} ข้อ${pendN > 0 ? ` - รอ ${pendN} ข้อ` : ''} - ทั้งหมด ${total} ข้อ` },
   ];
