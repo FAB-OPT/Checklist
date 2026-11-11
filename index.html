@@ -15829,6 +15829,7 @@ const SFRep = {
             time: this.sentTime(r), pct: st.pct, fail: st.fail,
             start: this.hhmm(r && r.startedAt), used: this.minutesUsed(r),
             by: (r && (r.submittedBy || r.createdBy || r.user)) || '',
+            lateReason: (r && _isDailyLate(r)) ? String(r.lateReason || '').trim() : '',
             fails: this.failList(r),
           };
         });
@@ -15915,6 +15916,16 @@ const SFRep = {
     rows.forEach((r) => r.occ.sort((a, b) => (a.date || '').localeCompare(b.date || '') || a.branch.localeCompare(b.branch, 'th')));
     const totFail = rows.reduce((s, r) => s + r.fail, 0);
     return { rows: rows, totalFail: totFail, sections: this.bySection(recs) };
+  },
+
+  /* รายการที่ส่ง/เริ่มสายของช่วงที่เลือก พร้อมเหตุผลที่สาขากรอกตอนเริ่มตรวจ */
+  lateList() {
+    if (!ckHasLate()) return [];
+    return this.records().filter((d) => d && d.submittedAt && _isDailyLate(d)).sort((a, b) =>
+      (a.date || '').localeCompare(b.date || '') || String(a.branchCode).localeCompare(String(b.branchCode)) ||
+      String(a.shift || 'open').localeCompare(String(b.shift || 'open')))
+      .map((d) => ({ date: d.date, code: String(d.branchCode), name: d.branchName || '', zone: _sfBranchZone(d.branchCode) || '',
+        shift: d.shift || 'open', start: this.hhmm(d.startedAt), time: this.sentTime(d), reason: String(d.lateReason || '').trim() }));
   },
 
   dataDetail() {
@@ -16144,6 +16155,22 @@ const SFRep = {
       });
       h += '</tbody></table>';
       }
+      if (late) {
+        const lt = [];
+        byDate[dt].forEach((r) => shifts.forEach((sh) => {
+          const c = r.cell[sh];
+          if (c.state === 'late') lt.push({ br: r.code + ' ' + r.name, sh: sh, start: c.start, time: c.time, why: c.lateReason });
+        }));
+        if (lt.length) {
+          h += `<div class="sfr-h3">เหตุผลที่ส่งสาย (${lt.length} รายการ)</div><table class="sfr-tb"><colgroup>
+            <col style="width:26%"><col style="width:9%"><col style="width:9%"><col style="width:9%"><col style="width:47%">
+            </colgroup><thead><tr><th>สาขา</th><th class="c">รอบ</th><th class="c">เริ่ม</th><th class="c">ส่ง</th><th>เหตุผลที่สาขาระบุ</th></tr></thead><tbody>`
+            + lt.map((x) => `<tr><td>${escapeHtml(x.br)}</td><td class="c">${this.shiftName(x.sh)}</td>
+              <td class="c">${escapeHtml(x.start || '—')}</td><td class="c">${escapeHtml(x.time || '—')}</td>
+              <td>${x.why ? escapeHtml(x.why) : '<span style="color:#999">ไม่ได้ระบุเหตุผล</span>'}</td></tr>`).join('')
+            + '</tbody></table>';
+        }
+      }
     });
     return h + this.foot(ckHasLate()
       ? 'นับ “ส่งสาย” จากเวลาที่เริ่มทำเช็คลิสต์ — ' + ckCutoffText()
@@ -16213,6 +16240,17 @@ const SFRep = {
             <td class="n">${x.need}</td><td class="n">${x.sent}</td><td class="n">${this.pct(x.sentPct)}</td>
             <td class="n">${x.onTime}</td><td class="n">${x.fail}</td><td class="n">${this.pct(x.passPct)}</td></tr>`).join('')
         + '</tbody></table>';
+      const ll = this.lateList();
+      if (ll.length) {
+        h += `<div class="sfr-h2">เหตุผลที่ส่งสาย (${ll.length} รายการ)</div>`;
+        h += `<table class="sfr-tb"><colgroup>
+          <col style="width:14%"><col style="width:24%"><col style="width:8%"><col style="width:8%"><col style="width:8%"><col style="width:38%">
+          </colgroup><thead><tr><th>วันที่</th><th>สาขา</th><th class="c">รอบ</th><th class="c">เริ่ม</th><th class="c">ส่ง</th><th>เหตุผลที่สาขาระบุ</th></tr></thead><tbody>`
+          + ll.slice(0, 80).map((x) => `<tr><td class="nw">${escapeHtml(fmtDateThaiShort(x.date))}</td><td>${escapeHtml(x.code + ' ' + x.name)}</td>
+            <td class="c">${this.shiftName(x.shift)}</td><td class="c">${escapeHtml(x.start || '—')}</td><td class="c">${escapeHtml(x.time || '—')}</td>
+            <td>${x.reason ? escapeHtml(x.reason) : '<span style="color:#999">ไม่ได้ระบุเหตุผล</span>'}</td></tr>`).join('')
+          + '</tbody></table>' + (ll.length > 80 ? `<div class="sfr-foot" style="margin-top:4px">แสดง 80 รายการแรก · ดูครบ ${ll.length} รายการในไฟล์ Excel</div>` : '');
+      }
     }
     return h + this.foot('“ต้องส่ง” = จำนวนวันในช่วง × รอบที่เลือก · “% ผ่าน” คิดจากข้อที่ให้ผลจริง ไม่รวมข้อที่ยังไม่ได้ตอบ');
   },
@@ -16285,6 +16323,10 @@ const SFRep = {
         <small>${escapeHtml(fmtDateThaiShort(d.date))} · ${this.shiftName(d.shift)} · ส่ง ${escapeHtml(this.sentTime(d) || '—')} น.
         ${late ? '<span class="sfr-pill late">สาย</span>' : '<span class="sfr-pill ok">ตรงเวลา</span>'}</small>
       </div><div class="sfr-card-b">`;
+      if (late) {
+        const why = String(d.lateReason || '').trim();
+        h += `<div class="sfr-note" style="margin-left:0"><b>เหตุผลที่ตรวจช้า:</b> ${why ? escapeHtml(why) : '<i>สาขาไม่ได้ระบุเหตุผล</i>'}</div>`;
+      }
       h += this.figs([
         { v: this.pct(st.pct), l: 'ผ่านเกณฑ์', c: 'ok' },
         { v: st.pass, l: 'ผ่าน', c: 'ok' },
@@ -16374,6 +16416,7 @@ const SFRep = {
         cols.push({ h: n + ' · เวลาส่ง', w: 11 });
         if (deep) cols.push({ h: n + ' · ใช้เวลา (นาที)', w: 15 });
         cols.push({ h: n + ' · % ผ่าน', w: 10 }, { h: n + ' · ข้อที่ตก', w: 11 });
+        if (ckHasLate()) cols.push({ h: n + ' · เหตุผลที่ส่งสาย', w: 36 });
       });
       const rows = d.rows.map((r) => {
         const o = [fmtDateThaiShort(r.date), String(r.code), r.name, r.zone || ''];
@@ -16384,6 +16427,7 @@ const SFRep = {
           o.push(c.time || '');
           if (deep) o.push(c.used == null ? '' : c.used);
           o.push(c.pct == null ? '' : c.pct, c.fail || 0);
+          if (ckHasLate()) o.push(c.state === 'late' ? (c.lateReason || 'ไม่ได้ระบุเหตุผล') : '');
         });
         return o;
       });
@@ -16420,6 +16464,7 @@ const SFRep = {
         if (!it) return;
         rows.push([fmtDateThaiShort(d.date), String(d.branchCode), d.branchName || '',
           _sfBranchZone(d.branchCode) || '', this.shiftName(d.shift), this.sentTime(d) || '', late,
+          _isDailyLate(d) ? (String(d.lateReason || '').trim() || 'ไม่ได้ระบุเหตุผล') : '',
           it.section || '', it.text || '',
           it.status === 'pass' ? 'ผ่าน' : it.status === 'fail' ? 'ไม่ผ่าน' : 'ยังไม่ตอบ',
           (it.note || ''), (Array.isArray(it.photos) ? it.photos.length : 0)]);
@@ -16428,14 +16473,28 @@ const SFRep = {
     return {
       name: 'รายละเอียดรายข้อ',
       cols: [{ h: 'วันที่', w: 13 }, { h: 'รหัส', w: 9 }, { h: 'สาขา', w: 28 }, { h: 'โซน', w: 12 },
-        { h: 'รอบ', w: 10 }, { h: 'เวลาส่ง', w: 10 }, { h: 'ตรงเวลา/สาย', w: 12 },
+        { h: 'รอบ', w: 10 }, { h: 'เวลาส่ง', w: 10 }, { h: 'ตรงเวลา/สาย', w: 12 }, { h: 'เหตุผลที่ตรวจช้า', w: 34 },
         { h: 'หมวด', w: 22 }, { h: 'หัวข้อ', w: 52 }, { h: 'ผล', w: 11 }, { h: 'หมายเหตุ', w: 40 }, { h: 'จำนวนรูป', w: 10 }],
       rows: rows,
     };
   },
   /* ชีตเสริมของรายงานแบบละเอียด — แยกชีตดีกว่ายัดลงชีตเดียว
      เพราะแต่ละชุดมีหน่วยข้อมูลคนละอย่าง (รายสาขา / รายหมวด / รายครั้งที่ตก) */
+  lateSheet() {
+    const ll = this.lateList();
+    if (!ll.length) return [];
+    return [{ name: 'เหตุผลที่ส่งสาย',
+      cols: [{ h: 'วันที่', w: 13 }, { h: 'รหัส', w: 9 }, { h: 'สาขา', w: 28 }, { h: 'โซน', w: 12 }, { h: 'รอบ', w: 10 },
+        { h: 'เวลาเริ่ม', w: 10 }, { h: 'เวลาส่ง', w: 10 }, { h: 'เหตุผลที่สาขาระบุ', w: 52 }],
+      rows: ll.map((x) => [fmtDateThaiShort(x.date), x.code, x.name, x.zone, this.shiftName(x.shift), x.start || '', x.time || '',
+        x.reason || 'ไม่ได้ระบุเหตุผล']) }];
+  },
   extraSheets() {
+    /* ชีต "เหตุผลที่ส่งสาย" ออกให้ทุกรายงานที่นับความสาย (สรุปตามช่วงเวลา · การส่งรายวัน) ไม่ต้องเปิดแบบละเอียด */
+    const lateX = (this.S.type === 'period' || this.S.type === 'submit') ? this.lateSheet() : [];
+    return lateX.concat(this.extraSheetsDeep());
+  },
+  extraSheetsDeep() {
     if (!this.deep()) return [];
     const T = this.S.type;
     if (T === 'submit') {
