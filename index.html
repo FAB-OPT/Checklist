@@ -8788,21 +8788,52 @@ function _dailyHaveFrom() {
   const cov = _dailyCoverFrom(), first = _dailyFirstFrom();
   return (cov && cov < first) ? cov : first;
 }
-async function _ensureDailyRange(from) {
+let _dailyEnsureP = null;
+async function _ensureDailyRange(from, onProgress) {
   await ckAuthReady();            // รอล็อกอิน Firebase ก่อนแตะข้อมูล
   if (!firebaseDb || !from) return false;
+  /* คำขอที่ซ้อนกัน (เช่น เปลี่ยนวันที่ระหว่างที่กำลังดึง) รอรอบที่กำลังดึงอยู่ให้จบก่อน แล้วค่อยดูว่ายังขาดอีกไหม — ไม่ยิงซ้ำ */
+  while (_dailyEnsureP) { try { await _dailyEnsureP; } catch (_) {} }
   const have = _dailyHaveFrom();
   if (from >= have) return false;              // ครอบคลุมอยู่แล้ว
-  let q = firebaseDb.collection(DAILY_COLLECTION).where('date', '>=', from).where('date', '<', have);
+  const run = _dailyFetchRange(from, have, onProgress);
+  _dailyEnsureP = run;
+  try { return await run; } finally { _dailyEnsureP = null; }
+}
+/* ดึง [from, have) เป็นช่วงละ 7 วัน ครั้งละ 4 ช่วงพร้อมกัน — ช่วงไหนมาถึงก็รวมเข้าทันที
+   (เดิมก้อนเดียว: 1 เดือน ≈ 2,600 ใบ ≈ 24 MB รอจนครบถึงจะเห็นอะไร และถ้าพังกลางทางก็ไม่ได้อะไรเลย)
+   หมุด "มีข้อมูลถึงวันไหน" ขยับเมื่อดึงครบทุกช่วงเท่านั้น — ช่วงที่พังจะถูกลองใหม่รอบหน้า */
+async function _dailyFetchRange(from, have, onProgress) {
+  const iso = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  const wins = [];
+  const end = new Date(have + 'T00:00:00');
+  for (let a = new Date(from + 'T00:00:00'); a < end; ) {
+    const b = new Date(a); b.setDate(b.getDate() + 7);
+    wins.push([iso(a), iso(b < end ? b : end)]);
+    a = b;
+  }
   const isBr = currentUser && currentUser.role === 'branch';
   const bc = isBr ? String(currentUser.branchCode || '') : '';
-  if (isBr && bc) q = q.where('branchCode', '==', bc);   // สาขาไม่ต้องดึงของคนอื่น
-  const snap = await q.get();
   const map = new Map(allDailyChecklists.filter(d => d && d.id != null).map(d => [String(d.id), d]));
-  _mergeDailyDocs(map, snap.docs);
+  let next = 0, done = 0, docs = 0, failed = null;
+  const worker = async () => {
+    while (next < wins.length && !failed) {
+      const w = wins[next++];
+      let q = firebaseDb.collection(DAILY_COLLECTION).where('date', '>=', w[0]).where('date', '<', w[1]);
+      if (isBr && bc) q = q.where('branchCode', '==', bc);   // สาขาไม่ต้องดึงของคนอื่น
+      try {
+        const snap = await q.get();
+        _mergeDailyDocs(map, snap.docs);
+        docs += snap.size; done++;
+        if (onProgress) { try { onProgress(done, wins.length, docs); } catch (_) {} }
+      } catch (e) { failed = e; }
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(4, wins.length) }, worker));
+  try { saveDailyLocal(); } catch (e) { console.warn('[daily] เก็บแคชในเครื่องไม่สำเร็จ', e); }
+  if (failed) throw failed;
   _dailyLoadedFrom = from;
   _dailyCoverSet(from);
-  saveDailyLocal();
   return true;
 }
 
@@ -15909,14 +15940,14 @@ const SFRep = {
   },
   /* ดึงข้อมูลของช่วงที่เลือกให้ครบก่อนคำนวณ — ไม่งั้นตัวเลขขาดเงียบ ๆ
      เรียกก่อนทุกทางที่ผลิตตัวเลข (ตัวอย่าง · PDF · Excel) */
-  async ensure() {
-    if (!this.S.from) return;
+  async ensure(onProg) {
+    if (!this.S.from) return true;
     try {
-      if (await _ensureDailyRange(this.S.from)) _repaintDaily();
+      if (await _ensureDailyRange(this.S.from, onProg)) _repaintDaily();
+      return true;
     } catch (e) {
       console.warn('[รายงาน] ดึงข้อมูลย้อนหลังไม่สำเร็จ', e);
-      showModal('ดึงข้อมูลย้อนหลังไม่สำเร็จ',
-        'ตัวเลขในรายงานอาจไม่ครบ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่');
+      return false;
     }
   },
   preview() {
@@ -15927,8 +15958,18 @@ const SFRep = {
     /* ช่วงที่เลือกยังไม่มีข้อมูล → ดึงแล้ววาดตัวอย่างใหม่อีกรอบ
        เช็คก่อนว่าขาดจริงไหม จะได้ไม่ยิงซ้ำทุกครั้งที่ขยับตัวเลือก */
     if (this.S.from < _dailyHaveFrom()) {
+      const from0 = this.S.from;
       el.innerHTML = 'กำลังดึงข้อมูลย้อนหลัง…';
-      this.ensure().then(() => this.preview());
+      const onProg = (d, t, n) => { const e2 = document.getElementById('sfrep-pv'); if (e2 && this.S.from === from0 && this._pulling) e2.innerHTML = `กำลังดึงข้อมูลย้อนหลัง… <b>${d}/${t}</b> ช่วง (${n.toLocaleString('en-US')} ใบ)`; };
+      this._pulling = true;
+      this.ensure(onProg).then((ok) => {
+        this._pulling = false;
+        if (ok) { this.preview(); return; }
+        /* ดึงไม่สำเร็จ: ไม่วนดึงซ้ำเอง (เดิมวนไม่จบ) ให้กดลองใหม่เอง */
+        const e3 = document.getElementById('sfrep-pv'); if (!e3) return;
+        e3.className = 'sfrep-pv warn';
+        e3.innerHTML = 'ดึงข้อมูลย้อนหลังไม่สำเร็จ ตัวเลขอาจไม่ครบ — <a href="#" onclick="SFRep.preview();return false" style="color:inherit;font-weight:700;text-decoration:underline">ลองใหม่</a>';
+      });
       return;
     }
     const days = this.dateList().length, recs = this.records().length, br = this.roster().length;
@@ -16294,7 +16335,7 @@ const SFRep = {
   async pdf() {
     if (this.S.from > this.S.to) { showModal('ช่วงวันที่ไม่ถูกต้อง', 'วันเริ่มต้นอยู่หลังวันสิ้นสุด'); return; }
     this.busy(true, 'กำลังเตรียมข้อมูล…');
-    await this.ensure();
+    if (!(await this.ensure())) { showModal('ดึงข้อมูลย้อนหลังไม่สำเร็จ', 'ตัวเลขในรายงานอาจไม่ครบ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่'); }
     this.busy(false);
     const doc = this.S.type === 'submit' ? this.docSubmit()
       : this.S.type === 'period' ? this.docPeriod()
@@ -16444,7 +16485,7 @@ const SFRep = {
   async excel() {
     if (this.S.from > this.S.to) { showModal('ช่วงวันที่ไม่ถูกต้อง', 'วันเริ่มต้นอยู่หลังวันสิ้นสุด'); return; }
     this.busy(true, 'กำลังเตรียมข้อมูล…');
-    await this.ensure();
+    if (!(await this.ensure())) { showModal('ดึงข้อมูลย้อนหลังไม่สำเร็จ', 'ตัวเลขในรายงานอาจไม่ครบ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่'); }
     const spec = this.sheetSpec();
     /* ต้องปลดปุ่มก่อนออกทุกทาง ไม่งั้นกล่องค้างกดอะไรไม่ได้ */
     if (!spec.rows.length) {
